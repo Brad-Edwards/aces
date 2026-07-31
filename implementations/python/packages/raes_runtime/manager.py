@@ -4,7 +4,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
-from raes_contracts.contracts import ExperimentStochasticControlModel
+from raes_contracts.contracts import (
+    ExperimentStochasticControlModel,
+    ParticipantInformationStateContextResolver,
+)
 from raes_contracts.contracts.time_model import TimeModelDeclarationModel
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
@@ -18,11 +21,12 @@ from .backend_calls import _call_backend_apply, _call_backend_diagnostics, _Real
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
 from .participant_activity import resolve_participant_activity_controls
 from .participant_execution_control import RuntimeParticipantExecutionMixin
-from .registry import RuntimeTarget, _validate_runtime_target_shape
+from .participant_information_state_validation import require_participant_information_state_snapshot
+from .registry import RuntimeTarget as _RuntimeTarget
+from .registry import _validate_runtime_target_shape
 from .time_control import RuntimeTimeControlMixin
 
-_RUNTIME_APPLY_ADDRESS = "runtime.apply"
-_APPLY_EVALUATOR_ADDRESS = "runtime.apply.evaluator"
+_RUNTIME_APPLY_ADDRESS, _APPLY_EVALUATOR_ADDRESS = "runtime.apply", "runtime.apply.evaluator"
 _APPLY_ORCHESTRATOR_ADDRESS = "runtime.apply.orchestrator"
 _APPLY_PHASE_FAILED = "runtime.apply-phase-failed"
 _DESTROY_PHASE_FAILED = "runtime.destroy-phase-failed"
@@ -41,7 +45,7 @@ class _RuntimeApplyState:
 
 def _provenance_diagnostics(
     execution_plan: ExecutionPlan,
-    target: RuntimeTarget,
+    target: _RuntimeTarget,
     snapshot: RuntimeSnapshot,
 ) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
@@ -88,10 +92,11 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
 
     def __init__(
         self,
-        target: RuntimeTarget,
+        target: _RuntimeTarget,
         *,
         initial_snapshot: RuntimeSnapshot | None = None,
         stochastic_controls: Iterable[ExperimentStochasticControlModel] = (),
+        information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
     ) -> None:
         _validate_runtime_target_shape(
             manifest=target.manifest,
@@ -103,6 +108,8 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
         )
         self._target = target
         self._snapshot = initial_snapshot if initial_snapshot is not None else RuntimeSnapshot()
+        self._information_state_context_resolver = information_state_context_resolver
+        require_participant_information_state_snapshot(self._snapshot, information_state_context_resolver)
         self._participant_activity_controls = resolve_participant_activity_controls(stochastic_controls)
         self._time_declaration: TimeModelDeclarationModel | None = None
         self._initialize_participant_scheduler()
@@ -180,7 +187,11 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
             services_to_rollback.append((_ROLLBACK_ORCHESTRATOR_ADDRESS, self._target.orchestrator))
         if state.started_evaluator and self._target.evaluator is not None:
             services_to_rollback.append((_ROLLBACK_EVALUATOR_ADDRESS, self._target.evaluator))
-        rollback_result = rollback_services(state.working_snapshot, services_to_rollback)
+        rollback_result = rollback_services(
+            state.working_snapshot,
+            services_to_rollback,
+            information_state_context_resolver=self._information_state_context_resolver,
+        )
         self._record_phase_result(state, rollback_result)
         self._fail_apply_state(state)
 
@@ -201,6 +212,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
                 manifest=execution_plan.manifest,
                 artifact_availability=execution_plan.artifact_availability,
             ),
+            information_state_context_resolver=self._information_state_context_resolver,
         )
         self._record_phase_result(state, provision_result)
         if not provision_result.success:
@@ -225,6 +237,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
                 state.working_snapshot,
                 address=_APPLY_EVALUATOR_ADDRESS,
                 snapshot=state.working_snapshot,
+                information_state_context_resolver=self._information_state_context_resolver,
             )
             self._record_phase_result(state, evaluation_result)
             if evaluation_result.success:
@@ -240,6 +253,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
                 rollback_result = rollback_services(
                     state.working_snapshot,
                     [(_ROLLBACK_EVALUATOR_ADDRESS, self._target.evaluator)],
+                    information_state_context_resolver=self._information_state_context_resolver,
                 )
                 self._record_phase_result(state, rollback_result)
                 self._fail_apply_state(state)
@@ -256,6 +270,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
                 state.working_snapshot,
                 address=_APPLY_ORCHESTRATOR_ADDRESS,
                 snapshot=state.working_snapshot,
+                information_state_context_resolver=self._information_state_context_resolver,
             )
             self._record_phase_result(state, orchestration_result)
             if not orchestration_result.success:
@@ -271,7 +286,11 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
                 ]
                 if state.started_evaluator and self._target.evaluator is not None:
                     services_to_rollback.append((_ROLLBACK_EVALUATOR_ADDRESS, self._target.evaluator))
-                rollback_result = rollback_services(state.working_snapshot, services_to_rollback)
+                rollback_result = rollback_services(
+                    state.working_snapshot,
+                    services_to_rollback,
+                    information_state_context_resolver=self._information_state_context_resolver,
+                )
                 self._record_phase_result(state, rollback_result)
                 self._fail_apply_state(state)
 
@@ -399,6 +418,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
                 working_snapshot,
                 address="runtime.destroy.orchestrator",
                 snapshot=working_snapshot,
+                information_state_context_resolver=self._information_state_context_resolver,
             )
             diagnostics.extend(stop_result.diagnostics)
             changed_addresses.extend(stop_result.changed_addresses)
@@ -419,6 +439,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
                 working_snapshot,
                 address="runtime.destroy.evaluator",
                 snapshot=working_snapshot,
+                information_state_context_resolver=self._information_state_context_resolver,
             )
             diagnostics.extend(stop_result.diagnostics)
             changed_addresses.extend(stop_result.changed_addresses)
@@ -455,6 +476,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
             working_snapshot,
             address="runtime.destroy.provisioning",
             snapshot=working_snapshot,
+            information_state_context_resolver=self._information_state_context_resolver,
         )
         diagnostics.extend(provision_result.diagnostics)
         changed_addresses.extend(provision_result.changed_addresses)

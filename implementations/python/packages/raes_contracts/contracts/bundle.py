@@ -47,7 +47,6 @@ from .participant_decision_surface_v2 import ParticipantDecisionSurfaceV2Model
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
-    ParticipantObservationEnvelopeModel,
     ParticipantSharedStateRecordModel,
     ParticipantTimeManagementContextModel,
 )
@@ -56,11 +55,16 @@ from .participant_execution import (
     ParticipantExecutionControlRequestModel,
     ParticipantExecutionServiceStateModel,
 )
+from .participant_information_state import (
+    ParticipantInformationReconstructionProfileModel,
+    ParticipantInformationStateRecordModel,
+)
 from .participant_manifests import (
     BackendManifestV2Model,
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
 )
+from .participant_observation import ParticipantObservationEnvelopeModel
 from .participant_resource_budgets import (
     ParticipantResourceBudgetEventModel,
     ParticipantResourceBudgetPolicyModel,
@@ -175,6 +179,9 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "random-stream-profile-v1": RandomStreamProfileModel.model_json_schema(),
+        "participant-information-reconstruction-profile-v1": (
+            ParticipantInformationReconstructionProfileModel.model_json_schema()
+        ),
         "random-stream-vector-v1": RandomStreamVectorModel.model_json_schema(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
         "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
@@ -237,6 +244,7 @@ def _runtime_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-resource-budget-event-v1": ParticipantResourceBudgetEventModel.model_json_schema(),
         "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
         "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
+        "participant-information-state-record-v1": ParticipantInformationStateRecordModel.model_json_schema(),
         "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),
         "participant-joint-action-record-v1": ParticipantJointActionRecordModel.model_json_schema(),
         "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),

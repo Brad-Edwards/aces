@@ -1,5 +1,6 @@
 """Apply failure synthesis and service rollback operations."""
 
+from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 
@@ -24,6 +25,8 @@ def maybe_synthesize_failure(
 def rollback_services(
     snapshot: RuntimeSnapshot,
     services: list[tuple[str, object]],
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> ApplyResult:
     """Stop started services in order and preserve every rollback diagnostic."""
 
@@ -37,6 +40,7 @@ def rollback_services(
             working_snapshot,
             address=address,
             snapshot=working_snapshot,
+            information_state_context_resolver=information_state_context_resolver,
         )
         diagnostics.extend(stop_result.diagnostics)
         changed_addresses.extend(stop_result.changed_addresses)

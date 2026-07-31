@@ -49,6 +49,7 @@ class RuntimeTimeControlMixin:
             state.working_snapshot,
             address=_APPLY_TIME_ADDRESS,
             snapshot=state.working_snapshot,
+            information_state_context_resolver=self._information_state_context_resolver,
         )
         self._record_phase_result(state, result)
         if result.success:
@@ -134,6 +135,7 @@ class RuntimeTimeControlMixin:
             *method_args,
             address=f"runtime.time.{method_name}",
             snapshot=self._snapshot,
+            information_state_context_resolver=self._information_state_context_resolver,
         )
         if result.success:
             result = self._validated_time_control_result(method_name, result, predecessor, args)

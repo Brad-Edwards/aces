@@ -69,6 +69,7 @@ def _runtime_surface_summary(snapshot: RuntimeSnapshot) -> dict[str, int]:
         "participant_episode_history": _history_count(snapshot.participant_episode_history),
         "participant_behavior_history": _history_count(snapshot.participant_behavior_history),
         "participant_crossing_history": _history_count(snapshot.participant_crossing_history),
+        "information_state_history": _history_count(snapshot.information_state_history),
         "shared_state_records": len(snapshot.shared_state_records),
         "shared_state_history": _history_count(snapshot.shared_state_history),
         "joint_action_records": len(snapshot.joint_action_records),

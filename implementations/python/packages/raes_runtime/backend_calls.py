@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
+from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.contracts.time_model import validate_time_runtime_transition
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ProvisioningPlan
@@ -63,6 +64,7 @@ def _call_backend_apply(
     address: str,
     snapshot: RuntimeSnapshot,
     realization: _RealizationApplyContext | None = None,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> ApplyResult:
     realization_context = realization or _RealizationApplyContext()
     baseline_snapshot = deepcopy(snapshot)
@@ -85,6 +87,7 @@ def _call_backend_apply(
         realization_plan=realization_context.plan,
         backend_manifest=realization_context.manifest,
         artifact_availability=realization_context.artifact_availability,
+        information_state_context_resolver=information_state_context_resolver,
     )
 
 
@@ -97,6 +100,7 @@ def _finalize_backend_apply(
     realization_plan: ProvisioningPlan | None,
     backend_manifest: BackendManifest | None,
     artifact_availability: ArtifactAvailabilityContext | None,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
 ) -> ApplyResult:
     """Validate a backend's apply result and gate its realized snapshot.
 
@@ -117,6 +121,7 @@ def _finalize_backend_apply(
         contract_diagnostics = _backend_snapshot_contract_diagnostics(
             result,
             baseline_snapshot,
+            information_state_context_resolver=information_state_context_resolver,
         )
         realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
         if not contract_diagnostics and realization_requirements and realization_plan is not None:
@@ -150,12 +155,18 @@ def _finalize_backend_apply(
 def _backend_snapshot_contract_diagnostics(
     result: ApplyResult,
     baseline_snapshot: RuntimeSnapshot,
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
 ) -> list[Diagnostic]:
     diagnostics = _snapshot_address_contract_diagnostics(result.snapshot)
     if not diagnostics:
         diagnostics = _changed_address_transition_diagnostics(result, baseline_snapshot)
     if not diagnostics:
-        diagnostics = _snapshot_contract_diagnostics(result.snapshot)
+        diagnostics = _snapshot_contract_diagnostics(
+            result.snapshot,
+            information_state_context_resolver=information_state_context_resolver,
+            trusted_information_state_history=baseline_snapshot.information_state_history,
+        )
     if not diagnostics:
         diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
     return diagnostics
@@ -301,18 +312,28 @@ def _apply_result_details_violation(result: ApplyResult, address: str) -> str | 
     return f"Backend method '{address}' returned ApplyResult.details as {type(result.details).__name__}; expected dict."
 
 
-def _snapshot_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+def _snapshot_contract_diagnostics(
+    snapshot: RuntimeSnapshot,
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
+    trusted_information_state_history: dict[str, list[dict[str, object]]],
+) -> list[Diagnostic]:
     checks = (
         workflow_result_contract_diagnostics,
         evaluation_result_contract_diagnostics,
         proposition_truth_contract_diagnostics,
-        participant_runtime_state_contract_diagnostics,
     )
     diagnostics: list[Diagnostic] = []
     for check in checks:
         diagnostics = check(snapshot)
         if diagnostics:
             break
+    if not diagnostics:
+        diagnostics = participant_runtime_state_contract_diagnostics(
+            snapshot,
+            information_state_context_resolver=information_state_context_resolver,
+            trusted_information_state_history=trusted_information_state_history,
+        )
     return diagnostics
 
 
@@ -365,6 +386,8 @@ def _snapshot_carrier_addresses(snapshot: RuntimeSnapshot) -> set[str]:
         snapshot.participant_episode_history,
         snapshot.participant_behavior_history,
         snapshot.participant_control_history,
+        snapshot.participant_crossing_history,
+        snapshot.information_state_history,
         snapshot.participant_autonomous_execution_states,
         snapshot.participant_execution_services,
         snapshot.shared_state_records,

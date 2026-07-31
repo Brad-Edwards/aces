@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from raes_contracts.contracts import RuntimeSnapshotEnvelopeModel
+from raes_contracts.contracts import (
+    ParticipantInformationStateContextResolver,
+    RuntimeSnapshotEnvelopeModel,
+)
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_autonomous_state import (
     iter_participant_autonomous_runtime_snapshot_violations,
@@ -13,6 +16,9 @@ from raes_contracts.participant_autonomous_state import (
 )
 from raes_contracts.participant_concurrency import iter_participant_concurrency_snapshot_violations
 from raes_contracts.participant_episode import iter_participant_episode_snapshot_violations
+from raes_contracts.participant_information_state_history import (
+    iter_participant_information_state_snapshot_violations,
+)
 from raes_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
@@ -72,6 +78,10 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
         participant_behavior_history={
             participant_address: [event.model_dump(mode="json") for event in history]
             for participant_address, history in validated.participant_behavior_history.items()
+        },
+        information_state_history={
+            participant_address: [record.model_dump(mode="json") for record in history]
+            for participant_address, history in validated.information_state_history.items()
         },
         participant_autonomous_execution_states={
             state_address: state.model_dump(mode="json")
@@ -376,6 +386,20 @@ def _participant_concurrency_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> 
     ]
 
 
+def _participant_information_state_snapshot_diagnostics(
+    snapshot: RuntimeSnapshot,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
+) -> list[Diagnostic]:
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_information_state_snapshot_violations(
+            snapshot.information_state_history,
+            information_state_context_resolver=information_state_context_resolver,
+            context_scope=snapshot,
+        )
+    ]
+
+
 def _participant_autonomous_state_snapshot_diagnostics(
     states: object,
 ) -> list[Diagnostic]:
@@ -385,7 +409,11 @@ def _participant_autonomous_state_snapshot_diagnostics(
     ]
 
 
-def _runtime_snapshot_semantic_diagnostics(payload: object) -> list[Diagnostic]:
+def _runtime_snapshot_semantic_diagnostics(
+    payload: object,
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+) -> list[Diagnostic]:
     validated = RuntimeSnapshotEnvelopeModel.model_validate(payload)
     autonomous_states = {
         state_address: state.model_dump(mode="json")
@@ -408,5 +436,9 @@ def _runtime_snapshot_semantic_diagnostics(payload: object) -> list[Diagnostic]:
         *_participant_behavior_snapshot_diagnostics(snapshot),
         *_shared_state_snapshot_diagnostics(snapshot),
         *_participant_concurrency_snapshot_diagnostics(snapshot),
+        *_participant_information_state_snapshot_diagnostics(
+            snapshot,
+            information_state_context_resolver,
+        ),
         *autonomous_diagnostics,
     ]

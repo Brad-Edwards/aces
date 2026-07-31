@@ -2,9 +2,9 @@
   "contract_id": "participant-observation-envelope-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "735f292ec936892c59e164d477aae3be1117f3e09805dddc73feb6a021699f7f",
+  "content_hash": "9357990f7970dfaaa7ddf6e8ed212682dae6c233b2ea09aa6c6b579ada6d0b75",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "735f292ec936892c59e164d477aae3be1117f3e09805dddc73feb6a021699f7f"
+    "summary": "Required reconstruction authority for strong ACT-604 information guarantees and explicit loss disclosure for lossy projections.",
+    "content_hash": "9357990f7970dfaaa7ddf6e8ed212682dae6c233b2ea09aa6c6b579ada6d0b75"
   }
 }

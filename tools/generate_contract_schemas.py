@@ -66,6 +66,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("random-stream-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("participant-information-reconstruction-profile-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("random-stream-vector-v"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("behavioral-relation-profile-v"):
@@ -79,6 +81,7 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
     if name in {
         "participant-lifecycle-event-v1",
         "participant-observation-envelope-v1",
+        "participant-information-state-record-v1",
         "participant-shared-state-record-v1",
         "participant-joint-action-record-v1",
         "participant-time-management-context-v1",

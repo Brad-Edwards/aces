@@ -2,9 +2,9 @@
   "contract_id": "participant-context-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
   "stability": "draft",
-  "content_hash": "40dea81dac51eff81d69768f06ec89a82d21031e408ea97167f7631269e51c01",
+  "content_hash": "8b116a11de4465c50c55d987e2ce8aa8d6bb13986b443523d742787d802412f9",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "40dea81dac51eff81d69768f06ec89a82d21031e408ea97167f7631269e51c01"
+    "summary": "Added the closed participant-information-state source layer for ACT-604 derived context joins.",
+    "content_hash": "8b116a11de4465c50c55d987e2ce8aa8d6bb13986b443523d742787d802412f9"
   }
 }

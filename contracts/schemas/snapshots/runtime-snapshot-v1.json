@@ -4344,6 +4344,123 @@
       "title": "ParticipantCrossingTransformationModel",
       "type": "object"
     },
+    "ParticipantDecisionSurfaceCausalCutModel": {
+      "additionalProperties": false,
+      "description": "A downward-closed causal frontier for a partially ordered realization.",
+      "properties": {
+        "cut_kind": {
+          "const": "causal_frontier",
+          "title": "Cut Kind",
+          "type": "string"
+        },
+        "cut_ref": {
+          "minLength": 1,
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "frontier_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Frontier Event Refs",
+          "type": "array"
+        },
+        "history_domain": {
+          "minLength": 1,
+          "title": "History Domain",
+          "type": "string"
+        },
+        "order_model": {
+          "const": "causal_partial_order",
+          "title": "Order Model",
+          "type": "string"
+        },
+        "predecessor_closure_ref": {
+          "minLength": 1,
+          "title": "Predecessor Closure Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cut_kind",
+        "cut_ref",
+        "history_domain",
+        "order_model",
+        "frontier_event_refs",
+        "predecessor_closure_ref"
+      ],
+      "title": "ParticipantDecisionSurfaceCausalCutModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceSequenceCutModel": {
+      "additionalProperties": false,
+      "description": "A complete prefix ending at one event in a declared total order.",
+      "properties": {
+        "anchor_event_ref": {
+          "minLength": 1,
+          "title": "Anchor Event Ref",
+          "type": "string"
+        },
+        "anchor_order": {
+          "minimum": 0,
+          "title": "Anchor Order",
+          "type": "integer"
+        },
+        "cut_kind": {
+          "const": "sequence_prefix",
+          "title": "Cut Kind",
+          "type": "string"
+        },
+        "cut_ref": {
+          "minLength": 1,
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "history_domain": {
+          "enum": [
+            "participant_episode_lifecycle",
+            "participant_behavior_history"
+          ],
+          "title": "History Domain",
+          "type": "string"
+        },
+        "history_prefix_length": {
+          "minimum": 1,
+          "title": "History Prefix Length",
+          "type": "integer"
+        },
+        "order_model": {
+          "enum": [
+            "control_plane_order",
+            "backend_serialized_order",
+            "behavior_history_order"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cut_kind",
+        "cut_ref",
+        "history_domain",
+        "order_model",
+        "anchor_event_ref",
+        "anchor_order",
+        "history_prefix_length"
+      ],
+      "title": "ParticipantDecisionSurfaceSequenceCutModel",
+      "type": "object"
+    },
     "ParticipantDenialOccurrenceModel": {
       "additionalProperties": false,
       "description": "Denial of exactly one proposal revision.",
@@ -5220,6 +5337,713 @@
         "completion_evidence_ref"
       ],
       "title": "ParticipantHandoffOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantInformationStateRecordModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "information_guarantee": {
+                "enum": [
+                  "history_consistent",
+                  "perfect_recall"
+                ]
+              }
+            },
+            "required": [
+              "information_guarantee"
+            ]
+          },
+          "then": {
+            "properties": {
+              "occurrence_history_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "reconstructed_state_digest": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "reconstruction_algorithm_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "reconstruction_algorithm_version": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "reconstruction_profile_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "reconstruction_proof_ref": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "occurrence_history_ref",
+              "reconstruction_profile_ref",
+              "reconstruction_algorithm_id",
+              "reconstruction_algorithm_version",
+              "reconstruction_proof_ref",
+              "reconstructed_state_digest"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "information_guarantee": {
+                "const": "perfect_recall"
+              }
+            },
+            "required": [
+              "information_guarantee"
+            ]
+          },
+          "then": {
+            "properties": {
+              "occurrence_order_witness_ref": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "occurrence_order_witness_ref"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "information_guarantee": {
+                "const": "lossy_projection"
+              }
+            },
+            "required": [
+              "information_guarantee"
+            ]
+          },
+          "then": {
+            "properties": {
+              "loss_disclosures": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "loss_disclosures"
+            ]
+          }
+        }
+      ],
+      "description": "Immutable participant-relative information state at one exact cut.",
+      "properties": {
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authorization_scope": {
+          "minLength": 1,
+          "title": "Authorization Scope",
+          "type": "string"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "event_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventClassificationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "participant_information_state",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "extension_policy": {
+          "minLength": 1,
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "granular_markings": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Granular Markings",
+          "type": "object"
+        },
+        "information_guarantee": {
+          "enum": [
+            "observation_only",
+            "history_consistent",
+            "perfect_recall",
+            "lossy_projection",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Information Guarantee",
+          "type": "string"
+        },
+        "information_state_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Information State Digest",
+          "type": "string"
+        },
+        "information_state_ref": {
+          "minLength": 1,
+          "title": "Information State Ref",
+          "type": "string"
+        },
+        "ingested_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Ingested At",
+          "type": "string"
+        },
+        "logical_order_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Order Ref"
+        },
+        "loss_disclosures": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Loss Disclosures",
+          "type": "array"
+        },
+        "marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Marking Definition Refs",
+          "type": "array"
+        },
+        "markings": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Markings",
+          "type": "array"
+        },
+        "memory_reset_authority_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Reset Authority Ref"
+        },
+        "object_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Object Marking Refs",
+          "type": "array"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "occurrence_history_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurrence History Ref"
+        },
+        "occurrence_order_witness_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurrence Order Witness Ref"
+        },
+        "ordering_basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Ordering Basis",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "participant_memory_scope": {
+          "enum": [
+            "episode_local_reset",
+            "persistent_across_episodes"
+          ],
+          "title": "Participant Memory Scope",
+          "type": "string"
+        },
+        "payload_ref": {
+          "minLength": 1,
+          "title": "Payload Ref",
+          "type": "string"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "predecessor_information_state_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Information State Refs",
+          "type": "array"
+        },
+        "producer_ref": {
+          "minLength": 1,
+          "title": "Producer Ref",
+          "type": "string"
+        },
+        "projection_policy_revision": {
+          "minLength": 1,
+          "title": "Projection Policy Revision",
+          "type": "string"
+        },
+        "projection_version": {
+          "minLength": 1,
+          "title": "Projection Version",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "raw_data_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawDataIntegrityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reconstructed_state_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reconstructed State Digest"
+        },
+        "reconstruction_algorithm_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reconstruction Algorithm Id"
+        },
+        "reconstruction_algorithm_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reconstruction Algorithm Version"
+        },
+        "reconstruction_profile_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reconstruction Profile Ref"
+        },
+        "reconstruction_proof_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reconstruction Proof Ref"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "redaction_policy_ref": {
+          "minLength": 1,
+          "title": "Redaction Policy Ref",
+          "type": "string"
+        },
+        "redaction_policy_revision": {
+          "minLength": 1,
+          "title": "Redaction Policy Revision",
+          "type": "string"
+        },
+        "schema_name": {
+          "const": "raes.participant_runtime.information_state",
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence_number": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Number"
+        },
+        "source_pipeline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourcePipelineModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_raw_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Raw Ref"
+        },
+        "source_record_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Ref"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/ParticipantInformationStateSourceRefModel"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "source_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceStatusModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_system_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source System Ref"
+        },
+        "state_cut": {
+          "discriminator": {
+            "mapping": {
+              "causal_frontier": "#/$defs/ParticipantDecisionSurfaceCausalCutModel",
+              "sequence_prefix": "#/$defs/ParticipantDecisionSurfaceSequenceCutModel"
+            },
+            "propertyName": "cut_kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceSequenceCutModel"
+            },
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceCausalCutModel"
+            }
+          ],
+          "title": "State Cut"
+        },
+        "supersedes_information_state_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Information State Ref"
+        },
+        "temporal_context": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Context"
+        },
+        "visibility_projection_ref": {
+          "minLength": 1,
+          "title": "Visibility Projection Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_name",
+        "schema_version",
+        "event_type",
+        "extension_policy",
+        "participant_address",
+        "episode_id",
+        "occurred_at",
+        "recorded_at",
+        "ingested_at",
+        "clock_authority",
+        "ordering_basis",
+        "actor_ref",
+        "producer_ref",
+        "redaction_policy_ref",
+        "authorization_scope",
+        "information_state_ref",
+        "information_state_digest",
+        "payload_ref",
+        "state_cut",
+        "participant_memory_scope",
+        "audience_scope_ref",
+        "visibility_projection_ref",
+        "projection_version",
+        "projection_policy_revision",
+        "redaction_policy_revision",
+        "information_guarantee",
+        "source_refs"
+      ],
+      "title": "ParticipantInformationStateRecordModel",
+      "type": "object",
+      "x-raes-invariants": [
+        {
+          "description": "Strong information-state claims resolve one profile, occurrence history, typed source set, proof digest, and exact participant/episode/cut/projection/memory coordinate.",
+          "id": "participant-information-state-context-resolution",
+          "inputs": [
+            {
+              "contract_id": "participant-information-state-record-v1",
+              "instance_path": "#"
+            }
+          ],
+          "level": "error",
+          "validator": "raes_contracts.contracts.validate_participant_information_state_context"
+        }
+      ]
+    },
+    "ParticipantInformationStateSourceRefModel": {
+      "additionalProperties": false,
+      "description": "One closed typed relation to an incumbent information source.",
+      "properties": {
+        "contract_id": {
+          "enum": [
+            "participant-observation-envelope-v1",
+            "participant-context-view-v1",
+            "participant-shared-state-record-v1",
+            "participant-behavior-history-event-stream-v1",
+            "participant-episode-state-envelope-v1"
+          ],
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "authored_initial",
+            "observed",
+            "derived",
+            "disclosed",
+            "shared_state_projection"
+          ],
+          "title": "Relation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_id",
+        "ref",
+        "relation"
+      ],
+      "title": "ParticipantInformationStateSourceRefModel",
       "type": "object"
     },
     "ParticipantInteractionClass": {
@@ -10034,6 +10858,16 @@
         "$ref": "#/$defs/EvaluationResultStateModel"
       },
       "title": "Evaluation Results",
+      "type": "object"
+    },
+    "information_state_history": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/ParticipantInformationStateRecordModel"
+        },
+        "type": "array"
+      },
+      "title": "Information State History",
       "type": "object"
     },
     "joint_action_records": {

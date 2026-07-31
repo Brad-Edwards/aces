@@ -1,0 +1,120 @@
+{
+  "$id": "https://raesystem.github.io/rae/schemas/participant-information-reconstruction-profile-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One immutable, non-executable reconstruction profile declaration.",
+  "properties": {
+    "accepted_input_contracts": {
+      "items": {
+        "enum": [
+          "participant-observation-envelope-v1",
+          "participant-context-view-v1",
+          "participant-shared-state-record-v1",
+          "participant-behavior-history-event-stream-v1",
+          "participant-episode-state-envelope-v1"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Accepted Input Contracts",
+      "type": "array"
+    },
+    "accepted_order_semantics": {
+      "items": {
+        "enum": [
+          "sequence_prefix",
+          "causal_frontier"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Accepted Order Semantics",
+      "type": "array"
+    },
+    "algorithm_id": {
+      "minLength": 1,
+      "title": "Algorithm Id",
+      "type": "string"
+    },
+    "algorithm_version": {
+      "minLength": 1,
+      "title": "Algorithm Version",
+      "type": "string"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "determinism_basis": {
+      "const": "exact_occurrence_prefix_and_proof_digest",
+      "title": "Determinism Basis",
+      "type": "string"
+    },
+    "fixture_format": {
+      "minLength": 1,
+      "title": "Fixture Format",
+      "type": "string"
+    },
+    "information_state_schema_version": {
+      "minLength": 1,
+      "title": "Information State Schema Version",
+      "type": "string"
+    },
+    "normative_artifact_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Normative Artifact Digest",
+      "type": "string"
+    },
+    "normative_artifact_ref": {
+      "minLength": 1,
+      "title": "Normative Artifact Ref",
+      "type": "string"
+    },
+    "profile_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-v[0-9]+$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "projection_version": {
+      "minLength": 1,
+      "title": "Projection Version",
+      "type": "string"
+    },
+    "proof_artifact_format": {
+      "minLength": 1,
+      "title": "Proof Artifact Format",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-information-reconstruction-profile/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile_id",
+    "title",
+    "description",
+    "algorithm_id",
+    "algorithm_version",
+    "information_state_schema_version",
+    "projection_version",
+    "determinism_basis",
+    "accepted_input_contracts",
+    "accepted_order_semantics",
+    "fixture_format",
+    "proof_artifact_format",
+    "normative_artifact_ref",
+    "normative_artifact_digest"
+  ],
+  "title": "ParticipantInformationReconstructionProfileModel",
+  "type": "object"
+}
