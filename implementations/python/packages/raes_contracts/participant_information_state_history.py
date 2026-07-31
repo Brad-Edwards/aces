@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
+from dataclasses import dataclass
 
 from pydantic import ValidationError
 
@@ -13,6 +14,15 @@ from .contracts import (
 )
 
 Violation = tuple[str, str]
+
+
+@dataclass
+class _SnapshotHistoryValidationContext:
+    trusted_history: Mapping[str, list[dict[str, object]]]
+    known_event_ids: set[str]
+    known_state_refs: set[str]
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None
+    context_scope: object | None
 
 
 def _history_entry_violation(
@@ -116,11 +126,7 @@ def _participant_history_violations(
     *,
     participant_address: str,
     participant_path: str,
-    trusted_prefix_length: int,
-    known_event_ids: set[str],
-    known_state_refs: set[str],
-    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
-    context_scope: object | None,
+    validation: _SnapshotHistoryValidationContext,
 ) -> list[Violation]:
     violations: list[Violation] = []
     participant_prior_refs: set[str] = set()
@@ -136,8 +142,8 @@ def _participant_history_violations(
                 record,
                 participant_address=participant_address,
                 record_path=record_path,
-                known_event_ids=known_event_ids,
-                known_state_refs=known_state_refs,
+                known_event_ids=validation.known_event_ids,
+                known_state_refs=validation.known_state_refs,
             )
         )
         violations.extend(
@@ -150,9 +156,9 @@ def _participant_history_violations(
         context_violation = _record_context_violation(
             record,
             record_path=record_path,
-            trusted_prefix_member=index < trusted_prefix_length,
-            information_state_context_resolver=information_state_context_resolver,
-            context_scope=context_scope,
+            trusted_prefix_member=index < len(validation.trusted_history.get(participant_address, [])),
+            information_state_context_resolver=validation.information_state_context_resolver,
+            context_scope=validation.context_scope,
         )
         if context_violation is not None:
             violations.append(context_violation)
@@ -171,29 +177,28 @@ def iter_participant_information_state_snapshot_violations(
     address = "runtime.snapshot.information-state-history"
     if not isinstance(information_state_history, Mapping):
         yield address, "information_state_history must be a mapping"
-        return
-
-    known_event_ids: set[str] = set()
-    known_state_refs: set[str] = set()
-    trusted = trusted_history or {}
-    for participant_address, raw_records in information_state_history.items():
-        entry_violation = _history_entry_violation(address, participant_address, raw_records)
-        if entry_violation is not None:
-            yield entry_violation
-            continue
-        assert isinstance(participant_address, str)
-        assert isinstance(raw_records, Sequence) and not isinstance(raw_records, (str, bytes, bytearray))
-        participant_path = f"{address}.{participant_address}"
-        yield from _participant_history_violations(
-            raw_records,
-            participant_address=participant_address,
-            participant_path=participant_path,
-            trusted_prefix_length=len(trusted.get(participant_address, [])),
-            known_event_ids=known_event_ids,
-            known_state_refs=known_state_refs,
+    else:
+        validation = _SnapshotHistoryValidationContext(
+            trusted_history=trusted_history or {},
+            known_event_ids=set(),
+            known_state_refs=set(),
             information_state_context_resolver=information_state_context_resolver,
             context_scope=context_scope,
         )
+        for participant_address, raw_records in information_state_history.items():
+            entry_violation = _history_entry_violation(address, participant_address, raw_records)
+            if entry_violation is not None:
+                yield entry_violation
+                continue
+            assert isinstance(participant_address, str)
+            assert isinstance(raw_records, Sequence) and not isinstance(raw_records, (str, bytes, bytearray))
+            participant_path = f"{address}.{participant_address}"
+            yield from _participant_history_violations(
+                raw_records,
+                participant_address=participant_address,
+                participant_path=participant_path,
+                validation=validation,
+            )
 
 
 def iter_participant_information_state_history_transition_violations(
