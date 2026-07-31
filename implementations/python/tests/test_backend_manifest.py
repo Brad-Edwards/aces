@@ -175,14 +175,15 @@ def test_backend_manifest_schema_requires_true_support_flag_for_nonempty_support
     payload = backend_manifest_payload(create_stub_manifest())
     provisioner = payload["capabilities"]["provisioner"]
     provisioner.pop(support_flag)
+    validator = Draft202012Validator(schema)
 
     with pytest.raises(JSONSchemaValidationError):
-        Draft202012Validator(schema).validate(payload)
+        validator.validate(payload)
     with pytest.raises(ValidationError):
         BackendManifestV2Model.model_validate(payload)
 
     provisioner[supported_values] = []
-    Draft202012Validator(schema).validate(payload)
+    validator.validate(payload)
     BackendManifestV2Model.model_validate(payload)
 
 
