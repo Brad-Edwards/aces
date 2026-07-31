@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import dataclass
 
 from pydantic import ValidationError
 from raes_contracts.contracts import (
@@ -16,10 +17,11 @@ from raes_contracts.contracts import (
     TransformationCheckOutcome,
 )
 
-from ._declarations import build_declaration_index
+from ._declarations import Declaration, DeclarationIndex, build_declaration_index
 from ._errors import SDLParseError, SDLValidationError
 from ._identifiers import QualifiedName
 from ._module_symbols import FORWARDING_AGENTS_SECTION, symbol_index
+from ._transformation_bindings import _retarget_binding_documents
 from ._transformation_support import (
     IDENTITY_TRANSPORT_PROFILE,
     RENAME_PROFILE,
@@ -35,9 +37,8 @@ from ._transformation_types import (
     SDLAuthoringArtifact,
     SDLTransformationResult,
 )
-from .canonical import canonical_sdl_bytes, canonical_sdl_digest
+from .canonical import SDLCanonicalDigest, canonical_sdl_bytes, canonical_sdl_digest
 from .composition import _rewrite_payload_with_symbols
-from .external_concept_subjects import external_concept_subjects
 from .scenario import ExpandedScenario, ModuleDescriptor, Scenario
 from .validator import SemanticValidator
 
@@ -114,44 +115,52 @@ def _rewrite_module_exports(
         exports[section] = [new_key if name == old_key else name for name in exported_names]
 
 
-def _preserve_explicit_shape(template: object, rewritten: object) -> object:
-    """Remove helper-populated defaults while retaining rewritten map keys."""
-
-    if isinstance(template, dict) and isinstance(rewritten, dict):
-        result: dict[object, object] = {}
-        matched_template: set[object] = set()
-        matched_rewritten: set[object] = set()
-        for key in template:
-            if key not in rewritten:
-                continue
+def _preserve_explicit_mapping_shape(
+    template: dict[object, object],
+    rewritten: dict[object, object],
+) -> dict[object, object]:
+    result: dict[object, object] = {}
+    matched_template: set[object] = set()
+    matched_rewritten: set[object] = set()
+    for key in template:
+        if key in rewritten:
             result[key] = _preserve_explicit_shape(template[key], rewritten[key])
             matched_template.add(key)
             matched_rewritten.add(key)
-        template_only = [key for key in template if key not in matched_template]
-        rewritten_only = [key for key in rewritten if key not in matched_rewritten]
-        if len(template_only) > len(rewritten_only):
-            raise ValueError("reference rewrite changed the explicit payload shape")
-        for template_key, rewritten_key in zip(template_only, rewritten_only, strict=False):
-            result[rewritten_key] = _preserve_explicit_shape(
-                template[template_key],
-                rewritten[rewritten_key],
-            )
-        return result
-    if isinstance(template, list) and isinstance(rewritten, list):
-        if len(template) != len(rewritten):
-            raise ValueError("reference rewrite changed an explicit list shape")
-        return [
-            _preserve_explicit_shape(template_item, rewritten_item)
-            for template_item, rewritten_item in zip(template, rewritten, strict=True)
-        ]
-    if isinstance(template, tuple) and isinstance(rewritten, tuple):
-        if len(template) != len(rewritten):
-            raise ValueError("reference rewrite changed an explicit tuple shape")
-        return tuple(
-            _preserve_explicit_shape(template_item, rewritten_item)
-            for template_item, rewritten_item in zip(template, rewritten, strict=True)
-        )
-    return rewritten
+    template_only = [key for key in template if key not in matched_template]
+    rewritten_only = [key for key in rewritten if key not in matched_rewritten]
+    if len(template_only) > len(rewritten_only):
+        raise ValueError("reference rewrite changed the explicit payload shape")
+    for template_key, rewritten_key in zip(template_only, rewritten_only, strict=False):
+        result[rewritten_key] = _preserve_explicit_shape(template[template_key], rewritten[rewritten_key])
+    return result
+
+
+def _preserve_explicit_sequence_shape(
+    template: list[object] | tuple[object, ...],
+    rewritten: list[object] | tuple[object, ...],
+) -> list[object] | tuple[object, ...]:
+    if len(template) != len(rewritten):
+        raise ValueError("reference rewrite changed an explicit sequence shape")
+    items = [
+        _preserve_explicit_shape(template_item, rewritten_item)
+        for template_item, rewritten_item in zip(template, rewritten, strict=True)
+    ]
+    result: list[object] | tuple[object, ...] = tuple(items) if isinstance(template, tuple) else items
+    return result
+
+
+def _preserve_explicit_shape(template: object, rewritten: object) -> object:
+    """Remove helper-populated defaults while retaining rewritten map keys."""
+
+    result = rewritten
+    if isinstance(template, dict) and isinstance(rewritten, dict):
+        result = _preserve_explicit_mapping_shape(template, rewritten)
+    elif (isinstance(template, list) and isinstance(rewritten, list)) or (
+        isinstance(template, tuple) and isinstance(rewritten, tuple)
+    ):
+        result = _preserve_explicit_sequence_shape(template, rewritten)
+    return result
 
 
 def _rewritten_candidate(
@@ -180,100 +189,94 @@ def _rewritten_candidate(
     return candidate
 
 
-def _retarget_binding_documents(
-    documents: tuple[ExternalConceptBindingDocumentModel, ...],
-    *,
-    source: SDLAuthoringArtifact,
-    target: SDLAuthoringArtifact,
-    source_digest: str,
-    target_digest: str,
-    before: str,
-    after: str,
-) -> tuple[ExternalConceptBindingDocumentModel, ...]:
-    source_subjects = {subject.canonical_ref: subject for subject in external_concept_subjects(source)}
-    target_subjects = {subject.canonical_ref: subject for subject in external_concept_subjects(target)}
-    transformed: list[ExternalConceptBindingDocumentModel] = []
-    for document in documents:
-        payload = document.model_dump(mode="json")
-        bindings = payload.get("bindings")
-        if not isinstance(bindings, dict):
-            raise ValueError("external concept binding document has an invalid binding map")
-        for binding in bindings.values():
-            if not isinstance(binding, dict) or not isinstance(binding.get("subject"), dict):
-                raise ValueError("external concept binding document has an invalid subject")
-            subject = binding["subject"]
-            canonical_ref = str(subject.get("canonical_ref", ""))
-            source_subject = source_subjects.get(canonical_ref)
-            same_source_coordinate = source_subject is not None and (
-                source_subject.subject_kind == subject.get("subject_kind")
-                and source_subject.owning_contract_id == subject.get("owning_contract_id")
-                and source_subject.lifecycle_phase.value == subject.get("lifecycle_phase")
-            )
-            supplied_digest = str(subject.get("artifact_digest", ""))
-            if same_source_coordinate and supplied_digest.casefold() != source_digest.casefold():
-                raise ValueError("external concept subject is stale for the source artifact")
-            if supplied_digest.casefold() != source_digest.casefold():
-                continue
-            if not same_source_coordinate or source_subject is None:
-                raise ValueError("external concept subject does not resolve in the source artifact")
-            rewritten_ref = after if canonical_ref == before else canonical_ref
-            target_subject = target_subjects.get(rewritten_ref)
-            if target_subject is None or target_subject.subject_kind != source_subject.subject_kind:
-                raise ValueError("external concept subject does not resolve in the target artifact")
-            subject["canonical_ref"] = rewritten_ref
-            subject["artifact_digest"] = target_digest
-        transformed.append(ExternalConceptBindingDocumentModel.model_validate(payload))
-    return tuple(transformed)
+@dataclass(frozen=True, slots=True)
+class _RenameSelection:
+    declaration: Declaration
+    section: str
+    old_key: str
+    new_key: str
+    new_address: str
 
 
-def rename_sdl_declaration(
+@dataclass(frozen=True, slots=True)
+class _RenamedArtifacts:
+    target: SDLAuthoringArtifact
+    target_digest: SDLCanonicalDigest
+    binding_documents: tuple[ExternalConceptBindingDocumentModel, ...]
+
+
+def _select_rename(
     source: SDLAuthoringArtifact,
     request: RenameSDLDeclarationRequest,
-    *,
-    binding_documents: tuple[ExternalConceptBindingDocumentModel, ...] = (),
-) -> SDLTransformationResult:
-    """Atomically rename one exact top-level SDL declaration and its references."""
-
-    if not isinstance(source, (Scenario, ExpandedScenario)) or not source.semantic_validated:
-        raise SDLParseError("SDL transformation requires a semantically admitted authoring scenario")
-    source_digest = canonical_sdl_digest(source)
-    index = build_declaration_index(source)
+    source_digest: SDLCanonicalDigest,
+    index: DeclarationIndex,
+) -> _RenameSelection | SDLTransformationResult:
     resolved = top_level_declaration(source, index, request.target_address)
+    result: _RenameSelection | SDLTransformationResult
     if resolved is None:
-        return refused_rename(
+        result = refused_rename(
             source_digest=source_digest,
             request=request,
             diagnostic_code="artifact-transformation.target-not-exact",
             message="The request target is not an exact supported declaration address.",
         )
-    declaration, section, old_key = resolved
-    try:
-        new_key = _new_qualified_key(section=section, old_key=old_key, new_local_name=request.new_local_name)
-    except ValueError:
-        return refused_rename(
-            source_digest=source_digest,
-            request=request,
-            diagnostic_code="artifact-transformation.target-unsupported",
-            message="The requested replacement is outside the declaration's supported identity boundary.",
-            passed_checks=("source-admitted", "target-exact"),
-            affected_identities=(request.target_address,),
-        )
-    new_address = f"{section}.{new_key}"
-    collision = index.declaration_for(new_address)
-    if collision is not None and collision.address != declaration.address:
-        return refused_rename(
-            source_digest=source_digest,
-            request=request,
-            diagnostic_code="artifact-transformation.identity-collision",
-            message="The requested replacement collides with an existing canonical declaration.",
-            passed_checks=("source-admitted", "target-exact", "target-supported"),
-            affected_identities=(request.target_address,),
-        )
+    else:
+        declaration, section, old_key = resolved
+        try:
+            new_key = _new_qualified_key(
+                section=section,
+                old_key=old_key,
+                new_local_name=request.new_local_name,
+            )
+        except ValueError:
+            result = refused_rename(
+                source_digest=source_digest,
+                request=request,
+                diagnostic_code="artifact-transformation.target-unsupported",
+                message="The requested replacement is outside the declaration's supported identity boundary.",
+                passed_checks=("source-admitted", "target-exact"),
+                affected_identities=(request.target_address,),
+            )
+        else:
+            new_address = f"{section}.{new_key}"
+            collision = index.declaration_for(new_address)
+            if collision is not None and collision.address != declaration.address:
+                result = refused_rename(
+                    source_digest=source_digest,
+                    request=request,
+                    diagnostic_code="artifact-transformation.identity-collision",
+                    message="The requested replacement collides with an existing canonical declaration.",
+                    passed_checks=("source-admitted", "target-exact", "target-supported"),
+                    affected_identities=(request.target_address,),
+                )
+            else:
+                result = _RenameSelection(
+                    declaration=declaration,
+                    section=section,
+                    old_key=old_key,
+                    new_key=new_key,
+                    new_address=new_address,
+                )
+    return result
 
+
+def _build_renamed_artifacts(
+    source: SDLAuthoringArtifact,
+    request: RenameSDLDeclarationRequest,
+    source_digest: SDLCanonicalDigest,
+    selection: _RenameSelection,
+    binding_documents: tuple[ExternalConceptBindingDocumentModel, ...],
+) -> _RenamedArtifacts | SDLTransformationResult:
+    result: _RenamedArtifacts | SDLTransformationResult
     try:
-        target = _rewritten_candidate(source, section=section, old_key=old_key, new_key=new_key)
+        target = _rewritten_candidate(
+            source,
+            section=selection.section,
+            old_key=selection.old_key,
+            new_key=selection.new_key,
+        )
     except (SDLValidationError, ValidationError, TypeError, ValueError):
-        return refused_rename(
+        result = refused_rename(
             source_digest=source_digest,
             request=request,
             diagnostic_code="artifact-transformation.target-invalid",
@@ -281,59 +284,71 @@ def rename_sdl_declaration(
             passed_checks=("source-admitted", "target-exact", "target-injective", "target-supported"),
             affected_identities=(request.target_address,),
         )
-    target_digest = canonical_sdl_digest(target)
-    try:
-        transformed_bindings = _retarget_binding_documents(
-            binding_documents,
-            source=source,
-            target=target,
-            source_digest=source_digest.value,
-            target_digest=target_digest.value,
-            before=request.target_address,
-            after=new_address,
-        )
-    except (ValidationError, ValueError):
-        return refused_rename(
-            source_digest=source_digest,
-            request=request,
-            diagnostic_code="artifact-transformation.linked-artifact-stale",
-            message="A supplied linked artifact does not resolve against the exact source and target identities.",
-            passed_checks=("source-admitted", "target-exact", "target-injective", "target-supported"),
-            affected_identities=(request.target_address,),
-        )
+    else:
+        target_digest = canonical_sdl_digest(target)
+        try:
+            transformed_bindings = _retarget_binding_documents(
+                binding_documents,
+                source=source,
+                target=target,
+                source_digest=source_digest.value,
+                target_digest=target_digest.value,
+                before=request.target_address,
+                after=selection.new_address,
+            )
+        except (ValidationError, ValueError):
+            result = refused_rename(
+                source_digest=source_digest,
+                request=request,
+                diagnostic_code="artifact-transformation.linked-artifact-stale",
+                message="A supplied linked artifact does not resolve against the exact source and target identities.",
+                passed_checks=("source-admitted", "target-exact", "target-injective", "target-supported"),
+                affected_identities=(request.target_address,),
+            )
+        else:
+            result = _RenamedArtifacts(
+                target=target,
+                target_digest=target_digest,
+                binding_documents=transformed_bindings,
+            )
+    return result
 
+
+def _rename_preservation_verified(
+    source: SDLAuthoringArtifact,
+    request: RenameSDLDeclarationRequest,
+    index: DeclarationIndex,
+    selection: _RenameSelection,
+    target: SDLAuthoringArtifact,
+) -> bool:
     try:
-        round_trip = _rewritten_candidate(target, section=section, old_key=new_key, new_key=old_key)
+        round_trip = _rewritten_candidate(
+            target,
+            section=selection.section,
+            old_key=selection.new_key,
+            new_key=selection.old_key,
+        )
         round_trip_digest = canonical_sdl_digest(round_trip)
     except (SDLValidationError, ValidationError, TypeError, ValueError):
-        round_trip_digest = None
+        return False
     target_index = build_declaration_index(target)
-    target_declaration = target_index.declaration_for(new_address)
-    preservation_verified = (
+    target_declaration = target_index.declaration_for(selection.new_address)
+    return (
         round_trip_digest is not None
         and canonical_sdl_bytes(round_trip) == canonical_sdl_bytes(source)
         and target_declaration is not None
-        and target_declaration.kind == declaration.kind
+        and target_declaration.kind == selection.declaration.kind
         and target_index.declaration_for(request.target_address) is None
         and len(target_index.declarations) == len(index.declarations)
     )
-    if not preservation_verified:
-        return refused_rename(
-            source_digest=source_digest,
-            request=request,
-            diagnostic_code="artifact-transformation.preservation-failed",
-            message="The transformed candidate did not satisfy the identity-transport round-trip relation.",
-            passed_checks=(
-                "linked-artifacts-current",
-                "source-admitted",
-                "target-admitted",
-                "target-exact",
-                "target-injective",
-                "target-supported",
-            ),
-            affected_identities=(request.target_address,),
-        )
 
+
+def _successful_rename_result(
+    request: RenameSDLDeclarationRequest,
+    source_digest: SDLCanonicalDigest,
+    selection: _RenameSelection,
+    artifacts: _RenamedArtifacts,
+) -> SDLTransformationResult:
     policy_digest = default_policy_digest()
     report = ArtifactTransformationReportModel(
         operation_profile=RENAME_PROFILE,
@@ -343,7 +358,7 @@ def rename_sdl_declaration(
         target_profile=SDL_CONTRACT_PROFILE,
         canonicalization_profile=source_digest.profile,
         source_digest=source_digest.value,
-        target_digest=target_digest.value,
+        target_digest=artifacts.target_digest.value,
         policy_digest=policy_digest,
         derivation_digest=rename_derivation_digest(
             source_digest=source_digest.value,
@@ -372,19 +387,82 @@ def rename_sdl_declaration(
         affected_identities=(request.target_address,),
         identity_map=(
             ArtifactTransformationIdentityMapModel(
-                declaration_kind=declaration.kind,
+                declaration_kind=selection.declaration.kind,
                 before=request.target_address,
-                after=new_address,
+                after=selection.new_address,
             ),
         ),
         preservation=ArtifactTransformationPreservationModel(
             profile=IDENTITY_TRANSPORT_PROFILE,
             outcome=PreservationOutcome.VERIFIED,
-            evidence_digests=tuple(sorted({source_digest.value, target_digest.value})),
+            evidence_digests=tuple(sorted({source_digest.value, artifacts.target_digest.value})),
             limitations=("Finite structural and semantic verification does not establish behavioral equivalence.",),
         ),
     )
-    return SDLTransformationResult(output=target, binding_documents=transformed_bindings, report=report)
+    return SDLTransformationResult(
+        output=artifacts.target,
+        binding_documents=artifacts.binding_documents,
+        report=report,
+    )
+
+
+def _finish_rename(
+    source: SDLAuthoringArtifact,
+    request: RenameSDLDeclarationRequest,
+    source_digest: SDLCanonicalDigest,
+    index: DeclarationIndex,
+    selection: _RenameSelection,
+    artifacts: _RenamedArtifacts,
+) -> SDLTransformationResult:
+    if _rename_preservation_verified(source, request, index, selection, artifacts.target):
+        result = _successful_rename_result(request, source_digest, selection, artifacts)
+    else:
+        result = refused_rename(
+            source_digest=source_digest,
+            request=request,
+            diagnostic_code="artifact-transformation.preservation-failed",
+            message="The transformed candidate did not satisfy the identity-transport round-trip relation.",
+            passed_checks=(
+                "linked-artifacts-current",
+                "source-admitted",
+                "target-admitted",
+                "target-exact",
+                "target-injective",
+                "target-supported",
+            ),
+            affected_identities=(request.target_address,),
+        )
+    return result
+
+
+def rename_sdl_declaration(
+    source: SDLAuthoringArtifact,
+    request: RenameSDLDeclarationRequest,
+    *,
+    binding_documents: tuple[ExternalConceptBindingDocumentModel, ...] = (),
+) -> SDLTransformationResult:
+    """Atomically rename one exact top-level SDL declaration and its references."""
+
+    if not isinstance(source, (Scenario, ExpandedScenario)) or not source.semantic_validated:
+        raise SDLParseError("SDL transformation requires a semantically admitted authoring scenario")
+    source_digest = canonical_sdl_digest(source)
+    index = build_declaration_index(source)
+    selection = _select_rename(source, request, source_digest, index)
+    if isinstance(selection, SDLTransformationResult):
+        result = selection
+    else:
+        artifacts = _build_renamed_artifacts(
+            source,
+            request,
+            source_digest,
+            selection,
+            binding_documents,
+        )
+        if isinstance(artifacts, SDLTransformationResult):
+            result = artifacts
+        else:
+            result = _finish_rename(source, request, source_digest, index, selection, artifacts)
+    return result
 
 
 __all__ = ["rename_sdl_declaration"]

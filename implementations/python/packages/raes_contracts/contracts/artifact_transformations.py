@@ -127,8 +127,7 @@ class ArtifactTransformationReportModel(ContractModel):
     losses: tuple[ArtifactTransformationLossModel, ...] = ()
     diagnostics: tuple[DiagnosticModel, ...] = ()
 
-    @model_validator(mode="after")
-    def _validate_result_shape(self) -> ArtifactTransformationReportModel:
+    def _validate_status_shape(self) -> None:
         if self.status == ArtifactTransformationStatus.SUCCESS:
             if self.target_digest is None:
                 raise ValueError("successful transformation requires target_digest")
@@ -140,6 +139,7 @@ class ArtifactTransformationReportModel(ContractModel):
             if not self.diagnostics:
                 raise ValueError("refused transformation requires diagnostics")
 
+    def _validate_identity_ordering(self) -> None:
         if self.affected_identities != tuple(sorted(set(self.affected_identities))):
             raise ValueError("affected_identities must be sorted and unique")
         identity_order = tuple((item.before, item.after, item.declaration_kind) for item in self.identity_map)
@@ -148,15 +148,26 @@ class ArtifactTransformationReportModel(ContractModel):
         loss_order = tuple((item.kind.value, item.affected_identity) for item in self.losses)
         if loss_order != tuple(sorted(set(loss_order))):
             raise ValueError("losses must be sorted and unique")
+
+    def _validate_check_ordering(self) -> None:
         for checks, label in ((self.preconditions, "preconditions"), (self.postconditions, "postconditions")):
             check_ids = tuple(check.check_id for check in checks)
             if check_ids != tuple(sorted(set(check_ids))):
                 raise ValueError(f"{label} must be sorted and unique by check_id")
+
+    def _validate_diagnostic_ordering(self) -> None:
         diagnostic_order = tuple(
             (item.code, item.address, item.severity.value, item.message) for item in self.diagnostics
         )
         if diagnostic_order != tuple(sorted(set(diagnostic_order))):
             raise ValueError("diagnostics must be sorted and unique")
+
+    @model_validator(mode="after")
+    def _validate_result_shape(self) -> ArtifactTransformationReportModel:
+        self._validate_status_shape()
+        self._validate_identity_ordering()
+        self._validate_check_ordering()
+        self._validate_diagnostic_ordering()
         return self
 
     @classmethod

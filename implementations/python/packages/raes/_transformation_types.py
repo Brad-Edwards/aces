@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, TypeVar
 
 from raes_contracts.contracts import (
     ArtifactTransformationKind,
@@ -73,14 +72,11 @@ class SDLTransformationResult:
         return self.output is not None and self.report.status == ArtifactTransformationStatus.SUCCESS
 
 
-PortableContractT = TypeVar("PortableContractT", bound=ContractModel)
-
-
 @dataclass(frozen=True, slots=True)
-class PortableContractTransformationResult(Generic[PortableContractT]):
+class PortableContractTransformationResult:
     """Isolated admitted portable-contract result and canonical report."""
 
-    output: PortableContractT
+    output: ContractModel
     report: ArtifactTransformationReportModel
 
 
@@ -99,7 +95,6 @@ class CanonicalArtifactComparison:
 __all__ = [
     "ArtifactTransformationPolicy",
     "CanonicalArtifactComparison",
-    "PortableContractT",
     "PortableContractTransformationResult",
     "RemoveSDLDeclarationRequest",
     "RenameSDLDeclarationRequest",

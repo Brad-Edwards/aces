@@ -36,7 +36,7 @@ from ._transformation_types import (
     SDLAuthoringArtifact,
     SDLTransformationResult,
 )
-from .canonical import canonical_sdl_digest
+from .canonical import SDLCanonicalDigest, canonical_sdl_digest
 from .scenario import ExpandedScenario, Scenario
 from .validator import SemanticValidator
 
@@ -66,62 +66,12 @@ def _removed_candidate(
     return candidate
 
 
-def remove_sdl_declaration(
-    source: SDLAuthoringArtifact,
+def _successful_removal_result(
+    target: SDLAuthoringArtifact,
     request: RemoveSDLDeclarationRequest,
-    *,
-    policy: ArtifactTransformationPolicy | None = None,
-    binding_documents: tuple[ExternalConceptBindingDocumentModel, ...] = (),
+    policy: ArtifactTransformationPolicy,
+    source_digest: SDLCanonicalDigest,
 ) -> SDLTransformationResult:
-    """Remove one exact unreferenced declaration under explicit typed loss policy."""
-
-    if not isinstance(source, (Scenario, ExpandedScenario)) or not source.semantic_validated:
-        raise SDLParseError("SDL transformation requires a semantically admitted authoring scenario")
-    policy = ArtifactTransformationPolicy() if policy is None else policy
-    source_digest = canonical_sdl_digest(source)
-    resolved = top_level_declaration(source, build_declaration_index(source), request.target_address)
-    if resolved is None:
-        return refused_removal(
-            source_digest=source_digest,
-            request=request,
-            policy=policy,
-            diagnostic_code="artifact-transformation.target-not-exact",
-            message="The request target is not an exact supported declaration address.",
-        )
-    _, section, local_key = resolved
-    if ArtifactTransformationLossKind.DECLARATION_REMOVED not in policy.allowed_loss_kinds:
-        return refused_removal(
-            source_digest=source_digest,
-            request=request,
-            policy=policy,
-            diagnostic_code="artifact-transformation.loss-not-authorized",
-            message="Declaration removal requires explicit authorization of its exact loss kind.",
-            passed_checks=("source-admitted", "target-exact"),
-            include_loss=True,
-        )
-    if binding_documents:
-        return refused_removal(
-            source_digest=source_digest,
-            request=request,
-            policy=policy,
-            diagnostic_code="artifact-transformation.linked-artifact-unsupported",
-            message="Declaration removal cannot silently discard or retarget supplied concept bindings.",
-            passed_checks=("loss-authorized", "source-admitted", "target-exact"),
-            include_loss=True,
-        )
-    try:
-        target = _removed_candidate(source, section=section, local_key=local_key)
-    except (SDLValidationError, ValidationError, TypeError, ValueError):
-        return refused_removal(
-            source_digest=source_digest,
-            request=request,
-            policy=policy,
-            diagnostic_code="artifact-transformation.target-invalid",
-            message="The complete transformed candidate failed structural or semantic admission.",
-            passed_checks=("loss-authorized", "source-admitted", "target-exact"),
-            include_loss=True,
-        )
-
     target_digest = canonical_sdl_digest(target)
     policy_digest = transformation_policy_digest(policy)
     report = ArtifactTransformationReportModel(
@@ -154,6 +104,68 @@ def remove_sdl_declaration(
         losses=(removal_loss(request.target_address, severity=Severity.WARNING),),
     )
     return SDLTransformationResult(output=target, binding_documents=(), report=report)
+
+
+def remove_sdl_declaration(
+    source: SDLAuthoringArtifact,
+    request: RemoveSDLDeclarationRequest,
+    *,
+    policy: ArtifactTransformationPolicy | None = None,
+    binding_documents: tuple[ExternalConceptBindingDocumentModel, ...] = (),
+) -> SDLTransformationResult:
+    """Remove one exact unreferenced declaration under explicit typed loss policy."""
+
+    if not isinstance(source, (Scenario, ExpandedScenario)) or not source.semantic_validated:
+        raise SDLParseError("SDL transformation requires a semantically admitted authoring scenario")
+    resolved_policy = ArtifactTransformationPolicy() if policy is None else policy
+    source_digest = canonical_sdl_digest(source)
+    resolved = top_level_declaration(source, build_declaration_index(source), request.target_address)
+    if resolved is None:
+        result = refused_removal(
+            source_digest=source_digest,
+            request=request,
+            policy=resolved_policy,
+            diagnostic_code="artifact-transformation.target-not-exact",
+            message="The request target is not an exact supported declaration address.",
+        )
+    else:
+        _, section, local_key = resolved
+        if ArtifactTransformationLossKind.DECLARATION_REMOVED not in resolved_policy.allowed_loss_kinds:
+            result = refused_removal(
+                source_digest=source_digest,
+                request=request,
+                policy=resolved_policy,
+                diagnostic_code="artifact-transformation.loss-not-authorized",
+                message="Declaration removal requires explicit authorization of its exact loss kind.",
+                passed_checks=("source-admitted", "target-exact"),
+                include_loss=True,
+            )
+        elif binding_documents:
+            result = refused_removal(
+                source_digest=source_digest,
+                request=request,
+                policy=resolved_policy,
+                diagnostic_code="artifact-transformation.linked-artifact-unsupported",
+                message="Declaration removal cannot silently discard or retarget supplied concept bindings.",
+                passed_checks=("loss-authorized", "source-admitted", "target-exact"),
+                include_loss=True,
+            )
+        else:
+            try:
+                target = _removed_candidate(source, section=section, local_key=local_key)
+            except (SDLValidationError, ValidationError, TypeError, ValueError):
+                result = refused_removal(
+                    source_digest=source_digest,
+                    request=request,
+                    policy=resolved_policy,
+                    diagnostic_code="artifact-transformation.target-invalid",
+                    message="The complete transformed candidate failed structural or semantic admission.",
+                    passed_checks=("loss-authorized", "source-admitted", "target-exact"),
+                    include_loss=True,
+                )
+            else:
+                result = _successful_removal_result(target, request, resolved_policy, source_digest)
+    return result
 
 
 __all__ = ["remove_sdl_declaration"]

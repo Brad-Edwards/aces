@@ -84,8 +84,9 @@ def test_transformation_report_is_closed_frozen_and_deterministic() -> None:
     assert report.model_dump_json() == _successful_report().model_dump_json()
     assert "artifact-transformation-report-v1" in schema_bundle()
 
+    invalid_payload = report.model_dump(mode="json") | {"unknown": "forbidden"}
     with pytest.raises(ValidationError):
-        ArtifactTransformationReportModel.model_validate(report.model_dump(mode="json") | {"unknown": "forbidden"})
+        ArtifactTransformationReportModel.model_validate(invalid_payload)
     with pytest.raises(ValidationError):
         report.status = ArtifactTransformationStatus.REFUSED  # type: ignore[misc]
 
@@ -390,11 +391,12 @@ def test_portable_contract_transformation_rejects_unprofiled_models() -> None:
         value: int
 
     source = UnprofiledContract(value=1)
+    comparison_peer = UnprofiledContract(value=1)
 
     with pytest.raises(TypeError, match="explicit governed"):
         canonicalize_portable_contract(source)
     with pytest.raises(TypeError, match="explicit governed"):
-        compare_canonical_artifacts(source, UnprofiledContract(value=1))
+        compare_canonical_artifacts(source, comparison_peer)
 
 
 def test_canonical_comparison_distinguishes_meaning_and_artifact_kind() -> None:
@@ -410,8 +412,9 @@ def test_canonical_comparison_distinguishes_meaning_and_artifact_kind() -> None:
     assert not comparison.equivalent
     assert comparison.artifact_kind == ArtifactTransformationKind.SDL_AUTHORING
     assert comparison.relation_profile == "canonical-artifact-identity"
+    portable_contract = _concept_binding_inputs()[1]
     with pytest.raises(TypeError, match="same supported artifact kind"):
-        compare_canonical_artifacts(scenario, _concept_binding_inputs()[1])
+        compare_canonical_artifacts(scenario, portable_contract)
 
 
 @settings(max_examples=24, deadline=None)

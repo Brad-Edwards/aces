@@ -24,7 +24,6 @@ from ._transformation_support import (
 )
 from ._transformation_types import (
     CanonicalArtifactComparison,
-    PortableContractT,
     PortableContractTransformationResult,
     SDLAuthoringArtifact,
 )
@@ -41,8 +40,8 @@ def _portable_contract_profile(model: ContractModel) -> str:
 
 
 def canonicalize_portable_contract(
-    source: PortableContractT,
-) -> PortableContractTransformationResult[PortableContractT]:
+    source: ContractModel,
+) -> PortableContractTransformationResult:
     """Re-admit an isolated portable contract and verify canonical identity."""
 
     if not isinstance(source, ContractModel):

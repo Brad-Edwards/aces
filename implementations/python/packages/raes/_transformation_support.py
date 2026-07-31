@@ -16,7 +16,7 @@ from raes_contracts.contracts import (
     PreservationOutcome,
     TransformationCheckOutcome,
 )
-from raes_contracts.diagnostics import Diagnostic, Severity, diagnostic_model
+from raes_contracts.diagnostics import Diagnostic, DiagnosticModel, Severity, diagnostic_model
 
 from ._declarations import Declaration, DeclarationIndex
 from ._module_symbols import HASHMAP_SECTIONS
@@ -47,7 +47,7 @@ def diagnostic(
     *,
     address: str = "",
     severity: Severity = Severity.ERROR,
-):
+) -> DiagnosticModel:
     return diagnostic_model(
         Diagnostic(
             code=code,
@@ -166,17 +166,18 @@ def top_level_declaration(
     address: str,
 ) -> tuple[Declaration, str, str] | None:
     declaration = index.declaration_for(address)
-    if declaration is None or "." not in address:
-        return None
-    section, local_key = address.split(".", 1)
-    if section not in HASHMAP_SECTIONS:
-        return None
-    section_value = getattr(scenario, section, None)
-    if not isinstance(section_value, Mapping) or local_key not in section_value:
-        return None
-    if declaration.model_path != f"{section}.{local_key}":
-        return None
-    return declaration, section, local_key
+    result: tuple[Declaration, str, str] | None = None
+    if declaration is not None and "." in address:
+        section, local_key = address.split(".", 1)
+        section_value = getattr(scenario, section, None)
+        if (
+            section in HASHMAP_SECTIONS
+            and isinstance(section_value, Mapping)
+            and local_key in section_value
+            and declaration.model_path == f"{section}.{local_key}"
+        ):
+            result = (declaration, section, local_key)
+    return result
 
 
 def removal_loss(
