@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973",
+  "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109",
   "last_change": {
-    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
-    "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973"
+    "summary": "Propagated SSH generated-artifact output selection semantics into satisfiability evidence for issue #1010.",
+    "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109"
   }
 }

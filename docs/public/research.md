@@ -13,9 +13,9 @@ You can inspect:
 
 Working records remain in the repository for peer review. They are not part of
 this hosted guide. Start with the
-[formal specifications](https://github.com/RAESystem/rae/tree/main/specs),
-[contracts](https://github.com/RAESystem/rae/tree/main/contracts), and
-[research directory](https://github.com/RAESystem/rae/tree/main/docs/research).
+[formal specifications](https://github.com/OpenRAE/rae/tree/main/specs),
+[contracts](https://github.com/OpenRAE/rae/tree/main/contracts), and
+[research directory](https://github.com/OpenRAE/rae/tree/main/docs/research).
 
 RAES can support a bounded reproduction attempt. One successful parse,
 realization, or replay does not prove scientific reproducibility.

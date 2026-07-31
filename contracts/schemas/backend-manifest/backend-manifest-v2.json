@@ -578,6 +578,16 @@
       "title": "EvaluatorCapabilitiesModel",
       "type": "object"
     },
+    "GeneratedArtifactKind": {
+      "description": "Portable kinds of material a provisioner may generate.",
+      "enum": [
+        "certificate_bundle",
+        "rendered_config",
+        "ssh_key_bundle"
+      ],
+      "title": "GeneratedArtifactKind",
+      "type": "string"
+    },
     "LiteralBindingValueModel": {
       "additionalProperties": false,
       "description": "Portable literal value; strict type validation occurs at its descriptor.",
@@ -1730,20 +1740,67 @@
         {
           "if": {
             "properties": {
+              "supported_account_features": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "supported_account_features"
+            ]
+          },
+          "then": {
+            "properties": {
               "supports_accounts": {
-                "const": false
+                "const": true
               }
             },
             "required": [
               "supports_accounts"
             ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "supports_generated_artifacts": {
+                "const": true
+              }
+            },
+            "required": [
+              "supports_generated_artifacts"
+            ]
           },
           "then": {
             "properties": {
-              "supported_account_features": {
-                "maxItems": 0
+              "supported_generated_artifact_kinds": {
+                "minItems": 1
               }
-            }
+            },
+            "required": [
+              "supported_generated_artifact_kinds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "supported_generated_artifact_kinds": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "supported_generated_artifact_kinds"
+            ]
+          },
+          "then": {
+            "properties": {
+              "supports_generated_artifacts": {
+                "const": true
+              }
+            },
+            "required": [
+              "supports_generated_artifacts"
+            ]
           }
         }
       ],
@@ -1796,6 +1853,14 @@
           },
           "title": "Supported Domain Profiles",
           "type": "array"
+        },
+        "supported_generated_artifact_kinds": {
+          "items": {
+            "$ref": "#/$defs/GeneratedArtifactKind"
+          },
+          "title": "Supported Generated Artifact Kinds",
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_node_types": {
           "items": {
