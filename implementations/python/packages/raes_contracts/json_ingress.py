@@ -71,7 +71,7 @@ def parse_bounded_json_object(
 
     payload = parse_bounded_json(source, max_bytes=max_bytes, root="object")
     # The shared parser establishes the selected root type.
-    if not isinstance(payload, dict):  # pragma: no cover
+    if not isinstance(payload, dict):
         raise AssertionError("object-root parser returned a non-object")
     return payload
 
