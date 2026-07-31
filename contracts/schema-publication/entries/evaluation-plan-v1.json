@@ -2,9 +2,9 @@
   "contract_id": "evaluation-plan-v1",
   "schema_path": "contracts/schemas/plans/evaluation-plan-v1.json",
   "stability": "draft",
-  "content_hash": "6ab37890bed35b32d852f31f01b986c0d243f83bb986fd46e11ea1616efafcd5",
+  "content_hash": "ec563c738d21e8b0be1c50572e1f5100c39869b2093abfa71d9fc73cab2dae83",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "6ab37890bed35b32d852f31f01b986c0d243f83bb986fd46e11ea1616efafcd5"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "ec563c738d21e8b0be1c50572e1f5100c39869b2093abfa71d9fc73cab2dae83"
   }
 }

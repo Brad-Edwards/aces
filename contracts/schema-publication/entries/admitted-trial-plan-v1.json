@@ -2,9 +2,9 @@
   "contract_id": "admitted-trial-plan-v1",
   "schema_path": "contracts/schemas/plans/admitted-trial-plan-v1.json",
   "stability": "draft",
-  "content_hash": "4b85ec11998b0745e4d3d17861e06625f1b5bb99f3b6afffd8ac948fe96867ff",
+  "content_hash": "366f64c787d7db3334603c7ffe4607b79ae7a904ec644254a3e3408138a244b1",
   "last_change": {
-    "summary": "Propagated the secret-scope isolation dimension into the embedded scheduler-isolation-proof so admitted plans can carry a complete bounded-parallelism proof (issue #785).",
-    "content_hash": "4b85ec11998b0745e4d3d17861e06625f1b5bb99f3b6afffd8ac948fe96867ff"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "366f64c787d7db3334603c7ffe4607b79ae7a904ec644254a3e3408138a244b1"
   }
 }

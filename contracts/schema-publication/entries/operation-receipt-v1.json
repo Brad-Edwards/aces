@@ -2,9 +2,9 @@
   "contract_id": "operation-receipt-v1",
   "schema_path": "contracts/schemas/control-plane/operation-receipt-v1.json",
   "stability": "draft",
-  "content_hash": "e1f5d43c0303e20df01920b4b2c00482518f6efe3a12c6a40576ea477c7663bc",
+  "content_hash": "ec597654ec84617161098e883eb41e18bf30a81af3a50c0e316e284a920409df",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "e1f5d43c0303e20df01920b4b2c00482518f6efe3a12c6a40576ea477c7663bc"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "ec597654ec84617161098e883eb41e18bf30a81af3a50c0e316e284a920409df"
   }
 }

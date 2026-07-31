@@ -2337,8 +2337,22 @@ class TestObjective:
 # ---------------------------------------------------------------------------
 
 from raes.accounts import Account, PasswordStrength
-from raes.content import Content, ContentItem, ContentType
+from raes.content import Content, ContentItem, ContentType, ServiceSearchIndexSchemaMaterialization
 from raes.nodes import AssetValue, AssetValueLevel, OSFamily, ServicePort
+
+
+def _search_index_schema_materialization() -> dict[str, object]:
+    return {
+        "interface_profile": "service-search-index-schema",
+        "profile_version": "1",
+        "target_service_ref": "search",
+        "readback_assertion_refs": ["schema-ready"],
+        "evidence_requirement_refs": ["schema-readback"],
+        "observation_boundary_refs": ["participant-view"],
+        "requirements": {
+            "field_semantics": {"key": "exact-token"},
+        },
+    }
 
 
 class TestContent:
@@ -2391,6 +2405,67 @@ class TestContent:
             match="Directory content requires 'destination'",
         ):
             Content(type="directory", target="victim")
+
+    @pytest.mark.parametrize(
+        ("content", "message"),
+        [
+            (
+                {
+                    "type": "file",
+                    "target": "victim",
+                    "path": "/tmp/flag.txt",
+                    "service_materialization": _search_index_schema_materialization(),
+                },
+                "Search-index schema materialization requires dataset content",
+            ),
+            (
+                {
+                    "type": "dataset",
+                    "target": "victim",
+                    "source": {"name": "schema"},
+                    "service_materialization": _search_index_schema_materialization(),
+                },
+                "Search-index schema materialization must not carry source or items",
+            ),
+            (
+                {
+                    "type": "dataset",
+                    "target": "victim",
+                    "items": [{"name": "schema"}],
+                    "service_materialization": _search_index_schema_materialization(),
+                },
+                "Search-index schema materialization must not carry source or items",
+            ),
+            (
+                {
+                    "type": "file",
+                    "path": "/tmp/flag.txt",
+                    "service_materialization": _search_index_schema_materialization(),
+                },
+                "Content requires 'target'",
+            ),
+        ],
+    )
+    def test_search_index_schema_content_shape_rules(
+        self,
+        content: dict[str, object],
+        message: str,
+    ) -> None:
+        with pytest.raises(ValidationError, match=message):
+            Content.model_validate(content)
+
+    def test_search_index_schema_dataset_does_not_require_payload(self) -> None:
+        content = Content.model_validate(
+            {
+                "type": "dataset",
+                "target": "victim",
+                "service_materialization": _search_index_schema_materialization(),
+            }
+        )
+
+        assert isinstance(content.service_materialization, ServiceSearchIndexSchemaMaterialization)
+        assert content.source is None
+        assert content.items == []
 
 
 class TestAccount:

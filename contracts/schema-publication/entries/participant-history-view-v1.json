@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "2eb0de43e8e48b3f6f3eeb008c8f5d3be8b3cd585f4d28b1d7974c82c66a8bc9",
+  "content_hash": "d396a961790f60095b6885967777405056dddd124470a06fc2455cdc48680af7",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "2eb0de43e8e48b3f6f3eeb008c8f5d3be8b3cd585f4d28b1d7974c82c66a8bc9"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "d396a961790f60095b6885967777405056dddd124470a06fc2455cdc48680af7"
   }
 }

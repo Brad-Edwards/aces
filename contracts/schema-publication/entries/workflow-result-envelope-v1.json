@@ -2,9 +2,9 @@
   "contract_id": "workflow-result-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-result-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "ca40953f53b3f13a0bcf1e6bf9d631c9a94544278cef6882b3fa140a35022612",
+  "content_hash": "b4f5e3de5c333cf96fdb7c44eb65c3d757e4d05b4dcc456b2c24d21adf572569",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "ca40953f53b3f13a0bcf1e6bf9d631c9a94544278cef6882b3fa140a35022612"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "b4f5e3de5c333cf96fdb7c44eb65c3d757e4d05b4dcc456b2c24d21adf572569"
   }
 }

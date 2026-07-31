@@ -2,9 +2,9 @@
   "contract_id": "participant-resource-budget-policy-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-resource-budget-policy-v1.json",
   "stability": "draft",
-  "content_hash": "0d3aa2919271d566df9b8d0bb9882cc56f78b4de298c38485c7775fbb34cd574",
+  "content_hash": "3e01d6b28246fe7cf60f7b201c2b9fcebd869d1a3c4d8549098a6050870ee08b",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "0d3aa2919271d566df9b8d0bb9882cc56f78b4de298c38485c7775fbb34cd574"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "3e01d6b28246fe7cf60f7b201c2b9fcebd869d1a3c4d8549098a6050870ee08b"
   }
 }

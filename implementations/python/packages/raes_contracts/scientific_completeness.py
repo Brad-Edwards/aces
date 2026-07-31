@@ -103,7 +103,7 @@ class CompletenessProfileModel(ContractModel):
         if overlap:
             raise ValueError(f"relations cannot be both claimed and explicitly non-claimed: {overlap}")
         for claim in self.behavioral_claims:
-            validate_behavioral_claim_binding(claim, catalog)
+            validate_behavioral_claim_binding(claim)
         return self
 
 

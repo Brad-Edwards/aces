@@ -210,7 +210,7 @@ steps from this section and the machine-readable catalog alone:
    family must satisfy the single structural invariant set enforced by
    `implementations/python/tests/test_runtime_family_invariants.py` (the runtime
    SDL cross-family consistency epic
-   [#439](https://github.com/RAESystem/rae/issues/439) and children
+   [#439](https://github.com/OpenRAE/rae/issues/439) and children
    #442 / #443 / #444): a `Runtime<Noun>` model class, a
    `singular(collection_name) + "_id"` primary identifier, and a plural
    typed-child container registered in the registry. A new family that violates

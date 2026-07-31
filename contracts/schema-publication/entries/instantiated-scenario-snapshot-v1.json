@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "b8881d251f9889bc4ecc07b8bce78ca5d0e5ed72a2af573618c81e235a84004f",
+  "content_hash": "ebbb182be917c3d2b473f25df2374ab633bd2a73dc13af786e3c06f38d5f0ab6",
   "last_change": {
-    "summary": "Added SSH generated artifacts with per-output consumer selection and producer-private output declarations for issue #1010.",
-    "content_hash": "b8881d251f9889bc4ecc07b8bce78ca5d0e5ed72a2af573618c81e235a84004f"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "ebbb182be917c3d2b473f25df2374ab633bd2a73dc13af786e3c06f38d5f0ab6"
   }
 }

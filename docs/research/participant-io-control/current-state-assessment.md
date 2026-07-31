@@ -1,7 +1,7 @@
 # Participant Information-Flow And Control Current-State Assessment
 
 Date: 2026-07-15
-Issue: [#794](https://github.com/RAESystem/rae/issues/794)
+Issue: [#794](https://github.com/OpenRAE/rae/issues/794)
 Milestone: `Participant Information-Flow & Behavioral Equivalence`
 
 This assessment distinguishes normative definition, implementation, test,
@@ -140,9 +140,9 @@ surface, realized exposure, and decision/outcome. It refines the existing
 participant view rather than inventing a second visibility system.
 
 Ground Control has only documentation links for SEM-219, SEM-220, and SEM-226;
-issues [#294](https://github.com/RAESystem/rae/issues/294),
-[#295](https://github.com/RAESystem/rae/issues/295), and
-[#296](https://github.com/RAESystem/rae/issues/296) remain open. Therefore
+issues [#294](https://github.com/OpenRAE/rae/issues/294),
+[#295](https://github.com/OpenRAE/rae/issues/295), and
+[#296](https://github.com/OpenRAE/rae/issues/296) remain open. Therefore
 the ADR and formal matrix establish design, not runtime mediation or delivered
 exposure.
 

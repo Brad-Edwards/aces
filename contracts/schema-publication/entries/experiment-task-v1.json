@@ -2,9 +2,9 @@
   "contract_id": "experiment-task-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json",
   "stability": "draft",
-  "content_hash": "328f94b60bb8d6cc607c6b095fbf93cf2fb555c949c9d98ec3b56ab1387c085f",
+  "content_hash": "1268ebf471a62cd443c183664460d19b9ee03b1b7b2e312c8dc8c3c40305a5a9",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "328f94b60bb8d6cc607c6b095fbf93cf2fb555c949c9d98ec3b56ab1387c085f"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "1268ebf471a62cd443c183664460d19b9ee03b1b7b2e312c8dc8c3c40305a5a9"
   }
 }

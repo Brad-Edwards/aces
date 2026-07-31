@@ -100,7 +100,7 @@
           "type": "boolean"
         },
         "uri": {
-          "const": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1",
+          "const": "https://openrae.github.io/rae/schemas/semantic-invariants/v1",
           "title": "Uri",
           "type": "string"
         }
@@ -118,7 +118,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1",
+  "$id": "https://openrae.github.io/rae/schemas/semantic-invariants/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published shape for RAES semantic-invariant annotations.",
@@ -156,7 +156,7 @@
       "type": "string"
     },
     "uri": {
-      "const": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1",
+      "const": "https://openrae.github.io/rae/schemas/semantic-invariants/v1",
       "title": "Uri",
       "type": "string"
     }

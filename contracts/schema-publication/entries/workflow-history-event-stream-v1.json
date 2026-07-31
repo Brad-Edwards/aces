@@ -2,9 +2,9 @@
   "contract_id": "workflow-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "22737796b0903c109e718cdb2b14d1a05832019a121437c45f153a9a76caf916",
+  "content_hash": "591782d81458822d94e3f8bf6bc3eded95d97d5750659412a32c853288e07c4d",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "22737796b0903c109e718cdb2b14d1a05832019a121437c45f153a9a76caf916"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "591782d81458822d94e3f8bf6bc3eded95d97d5750659412a32c853288e07c4d"
   }
 }

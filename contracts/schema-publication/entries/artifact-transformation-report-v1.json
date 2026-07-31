@@ -2,9 +2,9 @@
   "contract_id": "artifact-transformation-report-v1",
   "schema_path": "contracts/schemas/artifact-transformations/artifact-transformation-report-v1.json",
   "stability": "draft",
-  "content_hash": "fc2844e8c0c1c8fb7dc2b5c50d00318626e6cfc3a65d9811f90497e3c6e12d66",
+  "content_hash": "d645595e96c86e16de9c772b26504e751ba49deed2dda591d094246cbeefc417",
   "last_change": {
-    "summary": "Initial publication for safe deterministic artifact transformations in issue #265.",
-    "content_hash": "fc2844e8c0c1c8fb7dc2b5c50d00318626e6cfc3a65d9811f90497e3c6e12d66"
+    "summary": "Initial publication for safe deterministic artifact transformations under the OpenRAE schema namespace in issue #265.",
+    "content_hash": "d645595e96c86e16de9c772b26504e751ba49deed2dda591d094246cbeefc417"
   }
 }

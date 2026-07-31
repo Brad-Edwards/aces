@@ -413,7 +413,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raesystem.github.io/rae/schemas/participant-outcome-report-v1.json",
+  "$id": "https://openrae.github.io/rae/schemas/participant-outcome-report-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "SEM-215 outcome interpretation report.\n\nThe carrier deliberately has no score, reward, or objective-success\nfield: reward and return remain ADR-054 step signals, and objective and\nevaluation results remain their own contract surfaces.",

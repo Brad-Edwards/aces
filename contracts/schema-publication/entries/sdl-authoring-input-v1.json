@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "937977a12cbb6caef5511b14e7c57fc46d9099e27f8501b9f3c2a6f7de08290d",
+  "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28",
   "last_change": {
-    "summary": "Added SSH generated artifacts with per-output consumer selection and producer-private output declarations for issue #1010.",
-    "content_hash": "937977a12cbb6caef5511b14e7c57fc46d9099e27f8501b9f3c2a6f7de08290d"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28"
   }
 }

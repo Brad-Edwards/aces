@@ -59,7 +59,7 @@ semantics, examples, or code from that source.
   the SDL schema.
 
 The authored/defaulted/planned/realized/observed/derived distinction tested by
-[issue #160](https://github.com/RAESystem/rae/issues/160) is a carrier
+[issue #160](https://github.com/OpenRAE/rae/issues/160) is a carrier
 boundary, not a vocabulary tag. SDL and `model_fields_set` carry authored and
 defaulted meaning; compiler plans carry planned operations; realization
 provenance and realized-form disclosures carry admitted choices; evidence
@@ -558,8 +558,10 @@ RAES relies on prior work in four ways:
   [SP 800-61r2](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
   / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) frames incident
   handling. These sources motivate separate functional roles; none defines a
-  required RAES product profile. Initial authored content stays under top-level
-  `content` and `service_materialization` per ADR-088.
+  required RAES product profile. Initial authored content and portable
+  search-index field-schema state stay under top-level `content` and the closed
+  `service_materialization` profiles per ADR-088. Native field types and mapping
+  bodies do not cross that boundary.
 - **Automation and presentation precedents:** OASIS
   [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
   and [OpenC2](https://docs.oasis-open.org/openc2/oc2ls/v1.0/oc2ls-v1.0.html)

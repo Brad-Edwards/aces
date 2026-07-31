@@ -2,9 +2,9 @@
   "contract_id": "random-stream-vector-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-vector-v1.json",
   "stability": "draft",
-  "content_hash": "65e838472c5d1ac7a0eb2ffa4bfe6f3a756c77d776158c6dba8510e2edbc9001",
+  "content_hash": "ad3da3c814fcafeb9d523858286fd80682c7df00a8e82961f1b6c5ba2f80f005",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "65e838472c5d1ac7a0eb2ffa4bfe6f3a756c77d776158c6dba8510e2edbc9001"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "ad3da3c814fcafeb9d523858286fd80682c7df00a8e82961f1b6c5ba2f80f005"
   }
 }

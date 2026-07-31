@@ -10,7 +10,7 @@ from raes_contracts.behavioral_relation_profiles import (
     ActiveOpacityStrategyModel,
     BehavioralRelationProfileModel,
     CoalitionOpacityObserverModel,
-    load_behavioral_relation_profile,
+    load_behavioral_relation_profile_revision,
 )
 from raes_contracts.behavioral_relations import (
     validate_behavioral_claim_binding,
@@ -352,7 +352,10 @@ def analyze_participant_opacity_file(
             max_bytes=_MAX_INPUT_BYTES,
         )
         request = ParticipantOpacityAnalysisInputModel.model_validate(payload)
-        profile = load_behavioral_relation_profile(request.profile_id)
+        profile = load_behavioral_relation_profile_revision(
+            request.profile_id,
+            request.profile_revision,
+        )
     except (OSError, ValidationError, ValueError):
         raise ParticipantOpacityOperationalError(
             "opacity analysis input failed bounded closed-world admission"

@@ -2,9 +2,9 @@
   "contract_id": "external-concept-bindings-v1",
   "schema_path": "contracts/schemas/concept-authority/external-concept-bindings-v1.json",
   "stability": "draft",
-  "content_hash": "d0bb5f16d315f7efb21d3da932c62350db84ae476b7cba90034ea51bffc0456c",
+  "content_hash": "4779c89b92f03c8a99e5a2da7580744115163550296b83992e9aa7ce86fd097e",
   "last_change": {
-    "summary": "Published the portable, scheme-neutral external concept-binding assertion contract and its governed structural invariants for issue #986.",
-    "content_hash": "d0bb5f16d315f7efb21d3da932c62350db84ae476b7cba90034ea51bffc0456c"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "4779c89b92f03c8a99e5a2da7580744115163550296b83992e9aa7ce86fd097e"
   }
 }

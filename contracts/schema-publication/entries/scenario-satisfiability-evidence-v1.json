@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109",
+  "content_hash": "6e0c1ee6fb1752832a07c220d6762dfbdfd71d39effe38bc2e44ea0c0d3b8e7c",
   "last_change": {
-    "summary": "Propagated SSH generated-artifact output selection semantics into satisfiability evidence for issue #1010.",
-    "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "6e0c1ee6fb1752832a07c220d6762dfbdfd71d39effe38bc2e44ea0c0d3b8e7c"
   }
 }

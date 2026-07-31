@@ -252,14 +252,20 @@ def _append_service_materialization_requirements(
     scenario: InstantiatedScenario,
 ) -> None:
     for name, content in scenario.content.items():
-        if content.service_materialization is None:
+        binding = content.service_materialization
+        if binding is None:
             continue
+        requirement_kind = (
+            "service-search-index-schema-materialization"
+            if binding.interface_profile == "service-search-index-schema"
+            else "service-content-materialization"
+        )
         requirements.append(
             CompiledRealizationRequirement(
                 field_path=f"content.{name}.service_materialization",
                 address=_content_address(name),
                 domain=REALIZATION_DOMAIN,
-                requirement_kind="service-content-materialization",
+                requirement_kind=requirement_kind,
                 explicitness=ExplicitnessClass.EXACT,
                 provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
                 governing_scope=f"#/content/{name}/service_materialization",
