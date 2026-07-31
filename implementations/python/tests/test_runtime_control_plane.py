@@ -348,7 +348,13 @@ class _CountingProvisioner:
 
 
 def _generated_artifact_spec(generator: str = "rendered_config") -> dict[str, Any]:
-    selected_outputs = ["config"] if generator == "ssh_key_bundle" else []
+    consumer: dict[str, Any] = {
+        "node": "vm",
+        "mount_destination": "/etc/config.yml",
+        "access_mode": "read_only",
+    }
+    if generator == "ssh_key_bundle":
+        consumer["selected_outputs"] = ["config"]
     return {
         "generator": generator,
         "lifecycle": "regenerate_on_change",
@@ -361,14 +367,7 @@ def _generated_artifact_spec(generator: str = "rendered_config") -> dict[str, An
                 "disposition": "consumer_selected",
             }
         ],
-        "consumers": [
-            {
-                "node": "vm",
-                "mount_destination": "/etc/config.yml",
-                "access_mode": "read_only",
-                "selected_outputs": selected_outputs,
-            }
-        ],
+        "consumers": [consumer],
     }
 
 
@@ -466,6 +465,19 @@ def test_control_plane_rejects_malformed_generated_artifact_before_backend_calls
     target, provisioner = _target_with_manifest(create_stub_manifest())
 
     receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan(spec={"provenance": "config.yml"}))
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["provisioner.generated-artifact-invalid"]
+    assert provisioner.validate_calls == 0
+    assert provisioner.apply_calls == 0
+
+
+def test_control_plane_rejects_explicitly_empty_generated_artifact_selection() -> None:
+    target, provisioner = _target_with_manifest(create_stub_manifest())
+    spec = _generated_artifact_spec()
+    spec["consumers"][0]["selected_outputs"] = []
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan(spec=spec))
 
     assert receipt.accepted is False
     assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["provisioner.generated-artifact-invalid"]

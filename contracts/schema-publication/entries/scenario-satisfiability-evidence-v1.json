@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "dbd6810e5e7ad3822f1da6ca3c5f1a0bb54acf13cb3cfc3f1e5009979d830a72",
+  "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109",
   "last_change": {
     "summary": "Propagated SSH generated-artifact output selection semantics into satisfiability evidence for issue #1010.",
-    "content_hash": "dbd6810e5e7ad3822f1da6ca3c5f1a0bb54acf13cb3cfc3f1e5009979d830a72"
+    "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109"
   }
 }

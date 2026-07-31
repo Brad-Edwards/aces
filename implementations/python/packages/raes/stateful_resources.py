@@ -103,6 +103,8 @@ class GeneratedArtifactConsumer(StatefulResourceConsumer):
 
     selected_outputs: list[PortableIdentifier] = Field(
         default_factory=list,
+        exclude_if=lambda value: not value,
+        min_length=1,
         json_schema_extra={"uniqueItems": True},
     )
 

@@ -4470,6 +4470,7 @@
             "pattern": "^[a-z0-9]",
             "type": "string"
           },
+          "minItems": 1,
           "title": "Selected Outputs",
           "type": "array",
           "uniqueItems": true

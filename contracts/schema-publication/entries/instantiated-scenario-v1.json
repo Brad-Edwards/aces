@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "4f6b9ccce8916449aaa4f5adb0e1a9fdf52a9c99adb300a695c8dc821ba6b636",
+  "content_hash": "01110b248678b4025db9b035afe3a878c176386018c1f483188e76edcf8cf3db",
   "last_change": {
     "summary": "Added SSH generated artifacts with per-output consumer selection and producer-private output declarations for issue #1010.",
-    "content_hash": "4f6b9ccce8916449aaa4f5adb0e1a9fdf52a9c99adb300a695c8dc821ba6b636"
+    "content_hash": "01110b248678b4025db9b035afe3a878c176386018c1f483188e76edcf8cf3db"
   }
 }

@@ -167,6 +167,16 @@ def test_ssh_artifact_output_selection_survives_compile_and_plan():
             - node: client
               mount_destination: /home/operator/.ssh
               access_mode: read_only
+              selected_outputs: []
+            """,
+            "at least 1 item",
+        ),
+        (
+            "- {name: public-key, path: id.pub, sensitivity: public, disposition: consumer_selected}",
+            """
+            - node: client
+              mount_destination: /home/operator/.ssh
+              access_mode: read_only
               selected_outputs: [public-key, public-key]
             """,
             "selected_outputs must be unique",
@@ -216,9 +226,13 @@ def test_ssh_artifact_rejects_invalid_output_selection(
 
 
 def test_legacy_generated_artifacts_keep_implicit_all_non_private_outputs():
-    artifact = _scenario().generated_artifacts["indexer-certs"]
+    scenario = _scenario()
+    artifact = scenario.generated_artifacts["indexer-certs"]
 
     assert artifact.consumers[0].selected_outputs == []
+    execution = plan(compile_runtime_model(scenario), create_stub_manifest())
+    payload = execution.provisioning.resources["provision.generated-artifact.indexer-certs"].payload["spec"]
+    assert "selected_outputs" not in payload["consumers"][0]
 
 
 def test_planner_rejects_ssh_artifact_when_backend_does_not_claim_kind_support():

@@ -33,8 +33,9 @@ SSH artifact consumers must select at least one declared, non-private output.
 Selections are unique, and every `consumer_selected` SSH output must be selected
 by at least one consumer. Existing certificate/config declarations that omit
 `selected_outputs` retain their compatibility meaning: all non-private outputs
-are available to that consumer. New declarations should select outputs
-explicitly.
+are available to that consumer. An explicitly present selection must contain at
+least one output; an empty list is invalid. New declarations should select
+outputs explicitly.
 
 For example, one SSH artifact can keep a private key producer-private while
 projecting only its public forms:
