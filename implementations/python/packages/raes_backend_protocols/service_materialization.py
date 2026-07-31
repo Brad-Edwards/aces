@@ -144,22 +144,25 @@ def service_materialization_plan_diagnostics(
 
 def _binding_violation(payload: Mapping[str, object], binding: object) -> str | None:
     if not isinstance(binding, Mapping):
-        return "Service materialization binding is missing required closed contract fields."
-    contract = _profile_contract(binding)
-    if contract is None:
-        return "Service materialization profile identity is unsupported or incomplete."
-    if set(binding) != contract.binding_fields:
-        return "Service materialization binding is missing required closed contract fields."
-    violations = (
-        _requirements_violation(binding, contract),
-        _content_type_violation(payload, binding, contract),
-        _target_violation(payload, binding),
-        _digest_violation(binding),
-        _field_schema_violation(binding, contract),
-        _readback_violation(binding),
-        _ownership_violation(binding),
-    )
-    return next((message for message in violations if message is not None), None)
+        violation = "Service materialization binding is missing required closed contract fields."
+    else:
+        contract = _profile_contract(binding)
+        if contract is None:
+            violation = "Service materialization profile identity is unsupported or incomplete."
+        elif set(binding) != contract.binding_fields:
+            violation = "Service materialization binding is missing required closed contract fields."
+        else:
+            violations = (
+                _requirements_violation(binding, contract),
+                _content_type_violation(payload, binding, contract),
+                _target_violation(payload, binding),
+                _digest_violation(binding),
+                _field_schema_violation(binding, contract),
+                _readback_violation(binding),
+                _ownership_violation(binding),
+            )
+            violation = next((message for message in violations if message is not None), None)
+    return violation
 
 
 def _profile_contract(binding: Mapping[str, object]) -> _ProfileContract | None:
@@ -208,30 +211,31 @@ def _field_schema_violation(
     binding: Mapping[str, object],
     contract: _ProfileContract,
 ) -> str | None:
-    if not contract.schema_profile:
-        return None
-    field_semantics = binding.get("field_semantics")
-    if (
-        not isinstance(field_semantics, Mapping)
-        or not field_semantics
-        or any(
-            not isinstance(name, str) or _FIELD_NAME_RE.fullmatch(name) is None or semantic not in _FIELD_SEMANTICS
-            for name, semantic in field_semantics.items()
-        )
-    ):
-        return "Search-index schema field semantics are empty, non-portable, or unsupported."
-    digest = binding.get("canonical_field_schema_digest")
-    expected = canonical_json_digest(
-        {
-            "interface_profile": contract.profile,
-            "profile_version": contract.version,
-            "projection_scope": "declared-fields",
-            "field_semantics": dict(field_semantics),
-        }
-    )
-    if digest != expected:
-        return "Search-index schema canonical portable field-schema digest is invalid."
-    return None
+    violation = None
+    if contract.schema_profile:
+        field_semantics = binding.get("field_semantics")
+        if (
+            not isinstance(field_semantics, Mapping)
+            or not field_semantics
+            or any(
+                not isinstance(name, str) or _FIELD_NAME_RE.fullmatch(name) is None or semantic not in _FIELD_SEMANTICS
+                for name, semantic in field_semantics.items()
+            )
+        ):
+            violation = "Search-index schema field semantics are empty, non-portable, or unsupported."
+        else:
+            digest = binding.get("canonical_field_schema_digest")
+            expected = canonical_json_digest(
+                {
+                    "interface_profile": contract.profile,
+                    "profile_version": contract.version,
+                    "projection_scope": "declared-fields",
+                    "field_semantics": dict(field_semantics),
+                }
+            )
+            if digest != expected:
+                violation = "Search-index schema canonical portable field-schema digest is invalid."
+    return violation
 
 
 def _exact_requirement_supported(

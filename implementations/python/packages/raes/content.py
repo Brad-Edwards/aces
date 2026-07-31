@@ -11,7 +11,7 @@ directories, CTF flag files.
 """
 
 from enum import Enum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -86,7 +86,7 @@ class ServiceMaterialization(_ServiceMaterializationBase):
 class SearchIndexFieldSemantic(str, Enum):
     """Portable top-level search-index field behavior."""
 
-    EXACT_TOKEN = "exact-token"  # noqa: S105 - portable field semantic, not a credential
+    EXACT_MATCH = "exact-token"
     FULL_TEXT = "full-text"
     INTEGER = "integer"
     TEMPORAL = "temporal"
@@ -142,7 +142,7 @@ class Content(SDLModel):
 
     @model_validator(mode="before")
     @classmethod
-    def default_service_materialization_profile(cls, value: Any) -> Any:
+    def default_service_materialization_profile(cls, value: object) -> object:
         """Preserve the original service-content default across discrimination."""
         if not isinstance(value, dict):
             return value
