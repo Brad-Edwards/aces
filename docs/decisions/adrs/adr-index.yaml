@@ -63,11 +63,11 @@ adrs:
     pin: aaf414e1da0eb329432562b16ff9e132522e19e8a35933a1c99329b0be27cae8
   - id: ADR-014
     path: docs/decisions/adrs/adr-014-nox-as-canonical-verification-graph.md
-    pin: 940ce80b1f1d94e3efb4a9f56cb9147d09c9a9dc1453a4977c7a5e194238d708
+    pin: c9c526e28632a06a2fc06e4c6f92d0e373c219ff9bba6c06e3d92a8140e65f30
     amendments:
       - date: 2026-07-31
         ref: "#963"
-        summary: Parallelized deterministic verification and contract batches, and moved external links to dedicated docs CI.
+        summary: Parallelized deterministic verification and contract batches, scoped pre-commit to staged changes, and moved external links to dedicated docs CI.
   - id: ADR-015
     path: docs/decisions/adrs/adr-015-sdl-processor-layering-and-source-file-size-cap.md
     pin: bc5038164e535c4d506962e27cee07e720f5c8a77cb17d018dedb3dba927936f
