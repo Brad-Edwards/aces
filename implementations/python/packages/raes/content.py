@@ -166,6 +166,24 @@ class Content(SDLModel):
     def parse_sensitive(cls, v: bool | str) -> bool | str:
         return parse_bool_or_var(v, field_name="sensitive")
 
+    def _validate_search_index_schema_content(self) -> bool:
+        if not isinstance(
+            self.service_materialization,
+            ServiceSearchIndexSchemaMaterialization,
+        ):
+            return False
+        if self.type != ContentType.DATASET:
+            raise ValueError("Search-index schema materialization requires dataset content")
+        if self.source is not None or self.items:
+            raise ValueError("Search-index schema materialization must not carry source or items")
+        return True
+
+    def _validate_ordinary_dataset_content(self, *, is_search_index_schema: bool) -> None:
+        if self.type != ContentType.DATASET or is_search_index_schema:
+            return
+        if not (self.source or self.items):
+            raise ValueError("Dataset content requires either 'source' or non-empty 'items'")
+
     @model_validator(mode="after")
     def validate_type_requirements(self) -> "Content":
         """Require the minimum anchors needed to describe real content."""
@@ -175,16 +193,10 @@ class Content(SDLModel):
         if self.type == ContentType.FILE and not self.path:
             raise ValueError("File content requires 'path'")
 
-        is_search_index_schema = isinstance(
-            self.service_materialization,
-            ServiceSearchIndexSchemaMaterialization,
+        is_search_index_schema = self._validate_search_index_schema_content()
+        self._validate_ordinary_dataset_content(
+            is_search_index_schema=is_search_index_schema,
         )
-        if is_search_index_schema and self.type != ContentType.DATASET:
-            raise ValueError("Search-index schema materialization requires dataset content")
-        if is_search_index_schema and (self.source is not None or self.items):
-            raise ValueError("Search-index schema materialization must not carry source or items")
-        if self.type == ContentType.DATASET and not is_search_index_schema and not (self.source or self.items):
-            raise ValueError("Dataset content requires either 'source' or non-empty 'items'")
 
         if self.type == ContentType.DIRECTORY and not self.destination:
             raise ValueError("Directory content requires 'destination'")
