@@ -350,11 +350,12 @@ def test_missing_claimed_channel_and_active_probe_bypass_fail_closed() -> None:
             "observation_inventory_digest": without_delivery.canonical_digest,
         }
     )
+    missing_support = _support(missing_delivery, inventory=without_delivery)
 
     with pytest.raises(ValueError, match="delivery"):
         validate_participant_opacity_runtime_enforcement(
             missing_delivery,
-            support=_support(missing_delivery, inventory=without_delivery),
+            support=missing_support,
             participant_address=PARTICIPANT,
             audience_scope_ref=AUDIENCE,
         )
@@ -374,11 +375,12 @@ def test_missing_claimed_channel_and_active_probe_bypass_fail_closed() -> None:
             "observation_inventory_digest": bypass_inventory.canonical_digest,
         }
     )
+    bypass_support = _support(bypass_binding, inventory=bypass_inventory)
 
     with pytest.raises(ValueError, match="unsupported"):
         validate_participant_opacity_runtime_enforcement(
             bypass_binding,
-            support=_support(bypass_binding, inventory=bypass_inventory),
+            support=bypass_support,
             participant_address=PARTICIPANT,
             audience_scope_ref=AUDIENCE,
         )
@@ -401,11 +403,12 @@ def test_coarse_channel_coverage_without_every_concrete_surface_fails_closed() -
             "observation_inventory_digest": incomplete.canonical_digest,
         }
     )
+    changed_support = _support(changed, inventory=incomplete)
 
     with pytest.raises(ValueError, match="missing concrete surfaces"):
         validate_participant_opacity_runtime_enforcement(
             changed,
-            support=_support(changed, inventory=incomplete),
+            support=changed_support,
             participant_address=PARTICIPANT,
             audience_scope_ref=AUDIENCE,
         )
@@ -432,10 +435,11 @@ def test_omission_and_logical_timing_require_declared_bases() -> None:
                 "observation_inventory_digest": changed_inventory.canonical_digest,
             }
         )
+        changed_support = _support(changed_binding, inventory=changed_inventory)
         with pytest.raises(ValueError, match=message):
             validate_participant_opacity_runtime_enforcement(
                 changed_binding,
-                support=_support(changed_binding, inventory=changed_inventory),
+                support=changed_support,
                 participant_address=PARTICIPANT,
                 audience_scope_ref=AUDIENCE,
             )
@@ -534,12 +538,14 @@ def test_exact_retry_reuses_opacity_decision_and_changed_binding_conflicts() -> 
 
 def test_governed_egress_normalizes_to_withheld_opportunity_before_return() -> None:
     plane = _opacity_plane(_OpacityResolver())
+    bound_identity = identity(audience_bound=True)
+    crossing_evidence = evidence()
 
     with pytest.raises(PermissionError, match="not permitted"):
         plane.get_participant_status_view(
             CROSSING_PARTICIPANT,
-            identity=identity(audience_bound=True),
-            crossing_evidence=evidence(),
+            identity=bound_identity,
+            crossing_evidence=crossing_evidence,
             idempotency_key="opacity-egress",
         )
 
@@ -562,12 +568,14 @@ def test_governed_egress_normalizes_to_withheld_opportunity_before_return() -> N
 def test_denied_egress_records_observable_denial_without_returning_a_view() -> None:
     resolver = _OpacityResolver(gate_overrides={"visibility": ParticipantCrossingGateDisposition.DENY})
     plane = _opacity_plane(resolver)
+    bound_identity = identity(audience_bound=True)
+    crossing_evidence = evidence()
 
     with pytest.raises(PermissionError, match="not permitted"):
         plane.get_participant_status_view(
             CROSSING_PARTICIPANT,
-            identity=identity(audience_bound=True),
-            crossing_evidence=evidence(),
+            identity=bound_identity,
+            crossing_evidence=crossing_evidence,
             idempotency_key="opacity-withheld",
         )
 
@@ -646,10 +654,12 @@ def test_restart_requires_the_exact_persisted_opacity_context(tmp_path) -> None:
         update={"enforcement_rule_digest": canonical_json_digest({"rule": "stale"})}
     )
     stale.support = _support(stale.binding)
+    restart_target = policy_capable_target("participant_ingress_admission")
+    restart_store = LocalControlPlaneStore(tmp_path / "opacity-control-plane")
     with pytest.raises(ValueError, match="restart context"):
         RuntimeControlPlane(
-            policy_capable_target("participant_ingress_admission"),
-            store=LocalControlPlaneStore(tmp_path / "opacity-control-plane"),
+            restart_target,
+            store=restart_store,
             crossing_policy_resolver=stale,
         )
 

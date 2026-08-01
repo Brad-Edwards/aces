@@ -15,6 +15,8 @@ from .behavioral_relations import (
 )
 from .canonical import canonical_json_digest
 from .contracts.participant_crossing import (
+    ParticipantOpacityObservationInventoryModel,
+    ParticipantOpacityObservationSurfaceModel,
     ParticipantOpacityRuntimeEnforcementBindingModel,
     ParticipantOpacityRuntimeSupportModel,
 )
@@ -349,15 +351,36 @@ def _validate_inventory(
     parameters = profile.parameters
     inventory = support.observation_inventory
     surfaces = inventory.surfaces
+    _validate_inventory_identity(inventory)
+    declared_channels = _validate_inventory_channels(
+        surfaces,
+        tuple(parameters.observation.observable_channels),
+    )
+    _validate_inventory_time_semantics(inventory, profile, declared_channels)
+    actual_by_ref = _validate_inventory_surface_set(surfaces)
+    _validate_inventory_surface_coordinates(actual_by_ref)
+    if isinstance(parameters.strategy, ActiveOpacityStrategyModel) and not any(
+        surface.profile_channel == "action-availability" and surface.disposition == "mediated" for surface in surfaces
+    ):
+        raise ValueError("participant opacity active strategy has an unmediated probe surface")
+
+
+def _validate_inventory_identity(inventory: ParticipantOpacityObservationInventoryModel) -> None:
     if (
         inventory.inventory_ref,
         inventory.inventory_revision,
     ) != (_INVENTORY_REF, _INVENTORY_REVISION):
         raise ValueError("participant opacity runtime inventory identity does not match the supported declaration")
-    unsupported = sorted(surface.surface_ref for surface in surfaces if surface.disposition == "unsupported")
+    unsupported = sorted(surface.surface_ref for surface in inventory.surfaces if surface.disposition == "unsupported")
     if unsupported:
         raise ValueError("participant opacity runtime inventory contains unsupported observation surfaces")
-    declared_channels = set(parameters.observation.observable_channels)
+
+
+def _validate_inventory_channels(
+    surfaces: tuple[ParticipantOpacityObservationSurfaceModel, ...],
+    observable_channels: tuple[str, ...],
+) -> set[str]:
+    declared_channels = set(observable_channels)
     present_channels = {surface.profile_channel for surface in surfaces}
     missing = sorted(declared_channels - present_channels)
     extra = sorted(present_channels - declared_channels)
@@ -365,6 +388,16 @@ def _validate_inventory(
         raise ValueError("participant opacity runtime inventory is missing claimed channels: " + ", ".join(missing))
     if extra:
         raise ValueError("participant opacity runtime inventory contains undeclared channels: " + ", ".join(extra))
+    return declared_channels
+
+
+def _validate_inventory_time_semantics(
+    inventory: ParticipantOpacityObservationInventoryModel,
+    profile: BehavioralRelationProfileModel,
+    declared_channels: set[str],
+) -> None:
+    parameters = profile.parameters
+    surfaces = inventory.surfaces
     if parameters.time.absence_observable:
         opportunities = [
             surface
@@ -387,6 +420,11 @@ def _validate_inventory(
         latency_surfaces = [surface for surface in surfaces if surface.profile_channel == "latency"]
         if any(surface.timing_bucket_ref is None for surface in latency_surfaces):
             raise ValueError("participant opacity logical latency requires a governed timing bucket")
+
+
+def _validate_inventory_surface_set(
+    surfaces: tuple[ParticipantOpacityObservationSurfaceModel, ...],
+) -> dict[str, ParticipantOpacityObservationSurfaceModel]:
     actual_by_ref = {surface.surface_ref: surface for surface in surfaces}
     expected_refs = set(_RUNTIME_SURFACE_SUPPORT)
     actual_refs = set(actual_by_ref)
@@ -400,6 +438,12 @@ def _validate_inventory(
         raise ValueError(
             "participant opacity runtime inventory contains unadmitted concrete surfaces: " + ", ".join(extra_surfaces)
         )
+    return actual_by_ref
+
+
+def _validate_inventory_surface_coordinates(
+    actual_by_ref: dict[str, ParticipantOpacityObservationSurfaceModel],
+) -> None:
     for surface_ref, expected in _RUNTIME_SURFACE_SUPPORT.items():
         channel, owner, disposition, occurrence, content, opportunity, timing = expected
         surface = actual_by_ref[surface_ref]
@@ -439,12 +483,6 @@ def _validate_inventory(
             raise ValueError(
                 f"participant opacity runtime surface {surface_ref} does not match the supported declaration"
             )
-    if isinstance(parameters.strategy, ActiveOpacityStrategyModel):
-        if not any(
-            surface.profile_channel == "action-availability" and surface.disposition == "mediated"
-            for surface in surfaces
-        ):
-            raise ValueError("participant opacity active strategy has an unmediated probe surface")
 
 
 __all__ = ["validate_participant_opacity_runtime_enforcement"]

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingGateDisposition,
@@ -29,7 +29,10 @@ def bind_active_participant_opacity_support(
         return resolution
     if len(supports) != 1:
         raise ValueError("participant opacity runtime support is ambiguous at the exact state cut")
-    return replace(resolution, opacity_enforcement=supports[0].binding)
+    return cast(
+        "ParticipantCrossingPolicyResolution",
+        replace(resolution, opacity_enforcement=supports[0].binding),
+    )
 
 
 def normalize_participant_opacity_resolution(
@@ -40,22 +43,25 @@ def normalize_participant_opacity_resolution(
     from .participant_crossing_mediation import ParticipantCrossingSemanticGates
 
     denied = ParticipantCrossingGateDisposition.DENY
-    return replace(
-        resolution,
-        gates=ParticipantCrossingSemanticGates(
-            participant_authority=denied,
-            action_admission=denied,
-            visibility=denied,
-            marking_authorization=denied,
-            declassification=denied,
-            transformation_validity=denied,
+    return cast(
+        "ParticipantCrossingPolicyResolution",
+        replace(
+            resolution,
+            gates=ParticipantCrossingSemanticGates(
+                participant_authority=denied,
+                action_admission=denied,
+                visibility=denied,
+                marking_authorization=denied,
+                declassification=denied,
+                transformation_validity=denied,
+            ),
+            reason_code="participant-opacity-contained",
+            required_operation=None,
+            allowed_downgrades={},
+            downgrade_policy_ref=None,
+            downgrade_provenance_ref=None,
+            transformation=None,
         ),
-        reason_code="participant-opacity-contained",
-        required_operation=None,
-        allowed_downgrades={},
-        downgrade_policy_ref=None,
-        downgrade_provenance_ref=None,
-        transformation=None,
     )
 
 

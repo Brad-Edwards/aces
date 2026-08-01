@@ -197,12 +197,15 @@ def _with_opacity_egress_observation(
         known_evidence_refs=context.known_evidence_refs,
         known_authority_basis_refs=context.known_authority_basis_refs,
     )
-    return replace(
-        prepared,
-        next_snapshot=next_snapshot,
-        record=replace(
-            prepared.record,
-            result_history_heads=_expected_history_heads(next_snapshot, participant_address),
+    return cast(
+        PreparedParticipantCrossing,
+        replace(
+            prepared,
+            next_snapshot=next_snapshot,
+            record=replace(
+                prepared.record,
+                result_history_heads=_expected_history_heads(next_snapshot, participant_address),
+            ),
         ),
     )
 
@@ -212,7 +215,7 @@ def _egress_observation_records(
     predecessor: ParticipantCrossingOccurrenceModel,
     *,
     delivered: bool,
-) -> tuple[ParticipantCrossingOccurrenceModel, ...]:
+) -> list[ParticipantCrossingOccurrenceModel]:
     decision = prepared.decision
     assert decision is not None
     decision_detail = decision.occurrence
@@ -260,7 +263,7 @@ def _egress_observation_records(
         }
     )
     if not delivered:
-        return (attempt,)
+        return [attempt]
     delivery_order = next_order + 1
     delivery_id = f"crossing-delivery.{uuid4()}"
     delivery_event_id = f"crossing-occurrence.delivered.{uuid4()}"
@@ -302,7 +305,7 @@ def _egress_observation_records(
             },
         }
     )
-    return attempt, delivery, observed
+    return [attempt, delivery, observed]
 
 
 def _view_subject(
