@@ -125,7 +125,6 @@ These are current SDL expressiveness gaps:
 | **Full solver-backed verification** | Global proof-style verification that attack paths are reachable and defenses are consistent is not implemented; the repository uses lightweight semantic modeling, invariants, typed contracts, and selective property/state-machine methods | VSDL SMT solver, CRACK Datalog |
 | **Full participant behavior surface** | The current `agents` section under-expresses richer role-neutral behavior concerns such as tool/affordance declarations, control-context assets, decision-surface exposure policies, episode structure, and benchmark-oriented participant assets | CybORG, OpenRange, Open Trajectory Gym |
 | **Materialized evidence capture and provenance** | SDL has implemented `evidence_requirements` syntax, a published schema, fixtures, and fail-closed validation for portable capture intent. It does not itself materialize captures, prove collection, calculate integrity, retain artifacts, or supply complete run-level provenance and loss reporting; those are processor/backend and experiment-evidence responsibilities | OpenRange, OCSF-informed telemetry models |
-| **User behavior profiles** | Normal user activity patterns (browsing, email, file access schedules) | CybORG Green agents |
 | **Multi-tenancy** | Multiple independent exercises sharing infrastructure | Locked Shields team-per-subnet model |
 
 ### Ecosystem-Layer Gaps (outside pure SDL syntax)
