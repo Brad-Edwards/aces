@@ -175,7 +175,7 @@ def _realize_feature(
     feature_type = _str(template.get("type"))
     source = template.get("source")
     package = _str(source.get("name")) if isinstance(source, Mapping) else ""
-    name = _resource_name(resource, payload)
+    name = _resource_name(resource)
     if feature_type == "service" and package:
         _merge_emit(accumulator, dialect.enable_feature(package))
     else:
@@ -197,7 +197,7 @@ def _content_descriptor(
     location: str | None,
 ) -> CloudInitFile:
     spec = _spec(payload)
-    name = _resource_name(resource, payload)
+    name = _resource_name(resource)
     descriptor = {
         "content": name,
         "type": _str(spec.get("type")),

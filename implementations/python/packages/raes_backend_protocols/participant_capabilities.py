@@ -7,6 +7,7 @@ from raes_contracts.controlled_vocabularies import validate_controlled_vocabular
 from raes_contracts.manifest_authority import (
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
@@ -71,7 +72,7 @@ def _validate_participant_feature_evidence(
         raise ValueError(
             "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
         )
-    if feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+    if feature not in PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES:
         return
     if support_level != ParticipantFeatureSupportLevel.EXACT and not limitation_refs:
         raise ValueError("ParticipantFeatureSupport limitation_refs must be non-empty for below-exact policy support")
@@ -248,7 +249,7 @@ class ParticipantRuntimeCapabilities:
         _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
         supported_features = self.supported_behavior_features | self.supported_interaction_features
         missing_policy_declarations = sorted(
-            (supported_features & PARTICIPANT_RUNTIME_POLICY_FEATURES) - set(feature_names)
+            (supported_features & PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES) - set(feature_names)
         )
         if missing_policy_declarations:
             raise ValueError(
@@ -264,7 +265,7 @@ class ParticipantRuntimeCapabilities:
                     "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
                 )
             if (
-                entry.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+                entry.feature in PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES
                 and entry.support_level != ParticipantFeatureSupportLevel.UNSUPPORTED
                 and entry.feature not in supported_features
             ):
@@ -402,6 +403,7 @@ __all__ = [
     "PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE",
     "PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS",
     "PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE",
+    "PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES",
     "PARTICIPANT_RUNTIME_POLICY_FEATURES",
     "PARTICIPANT_RUNTIME_ROLE_SCOPE",
     "ParticipantFeatureSupport",

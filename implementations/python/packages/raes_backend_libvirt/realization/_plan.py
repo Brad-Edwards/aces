@@ -7,7 +7,13 @@ from dataclasses import dataclass, field
 
 from raes_backend_protocols.capabilities import ProvisionerCapabilities
 from raes_contracts.diagnostics import Diagnostic
-from raes_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
+from raes_contracts.planning import (
+    PlannedResource,
+    ProvisioningPlan,
+    RuntimeDomain,
+    planned_infrastructure_spec,
+    planned_resource_payload,
+)
 
 from .._payload import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE, SUPPORTED_RESOURCE_TYPES, _os_family
 from ..acls import realize_node_acls
@@ -18,7 +24,6 @@ from ._cloud_init import _aggregate_cloud_init
 from ._diagnostics import _invalid_payload, _network_namespace_unsupported, _unsupported_resource
 from ._specs import (
     _domain_spec,
-    _infrastructure_spec,
     _network_address_lookup,
     _network_cidr_lookup,
     _network_spec,
@@ -58,7 +63,7 @@ def interpret_provisioning_plan(
     diagnostics: list[Diagnostic] = list(capability_envelope_diagnostics(plan, capabilities))
     network_resources, node_resources, placement_resources = _collect_supported_resources(plan, diagnostics)
 
-    networks = [_network_spec(resource, payload) for resource, payload in network_resources]
+    networks = [_network_spec(resource) for resource, _ in network_resources]
     network_lookup = _network_address_lookup(networks)
     cidr_lookup = _network_cidr_lookup(networks)
     node_lookup = _node_address_lookup(node_resources)
@@ -69,13 +74,12 @@ def interpret_provisioning_plan(
     )
     diagnostics.extend(placement_diagnostics)
     acls: dict[str, tuple[NetworkAcl, ...]] = {}
-    for resource, payload in node_resources:
-        node_acls, acl_diagnostics = realize_node_acls(resource, _infrastructure_spec(payload).get("acls"), cidr_lookup)
+    for resource, _payload in node_resources:
+        infrastructure = planned_infrastructure_spec(resource) or {}
+        node_acls, acl_diagnostics = realize_node_acls(resource, infrastructure.get("acls"), cidr_lookup)
         acls[resource.address] = node_acls
         diagnostics.extend(acl_diagnostics)
-    domains = [
-        _domain_spec(resource, payload, network_lookup, cloud_init, acls) for resource, payload in node_resources
-    ]
+    domains = [_domain_spec(resource, network_lookup, cloud_init, acls) for resource, _ in node_resources]
 
     return Realization(
         networks=tuple(sorted(networks, key=lambda spec: spec.address)),
@@ -97,14 +101,8 @@ def _collect_supported_resources(
     node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     for resource in sorted(plan.resources.values(), key=lambda item: item.address):
-        if resource.domain != RuntimeDomain.PROVISIONING:
-            continue
-        if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
-            diagnostics.append(_unsupported_resource(resource))
-            continue
-        payload = resource.payload
-        if not isinstance(payload, Mapping):
-            diagnostics.append(_invalid_payload(resource))
+        payload = _supported_resource_payload(resource, diagnostics)
+        if payload is None:
             continue
         if resource.resource_type == NETWORK_RESOURCE_TYPE:
             network_resources.append((resource, payload))
@@ -115,3 +113,18 @@ def _collect_supported_resources(
         else:
             placement_resources.append((resource, payload))
     return network_resources, node_resources, placement_resources
+
+
+def _supported_resource_payload(
+    resource: PlannedResource,
+    diagnostics: list[Diagnostic],
+) -> Mapping[str, object] | None:
+    if resource.domain != RuntimeDomain.PROVISIONING:
+        return None
+    if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
+        diagnostics.append(_unsupported_resource(resource))
+        return None
+    payload = planned_resource_payload(resource)
+    if payload is None:
+        diagnostics.append(_invalid_payload(resource))
+    return payload

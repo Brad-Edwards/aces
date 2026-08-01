@@ -22,6 +22,10 @@ from raes_runtime.registry import RuntimeTarget
 
 from raes_conformance.conformance.diagnostics import _diagnostic, sanitized_failure_message
 from raes_conformance.conformance.fixture_suite import run_fixture_suite
+from raes_conformance.conformance.participant_opacity_probes import (
+    ParticipantOpacityProbeHarness,
+    participant_opacity_cases,
+)
 from raes_conformance.conformance.participant_policy_probes import (
     ParticipantPolicyProbeHarness,
     participant_policy_cases,
@@ -146,6 +150,7 @@ class _TargetConformanceOptions:
     observer_version: str = "raes-realization-observer/v1"
     native_conformance: bool = False
     participant_policy_harness: ParticipantPolicyProbeHarness | None = None
+    participant_opacity_harness: ParticipantOpacityProbeHarness | None = None
 
 
 def _unknown_profile_report(
@@ -306,6 +311,7 @@ def _known_profile_report(
         adapter_cases = adapter_cases[:1]
     participant_feature_cases = _participant_feature_cases(target, profile)
     policy_cases = participant_policy_cases(target, profile, options.participant_policy_harness)
+    opacity_cases = participant_opacity_cases(target, options.participant_opacity_harness)
     target_cases = tuple(replace(case, execution_basis=options.execution_basis.value) for case in adapter_cases)
     realization_run = run_realization_conformance(
         target,
@@ -320,6 +326,7 @@ def _known_profile_report(
         *fixture_report.cases,
         *participant_feature_cases,
         *policy_cases,
+        *opacity_cases,
         *target_cases,
         *realization_cases,
     )
@@ -327,7 +334,16 @@ def _known_profile_report(
         fixture_report.passed
         and not contract_gaps
         and not capability_gaps
-        and all(case.passed for case in (*participant_feature_cases, *policy_cases, *target_cases, *realization_cases))
+        and all(
+            case.passed
+            for case in (
+                *participant_feature_cases,
+                *policy_cases,
+                *opacity_cases,
+                *target_cases,
+                *realization_cases,
+            )
+        )
     )
     profile_id = _to_profile_id(profile)
     return BackendConformanceReport(

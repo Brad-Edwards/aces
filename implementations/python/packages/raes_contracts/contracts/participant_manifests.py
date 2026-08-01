@@ -13,7 +13,7 @@ from ..manifest_authority import (
     PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
-    PARTICIPANT_RUNTIME_POLICY_FEATURES,
+    PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     validate_backend_supported_contract_versions,
     validate_participant_implementation_supported_contract_versions,
     validate_participant_supported_contract_versions,
@@ -80,7 +80,10 @@ class BackendManifestV2Model(ContractModel):
             PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE
         ]
         for entry in participant_runtime.feature_support:
-            if entry.feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES or entry.support_level.value == "unsupported":
+            if (
+                entry.feature not in PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES
+                or entry.support_level.value == "unsupported"
+            ):
                 continue
             missing = sorted(required_by_feature[entry.feature] - declared_contracts)
             if missing:

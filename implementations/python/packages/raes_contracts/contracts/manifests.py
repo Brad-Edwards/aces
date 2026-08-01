@@ -10,7 +10,7 @@ from pydantic_core import CoreSchema
 
 from ..addressing import require_compiled_address
 from ..manifest_authority import (
-    PARTICIPANT_RUNTIME_POLICY_FEATURES,
+    PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
     validate_backend_supported_contract_versions,
@@ -189,7 +189,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         supported_features = set(self.supported_behavior_features) | set(self.supported_interaction_features)
         declared_features = {entry.feature for entry in self.feature_support}
         missing_policy_declarations = sorted(
-            (supported_features & PARTICIPANT_RUNTIME_POLICY_FEATURES) - declared_features
+            (supported_features & PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES) - declared_features
         )
         if missing_policy_declarations:
             raise ValueError(
@@ -204,7 +204,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
                     "feature is declared in supported_behavior_features or supported_interaction_features"
                 )
             if (
-                entry.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+                entry.feature in PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES
                 and not declared_unsupported
                 and entry.feature not in supported_features
             ):

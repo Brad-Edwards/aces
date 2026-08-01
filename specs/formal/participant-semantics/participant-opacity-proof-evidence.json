@@ -30,7 +30,7 @@
       "requirement": "SEM-231",
       "revision": "participant-predicate-opacity/rev8-baseline",
       "path": "specs/formal/participant-semantics/participant-predicate-opacity.md",
-      "digest": "sha256:55c4c147a228d0fbd26dc620ad71b453cac649228c0a0601d8915ecb270926d7"
+      "digest": "sha256:7322248777fe8aed3a9f276ed3a09187f2c86afeafb1df9f252cbd9f402005df"
     }
   ],
   "dependencies": [
