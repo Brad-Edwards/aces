@@ -8,10 +8,11 @@
 # its Amendments section.
 files:
   - implementations/python/packages/raes_operations/_evidence_run_artifact.py
+  - implementations/python/packages/raes_backend_libvirt/drivers/libvirt.py
+  - implementations/python/packages/raes_backend_libvirt/realization.py
+  - implementations/python/packages/raes_backend_libvirt/techvault_native.py
+  - implementations/python/packages/raes_contracts/workflow.py
   - implementations/python/packages/raes/composition.py
   - implementations/python/packages/raes/orchestration.py
   - implementations/python/packages/raes/participant_behavior.py
   - implementations/python/packages/raes/runtime_mail_service.py
-  - implementations/python/packages/raes/runtime_security_monitoring.py
-  - implementations/python/packages/raes/semantics/objective_semantics.py
-  - implementations/python/packages/raes/semantics/participant_behavior.py
