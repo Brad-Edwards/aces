@@ -412,6 +412,71 @@
   "$id": "https://openrae.github.io/rae/schemas/participant-observation-envelope-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "information_guarantee": {
+            "enum": [
+              "history_consistent",
+              "perfect_recall"
+            ]
+          }
+        },
+        "required": [
+          "information_guarantee"
+        ]
+      },
+      "then": {
+        "properties": {
+          "action_observation_history_ref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "information_state_ref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "reconstruction_algorithm_ref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "reconstruction_proof_ref": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_observation_history_ref",
+          "information_state_ref",
+          "reconstruction_algorithm_ref",
+          "reconstruction_proof_ref"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "information_guarantee": {
+            "const": "lossy_projection"
+          }
+        },
+        "required": [
+          "information_guarantee"
+        ]
+      },
+      "then": {
+        "properties": {
+          "loss_descriptor": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "loss_descriptor"
+        ]
+      }
+    }
+  ],
   "description": "SEM-210 participant-visible observation record with explicit guarantees.",
   "properties": {
     "action_observation_history_ref": {

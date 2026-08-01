@@ -6,6 +6,7 @@ from raes_contracts.behavioral_relation_profiles import BehavioralRelationProfil
 from raes_contracts.behavioral_relations import BehavioralRelationCatalogModel
 from raes_contracts.contracts import (
     ActivityStreamsActivityTypesSourceModel,
+    ArtifactTransformationReportModel,
     AssociatedArtifactManifestModel,
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
@@ -32,6 +33,9 @@ from raes_contracts.contracts import (
     ParticipantEpisodeStateModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
+    ParticipantInformationReconstructionProfileModel,
+    ParticipantInformationStateContextResolver,
+    ParticipantInformationStateRecordModel,
     ParticipantLifecycleEventModel,
     ParticipantObservationEnvelopeModel,
     ParticipantSharedStateRecordModel,
@@ -41,6 +45,7 @@ from raes_contracts.contracts import (
     ValidationBasisDisclosureDocumentModel,
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
+    validate_participant_information_state_resolved_context,
 )
 from raes_contracts.contracts.participant_execution import (
     ParticipantExecutionBindingModel,
@@ -83,6 +88,10 @@ _MODEL_VALIDATORS = {
     "participant-execution-service-state-v1": ParticipantExecutionServiceStateModel.model_validate,
     "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
     "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
+    "participant-information-state-record-v1": ParticipantInformationStateRecordModel.model_validate,
+    "participant-information-reconstruction-profile-v1": (
+        ParticipantInformationReconstructionProfileModel.model_validate
+    ),
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
     "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_validate,
     "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_validate,
@@ -97,6 +106,7 @@ _MODEL_VALIDATORS = {
 
 _STRUCTURAL_ONLY_VALIDATORS = {
     "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
+    "artifact-transformation-report-v1": ArtifactTransformationReportModel.model_validate,
     "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
     "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,
@@ -121,6 +131,7 @@ _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset(
     {
         "associated-artifact-manifest-v1",
         "external-concept-bindings-v1",
+        "participant-information-state-record-v1",
     }
 )
 
@@ -211,10 +222,51 @@ def _validate_payload(contract_name: str, payload: object) -> list[Diagnostic]:
     return diagnostics
 
 
-def validate_contract_payload(contract_name: str, payload: object) -> tuple[Diagnostic, ...]:
-    """Validate one payload through the registered structural contract boundary."""
+def _information_state_context_diagnostics(
+    payload: object,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+) -> list[Diagnostic]:
+    contract_name = "participant-information-state-record-v1"
+    diagnostics: list[Diagnostic] = []
+    if information_state_context_resolver is None:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.semantic-context-required",
+                contract_name,
+                "participant information-state context resolver is required",
+            )
+        )
+    else:
+        try:
+            record = ParticipantInformationStateRecordModel.model_validate(payload)
+            validate_participant_information_state_resolved_context(
+                record,
+                information_state_context_resolver,
+                payload,
+            )
+        except (TypeError, ValueError) as exc:
+            diagnostics.append(
+                _diagnostic(
+                    "conformance.semantic-invalid",
+                    contract_name,
+                    "participant information-state context is invalid: " + sanitized_failure_message(exc),
+                )
+            )
+    return diagnostics
 
-    return tuple(_validate_payload(contract_name, payload))
+
+def validate_contract_payload(
+    contract_name: str,
+    payload: object,
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+) -> tuple[Diagnostic, ...]:
+    """Validate one payload through its structural and available contextual boundary."""
+
+    diagnostics = _validate_payload(contract_name, payload)
+    if not diagnostics and contract_name == "participant-information-state-record-v1":
+        diagnostics.extend(_information_state_context_diagnostics(payload, information_state_context_resolver))
+    return tuple(diagnostics)
 
 
 def supported_contract_ids() -> tuple[str, ...]:

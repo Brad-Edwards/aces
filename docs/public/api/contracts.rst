@@ -12,6 +12,12 @@ Diagnostics
 .. automodule:: raes_contracts.diagnostics
    :members:
 
+Artifact Transformation Reports
+-------------------------------
+
+.. automodule:: raes_contracts.contracts.artifact_transformations
+   :members:
+
 Planning
 --------
 

@@ -1,0 +1,6 @@
+name: transformation-collision-case
+nodes:
+  web:
+    type: switch
+  frontend:
+    type: switch

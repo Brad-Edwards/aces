@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import Field, StrictInt, model_validator
 
 from .base import ContractModel, NonEmptyString
+from .participant_decision_state_cut import ParticipantDecisionSurfaceStateCutOrderModel
 from .participant_decision_surface_exposure import ParticipantExposureOperation
 from .participant_manifests import DigestString
 
@@ -101,13 +100,6 @@ class ParticipantDecisionSurfaceExposureBindingV2Model(ContractModel):
         _validate_inherited_information(self)
         _validate_provenance_carriage(self)
         return self
-
-
-ParticipantDecisionSurfaceStateCutOrderModel = Literal[
-    "control_plane_order",
-    "backend_serialized_order",
-    "behavior_history_order",
-]
 
 
 __all__ = (

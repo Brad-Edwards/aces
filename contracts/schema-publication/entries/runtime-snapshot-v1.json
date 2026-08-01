@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "364c25254fc7e44dca9409081defc0bf2f553e57d9ccf93ab36ac7047da9ff4f",
+  "content_hash": "5770a30cc288096d4586cbc80356a7e7436583274ed2598945a3c3dd7e68f9ed",
   "last_change": {
-    "summary": "Propagated the optional participant-opacity decision binding through the embedded append-only crossing history for issue #964.",
-    "content_hash": "364c25254fc7e44dca9409081defc0bf2f553e57d9ccf93ab36ac7047da9ff4f"
+    "summary": "Added ACT-604 participant information-state history and propagated issue #964 participant-opacity bindings through the runtime snapshot.",
+    "content_hash": "5770a30cc288096d4586cbc80356a7e7436583274ed2598945a3c3dd7e68f9ed"
   }
 }

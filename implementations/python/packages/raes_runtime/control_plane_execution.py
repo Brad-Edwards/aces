@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import ApplyResult, OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
@@ -25,6 +26,7 @@ def apply_authorized_participant_action(
     request: object,
     snapshot: RuntimeSnapshot,
     address: str,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> ApplyResult:
     """Invoke and validate a participant backend after durable authorization."""
 
@@ -34,6 +36,7 @@ def apply_authorized_participant_action(
         snapshot,
         address=address,
         snapshot=snapshot,
+        information_state_context_resolver=information_state_context_resolver,
     )
 
 
@@ -113,6 +116,11 @@ def _execute_participant_action_locked(
         control_plane._snapshot,
         address=address,
         snapshot=control_plane._snapshot,
+        information_state_context_resolver=getattr(
+            control_plane,
+            "_information_state_context_resolver",
+            None,
+        ),
     )
     control_plane._snapshot = result.snapshot
     control_plane._store.save_snapshot(control_plane._snapshot)
@@ -231,6 +239,11 @@ def execute_operation(
         snapshot,
         address=request.address,
         snapshot=snapshot,
+        information_state_context_resolver=getattr(
+            control_plane,
+            "_information_state_context_resolver",
+            None,
+        ),
     )
     control_plane._snapshot = result.snapshot
     control_plane._store.save_snapshot(control_plane._snapshot)

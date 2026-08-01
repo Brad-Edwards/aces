@@ -143,6 +143,7 @@ def _participant_history_head(snapshot: RuntimeSnapshot, history_key: str) -> st
         "participant_behavior_history": snapshot.participant_behavior_history,
         "participant_control_history": snapshot.participant_control_history,
         "participant_crossing_history": snapshot.participant_crossing_history,
+        "information_state_history": snapshot.information_state_history,
     }
     history = histories.get(history_name)
     if not separator or not participant_address or history is None:
@@ -203,6 +204,10 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         "participant_crossing_history": {
             participant_address: list(events)
             for participant_address, events in snapshot.participant_crossing_history.items()
+        },
+        "information_state_history": {
+            participant_address: list(records)
+            for participant_address, records in snapshot.information_state_history.items()
         },
         "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
         "participant_execution_services": dict(snapshot.participant_execution_services),
@@ -282,6 +287,10 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         participant_crossing_history={
             participant_address: list(events)
             for participant_address, events in payload.get("participant_crossing_history", {}).items()
+        },
+        information_state_history={
+            participant_address: list(records)
+            for participant_address, records in payload.get("information_state_history", {}).items()
         },
         participant_autonomous_execution_states=dict(payload.get("participant_autonomous_execution_states", {})),
         participant_execution_services=dict(payload.get("participant_execution_services", {})),

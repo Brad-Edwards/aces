@@ -1,4 +1,4 @@
-"""Participant runtime envelope contracts (lifecycle, observation, shared state, joint action, time)."""
+"""Participant runtime envelope contracts (lifecycle, shared state, joint action, time)."""
 
 from __future__ import annotations
 
@@ -26,8 +26,6 @@ from .participant_runtime import (
     ParticipantRuntimeAtomicityScope,
     ParticipantRuntimeConflictClass,
     ParticipantRuntimeConflictPolicy,
-    ParticipantRuntimeDeliveryBasis,
-    ParticipantRuntimeInformationGuarantee,
     ParticipantRuntimeIsolationGuarantee,
     ParticipantRuntimeJointActionConflictPolicy,
     ParticipantRuntimeMappingLoss,
@@ -159,43 +157,6 @@ class ParticipantLifecycleEventModel(ParticipantRuntimeBaseEnvelopeModel):
     source_status_label: NonEmptyString | None = None
     mapping_loss: ParticipantRuntimeMappingLoss | None = None
     mapping_loss_detail: NonEmptyString | None = None
-
-
-class ParticipantObservationLossDescriptorModel(ContractModel):
-    """Declared projection-loss facts for one participant-visible observation."""
-
-    kind: NonEmptyString
-    fields_redacted: list[NonEmptyString] = Field(default_factory=list)
-
-
-class ParticipantObservationStochasticContextModel(ContractModel):
-    """Seed and randomization-policy references behind one observation."""
-
-    seed_ref: NonEmptyString | None = None
-    randomization_policy_ref: NonEmptyString | None = None
-
-
-class ParticipantObservationEnvelopeModel(ParticipantRuntimeBaseEnvelopeModel):
-    """SEM-210 participant-visible observation record with explicit guarantees."""
-
-    observation_ref: NonEmptyString
-    phase_ref: NonEmptyString | None = None
-    visibility_projection_ref: NonEmptyString
-    information_guarantee: ParticipantRuntimeInformationGuarantee
-    delivery_basis: ParticipantRuntimeDeliveryBasis
-    delivery_point_ref: NonEmptyString | None = None
-    delivered_at: Rfc3339DateTimeString | None = None
-    action_observation_history_ref: NonEmptyString | None = None
-    information_state_ref: NonEmptyString | None = None
-    hidden_state_refs: list[NonEmptyString] = Field(default_factory=list)
-    centralized_state_refs: list[NonEmptyString] = Field(default_factory=list)
-    loss_descriptor: ParticipantObservationLossDescriptorModel | None = None
-    stochastic_context: ParticipantObservationStochasticContextModel | None = None
-    noise_model_ref: NonEmptyString | None = None
-    reconstruction_algorithm_ref: NonEmptyString | None = None
-    reconstruction_proof_ref: NonEmptyString | None = None
-    belief_support_ref: NonEmptyString | None = None
-    redacted_field_refs: list[NonEmptyString] = Field(default_factory=list)
 
 
 class ParticipantSharedStateAccessModel(ContractModel):

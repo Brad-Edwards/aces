@@ -241,7 +241,14 @@ class ParticipantControlMixin(
             )
         return execute_participant_action(
             self,
-            method=backend_execution_control_method(method),
+            method=backend_execution_control_method(
+                method,
+                information_state_context_resolver=getattr(
+                    self,
+                    "_information_state_context_resolver",
+                    None,
+                ),
+            ),
             request=request,
             address=(f"runtime.control-plane.participant-execution.{request.execution_scope_ref}.{request.action}"),
             idempotency_key=idempotency_key,

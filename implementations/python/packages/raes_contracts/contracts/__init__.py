@@ -17,6 +17,7 @@ from ..artifact_requirements import (
 from ..versions import (
     ACTIVITYSTREAMS_ACTIVITY_TYPES_SOURCE_SCHEMA_VERSION,
     ARTIFACT_REQUIREMENT_SCHEMA_VERSION,
+    ARTIFACT_TRANSFORMATION_REPORT_SCHEMA_VERSION,
     ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
     ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -82,6 +83,18 @@ from .admitted_trial_plan import AdmittedTrialPlanProfilesModel as AdmittedTrial
 from .admitted_trial_plan import ExperimentScenarioFamilyReferenceModel as ExperimentScenarioFamilyReferenceModel
 from .admitted_trial_plan import seal_admitted_trial_entry as seal_admitted_trial_entry
 from .admitted_trial_plan import seal_admitted_trial_plan as seal_admitted_trial_plan
+from .artifact_transformations import (
+    ArtifactTransformationCheckModel,
+    ArtifactTransformationIdentityMapModel,
+    ArtifactTransformationKind,
+    ArtifactTransformationLossKind,
+    ArtifactTransformationLossModel,
+    ArtifactTransformationPreservationModel,
+    ArtifactTransformationReportModel,
+    ArtifactTransformationStatus,
+    PreservationOutcome,
+    TransformationCheckOutcome,
+)
 from .associated_artifacts import AssociatedArtifactManifestModel, AssociatedArtifactSetDigestString
 from .base import (
     BehavioralClaimBindingModel,
@@ -261,9 +274,6 @@ from .participant_envelopes import (
     ParticipantJointActionAccessSetModel,
     ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
-    ParticipantObservationEnvelopeModel,
-    ParticipantObservationLossDescriptorModel,
-    ParticipantObservationStochasticContextModel,
     ParticipantRuntimeBaseEnvelopeModel,
     ParticipantSharedStateAccessModel,
     ParticipantSharedStateRecordModel,
@@ -271,6 +281,16 @@ from .participant_envelopes import (
     RawDataIntegrityModel,
     SourcePipelineModel,
     SourceStatusModel,
+)
+from .participant_information_state import (
+    ParticipantInformationReconstructionProfileModel,
+    ParticipantInformationStateContextResolver,
+    ParticipantInformationStateRecordModel,
+    ParticipantInformationStateSourceCoordinate,
+    ParticipantInformationStateSourceRefModel,
+    ParticipantInformationStateValidationContext,
+    validate_participant_information_state_context,
+    validate_participant_information_state_resolved_context,
 )
 from .participant_manifests import (
     BackendManifestV2Model,
@@ -280,6 +300,11 @@ from .participant_manifests import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
     ParticipantImplementationSelectionModel,
+)
+from .participant_observation import (
+    ParticipantObservationEnvelopeModel,
+    ParticipantObservationLossDescriptorModel,
+    ParticipantObservationStochasticContextModel,
 )
 from .participant_occurrences import (
     ParticipantControlDeclarationModel,
