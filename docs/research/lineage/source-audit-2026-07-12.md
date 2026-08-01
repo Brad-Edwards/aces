@@ -185,6 +185,64 @@ syntax, introduces no source-compatible schema, and claims neither universal
 refinement nor universal reactive noninterference from the bounded executable
 counterexamples.
 
+## Issue 1001 Boundary-Flow Control Sources
+
+On 2026-08-01, issue #1001 extended the participant information-flow audit to
+classical lattice and decentralized IFC, robust downgrading, deployed
+operating-system IFC, cross-domain controlled interfaces, dynamic taint, and
+whole-system provenance. The following primary publication and institutional
+source identities were checked:
+
+- Dorothy E. Denning, *A Lattice Model of Secure Information Flow*,
+  Communications of the ACM 19(5), 1976,
+  <https://doi.org/10.1145/360051.360056>.
+- Andrew C. Myers and Barbara Liskov, *Complete, Safe Information Flow with
+  Decentralized Labels*, 1998 IEEE Symposium on Security and Privacy,
+  <https://doi.org/10.1109/SECPRI.1998.674834>.
+- Andrew C. Myers, Andrei Sabelfeld, and Steve Zdancewic, *Enforcing Robust
+  Declassification and Qualified Robustness*, Journal of Computer Security
+  14(2), 2006, <https://doi.org/10.3233/JCS-2006-14203>.
+- Ethan Cecchetti, Andrew C. Myers, and Owen Arden, *Nonmalleable Information
+  Flow Control*, ACM CCS 2017,
+  <https://doi.org/10.1145/3133956.3134054>.
+- Nickolai Zeldovich, Silas Boyd-Wickizer, Eddie Kohler, and David Mazières,
+  *Making Information Flow Explicit in HiStar*, OSDI 2006,
+  <https://www.usenix.org/conference/osdi-06/making-information-flow-explicit-histar>.
+- Maxwell Krohn, Alexander Yip, Micah Brodsky, Natan Cliffer, M. Frans
+  Kaashoek, Eddie Kohler, and Robert Morris, *Information Flow Control for
+  Standard OS Abstractions*, SOSP 2007,
+  <https://pdos.csail.mit.edu/papers/flume-sosp07.pdf>.
+- NIST SP 800-53 Revision 5, control AC-4, *Information Flow Enforcement*,
+  <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>, and the National
+  Security Agency's National Cross Domain Strategy and Management Office,
+  <https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/>.
+- William Enck, Peter Gilbert, Byung-Gon Chun, Landon P. Cox, Jaeyeon Jung,
+  Patrick McDaniel, and Anmol N. Sheth, *TaintDroid: An Information-Flow
+  Tracking System for Realtime Privacy Monitoring on Smartphones*, OSDI 2010,
+  <https://www.usenix.org/conference/osdi10/taintdroid-information-flow-tracking-system-realtime-privacy-monitoring>.
+- Thomas Pasquier, Xueyuan Han, Mark Goldstein, Thomas Moyer, David Eyers,
+  Margo Seltzer, and Jean Bacon, *Practical Whole-System Provenance Capture*,
+  SoCC 2017, <https://doi.org/10.1145/3127479.3129249>.
+
+RAES adapts the shared semantic discipline: ordered and conservative label
+propagation; principal-relative policy; independent confidentiality and
+integrity; authority-bounded release and endorsement; controlled-interface
+mediation at the final sink; and provenance carriage that does not itself
+grant authority. The sources also bound the claim. Fixed global labels do not
+capture every mutual-distrust policy; declassification and untaint privileges
+can become over-powerful trusted paths; label administration and compatibility
+have operational cost; dynamic taint does not completely cover implicit,
+native, control, or covert flows; provenance capture has coverage, volume, and
+overhead limits; and cross-domain assessment does not prove every downstream
+sink safe.
+
+SEM-233 is therefore an ACES-native, revisioned semantic profile rather than a
+copy of any source syntax, label vocabulary, operating-system API, guard
+product profile, or wire protocol. It claims no source compatibility,
+certification, runtime enforcement, backend completeness, or covert-channel
+control. No copied-code notice or third-party distribution obligation is
+introduced by these publication and institutional citations.
+
 ## DSL-437 Participant And Simulation Sources
 
 This addendum was reviewed on 2026-07-24 for DSL-437. It records semantic

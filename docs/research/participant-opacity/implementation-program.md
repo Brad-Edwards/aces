@@ -136,8 +136,10 @@ evidence, and secret-bearing diagnostics.
 ## Program Invariants
 
 - All claims use the exact applicable behavioral-taxonomy revision (current
-  authoring authority `raes-behavioral-relations@rev11`) and one explicit assurance axis. `rev5`
-  introduced opacity; it is not a permanent implementation pin.
+  authoring authority `raes-behavioral-relations@rev12`) and one explicit
+  assurance axis. The shipped runtime-reference profile retains its exact
+  historical `rev11` binding; `rev5` introduced opacity and is not a permanent
+  implementation pin.
 - Universal opacity requires model-check or proof evidence whose scope matches
   the claim.
 - Actual and alternative active points use the same participant strategy.

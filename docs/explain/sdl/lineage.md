@@ -1588,6 +1588,32 @@ conformance through those generic declarations.
 
 ### Adversarial Participant Flow And Control
 
+- The older cyber lineage establishes the portable core beneath the recent
+  agent-control systems. [Denning's lattice model](https://doi.org/10.1145/360051.360056)
+  supplies ordered information classes and conservative joins;
+  [decentralized labels](https://www.cs.cornell.edu/andru/papers/sp98/paper.html)
+  supply principal-relative ownership and explicit downgrade authority; and
+  [robust declassification](https://doi.org/10.3233/JCS-2006-14203) together
+  with [nonmalleable IFC](https://www.cs.cornell.edu/andru/papers/nmifc/)
+  supplies the separation of confidentiality release from integrity
+  endorsement and the need to constrain attacker influence over both.
+- [HiStar](https://www.usenix.org/conference/osdi-06/making-information-flow-explicit-histar)
+  and [Flume](https://pdos.csail.mit.edu/papers/flume-sosp07.pdf) demonstrate
+  decentralized information-flow control in operating-system abstractions.
+  [NIST SP 800-53 AC-4](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
+  and the [NSA cross-domain program](https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/)
+  supply the controlled-interface, complete-mediation, content/metadata
+  inspection, default-deny, and lifecycle-assurance precedents for a final
+  boundary. RAES adopts their semantic discipline, not a fixed military label
+  vocabulary, operating-system API, guard product profile, or accreditation
+  claim.
+- [TaintDroid](https://www.usenix.org/conference/osdi10/taintdroid-information-flow-tracking-system-realtime-privacy-monitoring)
+  demonstrates useful dynamic tracking of explicit flows, while
+  [CamFlow](https://arxiv.org/abs/1711.05296) demonstrates whole-system
+  provenance capture. Their limits are equally material: tracking may omit
+  implicit, native, control, or covert flows, and provenance says where data
+  came from rather than whether release, endorsement, or execution is
+  authorized.
 - [FIDES](https://arxiv.org/abs/2505.23643) supplies the immediate precedent
   for independent confidentiality/integrity labels, conservative propagation,
   and deterministic action policy.
@@ -1612,6 +1638,24 @@ conformance through those generic declarations.
   SEM-230, ACT-617, API-409/API-423, RUN-310/RUN-319, API-407, experiment, and
   ASR-535 carriers. It does not import an LLM framework, prompt format, model
   role, MCP gateway, monitor, scorer, or trajectory hierarchy.
+- SEM-233 therefore keeps confidentiality and integrity as independent
+  coordinates and keeps declassification, endorsement, approval, admission,
+  authentication, and authorization as distinct operations. Missing labels,
+  ambiguous joins, stale policy cuts, and unexplained cross-participant or
+  cross-episode resets fail closed at the final enforceable sink. A scalar
+  `trusted`, `sensitivity`, marking, confidence, signature, or monitor score
+  cannot stand in for the two coordinates. These rules address the recurring
+  failure modes of label/privilege administration, over-powered trusted
+  downgrade paths, incomplete mediation, tag laundering, stale provenance,
+  and guards that mistake detection or identity for flow authority.
+- Issue #1001 publishes `sem-233/rev1` as two closed finite obligation
+  powersets ordered by subset with componentwise union joins. Unknown state is
+  deny-equivalent; release operations create fresh identities; labels,
+  provenance, and possible-influence history survive handoff and replay; and
+  the existing SEM-230/API-423 crossing decision gains independent
+  confidentiality and integrity predicates at the same exact cut. Its finite
+  executable model is bounded falsification evidence, not a portable contract,
+  runtime or backend implementation, model check, proof, or covert-flow claim.
 - Issue #812 is design authority. Its DRAFT requirements and program do not
   establish runtime enforcement, backend realization, intentional-subversion
   robustness, model alignment, monitor honesty, private-reasoning safety, or
