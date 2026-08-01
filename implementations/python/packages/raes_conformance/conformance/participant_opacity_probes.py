@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import StrEnum
-from typing import Protocol
+from typing import Protocol, cast
 
 from raes_backend_protocols.capabilities import ParticipantFeatureSupport, resolve_participant_feature_support
 from raes_backend_protocols.manifest import backend_manifest_payload
@@ -364,10 +364,13 @@ def _harness_failure_case(
     """Retain the positive declaration while refusing absent probe evidence."""
 
     case = _unsupported_case(target)
-    return replace(
-        case,
-        diagnostics=(_diagnostic(code, _FEATURE, message),),
-        outcome=outcome,
+    return cast(
+        ConformanceCaseResult,
+        replace(
+            case,
+            diagnostics=(_diagnostic(code, _FEATURE, message),),
+            outcome=outcome,
+        ),
     )
 
 

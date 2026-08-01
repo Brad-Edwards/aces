@@ -62,8 +62,8 @@ class ReferenceParticipantOpacityHarness:
             ),
         )
 
+    @staticmethod
     def observe(
-        self,
         target: RuntimeTarget,
         case: ParticipantOpacityProbeCase,
         point_ref: str,
