@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "4e9f3694ba9be9dff9236ad94b895591f28863f295724d013c243b6d290ae37f",
+  "content_hash": "8e7112e33d8362c086571cb2062ad7063674aa0d7fe3d9e7fa0db38deede84a4",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "4e9f3694ba9be9dff9236ad94b895591f28863f295724d013c243b6d290ae37f"
+    "summary": "Require evidence, limitations, constraints, and disclosures for bounded participant-predicate-opacity backend declarations for issue #965.",
+    "content_hash": "8e7112e33d8362c086571cb2062ad7063674aa0d7fe3d9e7fa0db38deede84a4"
   }
 }

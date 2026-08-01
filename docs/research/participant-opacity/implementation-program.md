@@ -124,10 +124,19 @@ profile, environment, contract, and evidence identities.
 Method presence or a boolean is not capability evidence. Bounded conformance
 is not proof, cross-backend equivalence, or support outside the named profile.
 
+Delivered by #965: the governed `participant_predicate_opacity` API-407
+feature and required-contract map, bounded reference-backend declaration,
+generic target-owned complete-transcript probes, three independent shared
+claim bindings, exact six-way digest provenance, and fail-closed report
+validation. The adversarial suite rejects backend observation drift,
+runtime-only mediation, unexecuted declarations, forged manifest identity,
+authorized weakening that retains stronger claims, missing contracts or
+evidence, and secret-bearing diagnostics.
+
 ## Program Invariants
 
 - All claims use the exact applicable behavioral-taxonomy revision (current
-  authoring authority `raes-behavioral-relations@rev10`) and one explicit assurance axis. `rev5`
+  authoring authority `raes-behavioral-relations@rev11`) and one explicit assurance axis. `rev5`
   introduced opacity; it is not a permanent implementation pin.
 - Universal opacity requires model-check or proof evidence whose scope matches
   the claim.

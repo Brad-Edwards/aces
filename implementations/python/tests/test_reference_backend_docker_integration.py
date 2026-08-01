@@ -19,6 +19,7 @@ from raes_conformance.conformance import (
     BackendCapabilityProfile,
     run_target_conformance,
 )
+from raes_conformance.conformance.reference_participant_opacity import ReferenceParticipantOpacityHarness
 from raes_reference_backend import create_reference_backend_target
 from raes_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
 from raes_runtime.control_plane import RuntimeControlPlane
@@ -115,7 +116,10 @@ def test_real_driver_conformance_passes(container_runtime: str):
     target = create_reference_backend_target(driver=driver)
 
     try:
-        report = run_target_conformance(target)
+        report = run_target_conformance(
+            target,
+            participant_opacity_harness=ReferenceParticipantOpacityHarness(),
+        )
 
         assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
         assert report.passed is True, [

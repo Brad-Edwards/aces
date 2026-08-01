@@ -976,6 +976,7 @@
                   "participant_egress_projection",
                   "participant_ingress_admission",
                   "participant_intervention",
+                  "participant_predicate_opacity",
                   "participant_transformation"
                 ]
               },
@@ -1013,6 +1014,7 @@
                   "participant_egress_projection",
                   "participant_ingress_admission",
                   "participant_intervention",
+                  "participant_predicate_opacity",
                   "participant_transformation"
                 ]
               },
@@ -1046,6 +1048,7 @@
                   "participant_egress_projection",
                   "participant_ingress_admission",
                   "participant_intervention",
+                  "participant_predicate_opacity",
                   "participant_transformation"
                 ]
               },

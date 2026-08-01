@@ -121,7 +121,9 @@ ParticipantFeatureSupport =
   feature
   support_level
   constraint_refs
+  limitation_refs
   disclosure_refs
+  evidence_refs
 ```
 
 Rules:
@@ -144,6 +146,12 @@ Rules:
   SEM-218 explicitness/realization declarations cover cross-domain
   realization handling; the manifest carries both, and they are never merged
   or inferred from one another.
+- Evidence-required features include the six participant-policy features and
+  `participant_predicate_opacity`. A positive declaration requires evidence;
+  bounded support also requires constraints, limitations, and disclosures plus
+  every contract in that feature's required-contract map. Opacity is not a
+  policy operation and is deliberately absent from
+  `PARTICIPANT_RUNTIME_POLICY_FEATURES`.
 
 ## API-408 - Retrieval Projections
 

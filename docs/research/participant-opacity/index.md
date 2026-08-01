@@ -20,6 +20,8 @@ deployment, participant, or backend.
 - [Issue #961 bounded-falsification preflight](../../decisions/issue-961-participant-opacity-bounded-falsification-preflight.md)
 - [Issue #962 finite-state model-check preflight](../../decisions/issue-962-participant-opacity-model-check-preflight.md)
 - [Issue #963 mathematical-proof preflight](../../decisions/issue-963-participant-opacity-proof-preflight.md)
+- [Issue #964 reference-runtime enforcement preflight](../../decisions/issue-964-participant-opacity-runtime-enforcement-preflight.md)
+- [Issue #965 backend declaration, realization, and conformance preflight](../../decisions/issue-965-participant-opacity-backend-realization-preflight.md)
 - [Isabelle/HOL theorem source](../../../specs/formal/participant-semantics/isabelle/Participant_Opacity.thy)
 - [Checked proof evidence](../../../specs/formal/participant-semantics/participant-opacity-proof-evidence.json)
 - [ADR-099](../../decisions/adrs/adr-099-participant-relative-predicate-opacity.md)
