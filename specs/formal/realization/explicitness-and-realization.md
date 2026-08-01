@@ -201,6 +201,24 @@ processor layer plays no realization role under SEM-218: it compiles
 the typed runtime requirement and plans against backend support, but
 does not pick values for underspecified concerns.
 
+For a registered non-executable inventory concern, value equality alone is not
+sufficient evidence of exact realization. The concern descriptor MAY declare a
+closed required verification scope. The backend manifest MUST then disclose a
+concern-keyed observation capability whose scope covers that demand, and the
+returned runtime snapshot MUST carry a value-free observation disclosure for
+the same address, field path, domain, and requirement kind. The disclosure's
+scope and observation-strength source MUST be supported by the selected
+manifest declaration. Missing, malformed, under-scoped, or unsupported
+corroboration is a `runtime.backend-contract-invalid` failure before snapshot
+persistence.
+
+The initial qualified concern is `forwarding-agents`. Its scopes are `presence`
+(identity, placement, and implementation inventory) and `configuration`
+(authored child/configuration projection). The existing `ObservationStrength`
+values remain the source axis; they do not prove forwarding behavior. Delivery,
+transform, reload, health, and failure claims belong to governed proposition,
+probe, truth, and evidence contracts.
+
 **I3 — Openness is explicit.** A backend MAY realize an underspecified
 concern only at a point where the owning SDL schema or semantic rule
 explicitly designates that concern as realizable, *and* where the
@@ -217,6 +235,9 @@ per-domain `RealizationSupportDeclaration` entries that name (i) the
 support mode (`EXACT_ONLY`, `CONSTRAINED`, or `OPEN_REALIZATION`), (ii)
 the supported exact-requirement-kinds, (iii) the supported
 constraint-kinds, and (iv) the disclosure kinds the apparatus will emit.
+When a registered concern requires corroboration, the same declaration MUST
+also carry a concern-keyed observation capability containing its closed
+verification scope and non-`none` observation strength.
 Processor manifests MUST NOT carry `realization_support`: in RAES the
 processor layer does not realize underspecified author concerns — its
 manifest discloses processing features (compilation, planning,
@@ -325,7 +346,10 @@ realization status, are:
   deployment (I1, I2, I4). *Enforced today* by the typed compiler
   emission on `RuntimeModel.realization_requirements` and the
   realization-support plus open-request envelope-subsumption gates in
-  `raes_processor.planner.plan`.
+  `raes_processor.planner.plan`. Exact registered inventory concerns with a
+  required verification scope also fail with
+  `realization.under-observed-exact-requirement` when the manifest capability
+  is absent or weaker.
 - **Error-envelope gate** — unsupported exact requirements and
   forbidden approximations MUST be surfaced through stable validation
   errors or structured diagnostics (I1, I2). *Enforced today*; the
@@ -342,7 +366,9 @@ realization status, are:
   `RealizationProvenanceEntryModel`), which records each realized concern's
   explicitness class, origin, and governing designation scope and round-trips
   through the control-plane snapshot serializers and authenticated snapshot
-  response model.
+  response model. Concern corroboration is carried separately by
+  `realization_observations`, which records no realized value and is checked
+  against the compiled scope and selected backend manifest before persistence.
 - **Host / OS exposure gate** — exact values, credentials, and backend
   tokens MUST NOT be passed through process argv, logs, audit details,
   diagnostics, JSON fixtures, or semantic-profile artifacts when they

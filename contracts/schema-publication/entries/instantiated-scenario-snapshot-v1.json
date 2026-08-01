@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "ebbb182be917c3d2b473f25df2374ab633bd2a73dc13af786e3c06f38d5f0ab6",
+  "content_hash": "470d7e2a8818f8000d2df8e0d1dddc9ef5120039f91dd7b6f80e198a531674f0",
   "last_change": {
-    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
-    "content_hash": "ebbb182be917c3d2b473f25df2374ab633bd2a73dc13af786e3c06f38d5f0ab6"
+    "summary": "Added forwarding-agent ownership roles for issue #1043.",
+    "content_hash": "470d7e2a8818f8000d2df8e0d1dddc9ef5120039f91dd7b6f80e198a531674f0"
   }
 }

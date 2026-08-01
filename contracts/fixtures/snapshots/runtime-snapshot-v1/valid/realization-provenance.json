@@ -26,5 +26,15 @@
       "provenance": "author-declared"
     }
   ],
+  "realization_observations": [
+    {
+      "address": "provision.node.web",
+      "field_path": "nodes.web.runtime.forwarding_agents",
+      "domain": "runtime-realization",
+      "requirement_kind": "forwarding-agents",
+      "verification_scope": "configuration",
+      "observation_strength": "daemon-observed"
+    }
+  ],
   "metadata": {}
 }

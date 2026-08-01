@@ -21,7 +21,7 @@ from raes_contracts.participant_information_state_history import (
 )
 from raes_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
 from raes_contracts.planning import RuntimeDomain
-from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_contracts.runtime_state import RealizationObservationDisclosure, RuntimeSnapshot, SnapshotEntry
 from raes_processor.models import (
     ParticipantActionContractRuntime,
     ParticipantHistoryAddressScope,
@@ -118,6 +118,17 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
             for context_id, context in validated.time_management_contexts.items()
         },
         time_model_state=validated.time_model_state,
+        realization_observations=tuple(
+            RealizationObservationDisclosure(
+                address=entry.address,
+                field_path=entry.field_path,
+                domain=entry.domain,
+                requirement_kind=entry.requirement_kind,
+                verification_scope=entry.verification_scope,
+                observation_strength=entry.observation_strength,
+            )
+            for entry in validated.realization_observations
+        ),
         metadata=dict(validated.metadata),
     )
 

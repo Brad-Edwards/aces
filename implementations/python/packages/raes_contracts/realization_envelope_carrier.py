@@ -14,17 +14,9 @@ from pydantic_core import CoreSchema
 
 from raes_contracts.contracts import ContractModel, NonEmptyString, RealizationEnvelopeIdentityModel
 from raes_contracts.realization_envelope import RealizationEnvelopeModel
+from raes_contracts.vocabulary import ObservationStrength
 
 DigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
-
-
-class ObservationStrength(str, Enum):
-    """Strongest evidence a backend configuration emits for one concern."""
-
-    NONE = "none"
-    DRIVER_REPORTED = "driver-reported"
-    DAEMON_OBSERVED = "daemon-observed"
-    GUEST_OBSERVED = "guest-observed"
 
 
 class ConcernDisposition(str, Enum):

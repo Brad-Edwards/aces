@@ -10,7 +10,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
-from raes_contracts.contracts import RealizationEnvelopeIdentityModel
+from raes_contracts.contracts import RealizationEnvelopeIdentityModel, RealizationObservationDisclosureModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
 from raes_contracts.participant_autonomous_state import require_participant_autonomous_runtime_snapshot
 from raes_contracts.planning import RuntimeDomain
@@ -19,11 +19,13 @@ from raes_contracts.runtime_state import (
     ExplicitnessProvenance,
     OperationReceipt,
     OperationStatus,
+    RealizationObservationDisclosure,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
     SnapshotEntry,
 )
+from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 
 if TYPE_CHECKING:
     from .control_plane_store_local import LocalControlPlaneStore
@@ -240,6 +242,17 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             }
             for entry in snapshot.realization_provenance
         ],
+        "realization_observations": [
+            {
+                "address": entry.address,
+                "field_path": entry.field_path,
+                "domain": entry.domain,
+                "requirement_kind": entry.requirement_kind,
+                "verification_scope": entry.verification_scope.value,
+                "observation_strength": entry.observation_strength.value,
+            }
+            for entry in snapshot.realization_observations
+        ],
         "realization_envelope": (
             snapshot.realization_envelope.model_dump(mode="json") if snapshot.realization_envelope is not None else None
         ),
@@ -328,6 +341,11 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             for item in payload.get("realization_provenance", [])
             if isinstance(item, dict)
         ),
+        realization_observations=tuple(
+            _realization_observation_from_payload(item)
+            for item in payload.get("realization_observations", [])
+            if isinstance(item, dict)
+        ),
         realization_envelope=(
             RealizationEnvelopeIdentityModel.model_validate(payload["realization_envelope"])
             if payload.get("realization_envelope") is not None
@@ -337,6 +355,18 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
     )
     require_participant_autonomous_runtime_snapshot(snapshot)
     return snapshot
+
+
+def _realization_observation_from_payload(payload: dict[str, Any]) -> RealizationObservationDisclosure:
+    model = RealizationObservationDisclosureModel.model_validate(payload)
+    return RealizationObservationDisclosure(
+        address=model.address,
+        field_path=model.field_path,
+        domain=model.domain,
+        requirement_kind=model.requirement_kind,
+        verification_scope=RealizationVerificationScope(model.verification_scope),
+        observation_strength=ObservationStrength(model.observation_strength),
+    )
 
 
 class InMemoryControlPlaneStore:

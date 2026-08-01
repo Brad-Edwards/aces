@@ -115,6 +115,7 @@ from .capabilities import (
     OrchestratorCapabilitiesModel,
     ProcessorCompatibilityModel,
     ProvisionerCapabilitiesModel,
+    RealizationObservationCapabilityModel,
     RealizationSupportDeclarationModel,
 )
 from .catalogs import (
@@ -374,6 +375,7 @@ from .realization_plans import (
     PlanOperationModel,
     ProvisioningPlanModel,
     RealizationEnvelopeIdentityModel,
+    RealizationObservationDisclosureModel,
     RealizationProvenanceEntryModel,
     RuntimeSnapshotEnvelopeModel,
     SnapshotEntryModel,

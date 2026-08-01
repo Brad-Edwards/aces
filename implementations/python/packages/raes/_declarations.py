@@ -445,6 +445,8 @@ def _add_forwarding_agent_declarations(index: DeclarationIndex, scenario: Scenar
             kind="forwarding-agent",
             address_parts=("forwarding_agents", *_qualified_parts(agent.forwarding_agent_id)),
             model_path=f"forwarding_agents.{position}.forwarding_agent_id",
+            referenceable=True,
+            targetable=True,
         )
 
 

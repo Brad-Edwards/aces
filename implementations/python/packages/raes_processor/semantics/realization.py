@@ -29,7 +29,12 @@ from raes_contracts.realization_envelope import (
     RealizationEnvelopeModel,
 )
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
-from raes_contracts.vocabulary import Closure, RealizationSupportMode
+from raes_contracts.vocabulary import (
+    Closure,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+    verification_scope_satisfies,
+)
 
 from .artifact_realization import (
     artifact_requirement_diagnostics,
@@ -96,11 +101,17 @@ class CompiledRealizationRequirement:
     governing_scope: str | None = None
     delegated: bool = False
     artifact_requirement: ArtifactRequirement | None = None
+    verification_scope: RealizationVerificationScope | None = None
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address)
         if self.delegated != (self.explicitness is None):
             raise ValueError("delegated realization requirements must carry unresolved explicitness")
+        if self.verification_scope is not None and not isinstance(
+            self.verification_scope,
+            RealizationVerificationScope,
+        ):
+            raise TypeError("verification_scope must be RealizationVerificationScope")
         if self.artifact_requirement is not None:
             if self.requirement_kind != "source-artifact":
                 raise ValueError("artifact_requirement requires requirement_kind='source-artifact'")
@@ -203,9 +214,12 @@ def realization_support_diagnostics(
                 )
             continue
         if explicitness is ExplicitnessClass.EXACT:
-            supported = any(
-                EXACT_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds for declaration in declarations
-            )
+            exact_declarations = [
+                declaration
+                for declaration in declarations
+                if EXACT_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
+            ]
+            supported = bool(exact_declarations)
             if not supported:
                 diagnostics.append(
                     Diagnostic(
@@ -222,6 +236,29 @@ def realization_support_diagnostics(
                         severity=Severity.ERROR,
                     )
                 )
+            elif requirement.verification_scope is not None:
+                observed = any(
+                    (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
+                    and verification_scope_satisfies(
+                        capability.verification_scope,
+                        requirement.verification_scope,
+                    )
+                    for declaration in exact_declarations
+                )
+                if not observed:
+                    diagnostics.append(
+                        Diagnostic(
+                            code="realization.under-observed-exact-requirement",
+                            domain=requirement.domain,
+                            address=requirement.address,
+                            message=(
+                                f"Backend declares no '{requirement.verification_scope.value}' corroboration "
+                                f"for exact '{requirement.requirement_kind}' requirement at "
+                                f"'{requirement.field_path}' in domain '{requirement.domain}'."
+                            ),
+                            severity=Severity.ERROR,
+                        )
+                    )
         elif explicitness is ExplicitnessClass.CONSTRAINED:
             supported = any(
                 requirement.requirement_kind in declaration.supported_constraint_kinds for declaration in declarations
@@ -387,6 +424,7 @@ def realization_disclosure(
                 requirement,
                 declared_ops,
                 returned_snapshot,
+                manifest=manifest,
             )
         if diagnostic is not None:
             diagnostics.append(diagnostic)

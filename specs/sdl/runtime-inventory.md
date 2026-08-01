@@ -62,6 +62,15 @@ The node-scoped `forwarding_agents` family is distinct from the scenario-level
 `forwarding_agents` authoring section ([sections.md](sections.md)); they share
 identity and invariants but occupy different document positions.
 
+Forwarding-agent entries also carry a closed ownership role:
+`system_under_test` (the default) or `measurement_apparatus`. This role
+classifies ownership relative to the experiment; it does not assert execution,
+visibility, delivery, or health. Exact realization of the family means
+independently corroborated presence or configuration, as required by the
+authored projection, not proof that forwarding behavior occurred. Operational
+behavior is expressed through proposition, probe, truth, and evidence
+contracts.
+
 ### Other node-runtime surfaces
 
 A node's `runtime` also carries surfaces that are not ref-targetable families in

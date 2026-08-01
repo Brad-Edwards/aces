@@ -138,6 +138,22 @@ runtime, evidence, or provenance carriers. It must not hide in
 `RuntimeSnapshot.metadata`, evaluator details, diagnostics, audit blobs,
 backend DTOs, or raw logs.
 
+### 7. Forwarding-agent ownership does not collapse the planes
+
+A forwarding agent marked `system_under_test` remains scenario-native
+observability. A forwarding agent marked `measurement_apparatus` remains an
+authored inventory declaration for experiment apparatus; it does not become
+captured evidence merely by existing. The ownership role is not an execution
+or visibility claim.
+
+The authored evidence-requirement plane owns the binding direction. An
+apparatus-class `EvidenceRequirement` names the measurement forwarding agent
+in `source_refs`; the agent does not name evidence records, capture locations,
+or storage credentials. Environment-visible or comparability-relevant
+apparatus still requires the existing run-level augmentation disclosure.
+Operational delivery or failure claims remain proposition/probe/truth/evidence
+claims rather than fields on the inventory or realization observation.
+
 ## Required Boundaries
 
 - A backend log is not a participant observation unless a participant
@@ -237,3 +253,4 @@ participant-visible, or comparability-relevant.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-06-23 | #335 | Implemented SEM-225 run-level augmentation disclosures in `experiment-run-v1`, including separate environment-visible, participant-visible, and comparability-relevant validation. |
+| 2026-08-01 | #1043 | Separated forwarding-agent ownership, realization corroboration, evidence binding, and operational behavior claims. |

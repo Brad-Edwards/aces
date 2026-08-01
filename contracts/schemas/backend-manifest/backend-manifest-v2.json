@@ -718,6 +718,17 @@
       "title": "ObservationCapabilitiesModel",
       "type": "object"
     },
+    "ObservationStrength": {
+      "description": "Strongest evidence a backend configuration emits for one concern.",
+      "enum": [
+        "none",
+        "driver-reported",
+        "daemon-observed",
+        "guest-observed"
+      ],
+      "title": "ObservationStrength",
+      "type": "string"
+    },
     "OrchestratorCapabilitiesModel": {
       "additionalProperties": false,
       "allOf": [
@@ -1960,6 +1971,27 @@
       "title": "RealizationEnvelopeIdentityModel",
       "type": "object"
     },
+    "RealizationObservationCapabilityModel": {
+      "additionalProperties": false,
+      "description": "Concern-specific scope and source of backend corroboration.",
+      "properties": {
+        "observation_strength": {
+          "$ref": "#/$defs/ObservationStrength",
+          "not": {
+            "const": "none"
+          }
+        },
+        "verification_scope": {
+          "$ref": "#/$defs/RealizationVerificationScope"
+        }
+      },
+      "required": [
+        "verification_scope",
+        "observation_strength"
+      ],
+      "title": "RealizationObservationCapabilityModel",
+      "type": "object"
+    },
     "RealizationSupportDeclarationModel": {
       "additionalProperties": false,
       "allOf": [
@@ -2042,6 +2074,16 @@
           "title": "Domain",
           "type": "string"
         },
+        "observation_capabilities": {
+          "additionalProperties": {
+            "$ref": "#/$defs/RealizationObservationCapabilityModel"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Observation Capabilities",
+          "type": "object"
+        },
         "support_mode": {
           "$ref": "#/$defs/RealizationSupportMode"
         },
@@ -2078,6 +2120,15 @@
         "open-realization"
       ],
       "title": "RealizationSupportMode",
+      "type": "string"
+    },
+    "RealizationVerificationScope": {
+      "description": "Closed scope at which an inventory realization was corroborated.",
+      "enum": [
+        "presence",
+        "configuration"
+      ],
+      "title": "RealizationVerificationScope",
       "type": "string"
     },
     "TimeCapabilitiesModel": {

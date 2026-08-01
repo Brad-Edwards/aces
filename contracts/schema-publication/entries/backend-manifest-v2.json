@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "8e7112e33d8362c086571cb2062ad7063674aa0d7fe3d9e7fa0db38deede84a4",
+  "content_hash": "fe27901e088649ac3b9f7a53e4cc43474bd1ac0fbef28e7cb2545e33fd703c57",
   "last_change": {
-    "summary": "Require evidence, limitations, constraints, and disclosures for bounded participant-predicate-opacity backend declarations for issue #965.",
-    "content_hash": "8e7112e33d8362c086571cb2062ad7063674aa0d7fe3d9e7fa0db38deede84a4"
+    "summary": "Added concern-keyed realization observation capabilities for issue #1043.",
+    "content_hash": "fe27901e088649ac3b9f7a53e4cc43474bd1ac0fbef28e7cb2545e33fd703c57"
   }
 }

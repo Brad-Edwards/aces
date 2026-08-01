@@ -78,6 +78,22 @@ Authored evidence requirements:
 - MUST remain distinct from `experiment-derived-measure-v1` interpreted
   outputs.
 
+### Forwarding agents used as measurement apparatus
+
+A forwarding agent whose `ownership_role` is `measurement_apparatus` MUST be
+named by at least one inbound apparatus-class evidence requirement through
+`source_refs`. An apparatus-class requirement MUST NOT target a forwarding
+agent whose role is `system_under_test`. The forwarding agent remains the
+source inventory; the evidence requirement owns channel, artifact role,
+sensitivity, redaction, integrity, retention, loss, and abstract destination
+semantics.
+
+The agent MUST NOT duplicate that relation with evidence refs and MUST NOT
+carry an evidence path, pack URI, storage credential, or capture payload.
+Environment-visible or comparability-relevant apparatus additionally maps to
+the existing run-level augmentation disclosure. Neither ownership role nor a
+configured ship target proves delivery or captured evidence.
+
 ## Processor/Backend Operational Observability
 
 Processor/backend operational observability includes apparatus logs,

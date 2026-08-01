@@ -325,6 +325,7 @@ def _compiled_registered_requirement(
         provenance=provenance,
         governing_scope=governing_scope,
         delegated=delegated,
+        verification_scope=descriptor.required_verification_scope(authored_value),
     )
 
 
