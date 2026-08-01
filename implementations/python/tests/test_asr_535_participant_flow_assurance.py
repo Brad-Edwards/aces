@@ -125,7 +125,7 @@ def test_unsupported_declarations_claim_nothing_and_add_no_policy_case() -> None
     unsupported_features = {
         entry.feature
         for entry in policy_capable_target().manifest.participant_runtime.feature_support
-        if entry.support_level.value == "unsupported"
+        if entry.feature in ALL_POLICY_FEATURES and entry.support_level.value == "unsupported"
     }
     policy_cases = [case for case in report.cases if case.policy_binding is not None]
     assert unsupported_features == set(ALL_POLICY_FEATURES) - {"participant_ingress_admission"}

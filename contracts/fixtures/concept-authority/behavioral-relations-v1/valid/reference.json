@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev8",
+  "taxonomy_revision": "rev11",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -2000,13 +2000,19 @@
         "implementations/python/tests/test_issue_961_participant_opacity.py covers profile and claim resolution, finite bounds, active strategies, coalition fusion, decision and omission channels, retained release knowledge, vacuity, deterministic evidence, replay, and explicit nonclaims.",
         "The participant-opacity finite-state checker derives the complete reachable fixed point from an exact transition model, checks every reachable secret evaluation point, and binds catalog, profile, model, assumptions, explored coverage, tool version, result or safe counterexample, and replay evidence.",
         "The committed model-check input and evidence fixtures retain the exact positive baseline model, result, digests, complete coverage, tool identity, and explicit nonclaims; invalid fixtures exercise count and partial-result promotion failures.",
-        "implementations/python/tests/test_issue_962_participant_opacity_model_check.py covers pair-probe incompleteness, supervisor behavior, active strategies, coalition fusion, retained memory, release changes, order and probability non-promotion, exact bounds, replay, and agreement with the bounded lane."
+        "implementations/python/tests/test_issue_962_participant_opacity_model_check.py covers pair-probe incompleteness, supervisor behavior, active strategies, coalition fusion, retained memory, release changes, order and probability non-promotion, exact bounds, replay, and agreement with the bounded lane.",
+        "The Isabelle/HOL Participant_Opacity session kernel-checks the SEM-231 one-sided opacity definition, its information-cell knowledge characterization, and the conditional implication from a matching SEM-230 noninterference instance for an eligible predicate; checked countermodels preserve the invalid-promotion boundaries.",
+        "The participant-opacity-runtime-reference-v1 profile and RUN-319 crossing boundary enforce one exact finite observation inventory with safe, atomic runtime-enforcement decision bindings."
+        ,"The reference backend declares bounded support for the exact runtime profile; generic target conformance separately observes backend-native realization across the protected and complement points and binds the manifest, profile, configuration, tool, environment, and probe-set digests."
       ],
       "explicit_non_claims": [
         "Relation definition, catalog validation, claim-profile binding, and bounded finite analysis do not establish opacity of RAES, RUN-319, or any backend outside the exact admitted artifact.",
         "No checker, finite-state model check, mathematical proof, runtime enforcement, supervisor synthesis, backend declaration, backend realization, or backend conformance is delivered by taxonomy revision rev5.",
         "Taxonomy revision rev7 adds only an in-process bounded-test checker; it does not add a model check, mathematical proof, runtime enforcement, supervisor synthesis, backend declaration, backend realization, or backend conformance.",
         "Taxonomy revision rev8 adds one exact finite-state model-check result; it does not add a mathematical proof, runtime enforcement, supervisor synthesis, backend declaration, backend realization, or backend conformance.",
+        "Taxonomy revision rev9 adds only the abstract conditional mathematical theorem bound to participant-opacity-theorem-v1; it does not prove opacity of RAES, a runtime, a deployment, a backend, or the finite fixture profile.",
+        "Taxonomy revision rev10 adds partial runtime enforcement only for participant-opacity-runtime-reference-v1; it does not establish general opacity, live model checking or proof, supervisor synthesis, backend declaration, backend realization, or backend conformance.",
+        "Taxonomy revision rev11 adds one bounded reference-backend declaration, realization, and conformance lane; it does not establish universal opacity, proof of a live execution, native realization for other backends, or cross-backend equivalence.",
         "Bounded evidence authenticates only the normalized-input digest; it does not authenticate a claimed source artifact or materializer.",
         "Opacity of one predicate does not imply SEM-230 policy noninterference, projected-history equivalence, epistemic indistinguishability of two selected worlds, trace inclusion or equivalence, simulation, refinement, or strong or weak bisimulation.",
         "The possibilistic baseline makes no posterior-risk, entropy, probabilistic, differential-privacy, timed, progress-sensitive, or universal partial-order claim."
@@ -2020,17 +2026,18 @@
         "definition_status": "defined",
         "implementation_status": "implemented",
         "test_status": "bounded",
-        "proof_status": "deliberately-unproved",
+        "proof_status": "proved",
         "checker_status": "implemented",
         "model_check_status": "model-checked",
-        "runtime_enforcement_status": "not-enforced",
-        "backend_declaration_status": "not-declared",
-        "backend_realization_status": "not-realized",
-        "backend_conformance_status": "not-tested",
+        "runtime_enforcement_status": "partial",
+        "backend_declaration_status": "declared",
+        "backend_realization_status": "partial",
+        "backend_conformance_status": "bounded",
         "evidence_refs": [
           "docs/decisions/adrs/adr-099-participant-relative-predicate-opacity.md",
           "specs/formal/participant-semantics/participant-predicate-opacity.md",
-          "contracts/profiles/behavioral-relation/participant-opacity-baseline-v1.json",
+          "contracts/profiles/behavioral-relation/history/participant-opacity-baseline-v1-sem-231-rev2.json",
+          "contracts/profiles/behavioral-relation/participant-opacity-theorem-v1.json",
           "contracts/schemas/formal-analysis/participant-opacity-model-check-input-v1.json",
           "contracts/schemas/formal-analysis/participant-opacity-model-check-evidence-v1.json",
           "contracts/fixtures/formal-analysis/participant-opacity-model-check-input-v1/valid/opaque-transition-model.json",
@@ -2039,7 +2046,19 @@
           "implementations/python/packages/raes_processor/participant_opacity/_model_check.py",
           "implementations/python/tests/test_sem_231_participant_predicate_opacity.py",
           "implementations/python/tests/test_issue_961_participant_opacity.py",
-          "implementations/python/tests/test_issue_962_participant_opacity_model_check.py"
+          "implementations/python/tests/test_issue_962_participant_opacity_model_check.py",
+          "implementations/python/tests/test_issue_963_participant_opacity_proof.py",
+          "specs/formal/participant-semantics/isabelle/Participant_Opacity.thy",
+          "specs/formal/participant-semantics/participant-opacity-proof-evidence.json",
+          "tools/check_participant_opacity_proof.py",
+          "tools/isabelle_tool.py",
+          "contracts/profiles/behavioral-relation/participant-opacity-runtime-reference-v1.json",
+          "implementations/python/packages/raes_contracts/participant_opacity_runtime.py",
+          "implementations/python/packages/raes_runtime/participant_crossing_mediation.py",
+          "implementations/python/tests/test_issue_964_participant_opacity_runtime.py",
+          "docs/decisions/issue-965-participant-opacity-backend-realization-preflight.md",
+          "implementations/python/packages/raes_conformance/conformance/participant_opacity_probes.py",
+          "implementations/python/tests/test_issue_965_participant_opacity_backend.py"
         ]
       },
       "source_refs": [

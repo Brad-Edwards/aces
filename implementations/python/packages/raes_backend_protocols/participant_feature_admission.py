@@ -10,8 +10,8 @@ from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from .capabilities import (
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
-    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     ParticipantFeatureSupport,
 )
 
@@ -62,7 +62,7 @@ def _participant_feature_declaration(
     supported_features = capability.supported_behavior_features | capability.supported_interaction_features
     declaration = next((entry for entry in capability.feature_support if entry.feature == feature), None)
     if declaration is None:
-        if feature in supported_features and feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+        if feature in supported_features and feature not in PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES:
             return None
         raise ValueError(f"participant feature '{feature}' has no explicit support declaration")
     if declaration.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED:
@@ -80,7 +80,7 @@ def _validate_participant_feature_evidence(
         raise ValueError(
             f"participant feature '{feature}' is missing required contracts: {', '.join(missing_contracts)}"
         )
-    if not declaration.evidence_refs and feature in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+    if not declaration.evidence_refs and feature in PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES:
         raise ValueError(f"participant feature '{feature}' has no conformance evidence")
 
 

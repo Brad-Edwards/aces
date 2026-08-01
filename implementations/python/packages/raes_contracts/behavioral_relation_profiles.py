@@ -452,6 +452,12 @@ _HISTORICAL_PROFILE_PATHS = {
         "participant-opacity-baseline-v1",
         "sem-231/rev2",
     ): behavioral_relation_profiles_root() / "history" / "participant-opacity-baseline-v1-sem-231-rev2.json",
+    (
+        "participant-opacity-runtime-reference-v1",
+        "sem-231/runtime-rev1",
+    ): behavioral_relation_profiles_root()
+    / "history"
+    / "participant-opacity-runtime-reference-v1-sem-231-runtime-rev1.json",
 }
 
 

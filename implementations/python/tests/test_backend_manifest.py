@@ -16,6 +16,7 @@ from raes_backend_protocols.capabilities import (
     OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE,
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
@@ -225,7 +226,7 @@ def test_backend_manifest_v2_declares_participant_capability_dimensions():
         "shared_state_change",
     ]
     assert {entry["feature"]: entry["support_level"] for entry in participant_runtime["feature_support"]} == {
-        feature: "unsupported" for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+        feature: "unsupported" for feature in sorted(PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES)
     }
     assert all(entry["limitation_refs"] for entry in participant_runtime["feature_support"])
     assert all(entry["disclosure_refs"] for entry in participant_runtime["feature_support"])

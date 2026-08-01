@@ -15,7 +15,16 @@ from dataclasses import dataclass
 
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.diagnostics import Diagnostic, Severity
-from raes_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
+from raes_contracts.planning import (
+    PlannedResource,
+    ProvisioningPlan,
+    RuntimeDomain,
+    planned_infrastructure_spec,
+    planned_node_source,
+    planned_node_spec,
+    planned_resource_authored_name,
+    planned_resource_payload,
+)
 
 from .driver import ContainerSpec, NetworkSpec, ServiceSpec
 
@@ -75,8 +84,8 @@ def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
         if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
             diagnostics.append(_unsupported_resource(resource))
             continue
-        payload = resource.payload
-        if not isinstance(payload, Mapping):
+        payload = planned_resource_payload(resource)
+        if payload is None:
             diagnostics.append(_invalid_payload(resource))
             continue
         if resource.resource_type == NETWORK_RESOURCE_TYPE:
@@ -86,7 +95,7 @@ def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
         else:
             placement_resources.append((resource, payload))
 
-    networks = [_network_spec(resource, payload) for resource, payload in network_resources]
+    networks = [_network_spec(resource) for resource, _ in network_resources]
     network_lookup = _network_address_lookup(networks)
     containers: list[ContainerSpec] = []
     for resource, payload in node_resources:
@@ -114,30 +123,22 @@ def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
     return lookup
 
 
-def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> str:
-    name = payload.get("name") or payload.get("node_name")
-    if isinstance(name, str) and name:
+def _resource_name(resource: PlannedResource) -> str:
+    name = planned_resource_authored_name(resource)
+    if name is not None:
         return name
     return provider_resource_name(resource.address, prefix="raes")
 
 
-def _infrastructure_spec(payload: Mapping[str, object]) -> Mapping[str, object]:
-    spec = payload.get("spec")
-    if not isinstance(spec, Mapping):
-        return {}
-    infrastructure = spec.get("infrastructure")
-    return infrastructure if isinstance(infrastructure, Mapping) else {}
-
-
-def _network_spec(resource: PlannedResource, payload: Mapping[str, object]) -> NetworkSpec:
-    infrastructure = _infrastructure_spec(payload)
+def _network_spec(resource: PlannedResource) -> NetworkSpec:
+    infrastructure = planned_infrastructure_spec(resource) or {}
     properties = infrastructure.get("properties")
     labels: dict[str, str] = {}
     if isinstance(properties, Mapping) and properties.get("internal") is True:
         labels["internal"] = "true"
     return NetworkSpec(
         address=resource.address,
-        name=_resource_name(resource, payload),
+        name=_resource_name(resource),
         labels=labels,
     )
 
@@ -147,7 +148,7 @@ def _container_spec(
     payload: Mapping[str, object],
     network_lookup: dict[str, str],
 ) -> tuple[ContainerSpec, tuple[Diagnostic, ...]]:
-    infrastructure = _infrastructure_spec(payload)
+    infrastructure = planned_infrastructure_spec(resource) or {}
     networks = infrastructure.get("networks")
     references: tuple[str, ...] = ()
     if isinstance(networks, (list, tuple)):
@@ -156,12 +157,12 @@ def _container_spec(
     # resource address; pass unresolved references through unchanged so the
     # contract stays total even when a node names a network not in this plan.
     network_addresses = tuple(network_lookup.get(ref, ref) for ref in references)
-    image_ref = _image_ref(payload)
-    services, diagnostics = _service_specs(resource, payload)
+    image_ref = _image_ref(resource, payload)
+    services, diagnostics = _service_specs(resource)
     return (
         ContainerSpec(
             address=resource.address,
-            name=_resource_name(resource, payload),
+            name=_resource_name(resource),
             image_ref=image_ref,
             networks=network_addresses,
             services=services,
@@ -204,10 +205,8 @@ def _order_containers(containers: list[ContainerSpec]) -> tuple[ContainerSpec, .
 
 def _service_specs(
     resource: PlannedResource,
-    payload: Mapping[str, object],
 ) -> tuple[tuple[ServiceSpec, ...], tuple[Diagnostic, ...]]:
-    spec = payload.get("spec")
-    node = spec.get("node") if isinstance(spec, Mapping) else None
+    node = planned_node_spec(resource)
     raw_services = node.get("services") if isinstance(node, Mapping) else None
     if raw_services is None:
         return (), ()
@@ -240,29 +239,15 @@ def _valid_service_port(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 65535
 
 
-def _image_ref(payload: Mapping[str, object]) -> str:
-    source = _node_source(payload)
-    if source:
-        return source
-    os_family = payload.get("os_family")
-    if isinstance(os_family, str) and os_family:
-        return f"raes-reference/{os_family}"
-    return "raes-reference/base"
-
-
-def _node_source(payload: Mapping[str, object]) -> str | None:
-    """Return the authored container image source for a node, if any."""
-
-    spec = payload.get("spec")
-    node = spec.get("node") if isinstance(spec, Mapping) else None
-    source = node.get("source") if isinstance(node, Mapping) else None
-    if isinstance(source, str) and source:
-        return source
+def _image_ref(resource: PlannedResource, payload: Mapping[str, object]) -> str:
+    source = planned_node_source(resource)
     if isinstance(source, Mapping):
-        name = source.get("name")
-        if isinstance(name, str) and name:
-            return name
-    return None
+        source = source.get("name")
+    image_ref = source if isinstance(source, str) and source else None
+    if image_ref is None:
+        os_family = payload.get("os_family")
+        image_ref = f"raes-reference/{os_family}" if isinstance(os_family, str) and os_family else "raes-reference/base"
+    return image_ref
 
 
 def _placement(resource: PlannedResource, payload: Mapping[str, object]) -> PlacementRealization:
@@ -271,7 +256,7 @@ def _placement(resource: PlannedResource, payload: Mapping[str, object]) -> Plac
     return PlacementRealization(
         address=resource.address,
         resource_type=resource.resource_type,
-        name=_resource_name(resource, payload),
+        name=_resource_name(resource),
         target_address=target_address,
     )
 

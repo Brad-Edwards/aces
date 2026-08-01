@@ -363,6 +363,14 @@
         "backend/profile/environment digests",
         "separate declaration, realization, and conformance claim bindings"
       ],
+      "delivered_artifacts": [
+        "contracts/profiles/behavioral-relation/participant-opacity-runtime-reference-v1.json",
+        "implementations/python/packages/raes_contracts/manifest_authority.py",
+        "implementations/python/packages/raes_reference_backend/manifest.py",
+        "implementations/python/packages/raes_conformance/conformance/participant_opacity_probes.py",
+        "implementations/python/packages/raes_conformance/conformance/report.py",
+        "implementations/python/tests/test_issue_965_participant_opacity_backend.py"
+      ],
       "explicit_nonclaims": [
         "No universal backend opacity, proof, cross-backend equivalence, or unnamed profile support."
       ]

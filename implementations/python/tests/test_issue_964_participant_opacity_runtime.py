@@ -19,7 +19,10 @@ from participant_crossing_fixtures import (
 from raes_contracts.behavioral_relation_profiles import (
     load_behavioral_relation_profile,
 )
-from raes_contracts.behavioral_relations import load_behavioral_relation_catalog
+from raes_contracts.behavioral_relations import (
+    load_behavioral_relation_catalog,
+    load_behavioral_relation_catalog_revision,
+)
 from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.contracts.base import BehavioralClaimBindingModel
 from raes_contracts.contracts.participant_crossing import (
@@ -445,13 +448,17 @@ def test_omission_and_logical_timing_require_declared_bases() -> None:
             )
 
 
-def test_catalog_declares_only_partial_runtime_enforcement() -> None:
+def test_catalog_preserves_runtime_assurance_while_extending_backend_axes() -> None:
     catalog = load_behavioral_relation_catalog()
     relation = catalog.relations["participant-predicate-opacity"]
+    historical = load_behavioral_relation_catalog_revision("rev10").relations["participant-predicate-opacity"]
 
-    assert catalog.taxonomy_revision == "rev10"
+    assert catalog.taxonomy_revision == "rev11"
     assert relation.assurance.runtime_enforcement_status == "partial"
-    assert relation.assurance.backend_realization_status == "not-realized"
+    assert relation.assurance.backend_declaration_status == "declared"
+    assert relation.assurance.backend_realization_status == "partial"
+    assert relation.assurance.backend_conformance_status == "bounded"
+    assert historical.assurance.backend_realization_status == "not-realized"
 
 
 class _OpacityResolver(StaticCrossingResolver):

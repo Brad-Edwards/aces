@@ -18,6 +18,7 @@ from raes_backend_protocols.capabilities import (
     CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
@@ -48,11 +49,9 @@ REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
 _TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"})
 
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
-_PARTICIPANT_BEHAVIOR_FEATURES = (
-    frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE])
-    - {"autonomous_execution"}
-    - PARTICIPANT_RUNTIME_POLICY_FEATURES
-)
+_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
+) - {"autonomous_execution"} - PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES | {"participant_predicate_opacity"}
 _PARTICIPANT_INTERACTION_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
@@ -170,14 +169,36 @@ def _participant_runtime_capabilities() -> ParticipantRuntimeCapabilities:
         supported_participant_roles=_PARTICIPANT_ROLES,
         supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
         supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
-        feature_support=tuple(
+        feature_support=(
             ParticipantFeatureSupport(
-                feature=feature,
-                support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
-                limitation_refs=(f"limitation:{feature}:not-realized",),
-                disclosure_refs=(f"disclosure:{feature}:unsupported",),
-            )
-            for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+                feature="participant_predicate_opacity",
+                support_level=ParticipantFeatureSupportLevel.BOUNDED,
+                constraint_refs=(
+                    "profile:participant-opacity-runtime-reference-v1@sem-231/runtime-rev2",
+                    "scope:finite-reference-runtime-carrier",
+                ),
+                limitation_refs=(
+                    "limitation:participant-opacity:finite-profile-and-probe-set",
+                    "limitation:participant-opacity:no-universal-proof-or-cross-backend-equivalence",
+                ),
+                disclosure_refs=(
+                    "disclosure:participant-opacity:backend-native-reference-realization",
+                    "disclosure:participant-opacity:logical-time-only",
+                ),
+                evidence_refs=(
+                    "conformance:participant-opacity-backend:complete-transcript",
+                    "tests:test_issue_965_participant_opacity_backend",
+                ),
+            ),
+            *(
+                ParticipantFeatureSupport(
+                    feature=feature,
+                    support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+                    limitation_refs=(f"limitation:{feature}:not-realized",),
+                    disclosure_refs=(f"disclosure:{feature}:unsupported",),
+                )
+                for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+            ),
         ),
     )
 
