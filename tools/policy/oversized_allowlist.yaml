@@ -7,10 +7,6 @@
 # was re-baselined to the 500-line cap on 2026-07-12 (#561); see ADR-015 §2 and
 # its Amendments section.
 files:
-  - implementations/python/packages/raes_backend_libvirt/drivers/libvirt.py
-  - implementations/python/packages/raes_backend_libvirt/realization.py
-  - implementations/python/packages/raes_backend_libvirt/techvault_native.py
-  - implementations/python/packages/raes_contracts/workflow.py
   - implementations/python/packages/raes/composition.py
   - implementations/python/packages/raes/orchestration.py
   - implementations/python/packages/raes/participant_behavior.py
