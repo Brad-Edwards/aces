@@ -96,6 +96,13 @@ PARTICIPANT_RUNTIME_POLICY_FEATURES = frozenset(
     }
 )
 
+PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES = frozenset(
+    {
+        *PARTICIPANT_RUNTIME_POLICY_FEATURES,
+        "participant_predicate_opacity",
+    }
+)
+
 _PARTICIPANT_EPISODE_CONTRACTS = frozenset(
     {
         "participant-episode-state-envelope-v1",
@@ -128,6 +135,19 @@ _PARTICIPANT_AUTONOMOUS_EXECUTION_CONTRACTS = frozenset(
         "operation-status-v1",
     }
 )
+_PARTICIPANT_OPACITY_CONTRACTS = frozenset(
+    {
+        "operation-receipt-v1",
+        "operation-status-v1",
+        "runtime-snapshot-v1",
+        "participant-episode-state-envelope-v1",
+        "participant-episode-history-event-stream-v1",
+        "participant-behavior-history-event-stream-v1",
+        "participant-control-occurrence-v1",
+        "participant-crossing-occurrence-v1",
+        "participant-observation-envelope-v1",
+    }
+)
 
 PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
     PARTICIPANT_RUNTIME_ROLE_SCOPE: {
@@ -145,6 +165,7 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
         "failure_classes": _PARTICIPANT_BEHAVIOR_CONTRACTS,
         "observation_boundaries": _PARTICIPANT_BEHAVIOR_CONTRACTS,
         "outcome_interpretation": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "participant_predicate_opacity": _PARTICIPANT_OPACITY_CONTRACTS,
         "participant_declassification": frozenset({"participant-crossing-occurrence-v1"}),
         "participant_directed_inject_delivery": frozenset(
             {"orchestration-plan-v1", "participant-crossing-occurrence-v1"}

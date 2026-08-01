@@ -9,11 +9,13 @@ from raes_conformance.conformance import (
 from raes_reference_backend import create_reference_backend_target
 
 
-def test_reference_target_passes_full_remote_control_plane_conformance():
+def test_reference_target_requires_opacity_probe_for_positive_declaration():
     report = run_target_conformance(create_reference_backend_target())
 
     assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
-    assert report.passed is True, [diag.message for diag in report.diagnostics]
+    assert report.passed is False
+    opacity = next(case for case in report.cases if case.capability_feature == "participant_predicate_opacity")
+    assert opacity.outcome == "unsupported"
     assert not report.unsupported_contract_gaps
     assert not report.unsupported_capability_gaps
 
@@ -38,12 +40,15 @@ def test_reference_target_drives_full_participant_probe_case_set():
             )
 
 
-def test_reference_target_conformance_matches_stub_acceptance():
+def test_positive_reference_declaration_is_stricter_than_stub_nonclaim():
     from raes_backend_stubs.stubs import create_stub_target
 
     reference_report = run_target_conformance(create_reference_backend_target())
     stub_report = run_target_conformance(create_stub_target())
 
     assert reference_report.profile == stub_report.profile
-    assert reference_report.passed == stub_report.passed is True
-    assert {case.name for case in reference_report.cases} == {case.name for case in stub_report.cases}
+    assert reference_report.passed is False
+    assert stub_report.passed is True
+    assert {case.name for case in reference_report.cases} - {case.name for case in stub_report.cases} == {
+        "participant-opacity-backend-not-executed"
+    }

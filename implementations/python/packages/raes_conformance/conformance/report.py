@@ -95,6 +95,12 @@ class ConformanceCaseResult:
     limitations: tuple[str, ...] = ()
     explicit_non_claims: tuple[str, ...] = ()
     policy_binding: ParticipantPolicyBinding | None = None
+    claim_bindings: tuple[BehavioralClaimBindingModel, ...] = ()
+    realization_owner: str | None = None
+    profile_digest: str | None = None
+    manifest_digest: str | None = None
+    tool_digest: str | None = None
+    environment_digest: str | None = None
 
     def __post_init__(self) -> None:
         """Keep the closed outcome vocabulary aligned with the gating boolean."""
@@ -161,6 +167,50 @@ def _validate_catalog_bindings(report: BackendConformanceReport) -> None:
     for case in report.cases:
         if case.policy_binding is not None:
             validate_behavioral_claim_binding(case.policy_binding.claim)
+        for binding in case.claim_bindings:
+            validate_behavioral_claim_binding(binding)
+        _validate_case_claim_chain(case)
+
+
+def _validate_case_claim_chain(case: ConformanceCaseResult) -> None:
+    """Require declaration, realization, and conformance to remain distinct."""
+
+    if not case.claim_bindings:
+        return
+    axes = {binding.assurance_axis for binding in case.claim_bindings}
+    if "backend-realization" in axes and "backend-declaration" not in axes:
+        raise ValueError("backend realization claim requires a backend declaration claim")
+    if "backend-conformance" in axes and "backend-realization" not in axes:
+        raise ValueError("backend conformance claim requires a backend realization claim")
+    if "backend-conformance" in axes and "backend-declaration" not in axes:
+        raise ValueError("backend conformance claim requires a backend declaration claim")
+    coordinates = {
+        (
+            binding.taxonomy_id,
+            binding.taxonomy_revision,
+            binding.relation_id,
+            binding.relation_parameter_profile_ref,
+            binding.relation_parameter_profile_revision,
+        )
+        for binding in case.claim_bindings
+    }
+    if len(coordinates) != 1:
+        raise ValueError("backend assurance claims for one case must use identical governed coordinates")
+    if "backend-conformance" in axes:
+        if case.realization_owner != "backend-native":
+            raise ValueError("backend conformance claim requires backend-native realization ownership")
+        digests = (
+            case.profile_digest,
+            case.manifest_digest,
+            case.configuration_digest,
+            case.tool_digest,
+            case.environment_digest,
+            case.probe_set_digest,
+        )
+        if any(not digest for digest in digests):
+            raise ValueError(
+                "backend conformance claim requires exact profile, manifest, configuration, tool, environment, and probe-set digests"
+            )
 
 
 def _validate_claim_strength(report: BackendConformanceReport) -> None:
@@ -270,6 +320,12 @@ def backend_conformance_report_payload(report: BackendConformanceReport) -> dict
                 "limitations": list(case.limitations),
                 "explicit_non_claims": list(case.explicit_non_claims),
                 "policy_binding": _policy_binding_payload(case.policy_binding),
+                "claim_bindings": [binding.model_dump(mode="json") for binding in case.claim_bindings],
+                "realization_owner": case.realization_owner,
+                "profile_digest": case.profile_digest,
+                "manifest_digest": case.manifest_digest,
+                "tool_digest": case.tool_digest,
+                "environment_digest": case.environment_digest,
                 "diagnostics": [_diagnostic_payload(diag) for diag in case.diagnostics],
             }
             for case in report.cases

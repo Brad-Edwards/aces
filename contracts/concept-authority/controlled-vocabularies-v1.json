@@ -987,6 +987,10 @@
           "title": "Participant Intervention",
           "description": "Backend supports governed participant intervention and supervisory control occurrences."
         },
+        "participant_predicate_opacity": {
+          "title": "Participant Predicate Opacity",
+          "description": "Backend declares evidence-bound realization of a governed participant-relative predicate-opacity profile."
+        },
         "participant_transformation": {
           "title": "Participant Transformation",
           "description": "Backend supports governed non-mutating participant-boundary transformations with fresh result identity."
