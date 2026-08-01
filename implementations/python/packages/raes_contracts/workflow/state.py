@@ -77,6 +77,34 @@ class WorkflowHistoryEvent:
         }
 
 
+def _require_step_result_keys(payload: Mapping[str, Any]) -> None:
+    missing_keys = [key for key in ("lifecycle", "outcome", "attempts") if key not in payload]
+    if missing_keys:
+        raise ValueError("workflow step result is missing required fields: " + ", ".join(missing_keys))
+
+
+def _coerce_step_lifecycle(raw: object) -> WorkflowStepLifecycle:
+    return raw if isinstance(raw, WorkflowStepLifecycle) else WorkflowStepLifecycle(str(raw))
+
+
+def _coerce_step_outcome(raw: object) -> WorkflowStepOutcome | None:
+    if raw is None:
+        return None
+    return raw if isinstance(raw, WorkflowStepOutcome) else WorkflowStepOutcome(str(raw))
+
+
+def _coerce_step_attempts(raw: object) -> int:
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        raise TypeError("workflow step attempts must be an int")
+    return raw
+
+
+def _coerce_step_attempt_provenance(raw: object) -> tuple[WorkflowStepAttemptProvenance, ...]:
+    if isinstance(raw, (str, bytes, Mapping)) or not isinstance(raw, Iterable):
+        raise TypeError("workflow step attempt_provenance must be a list")
+    return tuple(WorkflowStepAttemptProvenance.from_payload(item) for item in raw)
+
+
 @dataclass(frozen=True)
 class WorkflowStepExecutionState:
     """Internal normalized execution state for one workflow-visible step."""
@@ -93,36 +121,12 @@ class WorkflowStepExecutionState:
     ) -> WorkflowStepExecutionState:
         if not isinstance(payload, Mapping):
             raise TypeError("workflow step result must be a mapping")
-        missing_keys = [key for key in ("lifecycle", "outcome", "attempts") if key not in payload]
-        if missing_keys:
-            raise ValueError("workflow step result is missing required fields: " + ", ".join(missing_keys))
-        lifecycle_raw = payload.get("lifecycle")
-        outcome_raw = payload.get("outcome")
-        attempts_raw = payload.get("attempts")
-        lifecycle = (
-            lifecycle_raw
-            if isinstance(lifecycle_raw, WorkflowStepLifecycle)
-            else WorkflowStepLifecycle(str(lifecycle_raw))
-        )
-        outcome = None
-        if outcome_raw is not None:
-            outcome = (
-                outcome_raw if isinstance(outcome_raw, WorkflowStepOutcome) else WorkflowStepOutcome(str(outcome_raw))
-            )
-        if isinstance(attempts_raw, bool) or not isinstance(attempts_raw, int):
-            raise TypeError("workflow step attempts must be an int")
-        attempt_provenance_raw = payload.get("attempt_provenance", ())
-        if isinstance(attempt_provenance_raw, (str, bytes, Mapping)) or not isinstance(
-            attempt_provenance_raw, Iterable
-        ):
-            raise TypeError("workflow step attempt_provenance must be a list")
+        _require_step_result_keys(payload)
         return cls(
-            lifecycle=lifecycle,
-            outcome=outcome,
-            attempts=attempts_raw,
-            attempt_provenance=tuple(
-                WorkflowStepAttemptProvenance.from_payload(item) for item in attempt_provenance_raw
-            ),
+            lifecycle=_coerce_step_lifecycle(payload.get("lifecycle")),
+            outcome=_coerce_step_outcome(payload.get("outcome")),
+            attempts=_coerce_step_attempts(payload.get("attempts")),
+            attempt_provenance=_coerce_step_attempt_provenance(payload.get("attempt_provenance", ())),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -242,6 +246,10 @@ def _validate_workflow_step_state_types(state: WorkflowStepExecutionState) -> No
         raise TypeError("attempts must be an int")
     if state.attempts < 0:
         raise ValueError("attempts must be >= 0")
+    _validate_workflow_step_attempt_provenance(state)
+
+
+def _validate_workflow_step_attempt_provenance(state: WorkflowStepExecutionState) -> None:
     if not isinstance(state.attempt_provenance, tuple) or any(
         not isinstance(item, WorkflowStepAttemptProvenance) for item in state.attempt_provenance
     ):
