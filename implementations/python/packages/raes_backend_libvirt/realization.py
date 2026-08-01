@@ -189,19 +189,24 @@ def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
 
 def _network_spec(resource: PlannedResource) -> NetworkSpec:
     infrastructure = planned_infrastructure_spec(resource) or {}
-    properties = infrastructure.get("properties")
+    raw_properties = infrastructure.get("properties")
+    properties = raw_properties if isinstance(raw_properties, Mapping) else {}
     labels: dict[str, str] = {}
-    if isinstance(properties, Mapping) and isinstance(properties.get("internal"), bool):
-        labels["internal"] = "true" if properties["internal"] else "false"
-    cidr = properties.get("cidr") if isinstance(properties, Mapping) else None
-    gateway = properties.get("gateway") if isinstance(properties, Mapping) else None
+    internal = properties.get("internal")
+    if isinstance(internal, bool):
+        labels["internal"] = str(internal).lower()
     return NetworkSpec(
         address=resource.address,
         name=_resource_name(resource),
-        cidr=cidr if isinstance(cidr, str) and cidr else None,
-        gateway=gateway if isinstance(gateway, str) and gateway else None,
+        cidr=_optional_str(properties.get("cidr")),
+        gateway=_optional_str(properties.get("gateway")),
         labels=labels,
     )
+
+
+def _optional_str(value: object) -> str | None:
+    text = _str(value)
+    return text or None
 
 
 def _node_address_lookup(
