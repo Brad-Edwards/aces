@@ -4,6 +4,15 @@ This specification defines DSL-437 execution as a composition of existing
 participant semantics and the shared time model. It introduces no background
 actor, inject, or private clock.
 
+## ACT-605 Baseline Behavior Profile Coverage
+
+ACT-605's declarative baseline and background behavior profiles are the
+versioned autonomous participant policies defined below. Ordinary user,
+automation, and ambient scenario activity reuse the same participant, action,
+observation, shared-time, native-execution, and evidence invariants. ACT-605
+adds no separate profile root or actor kind and changes none of the v1, v2, or
+v3 policy semantics.
+
 ## V1 Authored Policy
 
 For behavior specification \(B\), autonomous policy \(P\) contains:
