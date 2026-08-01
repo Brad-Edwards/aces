@@ -17,6 +17,7 @@ from raes_contracts.addressing import require_compiled_address
 from raes_contracts.apparatus import (
     DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
     RUNTIME_REALIZATION_DOMAIN,
+    RealizationSupportDeclaration,
 )
 from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.diagnostics import Diagnostic, Severity
@@ -188,97 +189,114 @@ def realization_support_diagnostics(
     security / host-exposure gate).
     """
 
-    diagnostics: list[Diagnostic] = []
-    for requirement in requirements:
-        explicitness = _effective_explicitness(requirement, manifest, apparatus_default)
-        declarations = [
-            declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
-        ]
-        if explicitness is ExplicitnessClass.OPEN:
-            supported = any(
-                declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION for declaration in declarations
+    return [
+        diagnostic
+        for requirement in requirements
+        if (
+            diagnostic := _realization_support_diagnostic(
+                requirement,
+                manifest,
+                apparatus_default,
             )
-            if not supported:
-                diagnostics.append(
-                    Diagnostic(
-                        code="realization.unsupported-open-requirement",
-                        domain=requirement.domain,
-                        address=requirement.address,
-                        message=(
-                            "Backend declares no open realization support for "
-                            f"'{requirement.requirement_kind}' requirement at "
-                            f"'{requirement.field_path}' in domain '{requirement.domain}'."
-                        ),
-                        severity=Severity.ERROR,
-                    )
-                )
-            continue
-        if explicitness is ExplicitnessClass.EXACT:
-            exact_declarations = [
-                declaration
-                for declaration in declarations
-                if EXACT_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
-            ]
-            supported = bool(exact_declarations)
-            if not supported:
-                diagnostics.append(
-                    Diagnostic(
-                        code="realization.unsupported-exact-requirement",
-                        domain=requirement.domain,
-                        address=requirement.address,
-                        message=(
-                            f"Backend declares no exact realization support "
-                            f"('{EXACT_REQUIREMENT_KIND}') for exact "
-                            f"'{requirement.requirement_kind}' requirement at "
-                            f"'{requirement.field_path}' in domain "
-                            f"'{requirement.domain}'."
-                        ),
-                        severity=Severity.ERROR,
-                    )
-                )
-            elif requirement.verification_scope is not None:
-                observed = any(
-                    (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
-                    and verification_scope_satisfies(
-                        capability.verification_scope,
-                        requirement.verification_scope,
-                    )
-                    for declaration in exact_declarations
-                )
-                if not observed:
-                    diagnostics.append(
-                        Diagnostic(
-                            code="realization.under-observed-exact-requirement",
-                            domain=requirement.domain,
-                            address=requirement.address,
-                            message=(
-                                f"Backend declares no '{requirement.verification_scope.value}' corroboration "
-                                f"for exact '{requirement.requirement_kind}' requirement at "
-                                f"'{requirement.field_path}' in domain '{requirement.domain}'."
-                            ),
-                            severity=Severity.ERROR,
-                        )
-                    )
-        elif explicitness is ExplicitnessClass.CONSTRAINED:
-            supported = any(
-                requirement.requirement_kind in declaration.supported_constraint_kinds for declaration in declarations
-            )
-            if not supported:
-                diagnostics.append(
-                    Diagnostic(
-                        code="realization.unsupported-constraint-requirement",
-                        domain=requirement.domain,
-                        address=requirement.address,
-                        message=(
-                            f"Backend declares no constraint realization support "
-                            f"for constraint kind '{requirement.requirement_kind}' at "
-                            f"'{requirement.field_path}' in domain "
-                            f"'{requirement.domain}'."
-                        ),
-                        severity=Severity.ERROR,
-                    )
-                )
-    return diagnostics
+        )
+        is not None
+    ]
+
+
+def _realization_support_diagnostic(
+    requirement: CompiledRealizationRequirement,
+    manifest: BackendManifest,
+    apparatus_default: ApparatusRealizationDefaultResolver | None,
+) -> Diagnostic | None:
+    explicitness = _effective_explicitness(requirement, manifest, apparatus_default)
+    declarations = [
+        declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
+    ]
+    if explicitness is ExplicitnessClass.OPEN:
+        return _open_support_diagnostic(requirement, declarations)
+    if explicitness is ExplicitnessClass.EXACT:
+        return _exact_support_diagnostic(requirement, declarations)
+    if explicitness is ExplicitnessClass.CONSTRAINED:
+        return _constraint_support_diagnostic(requirement, declarations)
+    return None
+
+
+def _open_support_diagnostic(
+    requirement: CompiledRealizationRequirement,
+    declarations: list[RealizationSupportDeclaration],
+) -> Diagnostic | None:
+    if any(declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION for declaration in declarations):
+        return None
+    return Diagnostic(
+        code="realization.unsupported-open-requirement",
+        domain=requirement.domain,
+        address=requirement.address,
+        message=(
+            "Backend declares no open realization support for "
+            f"'{requirement.requirement_kind}' requirement at "
+            f"'{requirement.field_path}' in domain '{requirement.domain}'."
+        ),
+        severity=Severity.ERROR,
+    )
+
+
+def _exact_support_diagnostic(
+    requirement: CompiledRealizationRequirement,
+    declarations: list[RealizationSupportDeclaration],
+) -> Diagnostic | None:
+    exact_declarations = [
+        declaration
+        for declaration in declarations
+        if EXACT_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
+    ]
+    if not exact_declarations:
+        return Diagnostic(
+            code="realization.unsupported-exact-requirement",
+            domain=requirement.domain,
+            address=requirement.address,
+            message=(
+                f"Backend declares no exact realization support ('{EXACT_REQUIREMENT_KIND}') for exact "
+                f"'{requirement.requirement_kind}' requirement at '{requirement.field_path}' in domain "
+                f"'{requirement.domain}'."
+            ),
+            severity=Severity.ERROR,
+        )
+    if requirement.verification_scope is None or any(
+        (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
+        and verification_scope_satisfies(capability.verification_scope, requirement.verification_scope)
+        for declaration in exact_declarations
+    ):
+        return None
+    return Diagnostic(
+        code="realization.under-observed-exact-requirement",
+        domain=requirement.domain,
+        address=requirement.address,
+        message=(
+            f"Backend declares no '{requirement.verification_scope.value}' corroboration "
+            f"for exact '{requirement.requirement_kind}' requirement at "
+            f"'{requirement.field_path}' in domain '{requirement.domain}'."
+        ),
+        severity=Severity.ERROR,
+    )
+
+
+def _constraint_support_diagnostic(
+    requirement: CompiledRealizationRequirement,
+    declarations: list[RealizationSupportDeclaration],
+) -> Diagnostic | None:
+    if any(requirement.requirement_kind in declaration.supported_constraint_kinds for declaration in declarations):
+        return None
+    return Diagnostic(
+        code="realization.unsupported-constraint-requirement",
+        domain=requirement.domain,
+        address=requirement.address,
+        message=(
+            "Backend declares no constraint realization support "
+            f"for constraint kind '{requirement.requirement_kind}' at "
+            f"'{requirement.field_path}' in domain '{requirement.domain}'."
+        ),
+        severity=Severity.ERROR,
+    )
 
 
 def realization_envelope_diagnostics(

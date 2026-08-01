@@ -9,7 +9,11 @@ from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.apparatus import DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisionOp
-from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
+from raes_contracts.runtime_state import (
+    RealizationObservationDisclosure,
+    RealizationProvenanceEntry,
+    RuntimeSnapshot,
+)
 from raes_contracts.vocabulary import verification_scope_satisfies
 
 from .realization_concerns import CONCERN_PAYLOAD_PATH, project_realization_concern
@@ -105,7 +109,31 @@ def _corroboration_diagnostic(
     required_scope = requirement.verification_scope
     if requirement.explicitness is not ExplicitnessClass.EXACT or required_scope is None:
         return None
-    observation = next(
+    observation = _matching_observation(requirement, returned_snapshot)
+    if (
+        observation is not None
+        and verification_scope_satisfies(observation.verification_scope, required_scope)
+        and _manifest_corroborates(requirement, observation, manifest)
+    ):
+        return None
+    return Diagnostic(
+        code=_BACKEND_CONTRACT_INVALID,
+        domain=requirement.domain,
+        address=requirement.address,
+        message=(
+            f"Backend returned no valid '{required_scope.value}' corroboration for exact "
+            f"'{requirement.requirement_kind}' requirement at '{requirement.field_path}'; "
+            "matching inventory values alone do not establish realization (SEM-218 I2)."
+        ),
+        severity=Severity.ERROR,
+    )
+
+
+def _matching_observation(
+    requirement: CompiledRealizationRequirement,
+    returned_snapshot: RuntimeSnapshot,
+) -> RealizationObservationDisclosure | None:
+    return next(
         (
             entry
             for entry in returned_snapshot.realization_observations
@@ -124,33 +152,23 @@ def _corroboration_diagnostic(
         ),
         None,
     )
-    capability_matches = False
-    if manifest is not None and observation is not None:
-        capability_matches = any(
-            (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
-            and DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
-            and verification_scope_satisfies(capability.verification_scope, observation.verification_scope)
-            and capability.observation_strength is observation.observation_strength
-            for declaration in manifest.realization_support
-            if declaration.domain == requirement.domain
-        )
-    if (
-        observation is None
-        or not verification_scope_satisfies(observation.verification_scope, required_scope)
-        or not capability_matches
-    ):
-        return Diagnostic(
-            code=_BACKEND_CONTRACT_INVALID,
-            domain=requirement.domain,
-            address=requirement.address,
-            message=(
-                f"Backend returned no valid '{required_scope.value}' corroboration for exact "
-                f"'{requirement.requirement_kind}' requirement at '{requirement.field_path}'; "
-                "matching inventory values alone do not establish realization (SEM-218 I2)."
-            ),
-            severity=Severity.ERROR,
-        )
-    return None
+
+
+def _manifest_corroborates(
+    requirement: CompiledRealizationRequirement,
+    observation: RealizationObservationDisclosure,
+    manifest: BackendManifest | None,
+) -> bool:
+    if manifest is None:
+        return False
+    return any(
+        (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
+        and DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
+        and verification_scope_satisfies(capability.verification_scope, observation.verification_scope)
+        and capability.observation_strength is observation.observation_strength
+        for declaration in manifest.realization_support
+        if declaration.domain == requirement.domain
+    )
 
 
 def _observed_projection(

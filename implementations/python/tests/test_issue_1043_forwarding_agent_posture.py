@@ -61,8 +61,9 @@ def test_measurement_apparatus_requires_and_accepts_inbound_evidence_binding() -
 
 
 def test_measurement_apparatus_without_evidence_binding_fails_closed() -> None:
+    source = _node_agent_scenario(role="measurement_apparatus", bind_evidence=False)
     with pytest.raises(SDLValidationError) as excinfo:
-        parse_sdl(_node_agent_scenario(role="measurement_apparatus", bind_evidence=False))
+        parse_sdl(source)
 
     assert any(
         "measurement_apparatus" in error and "EvidenceRequirement.source_refs" in error
@@ -71,8 +72,9 @@ def test_measurement_apparatus_without_evidence_binding_fails_closed() -> None:
 
 
 def test_system_under_test_cannot_be_claimed_as_apparatus_evidence_source() -> None:
+    source = _node_agent_scenario(role="system_under_test", bind_evidence=True)
     with pytest.raises(SDLValidationError) as excinfo:
-        parse_sdl(_node_agent_scenario(role="system_under_test", bind_evidence=True))
+        parse_sdl(source)
 
     assert any("system_under_test" in error and "source_class 'apparatus'" in error for error in excinfo.value.errors)
 
