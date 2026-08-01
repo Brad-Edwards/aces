@@ -76,6 +76,29 @@ def _observation_boundary_references_for_agent(
     return references, issues
 
 
+def _interaction_related_action_issues(
+    *,
+    action_name: str,
+    interaction: object,
+    action_contracts: Mapping[str, object],
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for related_action in getattr(interaction, "related_actions", []) or []:
+        if is_unresolved(related_action):
+            continue
+        if related_action not in action_contracts:
+            issues.append(
+                ParticipantBehaviorIssue(
+                    code="participant.interaction-action-unbound",
+                    participant_name="",
+                    action_name=str(action_name),
+                    ref=str(related_action),
+                )
+            )
+    return issues
+
+
 def _interaction_references_for_action_contracts(
     *,
     action_contracts: Mapping[str, object],
@@ -84,18 +107,14 @@ def _interaction_references_for_action_contracts(
     issues: list[ParticipantBehaviorIssue] = []
     for action_name, action_contract in action_contracts.items():
         for interaction in getattr(action_contract, "interactions", []) or []:
-            for related_action in getattr(interaction, "related_actions", []) or []:
-                if is_unresolved(related_action):
-                    continue
-                if related_action not in action_contracts:
-                    issues.append(
-                        ParticipantBehaviorIssue(
-                            code="participant.interaction-action-unbound",
-                            participant_name="",
-                            action_name=str(action_name),
-                            ref=str(related_action),
-                        )
-                    )
+            issues.extend(
+                _interaction_related_action_issues(
+                    action_name=action_name,
+                    interaction=interaction,
+                    action_contracts=action_contracts,
+                    is_unresolved=is_unresolved,
+                )
+            )
     return issues
 
 

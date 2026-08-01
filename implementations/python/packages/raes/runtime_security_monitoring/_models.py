@@ -1,7 +1,5 @@
 """Security-monitoring manager runtime inventory models."""
 
-from typing import Any
-
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from .._base import SDLModel, parse_int_or_var
@@ -63,7 +61,7 @@ class RuntimeSecurityMonitoringListener(SDLModel):
 
     @field_validator("auth_required", "tls_enabled", mode="before")
     @classmethod
-    def parse_optional_bool(cls, v: Any, info: ValidationInfo) -> bool | str | None:
+    def parse_optional_bool(cls, v: object, info: ValidationInfo) -> bool | str | None:
         return parse_optional_bool_or_var(v, field_name=info.field_name)
 
 
@@ -101,7 +99,7 @@ class RuntimeSecurityMonitoringComponent(SDLModel):
 
     @field_validator("enabled", mode="before")
     @classmethod
-    def parse_enabled(cls, v: Any) -> bool | str | None:
+    def parse_enabled(cls, v: object) -> bool | str | None:
         return parse_optional_bool_or_var(v, field_name="enabled")
 
     @field_validator("name")
@@ -143,7 +141,7 @@ class RuntimeSecurityMonitoringAgent(SDLModel):
 
     @field_validator("group_refs", mode="before")
     @classmethod
-    def coerce_group_refs(cls, v: Any) -> list[str]:
+    def coerce_group_refs(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
 
@@ -163,7 +161,7 @@ class RuntimeSecurityMonitoringAgentGroup(SDLModel):
 
     @field_validator("member_refs", "configuration_file_refs", mode="before")
     @classmethod
-    def coerce_lists(cls, v: Any) -> list[str]:
+    def coerce_lists(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("configuration_file_refs")
@@ -207,12 +205,12 @@ class RuntimeSecurityMonitoringContentSet(SDLModel):
 
     @field_validator("file_count", mode="before")
     @classmethod
-    def parse_file_count(cls, v: Any) -> int | str | None:
+    def parse_file_count(cls, v: object) -> int | str | None:
         return parse_int_or_var(v, minimum=0, field_name="file_count") if v is not None else v
 
     @field_validator("file_refs", mode="before")
     @classmethod
-    def coerce_file_refs(cls, v: Any) -> list[str]:
+    def coerce_file_refs(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("file_refs")
@@ -222,7 +220,7 @@ class RuntimeSecurityMonitoringContentSet(SDLModel):
 
     @field_validator("loaded", mode="before")
     @classmethod
-    def parse_loaded(cls, v: Any) -> bool | str | None:
+    def parse_loaded(cls, v: object) -> bool | str | None:
         return parse_optional_bool_or_var(v, field_name="loaded")
 
 
@@ -325,7 +323,7 @@ class RuntimeSecurityMonitoringManager(SDLModel):
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs", mode="before")
     @classmethod
-    def coerce_file_refs(cls, v: Any) -> list[str]:
+    def coerce_file_refs(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs")

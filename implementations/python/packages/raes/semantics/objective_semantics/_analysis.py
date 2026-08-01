@@ -218,6 +218,24 @@ def _analyze_success(
     return refs, issues, resolved
 
 
+def _window_reference_lists(
+    window: object,
+    unresolved: Callable[[object], bool],
+) -> dict[str, list[object]]:
+    """Filter each window keyspace's authored refs down to the resolved ones."""
+
+    def kept(attribute: str) -> list[object]:
+        return [ref for ref in getattr(window, attribute, []) or [] if not unresolved(ref)]
+
+    return {
+        "story_refs": kept("stories"),
+        "script_refs": kept("scripts"),
+        "event_refs": kept("events"),
+        "workflow_refs": kept("workflows"),
+        "step_refs": kept("steps"),
+    }
+
+
 def _analyze_window(
     objective_name: str,
     objective: object,
@@ -231,11 +249,7 @@ def _analyze_window(
         return [], [], None, []
 
     analysis = analyze_objective_window(
-        story_refs=[ref for ref in getattr(window, "stories", []) or [] if not unresolved(ref)],
-        script_refs=[ref for ref in getattr(window, "scripts", []) or [] if not unresolved(ref)],
-        event_refs=[ref for ref in getattr(window, "events", []) or [] if not unresolved(ref)],
-        workflow_refs=[ref for ref in getattr(window, "workflows", []) or [] if not unresolved(ref)],
-        step_refs=[ref for ref in getattr(window, "steps", []) or [] if not unresolved(ref)],
+        **_window_reference_lists(window, unresolved),
         stories_by_name=window_resources.stories,
         scripts_by_name=window_resources.scripts,
         events_by_name=window_resources.events,
