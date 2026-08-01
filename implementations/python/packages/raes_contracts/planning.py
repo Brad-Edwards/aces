@@ -1,7 +1,15 @@
-"""Shared runtime planning contracts."""
+"""Shared runtime planning contracts and safe planned-resource readers.
+
+Backend and provisioner implementations should use the named
+``planned_*`` accessors in this module instead of traversing a
+:class:`PlannedResource` payload directly.  The accessors are total, perform no
+validation or normalization, and return ``None`` when a requested surface is
+missing or does not apply to the resource's domain and type.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -81,6 +89,89 @@ class PlannedResource:
         require_compiled_address(self.address)
         for dependency in (*self.ordering_dependencies, *self.refresh_dependencies):
             require_compiled_address(dependency, field_name="dependency address")
+
+
+def planned_resource_payload(resource: PlannedResource) -> Mapping[str, Any] | None:
+    """Return the resource's mapping payload, or ``None`` when it is malformed.
+
+    The original mapping is returned without copying or mutation.  This reader
+    is domain-neutral; callers should use the narrower provisioning readers
+    below for fields whose meaning depends on a runtime domain or resource type.
+    """
+
+    payload = resource.payload
+    return payload if isinstance(payload, Mapping) else None
+
+
+def planned_resource_authored_name(resource: PlannedResource) -> str | None:
+    """Return the authored top-level resource name, if one is available."""
+
+    payload = planned_resource_payload(resource)
+    if payload is None:
+        return None
+    name = payload.get("name") or payload.get("node_name")
+    return name if isinstance(name, str) and name else None
+
+
+def planned_resource_name(resource: PlannedResource) -> str:
+    """Return the authored resource name or its full canonical address.
+
+    The address is a stable, provider-neutral fallback.  Backends that require
+    provider-safe native names remain responsible for deriving those names from
+    the address.
+    """
+
+    return planned_resource_authored_name(resource) or resource.address
+
+
+def planned_node_spec(resource: PlannedResource) -> Mapping[str, Any] | None:
+    """Return ``spec.node`` for a provisioning node, otherwise ``None``."""
+
+    if resource.domain is not RuntimeDomain.PROVISIONING or resource.resource_type != "node":
+        return None
+    payload = planned_resource_payload(resource)
+    spec = payload.get("spec") if payload is not None else None
+    node = spec.get("node") if isinstance(spec, Mapping) else None
+    return node if isinstance(node, Mapping) else None
+
+
+def planned_node_source(resource: PlannedResource) -> str | Mapping[str, Any] | None:
+    """Return a provisioning node's authored string-or-mapping source.
+
+    Mapping sources retain all source/build inputs and are not collapsed to a
+    backend-specific image name.  Empty strings and unsupported value shapes
+    are treated as absent.
+    """
+
+    node = planned_node_spec(resource)
+    source = node.get("source") if node is not None else None
+    if isinstance(source, str):
+        return source if source else None
+    return source if isinstance(source, Mapping) else None
+
+
+def planned_node_resources(resource: PlannedResource) -> Mapping[str, Any] | None:
+    """Return a provisioning node's authored resources mapping, if present."""
+
+    node = planned_node_spec(resource)
+    resources = node.get("resources") if node is not None else None
+    return resources if isinstance(resources, Mapping) else None
+
+
+def planned_infrastructure_spec(resource: PlannedResource) -> Mapping[str, Any] | None:
+    """Return ``spec.infrastructure`` for a provisioning node or network.
+
+    Infrastructure is intentionally unavailable for other provisioning
+    resource types and for other runtime domains rather than being inferred
+    from a coincidentally similar payload shape.
+    """
+
+    if resource.domain is not RuntimeDomain.PROVISIONING or resource.resource_type not in {"node", "network"}:
+        return None
+    payload = planned_resource_payload(resource)
+    spec = payload.get("spec") if payload is not None else None
+    infrastructure = spec.get("infrastructure") if isinstance(spec, Mapping) else None
+    return infrastructure if isinstance(infrastructure, Mapping) else None
 
 
 @dataclass(frozen=True)
@@ -216,5 +307,12 @@ __all__ = (
     "ProvisionOp",
     "ProvisioningPlan",
     "RuntimeDomain",
+    "planned_infrastructure_spec",
+    "planned_node_resources",
+    "planned_node_source",
+    "planned_node_spec",
+    "planned_resource_authored_name",
+    "planned_resource_name",
+    "planned_resource_payload",
     "require_plan_operation_identity",
 )

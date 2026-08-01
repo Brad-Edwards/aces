@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.planning import (
     ChangeAction,
     PlannedResource,
@@ -73,6 +74,27 @@ def test_interpret_maps_nodes_to_container_specs():
     assert isinstance(realization, Realization)
     assert [spec.address for spec in realization.containers] == ["provision.node.web"]
     assert realization.containers[0].name == "web"
+    assert not realization.diagnostics
+
+
+def test_interpret_uses_node_source_and_preserves_provider_name_fallback() -> None:
+    resource = PlannedResource(
+        address="provision.node.web",
+        domain=RuntimeDomain.PROVISIONING,
+        resource_type="node",
+        payload={
+            "os_family": "linux",
+            "spec": {
+                "node": {"source": {"name": "registry.example/web:1"}},
+                "infrastructure": {},
+            },
+        },
+    )
+
+    realization = interpret_provisioning_plan(_plan(resource))
+
+    assert realization.containers[0].image_ref == "registry.example/web:1"
+    assert realization.containers[0].name == provider_resource_name(resource.address, prefix="raes")
     assert not realization.diagnostics
 
 

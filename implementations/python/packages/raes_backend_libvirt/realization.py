@@ -25,7 +25,18 @@ from dataclasses import dataclass, field
 from raes_backend_protocols.capabilities import ProvisionerCapabilities
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.diagnostics import Diagnostic, Severity
-from raes_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
+from raes_contracts.planning import (
+    PlannedResource,
+    PlanOperation,
+    ProvisioningPlan,
+    RuntimeDomain,
+    planned_infrastructure_spec,
+    planned_node_resources,
+    planned_node_source,
+    planned_node_spec,
+    planned_resource_authored_name,
+    planned_resource_payload,
+)
 
 from ._payload import (
     ACCOUNT_PLACEMENT_RESOURCE_TYPE,
@@ -100,7 +111,7 @@ def interpret_provisioning_plan(
     diagnostics: list[Diagnostic] = list(capability_envelope_diagnostics(plan, capabilities))
     network_resources, node_resources, placement_resources = _collect_supported_resources(plan, diagnostics)
 
-    networks = [_network_spec(resource, payload) for resource, payload in network_resources]
+    networks = [_network_spec(resource) for resource, _ in network_resources]
     network_lookup = _network_address_lookup(networks)
     cidr_lookup = _network_cidr_lookup(networks)
     node_lookup = _node_address_lookup(node_resources)
@@ -111,13 +122,12 @@ def interpret_provisioning_plan(
     )
     diagnostics.extend(placement_diagnostics)
     acls: dict[str, tuple[NetworkAcl, ...]] = {}
-    for resource, payload in node_resources:
-        node_acls, acl_diagnostics = realize_node_acls(resource, _infrastructure_spec(payload).get("acls"), cidr_lookup)
+    for resource, _payload in node_resources:
+        infrastructure = planned_infrastructure_spec(resource) or {}
+        node_acls, acl_diagnostics = realize_node_acls(resource, infrastructure.get("acls"), cidr_lookup)
         acls[resource.address] = node_acls
         diagnostics.extend(acl_diagnostics)
-    domains = [
-        _domain_spec(resource, payload, network_lookup, cloud_init, acls) for resource, payload in node_resources
-    ]
+    domains = [_domain_spec(resource, network_lookup, cloud_init, acls) for resource, _ in node_resources]
 
     return Realization(
         networks=tuple(sorted(networks, key=lambda spec: spec.address)),
@@ -139,14 +149,8 @@ def _collect_supported_resources(
     node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     for resource in sorted(plan.resources.values(), key=lambda item: item.address):
-        if resource.domain != RuntimeDomain.PROVISIONING:
-            continue
-        if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
-            diagnostics.append(_unsupported_resource(resource))
-            continue
-        payload = resource.payload
-        if not isinstance(payload, Mapping):
-            diagnostics.append(_invalid_payload(resource))
+        payload = _supported_resource_payload(resource, diagnostics)
+        if payload is None:
             continue
         if resource.resource_type == NETWORK_RESOURCE_TYPE:
             network_resources.append((resource, payload))
@@ -159,6 +163,21 @@ def _collect_supported_resources(
     return network_resources, node_resources, placement_resources
 
 
+def _supported_resource_payload(
+    resource: PlannedResource,
+    diagnostics: list[Diagnostic],
+) -> Mapping[str, object] | None:
+    if resource.domain != RuntimeDomain.PROVISIONING:
+        return None
+    if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
+        diagnostics.append(_unsupported_resource(resource))
+        return None
+    payload = planned_resource_payload(resource)
+    if payload is None:
+        diagnostics.append(_invalid_payload(resource))
+    return payload
+
+
 def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
     lookup: dict[str, str] = {}
     for spec in networks:
@@ -168,21 +187,26 @@ def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
     return lookup
 
 
-def _network_spec(resource: PlannedResource, payload: Mapping[str, object]) -> NetworkSpec:
-    infrastructure = _infrastructure_spec(payload)
-    properties = infrastructure.get("properties")
+def _network_spec(resource: PlannedResource) -> NetworkSpec:
+    infrastructure = planned_infrastructure_spec(resource) or {}
+    raw_properties = infrastructure.get("properties")
+    properties = raw_properties if isinstance(raw_properties, Mapping) else {}
     labels: dict[str, str] = {}
-    if isinstance(properties, Mapping) and isinstance(properties.get("internal"), bool):
-        labels["internal"] = "true" if properties["internal"] else "false"
-    cidr = properties.get("cidr") if isinstance(properties, Mapping) else None
-    gateway = properties.get("gateway") if isinstance(properties, Mapping) else None
+    internal = properties.get("internal")
+    if isinstance(internal, bool):
+        labels["internal"] = str(internal).lower()
     return NetworkSpec(
         address=resource.address,
-        name=_resource_name(resource, payload),
-        cidr=cidr if isinstance(cidr, str) and cidr else None,
-        gateway=gateway if isinstance(gateway, str) and gateway else None,
+        name=_resource_name(resource),
+        cidr=_optional_str(properties.get("cidr")),
+        gateway=_optional_str(properties.get("gateway")),
         labels=labels,
     )
+
+
+def _optional_str(value: object) -> str | None:
+    text = _str(value)
+    return text or None
 
 
 def _node_address_lookup(
@@ -191,8 +215,8 @@ def _node_address_lookup(
     """Map every handle a placement might reference a node by to its address."""
 
     lookup: dict[str, str] = {}
-    for resource, payload in node_resources:
-        name = _resource_name(resource, payload)
+    for resource, _payload in node_resources:
+        name = _resource_name(resource)
         for key in (resource.address, name):
             if key:
                 lookup[key] = resource.address
@@ -333,7 +357,7 @@ def _realize_feature(
     feature_type = _str(template.get("type"))
     source = template.get("source")
     package = _str(source.get("name")) if isinstance(source, Mapping) else ""
-    name = _resource_name(resource, payload)
+    name = _resource_name(resource)
     if feature_type == "service" and package:
         _merge_emit(accumulator, dialect.enable_feature(package))
     else:
@@ -355,7 +379,7 @@ def _content_descriptor(
     location: str | None,
 ) -> CloudInitFile:
     spec = _spec(payload)
-    name = _resource_name(resource, payload)
+    name = _resource_name(resource)
     descriptor = {
         "content": name,
         "type": _str(spec.get("type")),
@@ -371,25 +395,24 @@ def _descriptor_body(descriptor: Mapping[str, object]) -> str:
 
 def _domain_spec(
     resource: PlannedResource,
-    payload: Mapping[str, object],
     network_lookup: dict[str, str],
     cloud_init: dict[str, _CloudInitAccumulator],
     acls: dict[str, tuple[NetworkAcl, ...]],
 ) -> DomainSpec:
-    infrastructure = _infrastructure_spec(payload)
+    infrastructure = planned_infrastructure_spec(resource) or {}
     references = _network_refs(infrastructure)
     network_addresses = tuple(network_lookup.get(ref, ref) for ref in references)
-    resources = _node_resources(payload)
-    name = _resource_name(resource, payload)
+    resources = planned_node_resources(resource) or {}
+    name = _resource_name(resource)
     accumulator = cloud_init.get(resource.address, _CloudInitAccumulator())
     return DomainSpec(
         address=resource.address,
         name=name,
-        image_ref=_image_ref(payload),
+        image_ref=_planned_node_image_ref(resource),
         memory_mib=_memory_mib(resources.get("ram")),
         vcpus=_vcpus(resources.get("cpu")),
         networks=network_addresses,
-        services=_services(payload),
+        services=_planned_node_services(resource),
         cloud_init=accumulator.build(hostname=name),
         network_acls=acls.get(resource.address, ()),
     )
@@ -406,9 +429,17 @@ def _network_cidr_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
     return lookup
 
 
-def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> str:
-    name = payload.get("name") or payload.get("node_name")
-    if isinstance(name, str) and name:
+def _resource_name(
+    resource: PlannedResource | PlanOperation,
+    payload: Mapping[str, object] | None = None,
+) -> str:
+    if isinstance(resource, PlannedResource):
+        name = planned_resource_authored_name(resource)
+    else:
+        operation_payload = payload or {}
+        raw_name = operation_payload.get("name") or operation_payload.get("node_name")
+        name = raw_name if isinstance(raw_name, str) and raw_name else None
+    if name is not None:
         return name
     return provider_resource_name(resource.address, prefix="raes")
 
@@ -450,6 +481,15 @@ def _services(payload: Mapping[str, object]) -> tuple[ServiceSpec, ...]:
     return tuple(sorted(services, key=lambda service: (service.protocol, service.port, service.name)))
 
 
+def _planned_node_services(resource: PlannedResource) -> tuple[ServiceSpec, ...]:
+    node = planned_node_spec(resource)
+    raw_services = node.get("services") if node is not None else None
+    if not isinstance(raw_services, list | tuple):
+        return ()
+    services = [service for item in raw_services if (service := _service(item)) is not None]
+    return tuple(sorted(services, key=lambda service: (service.protocol, service.port, service.name)))
+
+
 def _service(raw: object) -> ServiceSpec | None:
     service: ServiceSpec | None = None
     if isinstance(raw, Mapping):
@@ -485,6 +525,17 @@ def _image_ref(payload: Mapping[str, object]) -> str | None:
     node = spec.get("node") if isinstance(spec, Mapping) else None
     source = node.get("source") if isinstance(node, Mapping) else None
     if isinstance(source, str) and source:
+        return source
+    if isinstance(source, Mapping):
+        name = source.get("name")
+        if isinstance(name, str) and name:
+            return name
+    return None
+
+
+def _planned_node_image_ref(resource: PlannedResource) -> str | None:
+    source = planned_node_source(resource)
+    if isinstance(source, str):
         return source
     if isinstance(source, Mapping):
         name = source.get("name")
