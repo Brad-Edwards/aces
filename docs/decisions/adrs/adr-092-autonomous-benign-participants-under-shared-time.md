@@ -25,6 +25,11 @@ services while evaluated participants operate. Deterministic activity is still
 participant behavior: its implementation may be a script, agent, simulator, or
 external service, but determinism does not create a new actor ontology.
 
+ACT-605's declarative baseline and background behavior profiles are this same
+capability: ordinary user, automation, and ambient scenario activity expressed
+through autonomous participant policy. The requirement names a scenario
+purpose, not a separate actor, scheduler, clock, or execution plane.
+
 The prior live-activity prototype introduced parallel actor, scheduler, and
 historical-data concepts. That would duplicate participant semantics, bypass
 the shared time authority, and make scenario-pack control conventions part of
@@ -39,7 +44,8 @@ Autonomous benign activity is authored under
 `ParticipantBehaviorSpecification.autonomous_execution`. It resolves existing
 agents, participant action contracts, observation boundaries, implementation
 selection, and behavior history. Non-evaluated autonomous participants must
-have the existing `green` role.
+have the existing `green` role. This is the normative authoring and realization
+path for ACT-605 baseline behavior profiles.
 
 ### 2. Separate evaluation authority
 
@@ -244,3 +250,4 @@ evidence does not pass.
 | 2026-07-24 | #861 | Required exact action provenance and capability-specific atomic participant batching. |
 | 2026-07-26 | #897 | Kept v1 stable and governed richer within-run timing, weighted selection, lifecycle state, and provenance as a versioned autonomous-execution profile. |
 | 2026-07-26 | #898 | Added exact native action-to-target bindings, bounded concurrent execution, generation-fenced lifecycle control, typed service readback, and conditional live conformance. |
+| 2026-08-01 | #213 | Identified the existing autonomous-participant policy and execution path as the implementation of ACT-605 baseline behavior profiles. |

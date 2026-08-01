@@ -63,7 +63,7 @@
       "artifact_id": "known-limitations",
       "kind": "documentation",
       "path": "docs/explain/sdl/limitations.md",
-      "sha256": "4a673316b341fd5beca10e3dd87aa35ba762e4668d78d1b48cb706074f0c720c",
+      "sha256": "129cf17810aad4c51988bc872e28fe43ae95019a80053c42d800ff7e2b9cc93e",
       "validator": "documentation evidence only"
     }
   ],
