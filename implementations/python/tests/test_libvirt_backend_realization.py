@@ -53,7 +53,11 @@ def _node_os(os_family: str) -> PlannedResource:
             "node_name": "web",
             "os_family": os_family,
             "spec": {
-                "node": {"type": "vm", "source": {"name": "/img/base.qcow2"}, "resources": {"ram": 512, "cpu": 1}},
+                "node": {
+                    "type": "vm",
+                    "source": {"name": "/img/base.qcow2"},
+                    "resources": {"ram": 2_147_483_648, "cpu": 4},
+                },
                 "infrastructure": {"networks": ["lan"]},
             },
         },
@@ -71,7 +75,12 @@ def _domain(realization, address: str = NODE_ADDRESS):
 def test_node_without_placements_gets_hostname_only_cloud_init():
     realization = interpret_provisioning_plan(_plan(_node()))
 
-    cloud_init = _domain(realization).cloud_init
+    domain = _domain(realization)
+    cloud_init = domain.cloud_init
+    assert domain.image_ref == "/img/base.qcow2"
+    assert domain.memory_mib == 2048
+    assert domain.vcpus == 4
+    assert domain.networks == ("lan",)
     assert cloud_init.hostname == "web"
     assert cloud_init.is_empty is False  # hostname is present
     assert cloud_init.users == ()
