@@ -15,8 +15,8 @@ from raes_backend_protocols.participant_feature_admission import resolve_partici
 from raes_conformance.conformance.participant_opacity_probes import (
     ParticipantOpacityProbeCase,
     ParticipantOpacityProbeObservation,
-    ParticipantOpacityRealizationOwner,
 )
+from raes_conformance.conformance.reference_participant_opacity import ReferenceParticipantOpacityHarness
 from raes_conformance.conformance.report import (
     backend_conformance_report_payload,
     validate_backend_conformance_report,
@@ -48,49 +48,7 @@ EXPECTED_OBSERVATION = ParticipantOpacityProbeObservation(
 )
 
 
-class ReferenceOpacityHarness:
-    """Typed backend-specific setup; the generic runner still owns verdicts."""
-
-    probe_set_digest = canonical_json_digest({"probe_set": "participant-opacity-backend/rev1"})
-    configuration_digest = canonical_json_digest({"configuration": "reference-emulation/default"})
-    tool_digest = canonical_json_digest({"tool": "raes-conformance-participant-opacity/rev1"})
-    environment_digest = canonical_json_digest({"environment": "in-process-reference"})
-
-    def cases(self, target) -> tuple[ParticipantOpacityProbeCase, ...]:
-        profile = load_behavioral_relation_profile(PROFILE_ID)
-        return (
-            ParticipantOpacityProbeCase(
-                name="complete-observation-transcript",
-                profile_id=profile.profile_id,
-                profile_revision=profile.profile_revision,
-                profile_digest=profile.canonical_digest,
-                actual_point_ref="possible-point:runtime-reference-protected",
-                alternative_point_ref="possible-point:runtime-reference-complement",
-                expected_observation=EXPECTED_OBSERVATION,
-                realization_owner=ParticipantOpacityRealizationOwner.BACKEND_NATIVE,
-                execution_basis="hermetic-live",
-                manifest_digest=canonical_json_digest(backend_manifest_payload(target.manifest)),
-                configuration_digest=self.configuration_digest,
-                tool_digest=self.tool_digest,
-                environment_digest=self.environment_digest,
-                evidence_refs=("conformance:participant-opacity-backend:complete-transcript",),
-                limitations=("Limited to the named finite reference profile and probe set.",),
-                explicit_non_claims=(
-                    "No universal backend opacity, proof, model check, or cross-backend equivalence.",
-                ),
-            ),
-        )
-
-    def observe(self, target, case: ParticipantOpacityProbeCase, point_ref: str):
-        runtime = target.participant_runtime
-        assert runtime is not None
-        payload = runtime.participant_relation_probe(
-            relation_id="participant-predicate-opacity",
-            profile_id=case.profile_id,
-            profile_revision=case.profile_revision,
-            possible_point_ref=point_ref,
-        )
-        return ParticipantOpacityProbeObservation(**payload)
+ReferenceOpacityHarness = ReferenceParticipantOpacityHarness
 
 
 class RuntimeMediatedOnlyHarness(ReferenceOpacityHarness):

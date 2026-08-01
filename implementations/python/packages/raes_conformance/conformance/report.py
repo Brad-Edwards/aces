@@ -178,12 +178,26 @@ def _validate_case_claim_chain(case: ConformanceCaseResult) -> None:
     if not case.claim_bindings:
         return
     axes = {binding.assurance_axis for binding in case.claim_bindings}
+    _validate_claim_axes(axes)
+    _validate_claim_coordinates(case)
+    if "backend-conformance" in axes:
+        _validate_backend_conformance_claim(case)
+
+
+def _validate_claim_axes(axes: set[str | None]) -> None:
+    """Require each stronger assurance axis to retain its prerequisites."""
+
     if "backend-realization" in axes and "backend-declaration" not in axes:
         raise ValueError("backend realization claim requires a backend declaration claim")
     if "backend-conformance" in axes and "backend-realization" not in axes:
         raise ValueError("backend conformance claim requires a backend realization claim")
     if "backend-conformance" in axes and "backend-declaration" not in axes:
         raise ValueError("backend conformance claim requires a backend declaration claim")
+
+
+def _validate_claim_coordinates(case: ConformanceCaseResult) -> None:
+    """Require every assurance step to use one governed relation coordinate."""
+
     coordinates = {
         (
             binding.taxonomy_id,
@@ -196,21 +210,26 @@ def _validate_case_claim_chain(case: ConformanceCaseResult) -> None:
     }
     if len(coordinates) != 1:
         raise ValueError("backend assurance claims for one case must use identical governed coordinates")
-    if "backend-conformance" in axes:
-        if case.realization_owner != "backend-native":
-            raise ValueError("backend conformance claim requires backend-native realization ownership")
-        digests = (
-            case.profile_digest,
-            case.manifest_digest,
-            case.configuration_digest,
-            case.tool_digest,
-            case.environment_digest,
-            case.probe_set_digest,
+
+
+def _validate_backend_conformance_claim(case: ConformanceCaseResult) -> None:
+    """Require backend-native ownership and exact evidence coordinates."""
+
+    if case.realization_owner != "backend-native":
+        raise ValueError("backend conformance claim requires backend-native realization ownership")
+    digests = (
+        case.profile_digest,
+        case.manifest_digest,
+        case.configuration_digest,
+        case.tool_digest,
+        case.environment_digest,
+        case.probe_set_digest,
+    )
+    if any(not digest for digest in digests):
+        raise ValueError(
+            "backend conformance claim requires exact profile, manifest, configuration, "
+            "tool, environment, and probe-set digests"
         )
-        if any(not digest for digest in digests):
-            raise ValueError(
-                "backend conformance claim requires exact profile, manifest, configuration, tool, environment, and probe-set digests"
-            )
 
 
 def _validate_claim_strength(report: BackendConformanceReport) -> None:

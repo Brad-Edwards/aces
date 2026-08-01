@@ -6,12 +6,13 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Protocol
 
-from raes_backend_protocols.capabilities import resolve_participant_feature_support
+from raes_backend_protocols.capabilities import ParticipantFeatureSupport, resolve_participant_feature_support
 from raes_backend_protocols.manifest import backend_manifest_payload
 from raes_contracts.behavioral_relation_profiles import load_behavioral_relation_profile
 from raes_contracts.behavioral_relations import validate_behavioral_claim_binding
 from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.contracts import BehavioralClaimBindingModel
+from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_runtime.registry import RuntimeTarget
 
@@ -83,6 +84,13 @@ class ParticipantOpacityProbeHarness(Protocol):
         case: ParticipantOpacityProbeCase,
         point_ref: str,
     ) -> ParticipantOpacityProbeObservation: ...
+
+
+@dataclass(frozen=True)
+class _ProbeExecution:
+    observations: tuple[ParticipantOpacityProbeObservation, ...]
+    diagnostics: tuple[Diagnostic, ...]
+    backend_calls: int
 
 
 def _claim(
@@ -181,17 +189,13 @@ def _unsupported_case(target: RuntimeTarget) -> ConformanceCaseResult:
     )
 
 
-def _run_case(
+def _validate_probe_case(
     target: RuntimeTarget,
-    harness: ParticipantOpacityProbeHarness,
     case: ParticipantOpacityProbeCase,
-) -> ConformanceCaseResult:
-    declaration = resolve_participant_feature_support(
-        target.manifest,
-        _FEATURE,
-        required_level=ParticipantFeatureSupportLevel.BOUNDED,
-    )
-    assert declaration is not None
+    declaration: ParticipantFeatureSupport,
+) -> None:
+    """Bind a probe case to the governed profile and exact target manifest."""
+
     profile = load_behavioral_relation_profile(case.profile_id)
     if case.profile_revision != profile.profile_revision or case.profile_digest != profile.canonical_digest:
         raise ValueError("probe profile coordinates do not match the governed profile")
@@ -203,10 +207,18 @@ def _run_case(
         raise ValueError("probe manifest digest does not match the target declaration")
     if case.execution_basis not in {"fixture-only", "hermetic-live", "native-live"}:
         raise ValueError("probe execution basis is unsupported")
-    claims = [_declaration_claim(case, target, declaration.evidence_refs)]
-    diagnostics = []
+
+
+def _execute_probe(
+    target: RuntimeTarget,
+    harness: ParticipantOpacityProbeHarness,
+    case: ParticipantOpacityProbeCase,
+) -> _ProbeExecution:
+    """Collect the closed transcript and retain only sanitized failures."""
+
     instrumented, counter = _instrumented_target(target)
     observations: list[ParticipantOpacityProbeObservation] = []
+    diagnostics: list[Diagnostic] = []
     try:
         for point_ref in (case.actual_point_ref, case.alternative_point_ref):
             observations.append(harness.observe(instrumented, case, point_ref))
@@ -219,7 +231,18 @@ def _run_case(
             )
         )
     backend_calls = counter.calls if counter is not None else 0
-    if backend_calls == 0:
+    return _ProbeExecution(tuple(observations), tuple(diagnostics), backend_calls)
+
+
+def _probe_diagnostics(
+    case: ParticipantOpacityProbeCase,
+    execution: _ProbeExecution,
+    observations_match: bool,
+) -> tuple[Diagnostic, ...]:
+    """Evaluate mediation, ownership, and transcript consistency."""
+
+    diagnostics = list(execution.diagnostics)
+    if execution.backend_calls == 0:
         diagnostics.append(
             _diagnostic(
                 "conformance.participant-opacity-backend-unobserved",
@@ -235,10 +258,7 @@ def _run_case(
                 "Runtime mediation or a declaration alone cannot establish backend-native realization.",
             )
         )
-    observations_match = len(observations) == 2 and all(
-        observation == case.expected_observation for observation in observations
-    )
-    if observations and not observations_match:
+    if execution.observations and not observations_match:
         diagnostics.append(
             _diagnostic(
                 "conformance.participant-opacity-observation-mismatch",
@@ -246,7 +266,18 @@ def _run_case(
                 "The measured complete observation transcript differs across the governed opacity points.",
             )
         )
-    passed = not diagnostics and observations_match
+    return tuple(diagnostics)
+
+
+def _case_claims(
+    case: ParticipantOpacityProbeCase,
+    target: RuntimeTarget,
+    declaration: ParticipantFeatureSupport,
+    passed: bool,
+) -> tuple[BehavioralClaimBindingModel, ...]:
+    """Build the declaration-to-realization claim chain for one probe."""
+
+    claims = [_declaration_claim(case, target, declaration.evidence_refs)]
     if passed:
         claims.extend(
             (
@@ -268,6 +299,27 @@ def _run_case(
                 ),
             )
         )
+    return tuple(claims)
+
+
+def _run_case(
+    target: RuntimeTarget,
+    harness: ParticipantOpacityProbeHarness,
+    case: ParticipantOpacityProbeCase,
+) -> ConformanceCaseResult:
+    declaration = resolve_participant_feature_support(
+        target.manifest,
+        _FEATURE,
+        required_level=ParticipantFeatureSupportLevel.BOUNDED,
+    )
+    assert declaration is not None
+    _validate_probe_case(target, case, declaration)
+    execution = _execute_probe(target, harness, case)
+    observations_match = len(execution.observations) == 2 and all(
+        observation == case.expected_observation for observation in execution.observations
+    )
+    diagnostics = _probe_diagnostics(case, execution, observations_match)
+    passed = not diagnostics and observations_match
     return ConformanceCaseResult(
         name=case.name,
         contract_name="backend-manifest-v2",
@@ -278,9 +330,9 @@ def _run_case(
         probe_digest=canonical_json_digest(
             {
                 "case": case.name,
-                "observation_count": len(observations),
+                "observation_count": len(execution.observations),
                 "observations_match": observations_match,
-                "backend_calls": backend_calls,
+                "backend_calls": execution.backend_calls,
             }
         ),
         probe_set_digest=harness.probe_set_digest,
@@ -292,14 +344,62 @@ def _run_case(
         finite_scope="The exact two named possible points and closed observation transcript.",
         limitations=case.limitations,
         explicit_non_claims=case.explicit_non_claims,
-        diagnostics=tuple(diagnostics),
-        claim_bindings=tuple(claims),
+        diagnostics=diagnostics,
+        claim_bindings=_case_claims(case, target, declaration, passed),
         realization_owner=case.realization_owner.value,
         profile_digest=case.profile_digest,
         manifest_digest=case.manifest_digest,
         tool_digest=case.tool_digest,
         environment_digest=case.environment_digest,
     )
+
+
+def _harness_failure_case(
+    target: RuntimeTarget,
+    code: str,
+    message: str,
+    *,
+    outcome: str,
+) -> ConformanceCaseResult:
+    """Retain the positive declaration while refusing absent probe evidence."""
+
+    case = _unsupported_case(target)
+    return replace(
+        case,
+        diagnostics=(_diagnostic(code, _FEATURE, message),),
+        outcome=outcome,
+    )
+
+
+def _run_harness_cases(
+    target: RuntimeTarget,
+    harness: ParticipantOpacityProbeHarness,
+) -> tuple[ConformanceCaseResult, ...]:
+    """Convert adapter failures into bounded, non-passing report cases."""
+
+    try:
+        probe_cases = harness.cases(target)
+        if probe_cases:
+            results = tuple(_run_case(target, harness, case) for case in probe_cases)
+        else:
+            results = (
+                _harness_failure_case(
+                    target,
+                    "conformance.participant-opacity-harness-empty",
+                    "The opacity harness supplied no cases for a positive declaration.",
+                    outcome="unsupported",
+                ),
+            )
+    except Exception as exc:
+        results = (
+            _harness_failure_case(
+                target,
+                "conformance.participant-opacity-harness-rejected",
+                sanitized_failure_message(exc),
+                outcome="failed",
+            ),
+        )
+    return results
 
 
 def participant_opacity_cases(
@@ -309,45 +409,15 @@ def participant_opacity_cases(
     """Run backend opacity probes or retain an explicit unsupported result."""
 
     capability = target.manifest.participant_runtime
-    if capability is None:
-        return ()
-    declaration = next((entry for entry in capability.feature_support if entry.feature == _FEATURE), None)
-    if declaration is None or declaration.support_level is ParticipantFeatureSupportLevel.UNSUPPORTED:
-        return ()
-    if harness is None:
-        return (_unsupported_case(target),)
-    try:
-        probe_cases = harness.cases(target)
-        if not probe_cases:
-            case = _unsupported_case(target)
-            return (
-                replace(
-                    case,
-                    diagnostics=(
-                        _diagnostic(
-                            "conformance.participant-opacity-harness-empty",
-                            _FEATURE,
-                            "The opacity harness supplied no cases for a positive declaration.",
-                        ),
-                    ),
-                ),
-            )
-        return tuple(_run_case(target, harness, case) for case in probe_cases)
-    except Exception as exc:
-        case = _unsupported_case(target)
-        return (
-            replace(
-                case,
-                diagnostics=(
-                    _diagnostic(
-                        "conformance.participant-opacity-harness-rejected",
-                        _FEATURE,
-                        sanitized_failure_message(exc),
-                    ),
-                ),
-                outcome="failed",
-            ),
+    results: tuple[ConformanceCaseResult, ...] = ()
+    if capability is not None:
+        declaration = next((entry for entry in capability.feature_support if entry.feature == _FEATURE), None)
+        supported = (
+            declaration is not None and declaration.support_level is not ParticipantFeatureSupportLevel.UNSUPPORTED
         )
+        if supported:
+            results = (_unsupported_case(target),) if harness is None else _run_harness_cases(target, harness)
+    return results
 
 
 __all__ = [
