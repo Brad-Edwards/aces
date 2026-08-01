@@ -14,6 +14,11 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from .base import ContractModel, NonEmptyString
+from .participant_decision_state_cut import (
+    ParticipantDecisionSurfaceCausalCutModel,
+    ParticipantDecisionSurfaceSequenceCutModel,
+    ParticipantDecisionSurfaceStateCutModel,
+)
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceFormModel,
@@ -22,60 +27,13 @@ from .participant_decision_surface import (
     _validate_surface_affordances,
     _validate_surface_form_relations,
 )
-from .participant_decision_surface_exposure_v2 import (
-    ParticipantDecisionSurfaceExposureBindingV2Model,
-    ParticipantDecisionSurfaceStateCutOrderModel,
-)
+from .participant_decision_surface_exposure_v2 import ParticipantDecisionSurfaceExposureBindingV2Model
 from .participant_decision_surface_v2_validation import _validate_participant_decision_surface_v2
 from .participant_manifests import DigestString
 from .participant_runtime import ParticipantRuntimeDeliveryBasis
 from .schema_invariants import _add_raes_invariant
 
 _SURFACE_V2_VALIDATOR = "raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface"
-
-
-class ParticipantDecisionSurfaceSequenceCutModel(ContractModel):
-    """A complete prefix ending at one event in a declared total order."""
-
-    cut_kind: Literal["sequence_prefix"]
-    cut_ref: NonEmptyString
-    history_domain: Literal["participant_episode_lifecycle", "participant_behavior_history"]
-    order_model: ParticipantDecisionSurfaceStateCutOrderModel
-    anchor_event_ref: NonEmptyString
-    anchor_order: StrictInt = Field(ge=0)
-    history_prefix_length: StrictInt = Field(ge=1)
-    predecessor_event_refs: list[NonEmptyString] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _validate_prefix(self) -> ParticipantDecisionSurfaceSequenceCutModel:
-        _require_unique(self.predecessor_event_refs, "predecessor_event_refs")
-        if self.history_prefix_length != self.anchor_order + 1:
-            raise ValueError("history_prefix_length must equal anchor_order + 1")
-        if self.anchor_event_ref in self.predecessor_event_refs:
-            raise ValueError("anchor_event_ref must not also be a predecessor_event_ref")
-        return self
-
-
-class ParticipantDecisionSurfaceCausalCutModel(ContractModel):
-    """A downward-closed causal frontier for a partially ordered realization."""
-
-    cut_kind: Literal["causal_frontier"]
-    cut_ref: NonEmptyString
-    history_domain: NonEmptyString
-    order_model: Literal["causal_partial_order"]
-    frontier_event_refs: list[NonEmptyString] = Field(min_length=1)
-    predecessor_closure_ref: NonEmptyString
-
-    @model_validator(mode="after")
-    def _validate_frontier(self) -> ParticipantDecisionSurfaceCausalCutModel:
-        _require_unique(self.frontier_event_refs, "frontier_event_refs")
-        return self
-
-
-ParticipantDecisionSurfaceStateCutModel = Annotated[
-    ParticipantDecisionSurfaceSequenceCutModel | ParticipantDecisionSurfaceCausalCutModel,
-    Field(discriminator="cut_kind"),
-]
 
 
 class _ParticipantDecisionSurfaceAnchorV2Base(ContractModel):

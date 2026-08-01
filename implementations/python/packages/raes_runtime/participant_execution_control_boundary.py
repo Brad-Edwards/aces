@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.contracts.participant_execution import (
     ParticipantExecutionControlRequestModel,
     ParticipantExecutionServiceStateModel,
@@ -152,6 +153,8 @@ def _validate_observed_result(
 
 def backend_execution_control_method(
     backend_method: Callable[..., object],
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> Callable[[ParticipantExecutionControlRequestModel, RuntimeSnapshot], ApplyResult]:
     """Wrap native control with generation preflight and observed-result checks."""
 
@@ -168,6 +171,7 @@ def backend_execution_control_method(
             snapshot,
             address=f"runtime.participant-execution.{request.execution_scope_ref}.{request.action}",
             snapshot=snapshot,
+            information_state_context_resolver=information_state_context_resolver,
         )
         return _validate_observed_result(request, snapshot, result)
 

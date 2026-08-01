@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.evaluation import EvaluationExecutionState
 from raes_contracts.participant_episode import (
@@ -33,6 +34,10 @@ _SEMANTIC_CONTEXT_REQUIRED_MESSAGES = {
     "external-concept-bindings-v1": (
         "full external-concept binding conformance requires explicit exact RAES subjects and pinned local "
         "scheme snapshots; the generic fixture runner establishes structural validity only"
+    ),
+    "participant-information-state-record-v1": (
+        "full participant information-state conformance requires governed source, occurrence-history, proof, "
+        "and decision-surface resolution"
     ),
 }
 
@@ -128,7 +133,17 @@ _SEMANTIC_DISPATCH: dict[str, Callable[[str, object], list[Diagnostic]]] = {
 }
 
 
-def _semantic_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:
+def _semantic_diagnostics(
+    contract_name: str,
+    payload: object,
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+) -> list[Diagnostic]:
+    if contract_name == "runtime-snapshot-v1":
+        return _runtime_snapshot_semantic_diagnostics(
+            payload,
+            information_state_context_resolver=information_state_context_resolver,
+        )
     handler = _SEMANTIC_DISPATCH.get(contract_name)
     if handler is None:
         return []

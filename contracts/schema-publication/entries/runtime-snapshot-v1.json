@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "81ad3650fab82ddcecc17f9905319243605d3b64168f12cff75e4890c0180018",
+  "content_hash": "c1accde8189150102e0dff0db79769cc235b52991bb6e496aab3cd6ab4cd41d7",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "81ad3650fab82ddcecc17f9905319243605d3b64168f12cff75e4890c0180018"
+    "summary": "Added first-class append-only participant information-state history for ACT-604 exact-cut records.",
+    "content_hash": "c1accde8189150102e0dff0db79769cc235b52991bb6e496aab3cd6ab4cd41d7"
   }
 }

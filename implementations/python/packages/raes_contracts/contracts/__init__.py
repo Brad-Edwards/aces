@@ -274,9 +274,6 @@ from .participant_envelopes import (
     ParticipantJointActionAccessSetModel,
     ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
-    ParticipantObservationEnvelopeModel,
-    ParticipantObservationLossDescriptorModel,
-    ParticipantObservationStochasticContextModel,
     ParticipantRuntimeBaseEnvelopeModel,
     ParticipantSharedStateAccessModel,
     ParticipantSharedStateRecordModel,
@@ -284,6 +281,16 @@ from .participant_envelopes import (
     RawDataIntegrityModel,
     SourcePipelineModel,
     SourceStatusModel,
+)
+from .participant_information_state import (
+    ParticipantInformationReconstructionProfileModel,
+    ParticipantInformationStateContextResolver,
+    ParticipantInformationStateRecordModel,
+    ParticipantInformationStateSourceCoordinate,
+    ParticipantInformationStateSourceRefModel,
+    ParticipantInformationStateValidationContext,
+    validate_participant_information_state_context,
+    validate_participant_information_state_resolved_context,
 )
 from .participant_manifests import (
     BackendManifestV2Model,
@@ -293,6 +300,11 @@ from .participant_manifests import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
     ParticipantImplementationSelectionModel,
+)
+from .participant_observation import (
+    ParticipantObservationEnvelopeModel,
+    ParticipantObservationLossDescriptorModel,
+    ParticipantObservationStochasticContextModel,
 )
 from .participant_occurrences import (
     ParticipantControlDeclarationModel,

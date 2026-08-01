@@ -90,6 +90,12 @@ def _random_stream_profile_schema(repo_root: Path, path: Path) -> Path:
     return repo_root / "contracts" / "schemas" / "profiles" / _schema_filename(schema_version)
 
 
+def _participant_information_reconstruction_profile_schema(repo_root: Path, path: Path) -> Path:
+    payload = _load_json(path)
+    schema_version = payload["schema_version"]
+    return repo_root / "contracts" / "schemas" / "profiles" / _schema_filename(schema_version)
+
+
 def _random_stream_vector_schema(repo_root: Path, path: Path) -> Path:
     payload = _load_json(path)
     schema_version = payload["schema_version"]
@@ -157,6 +163,17 @@ def collect_validation_targets(
                 )
             )
             continue
+        if raw_path.startswith("contracts/profiles/participant-information-reconstruction/") and raw_path.endswith(
+            ".json"
+        ):
+            targets.append(
+                ValidationTarget(
+                    raw_path,
+                    _repo_rel_from(repo_root, _participant_information_reconstruction_profile_schema(repo_root, path)),
+                    "schema",
+                )
+            )
+            continue
         if raw_path.startswith("contracts/fixtures/random-stream-vectors/") and raw_path.endswith(".json"):
             targets.append(
                 ValidationTarget(
@@ -214,6 +231,19 @@ def _collect_full_targets(repo_root: Path) -> list[ValidationTarget]:
             ValidationTarget(
                 _repo_rel_from(repo_root, profile),
                 _repo_rel_from(repo_root, _random_stream_profile_schema(repo_root, profile)),
+                "schema",
+            )
+        )
+    for profile in sorted(
+        (repo_root / "contracts" / "profiles" / "participant-information-reconstruction").glob("*.json")
+    ):
+        targets.append(
+            ValidationTarget(
+                _repo_rel_from(repo_root, profile),
+                _repo_rel_from(
+                    repo_root,
+                    _participant_information_reconstruction_profile_schema(repo_root, profile),
+                ),
                 "schema",
             )
         )

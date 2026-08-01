@@ -2,9 +2,9 @@
   "contract_id": "participant-observation-envelope-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "2abcc6fb611f25dd99b453b0086387ec286b75748a5e56cc97bf67b69a039542",
+  "content_hash": "d0b27daf3dec522564f8da5620fb5b37f852aae245fb789ee1bfb7b908fb63c3",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "2abcc6fb611f25dd99b453b0086387ec286b75748a5e56cc97bf67b69a039542"
+    "summary": "Required reconstruction authority for strong ACT-604 information guarantees and explicit loss disclosure for lossy projections.",
+    "content_hash": "d0b27daf3dec522564f8da5620fb5b37f852aae245fb789ee1bfb7b908fb63c3"
   }
 }
