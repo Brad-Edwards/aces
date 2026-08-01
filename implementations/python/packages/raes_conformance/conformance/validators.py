@@ -6,6 +6,7 @@ from raes_contracts.behavioral_relation_profiles import BehavioralRelationProfil
 from raes_contracts.behavioral_relations import BehavioralRelationCatalogModel
 from raes_contracts.contracts import (
     ActivityStreamsActivityTypesSourceModel,
+    ArtifactTransformationReportModel,
     AssociatedArtifactManifestModel,
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
@@ -97,6 +98,7 @@ _MODEL_VALIDATORS = {
 
 _STRUCTURAL_ONLY_VALIDATORS = {
     "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
+    "artifact-transformation-report-v1": ArtifactTransformationReportModel.model_validate,
     "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
     "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,

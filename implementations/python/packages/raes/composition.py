@@ -558,55 +558,62 @@ def _rewrite_variable_tokens(value: object, variables: Mapping[str, str]) -> obj
     return rewritten
 
 
-def _namespace_payload(
+def _behavior_reference_maps(
     payload: dict[str, Any],
-    imported: ScenarioContent,
+    symbols: dict[str, dict[str, str] | set[str]],
     namespace: str,
-    descriptor: ModuleDescriptor,
-) -> dict[str, Any]:
-    namespaced = dict(payload)
-    _validate_descriptor_exports(imported, descriptor)
-    symbols = _symbol_index(
-        imported,
-        namespace=namespace,
-        descriptor=descriptor,
-        restrict_to_descriptor=True,
-    )
-    tool_affordance_ref_map: dict[str, str] = {}
-    participant_inject_delivery_ref_map: dict[str, str] = {}
-    for spec_name, behavior_spec in namespaced.get("behavior_specifications", {}).items():
+) -> tuple[dict[str, str], dict[str, str]]:
+    tool_affordances: dict[str, str] = {}
+    inject_deliveries: dict[str, str] = {}
+    for spec_name, behavior_spec in payload.get("behavior_specifications", {}).items():
         if not isinstance(behavior_spec, dict):
             continue
-        namespaced_spec_name = symbols["behavior_specifications"].get(
+        namespaced_name = symbols["behavior_specifications"].get(
             spec_name,
             _prefix(namespace, spec_name),
         )
         for affordance_id in behavior_spec.get("tool_affordances", {}):
-            tool_affordance_ref_map[tool_affordance_reference(spec_name, affordance_id)] = tool_affordance_reference(
-                namespaced_spec_name, affordance_id
+            tool_affordances[tool_affordance_reference(spec_name, affordance_id)] = tool_affordance_reference(
+                namespaced_name,
+                affordance_id,
             )
         for binding_id in behavior_spec.get("participant_inject_deliveries", {}):
-            participant_inject_delivery_ref_map[participant_inject_delivery_reference(spec_name, binding_id)] = (
-                participant_inject_delivery_reference(namespaced_spec_name, binding_id)
+            inject_deliveries[participant_inject_delivery_reference(spec_name, binding_id)] = (
+                participant_inject_delivery_reference(namespaced_name, binding_id)
             )
     named_symbols = symbols["named"]
     if isinstance(named_symbols, dict):
-        named_symbols.update(tool_affordance_ref_map)
-        named_symbols.update(participant_inject_delivery_ref_map)
+        named_symbols.update(tool_affordances)
+        named_symbols.update(inject_deliveries)
+    return tool_affordances, inject_deliveries
 
-    for node in namespaced.get("nodes", {}).values():
+
+def _rewrite_foundational_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for node in payload.get("nodes", {}).values():
         if isinstance(node, dict):
             _rewrite_node(node, symbols)
-    for infra in namespaced.get("infrastructure", {}).values():
-        if isinstance(infra, dict):
-            _rewrite_infrastructure(infra, symbols)
-    for feature in namespaced.get("features", {}).values():
+    for infrastructure in payload.get("infrastructure", {}).values():
+        if isinstance(infrastructure, dict):
+            _rewrite_infrastructure(infrastructure, symbols)
+    for feature in payload.get("features", {}).values():
         if isinstance(feature, dict):
             _rewrite_feature(feature, symbols)
-    for condition in namespaced.get("conditions", {}).values():
+    for entity in payload.get("entities", {}).values():
+        if isinstance(entity, dict):
+            _rewrite_entity(entity, symbols)
+
+
+def _rewrite_proposition_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for condition in payload.get("conditions", {}).values():
         if isinstance(condition, dict) and condition.get("proposition"):
             condition["proposition"] = _maybe_rename(str(condition["proposition"]), symbols["propositions"])
-    for proposition in namespaced.get("propositions", {}).values():
+    for proposition in payload.get("propositions", {}).values():
         if isinstance(proposition, dict):
             proposition["subjects"] = [
                 _maybe_rename(name, symbols["named"]) for name in proposition.get("subjects", [])
@@ -615,316 +622,478 @@ def _namespace_payload(
                 _maybe_rename(name, symbols["evidence_requirements"])
                 for name in proposition.get("evidence_requirements", [])
             ]
-    for assertion in namespaced.get("assertions", {}).values():
+    for assertion in payload.get("assertions", {}).values():
         if isinstance(assertion, dict) and assertion.get("proposition"):
             assertion["proposition"] = _maybe_rename(str(assertion["proposition"]), symbols["propositions"])
-    for entity in namespaced.get("entities", {}).values():
-        if isinstance(entity, dict):
-            _rewrite_entity(entity, symbols)
-    for inject in namespaced.get("injects", {}).values():
+
+
+def _rewrite_narrative_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for inject in payload.get("injects", {}).values():
         if isinstance(inject, dict):
             if inject.get("from_entity"):
                 inject["from_entity"] = _maybe_rename(str(inject["from_entity"]), symbols["entities"])
             inject["to_entities"] = [_maybe_rename(name, symbols["entities"]) for name in inject.get("to_entities", [])]
-    for event in namespaced.get("events", {}).values():
+    for event in payload.get("events", {}).values():
         if isinstance(event, dict):
             event["assertions"] = [_maybe_rename(name, symbols["assertions"]) for name in event.get("assertions", [])]
             event["injects"] = [_maybe_rename(name, symbols["injects"]) for name in event.get("injects", [])]
-    for script in namespaced.get("scripts", {}).values():
+    for script in payload.get("scripts", {}).values():
         if isinstance(script, dict):
             script["events"] = {
                 _maybe_rename(name, symbols["events"]): value for name, value in script.get("events", {}).items()
             }
-    for story in namespaced.get("stories", {}).values():
+    for story in payload.get("stories", {}).values():
         if isinstance(story, dict):
             story["scripts"] = [_maybe_rename(name, symbols["scripts"]) for name in story.get("scripts", [])]
-    for boundary in namespaced.get("observation_boundaries", {}).values():
+
+
+def _rewrite_observation_boundaries(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+    tool_affordance_refs: Mapping[str, str],
+) -> None:
+    for boundary in payload.get("observation_boundaries", {}).values():
         if not isinstance(boundary, dict):
             continue
         for field_name in ("observable_refs", "hidden_refs", "evidence_refs"):
             boundary[field_name] = [
-                tool_affordance_ref_map.get(ref, _maybe_rename(ref, symbols["named"]))
+                tool_affordance_refs.get(ref, _maybe_rename(ref, symbols["named"]))
                 for ref in boundary.get(field_name, [])
             ]
         for field_name in ("view_rules", "view_transitions"):
             for item in boundary.get(field_name, []):
-                if not isinstance(item, dict):
-                    continue
-                information_ref = item.get("information_ref")
-                if isinstance(information_ref, str):
-                    item["information_ref"] = tool_affordance_ref_map.get(
+                if isinstance(item, dict) and isinstance(item.get("information_ref"), str):
+                    information_ref = item["information_ref"]
+                    item["information_ref"] = tool_affordance_refs.get(
                         information_ref,
                         _maybe_rename(information_ref, symbols["named"]),
                     )
-    for content in namespaced.get("content", {}).values():
+
+
+def _rewrite_service_materialization(
+    materialization: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if materialization.get("target_service_ref"):
+        materialization["target_service_ref"] = _rewrite_node_or_service_ref(
+            str(materialization["target_service_ref"]),
+            symbols["nodes"],
+        )
+    if materialization.get("shared_service_relationship_ref"):
+        materialization["shared_service_relationship_ref"] = _rewrite_section_ref(
+            str(materialization["shared_service_relationship_ref"]),
+            "relationships",
+            symbols["relationships"],
+        )
+    for field_name, section_name in (
+        ("ordering_content_refs", "content"),
+        ("readback_assertion_refs", "assertions"),
+        ("evidence_requirement_refs", "evidence_requirements"),
+        ("observation_boundary_refs", "observation_boundaries"),
+    ):
+        materialization[field_name] = [
+            _rewrite_section_ref(reference, section_name, symbols[section_name])
+            for reference in materialization.get(field_name, [])
+        ]
+
+
+def _rewrite_content_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for content in payload.get("content", {}).values():
         if not isinstance(content, dict):
             continue
         if content.get("target"):
             content["target"] = _rewrite_section_ref(str(content["target"]), "nodes", symbols["nodes"])
         materialization = content.get("service_materialization")
-        if not isinstance(materialization, dict):
-            continue
-        if materialization.get("target_service_ref"):
-            materialization["target_service_ref"] = _rewrite_node_or_service_ref(
-                str(materialization["target_service_ref"]),
-                symbols["nodes"],
-            )
-        if materialization.get("shared_service_relationship_ref"):
-            materialization["shared_service_relationship_ref"] = _rewrite_section_ref(
-                str(materialization["shared_service_relationship_ref"]),
-                "relationships",
-                symbols["relationships"],
-            )
-        materialization["ordering_content_refs"] = [
-            _rewrite_section_ref(ref, "content", symbols["content"])
-            for ref in materialization.get("ordering_content_refs", [])
+        if isinstance(materialization, dict):
+            _rewrite_service_materialization(materialization, symbols)
+
+
+def _rewrite_resource_consumers(
+    resource: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for consumer in resource.get("consumers", []):
+        if isinstance(consumer, dict) and consumer.get("node"):
+            consumer["node"] = _maybe_rename(str(consumer["node"]), symbols["nodes"])
+
+
+def _rewrite_resource_dependencies(
+    resource: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+    *,
+    owner: str,
+) -> None:
+    for dependency_field in ("ordering_dependencies", "refresh_dependencies"):
+        resource[dependency_field] = [
+            _rewrite_stateful_dependency_ref(reference, symbols, owner=owner)
+            for reference in resource.get(dependency_field, [])
         ]
-        materialization["readback_assertion_refs"] = [
-            _rewrite_section_ref(ref, "assertions", symbols["assertions"])
-            for ref in materialization.get("readback_assertion_refs", [])
-        ]
-        materialization["evidence_requirement_refs"] = [
-            _rewrite_section_ref(ref, "evidence_requirements", symbols["evidence_requirements"])
-            for ref in materialization.get("evidence_requirement_refs", [])
-        ]
-        materialization["observation_boundary_refs"] = [
-            _rewrite_section_ref(ref, "observation_boundaries", symbols["observation_boundaries"])
-            for ref in materialization.get("observation_boundary_refs", [])
-        ]
+
+
+def _rewrite_stateful_resource(
+    resource: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+    *,
+    owner: str,
+) -> None:
+    if isinstance(resource, dict):
+        _rewrite_resource_consumers(resource, symbols)
+        _rewrite_resource_dependencies(resource, symbols, owner=owner)
+
+
+def _rewrite_stateful_resources(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
     for section_name in ("generated_artifacts", "persistent_volumes"):
-        for resource_name, resource in namespaced.get(section_name, {}).items():
-            if not isinstance(resource, dict):
-                continue
-            for consumer in resource.get("consumers", []):
-                if isinstance(consumer, dict) and consumer.get("node"):
-                    consumer["node"] = _maybe_rename(str(consumer["node"]), symbols["nodes"])
-            for dependency_field in (
-                "ordering_dependencies",
-                "refresh_dependencies",
-            ):
-                resource[dependency_field] = [
-                    _rewrite_stateful_dependency_ref(
-                        reference,
-                        symbols,
-                        owner=f"{section_name}.{resource_name}",
-                    )
-                    for reference in resource.get(dependency_field, [])
-                ]
-    for account in namespaced.get("accounts", {}).values():
-        if isinstance(account, dict):
-            if account.get("node"):
-                account["node"] = _maybe_rename(str(account["node"]), symbols["nodes"])
-            if account.get("domain_ref"):
-                account["domain_ref"] = _maybe_rename(
-                    str(account["domain_ref"]),
-                    symbols["identity_domains"],
-                )
-    for identity_domain in namespaced.get("identity_domains", {}).values():
-        if isinstance(identity_domain, dict) and identity_domain.get("authority_account_ref"):
-            identity_domain["authority_account_ref"] = _maybe_rename(
-                str(identity_domain["authority_account_ref"]),
+        for resource_name, resource in payload.get(section_name, {}).items():
+            _rewrite_stateful_resource(resource, symbols, owner=f"{section_name}.{resource_name}")
+
+
+def _rewrite_account(
+    account: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if not isinstance(account, dict):
+        return
+    if account.get("node"):
+        account["node"] = _maybe_rename(str(account["node"]), symbols["nodes"])
+    if account.get("domain_ref"):
+        account["domain_ref"] = _maybe_rename(str(account["domain_ref"]), symbols["identity_domains"])
+
+
+def _rewrite_identity_domain(
+    domain: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if isinstance(domain, dict) and domain.get("authority_account_ref"):
+        domain["authority_account_ref"] = _maybe_rename(
+            str(domain["authority_account_ref"]),
+            symbols["accounts"],
+        )
+
+
+def _rewrite_identity_forest(
+    forest: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if not isinstance(forest, dict):
+        return
+    if forest.get("root_domain_ref"):
+        forest["root_domain_ref"] = _maybe_rename(
+            str(forest["root_domain_ref"]),
+            symbols["identity_domains"],
+        )
+    forest["domain_refs"] = [_maybe_rename(name, symbols["identity_domains"]) for name in forest.get("domain_refs", [])]
+
+
+def _rewrite_account_and_domain_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for account in payload.get("accounts", {}).values():
+        _rewrite_account(account, symbols)
+    for domain in payload.get("identity_domains", {}).values():
+        _rewrite_identity_domain(domain, symbols)
+    for forest in payload.get("identity_forests", {}).values():
+        _rewrite_identity_forest(forest, symbols)
+
+
+def _rewrite_deployment_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for facade in payload.get("identity_facades", {}).values():
+        if isinstance(facade, dict) and facade.get("service_ref"):
+            facade["service_ref"] = _maybe_rename(str(facade["service_ref"]), symbols["named"])
+    for cell in payload.get("deployment_cells", {}).values():
+        if not isinstance(cell, dict):
+            continue
+        if cell.get("tenant_ref"):
+            cell["tenant_ref"] = _maybe_rename(str(cell["tenant_ref"]), symbols["deployment_tenants"])
+        cell["node_refs"] = [_maybe_rename(name, symbols["nodes"]) for name in cell.get("node_refs", [])]
+
+
+def _rewrite_relationship_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for relationship in payload.get("relationships", {}).values():
+        if not isinstance(relationship, dict):
+            continue
+        if relationship.get("source"):
+            relationship["source"] = _maybe_rename(str(relationship["source"]), symbols["named"])
+        if relationship.get("target"):
+            relationship["target"] = _maybe_rename(str(relationship["target"]), symbols["named"])
+        domain_join = relationship.get("domain_join")
+        if isinstance(domain_join, dict):
+            domain_join["controller_refs"] = [
+                _maybe_rename(name, symbols["nodes"]) for name in domain_join.get("controller_refs", [])
+            ]
+        shared_service = relationship.get("shared_service")
+        if isinstance(shared_service, dict):
+            shared_service["mutable_state_refs"] = [
+                _maybe_rename(name, symbols["persistent_volumes"])
+                for name in shared_service.get("mutable_state_refs", [])
+            ]
+        forwarding_edge = relationship.get("forwarding_edge")
+        if isinstance(forwarding_edge, dict) and forwarding_edge.get("forwarder_ref"):
+            forwarding_edge["forwarder_ref"] = _maybe_rename(
+                str(forwarding_edge["forwarder_ref"]),
+                symbols[FORWARDING_AGENTS_SECTION],
+            )
+
+
+def _rewrite_agent_access(
+    agent: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for access in agent.get("interactive_access", {}).values():
+        if not isinstance(access, dict):
+            continue
+        if access.get("target_ref"):
+            access["target_ref"] = _rewrite_section_ref(str(access["target_ref"]), "nodes", symbols["nodes"])
+        if access.get("account_ref"):
+            access["account_ref"] = _rewrite_section_ref(
+                str(access["account_ref"]),
+                "accounts",
                 symbols["accounts"],
             )
-    for identity_forest in namespaced.get("identity_forests", {}).values():
-        if not isinstance(identity_forest, dict):
-            continue
-        if identity_forest.get("root_domain_ref"):
-            identity_forest["root_domain_ref"] = _maybe_rename(
-                str(identity_forest["root_domain_ref"]),
-                symbols["identity_domains"],
-            )
-        identity_forest["domain_refs"] = [
-            _maybe_rename(name, symbols["identity_domains"]) for name in identity_forest.get("domain_refs", [])
-        ]
-    for identity_facade in namespaced.get("identity_facades", {}).values():
-        if isinstance(identity_facade, dict) and identity_facade.get("service_ref"):
-            identity_facade["service_ref"] = _maybe_rename(
-                str(identity_facade["service_ref"]),
-                symbols["named"],
-            )
-    for deployment_cell in namespaced.get("deployment_cells", {}).values():
-        if not isinstance(deployment_cell, dict):
-            continue
-        if deployment_cell.get("tenant_ref"):
-            deployment_cell["tenant_ref"] = _maybe_rename(
-                str(deployment_cell["tenant_ref"]),
-                symbols["deployment_tenants"],
-            )
-        deployment_cell["node_refs"] = [
-            _maybe_rename(name, symbols["nodes"]) for name in deployment_cell.get("node_refs", [])
-        ]
-    for relationship in namespaced.get("relationships", {}).values():
-        if isinstance(relationship, dict):
-            if relationship.get("source"):
-                relationship["source"] = _maybe_rename(str(relationship["source"]), symbols["named"])
-            if relationship.get("target"):
-                relationship["target"] = _maybe_rename(str(relationship["target"]), symbols["named"])
-            domain_join = relationship.get("domain_join")
-            if isinstance(domain_join, dict):
-                domain_join["controller_refs"] = [
-                    _maybe_rename(name, symbols["nodes"]) for name in domain_join.get("controller_refs", [])
-                ]
-            shared_service = relationship.get("shared_service")
-            if isinstance(shared_service, dict):
-                shared_service["mutable_state_refs"] = [
-                    _maybe_rename(name, symbols["persistent_volumes"])
-                    for name in shared_service.get("mutable_state_refs", [])
-                ]
-            forwarding_edge = relationship.get("forwarding_edge")
-            if isinstance(forwarding_edge, dict) and forwarding_edge.get("forwarder_ref"):
-                forwarding_edge["forwarder_ref"] = _maybe_rename(
-                    str(forwarding_edge["forwarder_ref"]),
-                    symbols[FORWARDING_AGENTS_SECTION],
-                )
-    for agent in namespaced.get("agents", {}).values():
+
+
+def _rewrite_agent_knowledge(
+    agent: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    knowledge = agent.get("initial_knowledge")
+    if not isinstance(knowledge, dict):
+        return
+    for field_name, symbol_key in (
+        ("hosts", "nodes"),
+        ("subnets", "infrastructure"),
+        ("accounts", "accounts"),
+    ):
+        knowledge[field_name] = [_maybe_rename(name, symbols[symbol_key]) for name in knowledge.get(field_name, [])]
+
+
+def _rewrite_agent(
+    agent: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if agent.get("entity"):
+        agent["entity"] = _maybe_rename(str(agent["entity"]), symbols["entities"])
+    for field_name, symbol_key in (
+        ("starting_accounts", "accounts"),
+        ("actions", "action_contracts"),
+        ("observation_boundaries", "observation_boundaries"),
+        ("allowed_subnets", "infrastructure"),
+        ("starting_assertions", "assertions"),
+        ("authority_anchors", "named"),
+        ("operating_scope", "named"),
+    ):
+        agent[field_name] = [_maybe_rename(name, symbols[symbol_key]) for name in agent.get(field_name, [])]
+    _rewrite_agent_access(agent, symbols)
+    _rewrite_agent_knowledge(agent, symbols)
+
+
+def _rewrite_agent_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for agent in payload.get("agents", {}).values():
         if isinstance(agent, dict):
-            if agent.get("entity"):
-                agent["entity"] = _maybe_rename(str(agent["entity"]), symbols["entities"])
-            agent["starting_accounts"] = [
-                _maybe_rename(name, symbols["accounts"]) for name in agent.get("starting_accounts", [])
-            ]
-            agent["actions"] = [_maybe_rename(name, symbols["action_contracts"]) for name in agent.get("actions", [])]
-            agent["observation_boundaries"] = [
-                _maybe_rename(name, symbols["observation_boundaries"])
-                for name in agent.get("observation_boundaries", [])
-            ]
-            for access in agent.get("interactive_access", {}).values():
-                if not isinstance(access, dict):
-                    continue
-                if access.get("target_ref"):
-                    access["target_ref"] = _rewrite_section_ref(
-                        str(access["target_ref"]),
-                        "nodes",
-                        symbols["nodes"],
-                    )
-                if access.get("account_ref"):
-                    access["account_ref"] = _rewrite_section_ref(
-                        str(access["account_ref"]),
-                        "accounts",
-                        symbols["accounts"],
-                    )
-            knowledge = agent.get("initial_knowledge")
-            if isinstance(knowledge, dict):
-                knowledge["hosts"] = [_maybe_rename(name, symbols["nodes"]) for name in knowledge.get("hosts", [])]
-                knowledge["subnets"] = [
-                    _maybe_rename(name, symbols["infrastructure"]) for name in knowledge.get("subnets", [])
-                ]
-                knowledge["accounts"] = [
-                    _maybe_rename(name, symbols["accounts"]) for name in knowledge.get("accounts", [])
-                ]
-            agent["allowed_subnets"] = [
-                _maybe_rename(name, symbols["infrastructure"]) for name in agent.get("allowed_subnets", [])
-            ]
-            # ADR-020 §6 accepts bare or section-qualified condition refs.
-            # symbols["named"] carries both forms after the symbol-index
-            # update, so a single rename handles `health` and
-            # `conditions.health` symmetrically.
-            agent["starting_assertions"] = [
-                _maybe_rename(name, symbols["assertions"]) for name in agent.get("starting_assertions", [])
-            ]
-            agent["authority_anchors"] = [
-                _maybe_rename(name, symbols["named"]) for name in agent.get("authority_anchors", [])
-            ]
-            agent["operating_scope"] = [
-                _maybe_rename(name, symbols["named"]) for name in agent.get("operating_scope", [])
-            ]
-    for behavior_spec in namespaced.get("behavior_specifications", {}).values():
+            _rewrite_agent(agent, symbols)
+
+
+def _rewrite_behavior_specification(
+    behavior_spec: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for field_name, symbol_key in (
+        ("participant_refs", "agents"),
+        ("action_contract_refs", "action_contracts"),
+        ("observation_boundary_refs", "observation_boundaries"),
+        ("outcome_interpretation_rule_refs", "outcome_interpretation_rules"),
+        ("authority_scope_refs", "named"),
+    ):
+        behavior_spec[field_name] = [
+            _maybe_rename(name, symbols[symbol_key]) for name in behavior_spec.get(field_name, [])
+        ]
+    autonomous_execution = behavior_spec.get("autonomous_execution")
+    if isinstance(autonomous_execution, dict):
+        _rewrite_participant_resource_budget(autonomous_execution.get("resource_budget"), symbols)
+    _rewrite_mixed_control(behavior_spec.get("mixed_control"), symbols)
+    for binding in behavior_spec.get("tool_affordances", {}).values():
+        if isinstance(binding, dict):
+            _rewrite_tool_affordance(binding, symbols)
+    for binding in behavior_spec.get("participant_inject_deliveries", {}).values():
+        if isinstance(binding, dict):
+            _rewrite_participant_inject_delivery(binding, symbols)
+
+
+def _rewrite_behavior_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for behavior_spec in payload.get("behavior_specifications", {}).values():
         if isinstance(behavior_spec, dict):
-            behavior_spec["participant_refs"] = [
-                _maybe_rename(name, symbols["agents"]) for name in behavior_spec.get("participant_refs", [])
-            ]
-            behavior_spec["action_contract_refs"] = [
-                _maybe_rename(name, symbols["action_contracts"])
-                for name in behavior_spec.get("action_contract_refs", [])
-            ]
-            behavior_spec["observation_boundary_refs"] = [
-                _maybe_rename(name, symbols["observation_boundaries"])
-                for name in behavior_spec.get("observation_boundary_refs", [])
-            ]
-            behavior_spec["outcome_interpretation_rule_refs"] = [
-                _maybe_rename(name, symbols["outcome_interpretation_rules"])
-                for name in behavior_spec.get("outcome_interpretation_rule_refs", [])
-            ]
-            behavior_spec["authority_scope_refs"] = [
-                _maybe_rename(name, symbols["named"]) for name in behavior_spec.get("authority_scope_refs", [])
-            ]
-            autonomous_execution = behavior_spec.get("autonomous_execution")
-            if isinstance(autonomous_execution, dict):
-                _rewrite_participant_resource_budget(
-                    autonomous_execution.get("resource_budget"),
-                    symbols,
-                )
-            _rewrite_mixed_control(behavior_spec.get("mixed_control"), symbols)
-            for binding in behavior_spec.get("tool_affordances", {}).values():
-                if isinstance(binding, dict):
-                    _rewrite_tool_affordance(binding, symbols)
-            for binding in behavior_spec.get("participant_inject_deliveries", {}).values():
-                if isinstance(binding, dict):
-                    _rewrite_participant_inject_delivery(binding, symbols)
-    for requirement in namespaced.get("evidence_requirements", {}).values():
+            _rewrite_behavior_specification(behavior_spec, symbols)
+    for requirement in payload.get("evidence_requirements", {}).values():
         if isinstance(requirement, dict):
             _rewrite_evidence_requirement(requirement, symbols)
-    _rewrite_time_model(namespaced, symbols)
-    for objective in namespaced.get("objectives", {}).values():
-        if not isinstance(objective, dict):
-            continue
-        if objective.get("agent"):
-            objective["agent"] = _maybe_rename(str(objective["agent"]), symbols["agents"])
-        if objective.get("entity"):
-            objective["entity"] = _maybe_rename(str(objective["entity"]), symbols["entities"])
-        objective["targets"] = [_maybe_rename(name, symbols["named"]) for name in objective.get("targets", [])]
-        objective["depends_on"] = [
-            _maybe_rename(name, symbols["objectives"]) for name in objective.get("depends_on", [])
-        ]
-        success = objective.get("success")
-        if isinstance(success, dict):
-            success["assertions"] = [
-                _maybe_rename(name, symbols["assertions"]) for name in success.get("assertions", [])
-            ]
-        window = objective.get("window")
-        if isinstance(window, dict):
-            for field_name, symbol_key in (
-                ("stories", "stories"),
-                ("scripts", "scripts"),
-                ("events", "events"),
-                ("workflows", "workflows"),
-            ):
-                window[field_name] = [_maybe_rename(name, symbols[symbol_key]) for name in window.get(field_name, [])]
-            window["steps"] = [
-                _rewrite_objective_window_ref(name, symbols["workflows"]) for name in window.get("steps", [])
-            ]
-    for workflow in namespaced.get("workflows", {}).values():
+
+
+def _rewrite_objective_window(
+    window: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for field_name, symbol_key in (
+        ("stories", "stories"),
+        ("scripts", "scripts"),
+        ("events", "events"),
+        ("workflows", "workflows"),
+    ):
+        window[field_name] = [_maybe_rename(name, symbols[symbol_key]) for name in window.get(field_name, [])]
+    window["steps"] = [_rewrite_objective_window_ref(name, symbols["workflows"]) for name in window.get("steps", [])]
+
+
+def _rewrite_objective(
+    objective: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if objective.get("agent"):
+        objective["agent"] = _maybe_rename(str(objective["agent"]), symbols["agents"])
+    if objective.get("entity"):
+        objective["entity"] = _maybe_rename(str(objective["entity"]), symbols["entities"])
+    objective["targets"] = [_maybe_rename(name, symbols["named"]) for name in objective.get("targets", [])]
+    objective["depends_on"] = [_maybe_rename(name, symbols["objectives"]) for name in objective.get("depends_on", [])]
+    success = objective.get("success")
+    if isinstance(success, dict):
+        success["assertions"] = [_maybe_rename(name, symbols["assertions"]) for name in success.get("assertions", [])]
+    window = objective.get("window")
+    if isinstance(window, dict):
+        _rewrite_objective_window(window, symbols)
+
+
+def _rewrite_terminal_sections(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+    tool_affordance_refs: Mapping[str, str],
+) -> None:
+    _rewrite_time_model(payload, symbols)
+    for objective in payload.get("objectives", {}).values():
+        if isinstance(objective, dict):
+            _rewrite_objective(objective, symbols)
+    for workflow in payload.get("workflows", {}).values():
         if isinstance(workflow, dict):
-            _rewrite_workflow(workflow, symbols, tool_affordance_ref_map)
-    for variation_point in namespaced.get("variation_points", {}).values():
+            _rewrite_workflow(workflow, symbols, tool_affordance_refs)
+    for variation_point in payload.get("variation_points", {}).values():
         if isinstance(variation_point, dict):
             _rewrite_variation_point(variation_point, symbols)
 
-    namespaced = _rewrite_variable_tokens(namespaced, symbols["variables"])
 
+def _namespace_declaration_keys(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+    namespace: str,
+) -> None:
     for section_name in _HASHMAP_SECTIONS:
-        section_payload = namespaced.get(section_name)
-        if not isinstance(section_payload, dict):
-            continue
-        namespaced[section_name] = {
-            symbols[section_name].get(name, _prefix(namespace, name)): value for name, value in section_payload.items()
-        }
-    forwarding_agents = namespaced.get(FORWARDING_AGENTS_SECTION, [])
-    if isinstance(forwarding_agents, list):
-        for agent in forwarding_agents:
-            if not isinstance(agent, dict):
-                continue
-            identifier = agent.get("forwarding_agent_id")
-            if isinstance(identifier, str):
-                agent["forwarding_agent_id"] = symbols[FORWARDING_AGENTS_SECTION].get(
-                    identifier,
-                    _private_prefix(namespace, identifier),
-                )
-    namespaced.pop("module", None)
-    namespaced.pop("imports", None)
-    namespaced.pop("expansion_provenance", None)
-    namespaced.pop("instantiation_provenance", None)
+        section_payload = payload.get(section_name)
+        if isinstance(section_payload, dict):
+            payload[section_name] = {
+                symbols[section_name].get(name, _prefix(namespace, name)): value
+                for name, value in section_payload.items()
+            }
+
+
+def _namespace_forwarding_agents(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+    namespace: str,
+) -> None:
+    forwarding_agents = payload.get(FORWARDING_AGENTS_SECTION, [])
+    if not isinstance(forwarding_agents, list):
+        return
+    for agent in forwarding_agents:
+        if isinstance(agent, dict) and isinstance(agent.get("forwarding_agent_id"), str):
+            identifier = agent["forwarding_agent_id"]
+            agent["forwarding_agent_id"] = symbols[FORWARDING_AGENTS_SECTION].get(
+                identifier,
+                _private_prefix(namespace, identifier),
+            )
+
+
+def _strip_composition_fields(payload: dict[str, Any]) -> None:
+    for field_name in ("module", "imports", "expansion_provenance", "instantiation_provenance"):
+        payload.pop(field_name, None)
+
+
+def _rewrite_payload_with_symbols(
+    payload: dict[str, Any],
+    *,
+    symbols: dict[str, dict[str, str] | set[str]],
+    namespace: str = "",
+    strip_composition_fields: bool = False,
+) -> dict[str, Any]:
+    """Rewrite declarations and references through one canonical symbol map.
+
+    Module composition and semantic transformations share this implementation
+    so new reference-bearing SDL fields cannot drift between the two surfaces.
+    The caller supplies an isolated ``model_dump`` payload; this function never
+    receives or mutates a caller-owned scenario model.
+    """
+
+    namespaced = dict(payload)
+    tool_affordance_refs, _ = _behavior_reference_maps(namespaced, symbols, namespace)
+    _rewrite_foundational_sections(namespaced, symbols)
+    _rewrite_proposition_sections(namespaced, symbols)
+    _rewrite_narrative_sections(namespaced, symbols)
+    _rewrite_observation_boundaries(namespaced, symbols, tool_affordance_refs)
+    _rewrite_content_sections(namespaced, symbols)
+    _rewrite_stateful_resources(namespaced, symbols)
+    _rewrite_account_and_domain_sections(namespaced, symbols)
+    _rewrite_deployment_sections(namespaced, symbols)
+    _rewrite_relationship_sections(namespaced, symbols)
+    _rewrite_agent_sections(namespaced, symbols)
+    _rewrite_behavior_sections(namespaced, symbols)
+    _rewrite_terminal_sections(namespaced, symbols, tool_affordance_refs)
+
+    rewritten = _rewrite_variable_tokens(namespaced, symbols["variables"])
+    if not isinstance(rewritten, dict):
+        raise TypeError("variable rewriting returned a non-object payload")
+    namespaced = rewritten
+    _namespace_declaration_keys(namespaced, symbols, namespace)
+    _namespace_forwarding_agents(namespaced, symbols, namespace)
+    if strip_composition_fields:
+        _strip_composition_fields(namespaced)
     return namespaced
+
+
+def _namespace_payload(
+    payload: dict[str, Any],
+    imported: ScenarioContent,
+    namespace: str,
+    descriptor: ModuleDescriptor,
+) -> dict[str, Any]:
+    _validate_descriptor_exports(imported, descriptor)
+    symbols = _symbol_index(
+        imported,
+        namespace=namespace,
+        descriptor=descriptor,
+        restrict_to_descriptor=True,
+    )
+    return _rewrite_payload_with_symbols(
+        payload,
+        symbols=symbols,
+        namespace=namespace,
+        strip_composition_fields=True,
+    )
 
 
 def _merge_sections(
