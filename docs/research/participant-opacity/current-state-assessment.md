@@ -87,6 +87,22 @@ It cannot presently provide:
 Those outcomes are deliberately assigned to issues #961 through #965.
 Nothing in issue #810 advances those assurance states.
 
+## Delivery Update Through #964
+
+The repository now retains exact historical bounded, model-check, and proof
+authorities and adds one separate finite runtime-enforcement lane. The
+`participant-opacity-runtime-reference-v1` profile binds an individual active
+observer to a complete concrete inventory for decision occurrence/content,
+failures and declared opportunities, delivery, retry, logical order and timing
+buckets, policy/supervisor effects, participant retrieval, and evidence
+visibility. RUN-319 persists only safe profile/predicate/inventory/rule refs and
+digests on the owning API-423 decision; the full inventory remains in the
+trusted runtime-support context. The supported enforcement rule normalizes
+every protected crossing to the same denial, releases no payload or participant
+state, and commits the withheld delivery opportunity atomically. Catalog
+runtime assurance is therefore `partial`; useful allowed-action and delivered-
+view modes, backend declaration, realization, and conformance remain absent.
+
 ## Recommendation
 
 Adopt the one-sided possibilistic kernel in ADR-099 and the focused formal

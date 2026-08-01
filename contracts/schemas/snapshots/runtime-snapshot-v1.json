@@ -265,6 +265,218 @@
       "title": "ArtifactSatisfactionDisclosureModel",
       "type": "object"
     },
+    "BehavioralClaimBindingModel": {
+      "additionalProperties": false,
+      "description": "A bounded claim tied to one revisioned behavioral-relation definition.\n\nThis is deliberately a claim *binding*, not another relation registry. The\ncatalog owns relation meaning; consumers supply the subject, carriers,\nquantifier/evidence boundary, assurance state, and explicit limitations.",
+      "properties": {
+        "assurance_axis": {
+          "anyOf": [
+            {
+              "enum": [
+                "definition",
+                "checker",
+                "bounded-test",
+                "model-check",
+                "proof",
+                "runtime-enforcement",
+                "backend-declaration",
+                "backend-realization",
+                "backend-conformance"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assurance Axis"
+        },
+        "assurance_status": {
+          "enum": [
+            "defined",
+            "implemented",
+            "tested",
+            "model-checked",
+            "proved",
+            "deliberately-unproved",
+            "future",
+            "enforced",
+            "declared",
+            "realized",
+            "conformant"
+          ],
+          "title": "Assurance Status",
+          "type": "string"
+        },
+        "evidence_boundary": {
+          "minLength": 1,
+          "title": "Evidence Boundary",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "evidence_scope": {
+          "enum": [
+            "structural",
+            "finite",
+            "statistical",
+            "model-check",
+            "proof"
+          ],
+          "title": "Evidence Scope",
+          "type": "string"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "left_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Left Carrier Ref"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_projection_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Ref"
+        },
+        "observation_projection_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Revision"
+        },
+        "quantifier_scope": {
+          "enum": [
+            "single-artifact",
+            "finite-cases",
+            "sampled-population",
+            "all-admitted-inputs",
+            "all-traces",
+            "all-strategies"
+          ],
+          "title": "Quantifier Scope",
+          "type": "string"
+        },
+        "relation_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "relation_parameter_profile_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Ref"
+        },
+        "relation_parameter_profile_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Revision"
+        },
+        "right_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Right Carrier Ref"
+        },
+        "subject": {
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        },
+        "taxonomy_id": {
+          "minLength": 1,
+          "title": "Taxonomy Id",
+          "type": "string"
+        },
+        "taxonomy_revision": {
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "title": "Taxonomy Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxonomy_id",
+        "taxonomy_revision",
+        "relation_id",
+        "subject",
+        "quantifier_scope",
+        "evidence_scope",
+        "evidence_boundary",
+        "assurance_status",
+        "limitations",
+        "explicit_non_claims"
+      ],
+      "title": "BehavioralClaimBindingModel",
+      "type": "object"
+    },
     "ClockTransitionEventModel": {
       "additionalProperties": false,
       "properties": {
@@ -2737,6 +2949,17 @@
           "minItems": 1,
           "title": "Loss And Limitations",
           "type": "array"
+        },
+        "opacity_enforcement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantOpacityRuntimeEnforcementBindingModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "order_model": {
           "enum": [
@@ -6034,6 +6257,211 @@
       ],
       "title": "ParticipantObservationStatus",
       "type": "string"
+    },
+    "ParticipantOpacityRuntimeEnforcementBindingModel": {
+      "additionalProperties": false,
+      "description": "Safe finite runtime-enforcement binding owned by an API-423 decision.",
+      "properties": {
+        "assurance_axis": {
+          "const": "runtime-enforcement",
+          "title": "Assurance Axis",
+          "type": "string"
+        },
+        "carrier_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Carrier Digest",
+          "type": "string"
+        },
+        "carrier_ref": {
+          "minLength": 1,
+          "title": "Carrier Ref",
+          "type": "string"
+        },
+        "claim": {
+          "$ref": "#/$defs/BehavioralClaimBindingModel"
+        },
+        "enforcement_rule_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Enforcement Rule Digest",
+          "type": "string"
+        },
+        "enforcement_rule_ref": {
+          "minLength": 1,
+          "title": "Enforcement Rule Ref",
+          "type": "string"
+        },
+        "enforcement_rule_revision": {
+          "minLength": 1,
+          "title": "Enforcement Rule Revision",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "materializer_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Materializer Digest",
+          "type": "string"
+        },
+        "materializer_ref": {
+          "minLength": 1,
+          "title": "Materializer Ref",
+          "type": "string"
+        },
+        "materializer_revision": {
+          "minLength": 1,
+          "title": "Materializer Revision",
+          "type": "string"
+        },
+        "memory_ref": {
+          "minLength": 1,
+          "title": "Memory Ref",
+          "type": "string"
+        },
+        "memory_revision": {
+          "minLength": 1,
+          "title": "Memory Revision",
+          "type": "string"
+        },
+        "observation_inventory_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Observation Inventory Digest",
+          "type": "string"
+        },
+        "observation_inventory_ref": {
+          "minLength": 1,
+          "title": "Observation Inventory Ref",
+          "type": "string"
+        },
+        "observation_inventory_revision": {
+          "minLength": 1,
+          "title": "Observation Inventory Revision",
+          "type": "string"
+        },
+        "predicate_ref": {
+          "minLength": 1,
+          "title": "Predicate Ref",
+          "type": "string"
+        },
+        "predicate_revision": {
+          "minLength": 1,
+          "title": "Predicate Revision",
+          "type": "string"
+        },
+        "profile_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Profile Digest",
+          "type": "string"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_revision": {
+          "minLength": 1,
+          "title": "Profile Revision",
+          "type": "string"
+        },
+        "relation_id": {
+          "const": "participant-predicate-opacity",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "release_ref": {
+          "minLength": 1,
+          "title": "Release Ref",
+          "type": "string"
+        },
+        "release_revision": {
+          "minLength": 1,
+          "title": "Release Revision",
+          "type": "string"
+        },
+        "state_cut_ref": {
+          "minLength": 1,
+          "title": "State Cut Ref",
+          "type": "string"
+        },
+        "state_cut_revision": {
+          "minLength": 1,
+          "title": "State Cut Revision",
+          "type": "string"
+        },
+        "taxonomy_id": {
+          "const": "raes-behavioral-relations",
+          "title": "Taxonomy Id",
+          "type": "string"
+        },
+        "taxonomy_revision": {
+          "minLength": 1,
+          "title": "Taxonomy Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxonomy_id",
+        "taxonomy_revision",
+        "relation_id",
+        "profile_id",
+        "profile_revision",
+        "profile_digest",
+        "predicate_ref",
+        "predicate_revision",
+        "carrier_ref",
+        "carrier_digest",
+        "materializer_ref",
+        "materializer_revision",
+        "materializer_digest",
+        "observation_inventory_ref",
+        "observation_inventory_revision",
+        "observation_inventory_digest",
+        "enforcement_rule_ref",
+        "enforcement_rule_revision",
+        "enforcement_rule_digest",
+        "state_cut_ref",
+        "state_cut_revision",
+        "memory_ref",
+        "memory_revision",
+        "release_ref",
+        "release_revision",
+        "assurance_axis",
+        "claim",
+        "evidence_refs",
+        "limitations",
+        "explicit_non_claims"
+      ],
+      "title": "ParticipantOpacityRuntimeEnforcementBindingModel",
+      "type": "object"
     },
     "ParticipantOutcomeInterpretationRecordModel": {
       "additionalProperties": false,

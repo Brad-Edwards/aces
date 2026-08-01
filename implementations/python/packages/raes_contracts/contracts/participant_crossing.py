@@ -26,6 +26,12 @@ from .participant_crossing_vocab import (
     ParticipantCrossingSubjectKind,
 )
 from .participant_envelopes import ParticipantRuntimeBaseEnvelopeModel
+from .participant_opacity import (
+    ParticipantOpacityObservationInventoryModel,
+    ParticipantOpacityObservationSurfaceModel,
+    ParticipantOpacityRuntimeEnforcementBindingModel,
+    ParticipantOpacityRuntimeSupportModel,
+)
 from .participant_runtime import ParticipantRuntimeOrderingBasis
 from .schema_invariants import _add_raes_invariant
 
@@ -239,6 +245,7 @@ class ParticipantCrossingDecisionModel(ParticipantCrossingOccurrenceBaseModel):
     reason_code: NonEmptyString
     required_operation: ParticipantCrossingOperation | None = None
     required_evidence_refs: list[NonEmptyString] = Field(min_length=1)
+    opacity_enforcement: ParticipantOpacityRuntimeEnforcementBindingModel | None = None
 
     @model_validator(mode="after")
     def _validate_deny_first_disposition(self) -> ParticipantCrossingDecisionModel:
@@ -451,6 +458,10 @@ __all__ = [
     "ParticipantCrossingOccurrenceDetail",
     "ParticipantCrossingOccurrenceModel",
     "ParticipantCrossingOperation",
+    "ParticipantOpacityObservationInventoryModel",
+    "ParticipantOpacityObservationSurfaceModel",
+    "ParticipantOpacityRuntimeEnforcementBindingModel",
+    "ParticipantOpacityRuntimeSupportModel",
     "ParticipantCrossingPolicyReferenceModel",
     "ParticipantCrossingRequestModel",
     "ParticipantCrossingSubjectKind",

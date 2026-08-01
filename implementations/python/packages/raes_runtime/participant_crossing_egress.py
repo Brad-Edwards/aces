@@ -6,14 +6,19 @@ import hashlib
 import json
 from dataclasses import dataclass, replace
 from typing import TypeVar, cast
+from uuid import uuid4
 
 from raes_contracts.contracts.base import ContractModel
 from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingDirection,
     ParticipantCrossingInteractionKind,
+    ParticipantCrossingOccurrenceModel,
     ParticipantCrossingOperation,
     ParticipantCrossingSubjectKind,
     ParticipantCrossingSubjectReferenceModel,
+)
+from raes_contracts.contracts.participant_crossing_validation import (
+    validate_participant_crossing_occurrence_context,
 )
 
 from .participant_crossing_mediation import (
@@ -23,6 +28,7 @@ from .participant_crossing_mediation import (
     commit_prepared_crossing,
     prepare_participant_crossing,
 )
+from .participant_crossing_records import _expected_history_heads
 
 _ViewT = TypeVar("_ViewT", bound=ContractModel)
 
@@ -104,6 +110,11 @@ def serialize_participant_view(
                 raise ValueError("idempotent participant projection is missing its governed result")
             return type(view).model_validate(prepared.record.result_payload)
         if not prepared.record.receipt.accepted:
+            prepared = _with_opacity_egress_observation(
+                control_plane,
+                prepared,
+                delivered=False,
+            )
             commit_prepared_crossing(control_plane, prepared)
             raise PermissionError("participant projection was not permitted")
 
@@ -124,6 +135,11 @@ def serialize_participant_view(
             )
             if actual != prepared.governed_subject:
                 raise ValueError("trusted egress transformation does not match its governed identity")
+        prepared = _with_opacity_egress_observation(
+            control_plane,
+            prepared,
+            delivered=True,
+        )
         prepared = cast(
             PreparedParticipantCrossing,
             replace(
@@ -136,6 +152,157 @@ def serialize_participant_view(
         )
         commit_prepared_crossing(control_plane, prepared)
         return governed
+
+
+def _with_opacity_egress_observation(
+    control_plane: object,
+    prepared: PreparedParticipantCrossing,
+    *,
+    delivered: bool,
+) -> PreparedParticipantCrossing:
+    """Append supported delivery/observation facts to the same atomic write."""
+
+    decision = prepared.decision
+    if decision is None or getattr(decision.occurrence, "opacity_enforcement", None) is None:
+        return prepared
+    participant_address = prepared.intent.participant_address
+    history = list(prepared.next_snapshot.participant_crossing_history.get(participant_address, ()))
+    if not history:
+        raise ValueError("opacity egress decision is missing its prepared crossing history")
+    predecessor = ParticipantCrossingOccurrenceModel.model_validate(history[-1])
+    records = _egress_observation_records(
+        prepared,
+        predecessor,
+        delivered=delivered,
+    )
+    candidate = [
+        *history,
+        *(record.model_dump(mode="json", exclude_none=True) for record in records),
+    ]
+    next_snapshot = prepared.next_snapshot.with_entries(
+        dict(prepared.next_snapshot.entries),
+        participant_crossing_history={
+            **prepared.next_snapshot.participant_crossing_history,
+            participant_address: candidate,
+        },
+    )
+    context = control_plane._crossing_policy_resolver.validation_context(
+        control_plane._snapshot,
+        participant_address,
+    )
+    validate_participant_crossing_occurrence_context(
+        [ParticipantCrossingOccurrenceModel.model_validate(item) for item in candidate],
+        known_subjects=context.known_subjects,
+        policies=context.policies,
+        known_evidence_refs=context.known_evidence_refs,
+        known_authority_basis_refs=context.known_authority_basis_refs,
+    )
+    return replace(
+        prepared,
+        next_snapshot=next_snapshot,
+        record=replace(
+            prepared.record,
+            result_history_heads=_expected_history_heads(next_snapshot, participant_address),
+        ),
+    )
+
+
+def _egress_observation_records(
+    prepared: PreparedParticipantCrossing,
+    predecessor: ParticipantCrossingOccurrenceModel,
+    *,
+    delivered: bool,
+) -> tuple[ParticipantCrossingOccurrenceModel, ...]:
+    decision = prepared.decision
+    assert decision is not None
+    decision_detail = decision.occurrence
+    decision_id = getattr(decision_detail, "decision_id", None)
+    if not isinstance(decision_id, str):
+        raise ValueError("opacity egress decision is missing its decision identity")
+    previous_detail = predecessor.occurrence
+    policy = previous_detail.policy
+    next_order = previous_detail.effective_order + 1
+    common = {
+        "direction": previous_detail.direction.value,
+        "interaction_kind": previous_detail.interaction_kind.value,
+        "audience_scope_ref": previous_detail.audience_scope_ref,
+        "subject": previous_detail.subject.model_dump(mode="json", exclude_none=True),
+        "controller_ref": previous_detail.controller_ref,
+        "authority_basis_refs": list(previous_detail.authority_basis_refs),
+        "policy": policy.model_dump(mode="json"),
+        "effective_order": next_order,
+        "order_model": previous_detail.order_model,
+        "backend_posture": previous_detail.backend_posture.value,
+        "loss_and_limitations": list(previous_detail.loss_and_limitations),
+    }
+    envelope = predecessor.model_dump(
+        mode="json",
+        exclude={"event_id", "predecessor_event_refs", "logical_order_ref", "occurrence"},
+        exclude_none=True,
+    )
+    envelope["logical_order_ref"] = f"{policy.decision_cut_ref}:order:{next_order}"
+    attempt_id = f"crossing-delivery-attempt.{uuid4()}"
+    attempt_event_id = f"crossing-occurrence.delivery-attempted.{uuid4()}"
+    owning_ref = previous_detail.subject.subject_ref
+    attempt = ParticipantCrossingOccurrenceModel.model_validate(
+        {
+            **envelope,
+            "event_id": attempt_event_id,
+            "predecessor_event_refs": [predecessor.event_id],
+            "occurrence": {
+                **common,
+                "stage": "delivery-attempted",
+                "decision_ref": decision_id,
+                "attempt_id": attempt_id,
+                "owning_occurrence_ref": owning_ref,
+                "disposition": "attempted" if delivered else "withheld",
+            },
+        }
+    )
+    if not delivered:
+        return (attempt,)
+    delivery_order = next_order + 1
+    delivery_id = f"crossing-delivery.{uuid4()}"
+    delivery_event_id = f"crossing-occurrence.delivered.{uuid4()}"
+    delivery = ParticipantCrossingOccurrenceModel.model_validate(
+        {
+            **envelope,
+            "event_id": delivery_event_id,
+            "logical_order_ref": f"{policy.decision_cut_ref}:order:{delivery_order}",
+            "predecessor_event_refs": [attempt_event_id],
+            "occurrence": {
+                **common,
+                "stage": "delivered",
+                "effective_order": delivery_order,
+                "decision_ref": decision_id,
+                "attempt_ref": attempt_id,
+                "delivery_id": delivery_id,
+                "owning_occurrence_ref": owning_ref,
+                "delivery_order": delivery_order,
+                "disposition": "delivered",
+            },
+        }
+    )
+    observation_order = delivery_order + 1
+    observed = ParticipantCrossingOccurrenceModel.model_validate(
+        {
+            **envelope,
+            "event_id": f"crossing-occurrence.observed.{uuid4()}",
+            "logical_order_ref": f"{policy.decision_cut_ref}:order:{observation_order}",
+            "predecessor_event_refs": [delivery_event_id],
+            "occurrence": {
+                **common,
+                "stage": "observed",
+                "effective_order": observation_order,
+                "decision_ref": decision_id,
+                "delivery_ref": delivery_id,
+                "observation_id": f"crossing-observation.{uuid4()}",
+                "owning_observation_ref": owning_ref,
+                "observation_order": observation_order,
+            },
+        }
+    )
+    return attempt, delivery, observed
 
 
 def _view_subject(

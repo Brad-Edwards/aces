@@ -103,6 +103,17 @@ memory, and active-probe bypasses.
 Runtime mediation is not a universal opacity result, supervisor synthesis, or
 backend-native realization.
 
+Delivered by #964: `participant-opacity-runtime-reference-v1@sem-231/runtime-rev1`,
+one closed concrete observation inventory, exact catalog/profile/claim
+admission, compact `runtime-enforcement/enforced/finite` bindings on API-423
+decisions, idempotency and restart joins, and an exact uniform-denial mediator.
+The mediator releases no participant payload or state and atomically records
+the withheld egress opportunity. Unsupported or stale coordinates deny, while
+an authorized weakening omits the positive opacity claim. The delivery excludes
+useful allowed-action and delivered-view modes as well as
+wall-clock/timed, probabilistic, coalition, partial-order, native-backend, and
+unbounded opacity.
+
 ### #965: Backend declaration, realization, and conformance
 
 Extend the existing API-407 participant-feature support vector for named
@@ -115,8 +126,8 @@ is not proof, cross-backend equivalence, or support outside the named profile.
 
 ## Program Invariants
 
-- All claims use the exact current behavioral-taxonomy revision (currently
-  `raes-behavioral-relations@rev8`) and one explicit assurance axis. `rev5`
+- All claims use the exact applicable behavioral-taxonomy revision (current
+  authoring authority `raes-behavioral-relations@rev10`) and one explicit assurance axis. `rev5`
   introduced opacity; it is not a permanent implementation pin.
 - Universal opacity requires model-check or proof evidence whose scope matches
   the claim.

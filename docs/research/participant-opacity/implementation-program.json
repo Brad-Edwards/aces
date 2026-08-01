@@ -321,6 +321,14 @@
         "supported-profile limitations",
         "runtime-enforcement claim binding"
       ],
+      "delivered_artifacts": [
+        "contracts/profiles/behavioral-relation/participant-opacity-runtime-reference-v1.json",
+        "contracts/schemas/participant-runtime/participant-crossing-occurrence-v1.json",
+        "implementations/python/packages/raes_contracts/participant_opacity_runtime.py",
+        "implementations/python/packages/raes_runtime/participant_crossing_mediation.py",
+        "implementations/python/packages/raes_runtime/participant_crossing_egress.py",
+        "implementations/python/tests/test_issue_964_participant_opacity_runtime.py"
+      ],
       "explicit_nonclaims": [
         "No general opacity, proof, supervisor synthesis, or backend-native realization."
       ]
