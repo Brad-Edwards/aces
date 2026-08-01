@@ -213,12 +213,14 @@ def _realization_support_diagnostic(
         declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
     ]
     if explicitness is ExplicitnessClass.OPEN:
-        return _open_support_diagnostic(requirement, declarations)
-    if explicitness is ExplicitnessClass.EXACT:
-        return _exact_support_diagnostic(requirement, declarations)
-    if explicitness is ExplicitnessClass.CONSTRAINED:
-        return _constraint_support_diagnostic(requirement, declarations)
-    return None
+        diagnostic = _open_support_diagnostic(requirement, declarations)
+    elif explicitness is ExplicitnessClass.EXACT:
+        diagnostic = _exact_support_diagnostic(requirement, declarations)
+    elif explicitness is ExplicitnessClass.CONSTRAINED:
+        diagnostic = _constraint_support_diagnostic(requirement, declarations)
+    else:
+        diagnostic = None
+    return diagnostic
 
 
 def _open_support_diagnostic(
