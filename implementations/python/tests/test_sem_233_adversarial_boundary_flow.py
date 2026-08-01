@@ -98,8 +98,10 @@ def test_profile_closes_two_independent_obligation_coordinates() -> None:
     confidential = PROFILE.label(confidentiality={"conf:audience:red"})
     influenced = PROFILE.label(integrity={"int:influence:external-mail"})
 
-    assert confidential.confidentiality and not confidential.integrity
-    assert influenced.integrity and not influenced.confidentiality
+    assert confidential.confidentiality
+    assert not confidential.integrity
+    assert influenced.integrity
+    assert not influenced.confidentiality
     with pytest.raises(UnsupportedFlow, match="outside the closed confidentiality universe"):
         PROFILE.label(confidentiality={"trusted"})
 
