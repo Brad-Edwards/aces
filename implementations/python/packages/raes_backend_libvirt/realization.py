@@ -149,14 +149,8 @@ def _collect_supported_resources(
     node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     for resource in sorted(plan.resources.values(), key=lambda item: item.address):
-        if resource.domain != RuntimeDomain.PROVISIONING:
-            continue
-        if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
-            diagnostics.append(_unsupported_resource(resource))
-            continue
-        payload = planned_resource_payload(resource)
+        payload = _supported_resource_payload(resource, diagnostics)
         if payload is None:
-            diagnostics.append(_invalid_payload(resource))
             continue
         if resource.resource_type == NETWORK_RESOURCE_TYPE:
             network_resources.append((resource, payload))
@@ -167,6 +161,21 @@ def _collect_supported_resources(
         else:
             placement_resources.append((resource, payload))
     return network_resources, node_resources, placement_resources
+
+
+def _supported_resource_payload(
+    resource: PlannedResource,
+    diagnostics: list[Diagnostic],
+) -> Mapping[str, object] | None:
+    if resource.domain != RuntimeDomain.PROVISIONING:
+        return None
+    if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
+        diagnostics.append(_unsupported_resource(resource))
+        return None
+    payload = planned_resource_payload(resource)
+    if payload is None:
+        diagnostics.append(_invalid_payload(resource))
+    return payload
 
 
 def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:

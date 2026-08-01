@@ -241,16 +241,13 @@ def _valid_service_port(value: object) -> bool:
 
 def _image_ref(resource: PlannedResource, payload: Mapping[str, object]) -> str:
     source = planned_node_source(resource)
-    if isinstance(source, str):
-        return source
     if isinstance(source, Mapping):
-        name = source.get("name")
-        if isinstance(name, str) and name:
-            return name
-    os_family = payload.get("os_family")
-    if isinstance(os_family, str) and os_family:
-        return f"raes-reference/{os_family}"
-    return "raes-reference/base"
+        source = source.get("name")
+    image_ref = source if isinstance(source, str) and source else None
+    if image_ref is None:
+        os_family = payload.get("os_family")
+        image_ref = f"raes-reference/{os_family}" if isinstance(os_family, str) and os_family else "raes-reference/base"
+    return image_ref
 
 
 def _placement(resource: PlannedResource, payload: Mapping[str, object]) -> PlacementRealization:
