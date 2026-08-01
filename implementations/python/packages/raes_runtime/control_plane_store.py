@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from dataclasses import dataclass, field
 from enum import Enum
@@ -137,6 +139,7 @@ def _require_expected_control_head(
 def _participant_history_head(snapshot: RuntimeSnapshot, history_key: str) -> str | None:
     history_name, separator, participant_address = history_key.partition(":")
     histories = {
+        "participant_episode_history": snapshot.participant_episode_history,
         "participant_behavior_history": snapshot.participant_behavior_history,
         "participant_control_history": snapshot.participant_control_history,
         "participant_crossing_history": snapshot.participant_crossing_history,
@@ -149,7 +152,10 @@ def _participant_history_head(snapshot: RuntimeSnapshot, history_key: str) -> st
     if not events:
         return None
     event_id = events[-1].get("event_id")
-    return event_id if isinstance(event_id, str) and event_id else None
+    if isinstance(event_id, str) and event_id:
+        return event_id
+    encoded = json.dumps(events[-1], sort_keys=True, separators=(",", ":"), default=str).encode()
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
 def _require_expected_history_heads(

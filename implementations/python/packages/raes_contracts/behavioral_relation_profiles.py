@@ -26,6 +26,7 @@ _MAX_PROFILE_BYTES = 256 * 1024
 SUPPORTED_BEHAVIORAL_RELATION_PROFILE_IDS = frozenset(
     {
         "participant-opacity-baseline-v1",
+        "participant-opacity-runtime-reference-v1",
         "participant-opacity-theorem-v1",
     }
 )

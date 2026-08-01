@@ -158,8 +158,8 @@ def _validate_authorities(manifest: dict[str, Any], repo_root: Path) -> tuple[An
     )
     if taxonomy["taxonomy_id"] != "raes-behavioral-relations" or taxonomy["taxonomy_revision"] != "rev9":
         raise ProofEvidenceError("proof taxonomy authority is not the declared rev9 authority")
-    if taxonomy["path"] != "contracts/concept-authority/behavioral-relations-v1.json":
-        raise ProofEvidenceError("proof taxonomy authority path is not canonical")
+    if taxonomy["path"] != "contracts/concept-authority/history/behavioral-relations-v1-rev9.json":
+        raise ProofEvidenceError("proof taxonomy authority path is not the immutable rev9 authority")
     _validate_digest_bound_path(repo_root, taxonomy, "taxonomy authority")
     catalog = load_behavioral_relation_catalog_revision("rev9")
     relation = catalog.relations["participant-predicate-opacity"]

@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "c1accde8189150102e0dff0db79769cc235b52991bb6e496aab3cd6ab4cd41d7",
+  "content_hash": "5770a30cc288096d4586cbc80356a7e7436583274ed2598945a3c3dd7e68f9ed",
   "last_change": {
-    "summary": "Added first-class append-only participant information-state history for ACT-604 exact-cut records.",
-    "content_hash": "c1accde8189150102e0dff0db79769cc235b52991bb6e496aab3cd6ab4cd41d7"
+    "summary": "Added ACT-604 participant information-state history and propagated issue #964 participant-opacity bindings through the runtime snapshot.",
+    "content_hash": "5770a30cc288096d4586cbc80356a7e7436583274ed2598945a3c3dd7e68f9ed"
   }
 }

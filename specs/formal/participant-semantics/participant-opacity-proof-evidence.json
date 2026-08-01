@@ -8,7 +8,7 @@
   "taxonomy": {
     "taxonomy_id": "raes-behavioral-relations",
     "taxonomy_revision": "rev9",
-    "path": "contracts/concept-authority/behavioral-relations-v1.json",
+    "path": "contracts/concept-authority/history/behavioral-relations-v1-rev9.json",
     "digest": "sha256:ec893a8464f6ddba89e5848c40dccc864ae555f95996d736dbc8f12d56afb971"
   },
   "profiles": [
@@ -30,7 +30,7 @@
       "requirement": "SEM-231",
       "revision": "participant-predicate-opacity/rev8-baseline",
       "path": "specs/formal/participant-semantics/participant-predicate-opacity.md",
-      "digest": "sha256:6916cdadb618df6149d3e8a3ea84f1c422890b50de005686bf15a32e20220c6e"
+      "digest": "sha256:55c4c147a228d0fbd26dc620ad71b453cac649228c0a0601d8915ecb270926d7"
     }
   ],
   "dependencies": [
@@ -288,7 +288,7 @@
     "tool_sources": [
       {
         "path": "tools/check_participant_opacity_proof.py",
-        "digest": "sha256:21cb9b25a921bb02616d74ee19a9c150e4ddb857a01eccab60fe3d2de30c0554"
+        "digest": "sha256:28bac5de7dfa1d1b893f372a221be6f33ad5bd6797fe85c247d61c45a90a699f"
       },
       {
         "path": "tools/isabelle_tool.py",

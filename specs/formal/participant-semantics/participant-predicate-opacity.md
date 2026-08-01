@@ -298,7 +298,7 @@ Assurance states are independent:
 | bounded testing | named finite profiles/cases, full bounds, digests, safe counterexamples | bounded |
 | model checking | closed finite model, explored bounds, pinned tool/version, result or counterexample | model checked for the exact baseline fixture model |
 | mathematical proof | theorem, assumptions, independently checkable proof, tool/digest when mechanized | proved for the abstract conditional theorem profile; no concrete RAES instance |
-| runtime enforcement | complete supported-channel inventory, fail-closed mediation, durable decisions, security tests | not enforced |
+| runtime enforcement | complete supported-channel inventory, fail-closed mediation, durable decisions, security tests | partial for the exact finite `participant-opacity-runtime-reference-v1@sem-231/runtime-rev1` profile and its governed RUN-319 crossing inventory |
 | backend declaration | API-407 feature strength, required contracts, limitations, evidence refs | not declared |
 | backend realization | native implementation, profile mapping, environment and provenance evidence | not realized |
 | bounded backend conformance | adversarial cases, backend/profile/environment digests, sanitized reports | not tested |
@@ -333,7 +333,7 @@ positive assurance axis.
   supervisor visibility, relation boundaries, and independent assurance state.
 - `ASR-535` owns bounded falsification, model-check/proof evidence discipline,
   safe counterexamples, and backend conformance claims.
-- `RUN-319` owns any future reference-runtime mediation and durable
+- `RUN-319` owns reference-runtime mediation and durable
   information-flow decisions.
 - `API-407` owns backend feature strength, required contracts, limitations,
   realization, and evidence disclosure.
@@ -341,8 +341,11 @@ positive assurance axis.
 Issue #810 defines this architecture. Issue #961 delivers the closed baseline
 profile and bounded finite falsifier. Issue #962 delivers exact finite-state
 model checking for the historical baseline fixture profile. Issue #963
-delivers the abstract conditional mathematical proof. Issues #964 and #965
-separately own runtime enforcement and backend realization/conformance.
+delivers the abstract conditional mathematical proof. Issue #964 delivers one
+finite reference-runtime uniform-denial enforcement profile through RUN-319;
+it releases no protected payload or participant state and records each withheld
+egress opportunity. Issue #965
+separately owns backend realization/conformance.
 
 ## Bounded Checker Contract
 

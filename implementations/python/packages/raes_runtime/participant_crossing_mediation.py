@@ -20,6 +20,8 @@ from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingOperation,
     ParticipantCrossingPolicyReferenceModel,
     ParticipantCrossingSubjectReferenceModel,
+    ParticipantOpacityRuntimeEnforcementBindingModel,
+    ParticipantOpacityRuntimeSupportModel,
 )
 from raes_contracts.contracts.participant_crossing_validation import (
     validate_participant_crossing_occurrence_context,
@@ -32,6 +34,11 @@ from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 
 from .control_plane_security import ControlPlaneIdentity, ParticipantAudienceSubjectBinding
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
+from .participant_opacity_enforcement import (
+    bind_active_participant_opacity_support,
+    normalize_participant_opacity_resolution,
+    validate_persisted_participant_opacity,
+)
 
 
 def _utc_now() -> str:
@@ -98,6 +105,7 @@ class ParticipantCrossingPolicyResolution:
     downgrade_policy_ref: str | None = None
     downgrade_provenance_ref: str | None = None
     transformation: ParticipantCrossingTransformationResolution | None = None
+    opacity_enforcement: ParticipantOpacityRuntimeEnforcementBindingModel | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +128,7 @@ class ParticipantCrossingValidationContext:
     policies: tuple[ParticipantCrossingPolicyReferenceModel, ...]
     known_evidence_refs: frozenset[str]
     known_authority_basis_refs: frozenset[str]
+    opacity_enforcement_supports: tuple[ParticipantOpacityRuntimeSupportModel, ...] = ()
 
 
 class ParticipantCrossingPolicyResolver(Protocol):
@@ -216,6 +225,36 @@ def prepare_participant_crossing(
             if callable(operation_resolver)
             else resolver.resolve(intent, control_plane._snapshot)
         )
+        context = resolver.validation_context(
+            control_plane._snapshot,
+            intent.participant_address,
+        )
+        resolution = bind_active_participant_opacity_support(
+            resolution,
+            context.opacity_enforcement_supports,
+        )
+        if resolution.opacity_enforcement is not None:
+            from raes_contracts.participant_opacity_runtime import (
+                validate_participant_opacity_runtime_enforcement,
+            )
+
+            support = next(
+                (
+                    candidate
+                    for candidate in context.opacity_enforcement_supports
+                    if candidate.binding == resolution.opacity_enforcement
+                ),
+                None,
+            )
+            if support is None:
+                raise ValueError("participant opacity runtime binding is not admitted by the resolver context")
+            validate_participant_opacity_runtime_enforcement(
+                resolution.opacity_enforcement,
+                support=support,
+                participant_address=intent.participant_address,
+                audience_scope_ref=intent.audience_scope_ref,
+            )
+            resolution = normalize_participant_opacity_resolution(resolution)
     except (TypeError, ValueError):
         return _prepare_policy_unresolved(
             control_plane,
@@ -430,6 +469,7 @@ def validate_persisted_crossing_history(
             known_evidence_refs=context.known_evidence_refs,
             known_authority_basis_refs=context.known_authority_basis_refs,
         )
+        validate_persisted_participant_opacity(records, context)
 
 
 __all__ = (
