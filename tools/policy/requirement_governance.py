@@ -130,10 +130,9 @@ class GroundControlHttpClient:
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
-        headers = {"X-Actor": "repo-policy"}
+        request = Request(url, headers={"X-Actor": "repo-policy"})  # noqa: S310 - explicit GC HTTP endpoint
         if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        request = Request(url, headers=headers)  # noqa: S310 - explicit GC HTTP endpoint
+            request.add_header("Authorization", f"Bearer {self.token}")
         try:
             with urlopen(  # noqa: S310 - explicit GC HTTP endpoint
                 request,

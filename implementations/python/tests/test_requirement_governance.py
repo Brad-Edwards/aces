@@ -15,11 +15,16 @@ if str(REPO_ROOT) not in sys.path:
 
 from tools.check_requirement_governance import (
     _env_flag,
+    classify_ground_control_error,
+    emit_failures,
+    evaluate_against_ground_control,
     governed_requirement_paths,
     is_dev_to_main_promotion,
+    report_missing_uid,
     report_unevaluated,
 )
 from tools.policy import requirement_governance
+from tools.policy.common import PolicyFailure
 from tools.policy.requirement_governance import (
     GroundControlAuthRequired,
     GroundControlHttpClient,
@@ -593,3 +598,46 @@ def test_env_flag_parses_truthy_and_falsy_values(monkeypatch) -> None:
     assert not _env_flag("GC_REQUIRE_GOVERNANCE")
     monkeypatch.delenv("GC_REQUIRE_GOVERNANCE")
     assert not _env_flag("GC_REQUIRE_GOVERNANCE")
+
+
+def test_report_missing_uid_text_and_json(capsys) -> None:
+    assert report_missing_uid(False) == 1
+    assert "requirement-context-missing" in capsys.readouterr().err
+
+    assert report_missing_uid(True) == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload[0]["rule_id"] == "requirement-context-missing"
+
+
+def test_classify_ground_control_error_distinguishes_auth_from_unavailable() -> None:
+    auth_rule, auth_message = classify_ground_control_error(GroundControlAuthRequired("401: nope"))
+    assert auth_rule == "ground-control-auth-required"
+    assert "401" in auth_message
+
+    down_rule, down_message = classify_ground_control_error(GroundControlUnavailable("connection refused"))
+    assert down_rule == "ground-control-unavailable"
+    assert down_message == "connection refused"
+
+
+def test_emit_failures_returns_zero_when_empty(capsys) -> None:
+    assert emit_failures([], as_json=False) == 0
+    assert capsys.readouterr().err == ""
+
+
+def test_emit_failures_reports_and_returns_one(capsys) -> None:
+    assert emit_failures([PolicyFailure("rule-x", "boom")], as_json=False) == 1
+    assert "rule-x" in capsys.readouterr().err
+
+
+def test_evaluate_against_ground_control_config_missing_skips_by_default(monkeypatch, capsys) -> None:
+    monkeypatch.setattr("tools.check_requirement_governance.resolve_base_url", lambda _root: None)
+    exit_code = evaluate_against_ground_control([], "GOV-918", require_governance=False, as_json=False)
+    assert exit_code == 0
+    assert "ground-control-config-missing" in capsys.readouterr().err
+
+
+def test_evaluate_against_ground_control_config_missing_fails_when_required(monkeypatch, capsys) -> None:
+    monkeypatch.setattr("tools.check_requirement_governance.resolve_base_url", lambda _root: None)
+    exit_code = evaluate_against_ground_control([], "GOV-918", require_governance=True, as_json=False)
+    assert exit_code == 1
+    assert "ground-control-config-missing" in capsys.readouterr().err

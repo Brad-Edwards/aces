@@ -13,11 +13,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.policy.common import apply_exceptions, changed_paths, failures_to_json, load_exceptions
+from tools.policy.common import PolicyFailure, apply_exceptions, changed_paths, failures_to_json, load_exceptions
 from tools.policy.requirement_governance import (
     GroundControlAuthRequired,
+    GroundControlError,
     GroundControlHttpClient,
-    GroundControlUnavailable,
     evaluate_requirement_governance,
     requirement_uid_from_context,
     resolve_base_url,
@@ -133,38 +133,39 @@ def is_dev_to_main_promotion() -> bool:
     return os.environ.get("GITHUB_HEAD_REF") == "dev" and os.environ.get("GITHUB_BASE_REF") == "main"
 
 
-def main() -> int:
-    args = parse_args()
-    paths = (
-        [Path(path).as_posix() for path in args.paths]
-        if args.paths
-        else changed_paths(REPO_ROOT, staged=args.staged, base_rev=args.base_rev)
-    )
-    effective_paths = governed_requirement_paths(paths)
-    uid = requirement_uid_from_context(current_branch(REPO_ROOT), args.requirement_uid)
-    if not requires_requirement_context(effective_paths):
-        return 0
-    if is_dev_to_main_promotion():
-        return 0
-    if not uid:
-        failure = [
-            {
-                "rule_id": "requirement-context-missing",
-                "message": "requirement UID is missing; set RAES_REQUIREMENT_UID or include a UID like GOV-918 in the branch name",
-                "path": None,
-            }
-        ]
-        if args.json:
-            print(json.dumps(failure, indent=2))
-        else:
-            print(
-                "[requirement-context-missing] requirement UID is missing; set RAES_REQUIREMENT_UID or include a UID like GOV-918 in the branch name",
-                file=sys.stderr,
-            )
-        return 1
+def report_missing_uid(as_json: bool) -> int:
+    """Report that a governed change lacks a resolvable requirement UID."""
+    message = "requirement UID is missing; set RAES_REQUIREMENT_UID or include a UID like GOV-918 in the branch name"
+    if as_json:
+        print(json.dumps([{"rule_id": "requirement-context-missing", "message": message, "path": None}], indent=2))
+    else:
+        print(f"[requirement-context-missing] {message}", file=sys.stderr)
+    return 1
 
-    require_governance = args.require_governance or _env_flag("GC_REQUIRE_GOVERNANCE")
 
+def classify_ground_control_error(exc: GroundControlError) -> tuple[str, str]:
+    """Map a Ground Control client error to a distinct (rule_id, message)."""
+    if isinstance(exc, GroundControlAuthRequired):
+        return "ground-control-auth-required", f"Ground Control requires authentication ({exc})"
+    return "ground-control-unavailable", str(exc)
+
+
+def emit_failures(failures: list[PolicyFailure], *, as_json: bool) -> int:
+    """Print governance failures and return 1 when any remain, else 0."""
+    if not failures:
+        return 0
+    if as_json:
+        print(failures_to_json(failures))
+    else:
+        for failure in failures:
+            print(failure.render(), file=sys.stderr)
+    return 1
+
+
+def evaluate_against_ground_control(
+    effective_paths: list[str], uid: str, *, require_governance: bool, as_json: bool
+) -> int:
+    """Evaluate requirement governance for a resolved UID against Ground Control."""
     base_url = resolve_base_url(REPO_ROOT)
     if base_url is None:
         return report_unevaluated(
@@ -174,9 +175,8 @@ def main() -> int:
                 ".mcp.json ground-control server env"
             ),
             require_governance=require_governance,
-            as_json=args.json,
+            as_json=as_json,
         )
-
     client = GroundControlHttpClient(
         base_url=base_url,
         token=resolve_token(REPO_ROOT),
@@ -184,30 +184,32 @@ def main() -> int:
     )
     try:
         failures = evaluate_requirement_governance(REPO_ROOT, effective_paths, client=client, requirement_uid=uid)
-    except GroundControlAuthRequired as exc:
+    except GroundControlError as exc:
+        rule_id, message = classify_ground_control_error(exc)
         return report_unevaluated(
-            rule_id="ground-control-auth-required",
-            message=f"Ground Control requires authentication ({exc})",
-            require_governance=require_governance,
-            as_json=args.json,
+            rule_id=rule_id, message=message, require_governance=require_governance, as_json=as_json
         )
-    except GroundControlUnavailable as exc:
-        return report_unevaluated(
-            rule_id="ground-control-unavailable",
-            message=str(exc),
-            require_governance=require_governance,
-            as_json=args.json,
-        )
-
     failures = apply_exceptions(failures, load_exceptions(REPO_ROOT), requirement_uid=uid)
-    if failures:
-        if args.json:
-            print(failures_to_json(failures))
-        else:
-            for failure in failures:
-                print(failure.render(), file=sys.stderr)
-        return 1
-    return 0
+    return emit_failures(failures, as_json=as_json)
+
+
+def main() -> int:
+    args = parse_args()
+    paths = (
+        [Path(path).as_posix() for path in args.paths]
+        if args.paths
+        else changed_paths(REPO_ROOT, staged=args.staged, base_rev=args.base_rev)
+    )
+    effective_paths = governed_requirement_paths(paths)
+    uid = requirement_uid_from_context(current_branch(REPO_ROOT), args.requirement_uid)
+    if not requires_requirement_context(effective_paths) or is_dev_to_main_promotion():
+        return 0
+    if not uid:
+        return report_missing_uid(args.json)
+    require_governance = args.require_governance or _env_flag("GC_REQUIRE_GOVERNANCE")
+    return evaluate_against_ground_control(
+        effective_paths, uid, require_governance=require_governance, as_json=args.json
+    )
 
 
 if __name__ == "__main__":
