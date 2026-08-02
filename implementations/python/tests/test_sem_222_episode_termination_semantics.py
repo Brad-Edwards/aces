@@ -128,10 +128,9 @@ def test_governed_signal_reason_map_is_distinct_and_total() -> None:
 def test_closure_record_rejects_ungoverned_signal_reason_mapping() -> None:
     # EBM-02/EBM-10: truncation may not be aliased to timeout-as-termination or
     # to an arbitrary terminal reason; the signal->reason mapping is governed.
+    payload = _closure_payload(source_signal="rl_termination", mapped_terminal_reason="truncated")
     with pytest.raises(ValueError, match="governed"):
-        ParticipantEpisodeClosureRecord.from_payload(
-            _closure_payload(source_signal="rl_termination", mapped_terminal_reason="truncated")
-        )
+        ParticipantEpisodeClosureRecord.from_payload(payload)
 
 
 # --- Closure record round-trips and validates its own shape. ---
@@ -146,13 +145,15 @@ def test_closure_record_round_trip() -> None:
 
 
 def test_closure_record_requires_evidence() -> None:
+    payload = _closure_payload(evidence_refs=[])
     with pytest.raises((ValueError, TypeError)):
-        ParticipantEpisodeClosureRecord.from_payload(_closure_payload(evidence_refs=[]))
+        ParticipantEpisodeClosureRecord.from_payload(payload)
 
 
 def test_closure_record_rejects_unknown_signal() -> None:
+    payload = _closure_payload(source_signal="done")
     with pytest.raises((ValueError, TypeError)):
-        ParticipantEpisodeClosureRecord.from_payload(_closure_payload(source_signal="done"))
+        ParticipantEpisodeClosureRecord.from_payload(payload)
 
 
 # --- EBM-10 positive: a valid closure record relates the RL signal to the

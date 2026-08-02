@@ -197,13 +197,28 @@ def iter_participant_episode_closure_violations(
 
     terminal_index = _participant_episode_terminal_index(participant_episode_history)
     for outer_key, records in participant_episode_closure_records.items():
-        if not isinstance(outer_key, str) or not outer_key:
-            yield (records_key, "participant episode closure record keys must be non-empty strings")
-            continue
-        if not isinstance(records, list):
-            yield (outer_key, "participant episode closure records must be a list")
-            continue
-        yield from _iter_address_closure_violations(outer_key, records, terminal_index)
+        yield from _iter_keyed_closure_violations(records_key, outer_key, records, terminal_index)
+
+
+def _closure_records_shape_error(records_key: str, outer_key: object, records: object) -> tuple[str, str] | None:
+    if not isinstance(outer_key, str) or not outer_key:
+        return (records_key, "participant episode closure record keys must be non-empty strings")
+    if not isinstance(records, list):
+        return (str(outer_key), "participant episode closure records must be a list")
+    return None
+
+
+def _iter_keyed_closure_violations(
+    records_key: str,
+    outer_key: object,
+    records: object,
+    terminal_index: dict[str, dict[tuple[str, int], ParticipantEpisodeTerminalReason]],
+) -> Iterator[tuple[str, str]]:
+    shape_error = _closure_records_shape_error(records_key, outer_key, records)
+    if shape_error is not None:
+        yield shape_error
+        return
+    yield from _iter_address_closure_violations(str(outer_key), list(records), terminal_index)
 
 
 def _iter_address_closure_violations(
