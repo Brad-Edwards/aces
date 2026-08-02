@@ -524,12 +524,15 @@ class TestProvisionerCapabilitiesArchitecture:
     def test_ungoverned_value_rejected(self):
         from raes_backend_protocols.capabilities import ProvisionerCapabilities
 
+        node_types = frozenset({"vm"})
+        os_families = frozenset({"linux"})
+        architectures = frozenset({"sparc"})
         with pytest.raises(ValueError):
             ProvisionerCapabilities(
                 name="p",
-                supported_node_types=frozenset({"vm"}),
-                supported_os_families=frozenset({"linux"}),
-                supported_node_architectures=frozenset({"sparc"}),
+                supported_node_types=node_types,
+                supported_os_families=os_families,
+                supported_node_architectures=architectures,
             )
 
 
