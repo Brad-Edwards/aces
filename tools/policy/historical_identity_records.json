@@ -32,8 +32,8 @@
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
       "rationale": "Preserves append-only lineage observations recorded before the RAES identity cutover.",
-      "occurrences": 346,
-      "content_sha256": "362f96df38c79d9d33f85e69a919b4f0e3732482e9589b26c932470bc6e7d82f"
+      "occurrences": 349,
+      "content_sha256": "b1766af5a23efec003c395b529cf17362942573e1147427d579af39f62c8ee9f"
     },
     {
       "path": "contracts/schema-publication/tombstones/\u0061ces-semantic-invariants-v1.json",
@@ -1565,8 +1565,8 @@
       "path": "docs/research/lineage/source-audit-2026-07-12.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 24,
-      "content_sha256": "89676790565dc970e4f07ff48dd705094124877bdd4f4aaa7e574c4cce4af9e9"
+      "occurrences": 25,
+      "content_sha256": "2dc32335c8e8ada53615b3bcd25195729738ef388dcf5cf7d686b7aa72707669"
     },
     {
       "path": "docs/research/participant-backend-contracts/index.md",

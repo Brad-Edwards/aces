@@ -53,14 +53,16 @@ model-check, runtime mapping, backend conformance, noninterference, or opacity
 result.
 
 Issue #812 and ADR-101 add the SEM-233 boundary-flow and ASR-536
-intentional-subversion evaluation design. Their normative profiles are in
+intentional-subversion evaluation design. Issue #1001 publishes the exact
+`sem-233/rev1` two-coordinate obligation algebra, carrier mapping, and bounded
+falsification evidence; ASR-536 remains design-only. Their normative profiles are in
 [`adversarial-flow-control.md`](adversarial-flow-control.md). The design
 extends the existing participant, control, crossing, runtime, backend, and
 experiment carriers with independent confidentiality and integrity
 coordinates, conservative derivation, final-sink mediation, and explicit
-attack-protocol variables. It does not report runtime enforcement, backend
-realization, monitor honesty, covert-channel control, or adversarial
-robustness.
+attack-protocol variables. The SEM-233 finite model is not a portable contract,
+runtime enforcement, backend realization, monitor-honesty, covert-channel, or
+adversarial-robustness result.
 
 Issue #813 and ADR-102 add the SEM-234 mixed-composition and ASR-537
 realization/transfer-evidence design. Their normative profiles are in

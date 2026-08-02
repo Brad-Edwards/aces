@@ -29,6 +29,35 @@ enforceable boundary. None of the sources establishes model alignment, safe
 private reasoning, monitor honesty, or protection from undeclared covert
 channels.
 
+## Boundary-flow precedent review for issue #1001
+
+Issue #1001 extends the source review beyond agent-specific control systems to
+the security mechanisms that have carried information-flow decisions at real
+system and domain boundaries. The comparison is deliberately about semantic
+lessons, including where an approach has worked and where its claim boundary
+has proved too weak for SEM-233.
+
+| Precedent | What worked | Limitation carried into the SEM-233 design boundary |
+| --- | --- | --- |
+| [Denning's lattice model](https://doi.org/10.1145/360051.360056) | Gives information classes a partial order and makes joins conservative instead of allowing an observation to erase a restriction. | A single fixed classification lattice does not represent mutually distrustful owners or independently evolving confidentiality and integrity obligations. |
+| [Decentralized labels](https://www.cs.cornell.edu/andru/papers/sp98/paper.html) | Makes policies principal-relative and gives declassification an explicit authority requirement rather than treating it as an ordinary relabel. | Distributed label and privilege management can produce label creep or over-powerful trusted downgrade paths; possession of authority still needs a bounded purpose and sink decision. |
+| [Robust declassification](https://doi.org/10.3233/JCS-2006-14203) and [nonmalleable IFC](https://www.cs.cornell.edu/andru/papers/nmifc/) | Show why confidentiality release and integrity endorsement are dual but distinct, and constrain attacker influence over downgrading. | Downgrading breaks simple noninterference and compositional reasoning unless the policy states who may affect the decision, what may change, and at which cut it is evaluated. |
+| [HiStar](https://www.usenix.org/conference/osdi-06/making-information-flow-explicit-histar) and [Flume](https://pdos.csail.mit.edu/papers/flume-sosp07.pdf) | Demonstrate practical decentralized IFC with labels, isolated components, a small trusted base, and conservative propagation through familiar OS abstractions. | Trusted declassifiers/untaint privileges, label administration, compatibility, and undeclared covert channels remain outside the ordinary flow lattice; operational success does not justify an unbounded `trusted` scalar. |
+| [NIST SP 800-53 AC-4](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final) and the [NSA cross-domain program](https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/) | Put enforcement at controlled interfaces, combine content and metadata checks, and treat default deny, assessment, configuration, and lifecycle control as part of the boundary. | A guard fails semantically when it can be bypassed, receives missing or stale attributes, accepts ambiguous content, or silently treats a release decision as identity/action authorization. Certification of one guard is not a proof about every downstream sink. |
+| [TaintDroid](https://www.usenix.org/conference/osdi10/taintdroid-information-flow-tracking-system-realtime-privacy-monitoring) | Shows that multi-granularity dynamic labels can expose consequential explicit flows with tolerable overhead in a bounded platform. | Dynamic taint is detection evidence, not permission to disclose. Native, implicit, control, and covert flows plus tag coarsening or laundering bound the claim. |
+| [CamFlow whole-system provenance](https://arxiv.org/abs/1711.05296) | Makes source and derivation carriage useful for audit and data-loss investigation across a whole system. | Provenance volume, coverage, and overhead are operational constraints, and derivation history cannot itself authorize release, endorsement, or execution. |
+| [NIST zero-trust architecture](https://doi.org/10.6028/NIST.SP.800-207) and capability authority | Reinforce per-request mediation, explicit policy enforcement points, and least authority rather than ambient trust. | Identity, device posture, and possession of a capability authorize an action; they do not replace end-to-end label propagation or a confidentiality release rule. |
+
+The resulting semantic split is strict: confidentiality and integrity are
+independent coordinates; conservative join/derivation never improves either
+coordinate; declassification, endorsement, action approval, admission,
+authentication, and authorization are different operations; provenance is
+evidence rather than permission; and an external effect or disclosure is
+decided again at the final enforceable sink. Unknown labels, ambiguous joins,
+stale policy cuts, and unexplained episode-boundary resets fail closed. The
+profile describes declared explicit flows only and makes no claim over covert
+channels, model honesty, or the completeness of a backend's instrumentation.
+
 ## Existing RAES coverage
 
 - ADR-085, ADR-095, SEM-230, and SEM-231 define exact-cut
@@ -74,6 +103,11 @@ ADR-101 and the formal authority add two DRAFT owners:
 - SEM-233 owns the participant-neutral flow-policy profile and final-sink
   semantics.
 - ASR-536 owns the intentional-subversion evaluation profile.
+
+Issue #1001 publishes the exact `sem-233/rev1` powerset algebra, typed carrier
+mapping, lineage, and bounded test-local falsification evidence. SEM-233 stays
+DRAFT: portable contracts, runtime enforcement, backend realization, and the
+ASR-536 evaluation remain separate downstream work.
 
 Issue #812 also opens six ordered implementation issues. It does not alter
 published schemas or runtime behavior and does not claim either DRAFT
