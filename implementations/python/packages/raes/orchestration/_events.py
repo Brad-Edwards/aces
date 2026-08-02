@@ -68,7 +68,7 @@ class Script(SDLModel):
 
     @field_validator("events", mode="before")
     @classmethod
-    def parse_event_times(cls, v: dict) -> dict[str, int | str]:
+    def parse_event_times(cls, v: dict[str, object]) -> dict[str, int | str]:
         if isinstance(v, dict):
             return {k: parse_duration(t) for k, t in v.items()}
         return v

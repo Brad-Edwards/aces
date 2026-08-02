@@ -7,6 +7,7 @@ composition and semantic transformations.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,8 @@ from .._source_profile import (
 )
 from ..instantiate import _bind_scenario_content
 from ..module_registry import (
+    Lockfile,
+    TrustPolicy,
     load_lockfile,
     load_trust_policy,
     resolve_import,
@@ -167,10 +170,125 @@ def _merge_sections(
     return merged
 
 
-def _import_decl(value: Any) -> ImportDecl:
+def _import_decl(value: object) -> ImportDecl:
     if isinstance(value, ImportDecl):
         return value
     return ImportDecl.model_validate(value)
+
+
+@dataclass(frozen=True)
+class _ImportContext:
+    """Invariant per-document context threaded through each import expansion."""
+
+    path: Path
+    resolved_path: Path
+    child_traversal: CompositionTraversal
+    budget: CompositionBudget
+    lockfile: Lockfile | None
+    trust_policy: TrustPolicy
+    source_format: str
+    migration_policy: SDLMigrationPolicy | str
+    limits: SDLParserLimits
+    source_diagnostics: list[SDLParseDiagnostic] | None
+
+
+def _expand_one_import(
+    raw_import: object,
+    merged: dict[str, Any],
+    context: _ImportContext,
+) -> tuple[
+    dict[str, Any],
+    list[ResolvedImportProvenance],
+    list[CapabilityConstraint],
+    list[ExplicitnessProvenanceRecord],
+    list[RealizationDesignationRecord],
+]:
+    """Resolve, expand, namespace, and merge a single import; return provenance additions."""
+
+    context.budget.add_import(path=context.path)
+    import_decl = _import_decl(raw_import)
+    if "__private." in import_decl.namespace:
+        raise SDLParseError(
+            "Import namespaces may not contain the reserved '__private' segment",
+            path=context.path,
+        )
+    resolved_import = resolve_import(
+        import_decl,
+        base_dir=context.resolved_path.parent,
+        lockfile=context.lockfile,
+        trust_policy=context.trust_policy,
+        source_options=SDLSourceParseOptions(
+            source_format=context.source_format,
+            migration_policy=context.migration_policy,
+            limits=context.limits,
+        ),
+        source_diagnostics=context.source_diagnostics,
+    )
+    import_path = resolved_import.root_file
+    imported_raw = _load_normalized_data(
+        resolved_import.source_document.text,
+        path=import_path,
+        source_format=context.source_format,
+        migration_policy=context.migration_policy,
+        limits=context.limits,
+        source_diagnostics=context.source_diagnostics,
+    )
+    imported_expanded, inner_provenance = expand_sdl_modules(
+        imported_raw,
+        path=import_path,
+        source_format=context.source_format,
+        migration_policy=context.migration_policy,
+        limits=context.limits,
+        source_diagnostics=context.source_diagnostics,
+        _traversal=context.child_traversal,
+    )
+    try:
+        imported_scenario = ExpandedScenario.model_validate(imported_expanded)
+        bound = _bind_scenario_content(
+            imported_scenario,
+            import_decl.parameters,
+            preserve_variation_variables=True,
+        )
+    except ValidationError as exc:
+        raise SDLParseError("Imported SDL unit is structurally invalid", path=import_path) from exc
+    except SDLInstantiationError as exc:
+        raise SDLParseError(str(exc), path=import_path) from exc
+    namespace = import_decl.namespace
+    descriptor = resolved_import.module_descriptor
+    symbols = _symbol_index(
+        bound.content,
+        namespace=namespace,
+        descriptor=descriptor,
+        restrict_to_descriptor=True,
+    )
+
+    namespaced_payload = _namespace_payload(
+        bound.content.model_dump(mode="python", by_alias=True),
+        bound.content,
+        namespace,
+        descriptor,
+    )
+    context.budget.check_namespaces(namespaced_payload, path=import_path)
+    merged = _merge_sections(merged, namespaced_payload, path=import_path)
+
+    import_records: list[ResolvedImportProvenance] = [
+        _resolved_import_record(resolved_import, requested=import_decl, bindings=bound)
+    ]
+    import_records.extend(_prefixed_import_record(record, namespace) for record in inner_provenance.imports)
+    capability_constraints = [
+        _prefixed_constraint(constraint, namespace=namespace, symbols=symbols)
+        for constraint in bound.capability_constraints
+    ]
+    explicitness_records = [
+        _prefixed_explicitness(record, namespace=namespace, imported=bound.content, symbols=symbols)
+        for record in bound.explicitness
+        if any(record.model_path.startswith(f"{section_name}.") for section_name in _HASHMAP_SECTIONS)
+    ]
+    realization_records = [
+        _prefixed_realization_designation(record, namespace=namespace, symbols=symbols)
+        for record in inner_provenance.realization_designations
+    ]
+    return merged, import_records, capability_constraints, explicitness_records, realization_records
 
 
 def expand_sdl_modules(
@@ -213,102 +331,27 @@ def expand_sdl_modules(
             raise SDLParseError("Realization designation is structurally invalid", path=path) from exc
     lockfile = load_lockfile(resolved_path.parent)
     trust_policy = load_trust_policy(resolved_path.parent)
+    context = _ImportContext(
+        path=path,
+        resolved_path=resolved_path,
+        child_traversal=child_traversal,
+        budget=budget,
+        lockfile=lockfile,
+        trust_policy=trust_policy,
+        source_format=source_format,
+        migration_policy=migration_policy,
+        limits=limits,
+        source_diagnostics=source_diagnostics,
+    )
 
-    for raw_import in list(merged.get("imports", [])):
-        budget.add_import(path=path)
-        import_decl = _import_decl(raw_import)
-        if "__private." in import_decl.namespace:
-            raise SDLParseError(
-                "Import namespaces may not contain the reserved '__private' segment",
-                path=path,
-            )
-        resolved_import = resolve_import(
-            import_decl,
-            base_dir=resolved_path.parent,
-            lockfile=lockfile,
-            trust_policy=trust_policy,
-            source_options=SDLSourceParseOptions(
-                source_format=source_format,
-                migration_policy=migration_policy,
-                limits=limits,
-            ),
-            source_diagnostics=source_diagnostics,
+    for raw_import in merged.get("imports", []):
+        merged, import_add, capability_add, explicitness_add, realization_add = _expand_one_import(
+            raw_import, merged, context
         )
-        import_path = resolved_import.root_file
-        imported_raw = _load_normalized_data(
-            resolved_import.source_document.text,
-            path=import_path,
-            source_format=source_format,
-            migration_policy=migration_policy,
-            limits=limits,
-            source_diagnostics=source_diagnostics,
-        )
-        imported_expanded, inner_provenance = expand_sdl_modules(
-            imported_raw,
-            path=import_path,
-            source_format=source_format,
-            migration_policy=migration_policy,
-            limits=limits,
-            source_diagnostics=source_diagnostics,
-            _traversal=child_traversal,
-        )
-        try:
-            imported_scenario = ExpandedScenario.model_validate(imported_expanded)
-            bound = _bind_scenario_content(
-                imported_scenario,
-                import_decl.parameters,
-                preserve_variation_variables=True,
-            )
-        except ValidationError as exc:
-            raise SDLParseError("Imported SDL unit is structurally invalid", path=import_path) from exc
-        except SDLInstantiationError as exc:
-            raise SDLParseError(str(exc), path=import_path) from exc
-        namespace = import_decl.namespace
-        descriptor = resolved_import.module_descriptor
-        symbols = _symbol_index(
-            bound.content,
-            namespace=namespace,
-            descriptor=descriptor,
-            restrict_to_descriptor=True,
-        )
-
-        namespaced_payload = _namespace_payload(
-            bound.content.model_dump(mode="python", by_alias=True),
-            bound.content,
-            namespace,
-            descriptor,
-        )
-        budget.check_namespaces(namespaced_payload, path=import_path)
-        merged = _merge_sections(merged, namespaced_payload, path=import_path)
-
-        import_records.append(_resolved_import_record(resolved_import, requested=import_decl, bindings=bound))
-        import_records.extend(_prefixed_import_record(record, namespace) for record in inner_provenance.imports)
-        capability_constraints.extend(
-            _prefixed_constraint(
-                constraint,
-                namespace=namespace,
-                symbols=symbols,
-            )
-            for constraint in bound.capability_constraints
-        )
-        explicitness_records.extend(
-            _prefixed_explicitness(
-                record,
-                namespace=namespace,
-                imported=bound.content,
-                symbols=symbols,
-            )
-            for record in bound.explicitness
-            if any(record.model_path.startswith(f"{section_name}.") for section_name in _HASHMAP_SECTIONS)
-        )
-        realization_records.extend(
-            _prefixed_realization_designation(
-                record,
-                namespace=namespace,
-                symbols=symbols,
-            )
-            for record in inner_provenance.realization_designations
-        )
+        import_records.extend(import_add)
+        capability_constraints.extend(capability_add)
+        explicitness_records.extend(explicitness_add)
+        realization_records.extend(realization_add)
 
     provenance = ExpansionProvenance(
         imports=tuple(import_records),

@@ -52,31 +52,15 @@ _DURATION_UNITS = {
 _DURATION_NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
-def parse_duration(value: str | int | float) -> int | str:
-    """Parse an OCR-compatible human-readable duration into seconds."""
-    if is_variable_ref(value):
-        return value
-    if isinstance(value, bool):
+def _numeric_duration(value: int | float) -> int:
+    if value < 0:
         raise ValueError(f"Invalid duration: {value!r}")
-    if isinstance(value, (int, float)):
-        if value < 0:
-            raise ValueError(f"Invalid duration: {value!r}")
-        if value == 0:
-            return 0
-        return math.ceil(value)
-
-    value_str = str(value).strip()
-    if not value_str:
-        raise ValueError(f"Invalid duration: {value!r}")
-    if value_str == "0":
+    if value == 0:
         return 0
+    return math.ceil(value)
 
-    normalized = value_str.replace("_", "").replace(" ", "").replace("µ", "u").lower()
 
-    if re.fullmatch(r"\d+(?:\.\d+)?", normalized):
-        total = Decimal(normalized)
-        return int(total.to_integral_value(rounding=ROUND_CEILING))
-
+def _accumulate_units(normalized: str, *, value: str | int | float) -> int:
     total = Decimal("0")
     position = 0
     parsed_any = False
@@ -110,3 +94,29 @@ def parse_duration(value: str | int | float) -> int | str:
         raise ValueError(f"Invalid duration: {value!r}")
 
     return int(total.to_integral_value(rounding=ROUND_CEILING))
+
+
+def _string_duration(value: str | int | float) -> int:
+    value_str = str(value).strip()
+    if not value_str:
+        raise ValueError(f"Invalid duration: {value!r}")
+    if value_str == "0":
+        return 0
+
+    normalized = value_str.replace("_", "").replace(" ", "").replace("µ", "u").lower()
+
+    if re.fullmatch(r"\d+(?:\.\d+)?", normalized):
+        return int(Decimal(normalized).to_integral_value(rounding=ROUND_CEILING))
+
+    return _accumulate_units(normalized, value=value)
+
+
+def parse_duration(value: str | int | float) -> int | str:
+    """Parse an OCR-compatible human-readable duration into seconds."""
+    if is_variable_ref(value):
+        return value
+    if isinstance(value, bool):
+        raise ValueError(f"Invalid duration: {value!r}")
+    if isinstance(value, (int, float)):
+        return _numeric_duration(value)
+    return _string_duration(value)

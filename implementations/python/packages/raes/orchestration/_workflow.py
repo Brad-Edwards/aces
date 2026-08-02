@@ -28,6 +28,4 @@ class Workflow(SDLModel):
     @field_validator("compensation", mode="before")
     @classmethod
     def parse_compensation(cls, v: object) -> object:
-        if v is None or isinstance(v, WorkflowCompensationPolicy):
-            return v
         return v

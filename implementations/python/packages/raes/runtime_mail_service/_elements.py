@@ -6,7 +6,6 @@ stores, mailboxes, aliases, routing rules, queues, and settings) aggregated by
 """
 
 import re
-from typing import Any
 
 from pydantic import Field, field_validator, model_validator
 
@@ -120,12 +119,12 @@ class RuntimeMailListener(SDLModel):
 
     @field_validator("capabilities", "tls_versions", mode="before")
     @classmethod
-    def coerce_string_lists(cls, v: Any) -> list[str]:
+    def coerce_string_lists(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("auth_mechanisms", mode="before")
     @classmethod
-    def coerce_auth_mechanisms(cls, v: Any) -> list[Any]:
+    def coerce_auth_mechanisms(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("auth_mechanisms")
@@ -231,7 +230,7 @@ class RuntimeMailMailbox(SDLModel):
 
     @field_validator("auth_mechanisms", mode="before")
     @classmethod
-    def coerce_auth_mechanisms(cls, v: Any) -> list[Any]:
+    def coerce_auth_mechanisms(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("auth_mechanisms")
@@ -276,7 +275,7 @@ class RuntimeMailAlias(SDLModel):
 
     @field_validator("target_refs", "external_targets", mode="before")
     @classmethod
-    def coerce_targets(cls, v: Any) -> list[str]:
+    def coerce_targets(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("external_targets")

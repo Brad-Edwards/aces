@@ -253,164 +253,184 @@ class WorkflowStep(SDLModel):
 
     @model_validator(mode="after")
     def validate_type_specific_fields(self) -> "WorkflowStep":
-        if self.type == WorkflowStepType.OBJECTIVE:
-            if not self.objective or not self.on_success:
-                raise ValueError("Objective workflow step requires 'objective' and 'on_success'")
-            if (
-                self.next
-                or self.on_exhausted
-                or self.when is not None
-                or self.then_step
-                or self.else_step
-                or self.branches
-                or self.join
-                or self.max_attempts is not None
-            ):
-                raise ValueError(
-                    "Objective workflow step only supports 'objective', "
-                    "'on-success', optional 'on-failure', optional "
-                    "'compensate-with', and 'description'"
-                )
-            return self
+        type_validators = {
+            WorkflowStepType.OBJECTIVE: self._validate_objective_type,
+            WorkflowStepType.DECISION: self._validate_decision_type,
+            WorkflowStepType.SWITCH: self._validate_switch_type,
+            WorkflowStepType.PARALLEL: self._validate_parallel_type,
+            WorkflowStepType.JOIN: self._validate_join_type,
+            WorkflowStepType.RETRY: self._validate_retry_type,
+            WorkflowStepType.CALL: self._validate_call_type,
+        }
+        type_validators.get(self.type, self._validate_end_type)()
+        return self
 
-        if self.type == WorkflowStepType.DECISION:
-            if self.when is None or not self.then_step or not self.else_step:
-                raise ValueError("Decision workflow step requires 'when', 'then', and 'else'")
-            if (
-                self.objective
-                or self.next
-                or self.on_success
-                or self.on_failure
-                or self.on_exhausted
-                or self.branches
-                or self.join
-                or self.max_attempts is not None
-                or self.compensate_with
-            ):
-                raise ValueError("Decision workflow step only supports 'when', 'then', 'else', and 'description'")
-            return self
+    def _validate_objective_type(self) -> None:
+        if not self.objective or not self.on_success:
+            raise ValueError("Objective workflow step requires 'objective' and 'on_success'")
+        if any(
+            (
+                self.next,
+                self.on_exhausted,
+                self.when is not None,
+                self.then_step,
+                self.else_step,
+                self.branches,
+                self.join,
+                self.max_attempts is not None,
+            )
+        ):
+            raise ValueError(
+                "Objective workflow step only supports 'objective', "
+                "'on-success', optional 'on-failure', optional "
+                "'compensate-with', and 'description'"
+            )
 
-        if self.type == WorkflowStepType.SWITCH:
-            if not self.cases or not self.default_step:
-                raise ValueError("Switch workflow step requires at least one 'case' and a 'default' target")
-            if (
-                self.objective
-                or self.next
-                or self.on_success
-                or self.on_failure
-                or self.on_exhausted
-                or self.when is not None
-                or self.then_step
-                or self.else_step
-                or self.branches
-                or self.join
-                or self.workflow
-                or self.max_attempts is not None
-                or self.compensate_with
-            ):
-                raise ValueError("Switch workflow step only supports 'cases', 'default', and 'description'")
-            return self
+    def _validate_decision_type(self) -> None:
+        if self.when is None or not self.then_step or not self.else_step:
+            raise ValueError("Decision workflow step requires 'when', 'then', and 'else'")
+        if any(
+            (
+                self.objective,
+                self.next,
+                self.on_success,
+                self.on_failure,
+                self.on_exhausted,
+                self.branches,
+                self.join,
+                self.max_attempts is not None,
+                self.compensate_with,
+            )
+        ):
+            raise ValueError("Decision workflow step only supports 'when', 'then', 'else', and 'description'")
 
-        if self.type == WorkflowStepType.PARALLEL:
-            if len(self.branches) < 2 or not self.join:
-                raise ValueError("Parallel workflow step requires at least two 'branches' and a 'join'")
-            if (
-                self.objective
-                or self.when is not None
-                or self.next
-                or self.on_success
-                or self.on_exhausted
-                or self.then_step
-                or self.else_step
-                or self.max_attempts is not None
-                or self.compensate_with
-            ):
-                raise ValueError(
-                    "Parallel workflow step only supports 'branches', 'join', optional 'on-failure', and 'description'"
-                )
-            if len(self.branches) != len(set(self.branches)):
-                raise ValueError("Parallel workflow branches must be unique")
-            return self
+    def _validate_switch_type(self) -> None:
+        if not self.cases or not self.default_step:
+            raise ValueError("Switch workflow step requires at least one 'case' and a 'default' target")
+        if any(
+            (
+                self.objective,
+                self.next,
+                self.on_success,
+                self.on_failure,
+                self.on_exhausted,
+                self.when is not None,
+                self.then_step,
+                self.else_step,
+                self.branches,
+                self.join,
+                self.workflow,
+                self.max_attempts is not None,
+                self.compensate_with,
+            )
+        ):
+            raise ValueError("Switch workflow step only supports 'cases', 'default', and 'description'")
 
-        if self.type == WorkflowStepType.JOIN:
-            if not self.next:
-                raise ValueError("Join workflow step requires 'next'")
-            if (
-                self.objective
-                or self.on_success
-                or self.on_failure
-                or self.on_exhausted
-                or self.when is not None
-                or self.then_step
-                or self.else_step
-                or self.branches
-                or self.join
-                or self.max_attempts is not None
-                or self.compensate_with
-            ):
-                raise ValueError("Join workflow step only supports 'next' and 'description'")
-            return self
+    def _validate_parallel_type(self) -> None:
+        if len(self.branches) < 2 or not self.join:
+            raise ValueError("Parallel workflow step requires at least two 'branches' and a 'join'")
+        if any(
+            (
+                self.objective,
+                self.when is not None,
+                self.next,
+                self.on_success,
+                self.on_exhausted,
+                self.then_step,
+                self.else_step,
+                self.max_attempts is not None,
+                self.compensate_with,
+            )
+        ):
+            raise ValueError(
+                "Parallel workflow step only supports 'branches', 'join', optional 'on-failure', and 'description'"
+            )
+        if len(self.branches) != len(set(self.branches)):
+            raise ValueError("Parallel workflow branches must be unique")
 
-        if self.type == WorkflowStepType.RETRY:
-            if not self.objective or self.max_attempts is None or not self.on_success:
-                raise ValueError("Retry workflow step requires 'objective', 'max-attempts', and 'on-success'")
-            if (
-                self.next
-                or self.when is not None
-                or self.on_failure
-                or self.then_step
-                or self.else_step
-                or self.branches
-                or self.join
-                or self.compensate_with
-            ):
-                raise ValueError(
-                    "Retry workflow step only supports 'objective', "
-                    "'max-attempts', 'on-success', optional 'on-exhausted', "
-                    "and 'description'"
-                )
-            return self
+    def _validate_join_type(self) -> None:
+        if not self.next:
+            raise ValueError("Join workflow step requires 'next'")
+        if any(
+            (
+                self.objective,
+                self.on_success,
+                self.on_failure,
+                self.on_exhausted,
+                self.when is not None,
+                self.then_step,
+                self.else_step,
+                self.branches,
+                self.join,
+                self.max_attempts is not None,
+                self.compensate_with,
+            )
+        ):
+            raise ValueError("Join workflow step only supports 'next' and 'description'")
 
-        if self.type == WorkflowStepType.CALL:
-            if not self.workflow or not self.on_success:
-                raise ValueError("Call workflow step requires 'workflow' and 'on-success'")
-            if (
-                self.objective
-                or self.next
-                or self.on_exhausted
-                or self.when is not None
-                or self.then_step
-                or self.else_step
-                or self.cases
-                or self.default_step
-                or self.branches
-                or self.join
-                or self.max_attempts is not None
-            ):
-                raise ValueError(
-                    "Call workflow step only supports 'workflow', "
-                    "'on-success', optional 'on-failure', optional "
-                    "'compensate-with', and 'description'"
-                )
-            return self
+    def _validate_retry_type(self) -> None:
+        if not self.objective or self.max_attempts is None or not self.on_success:
+            raise ValueError("Retry workflow step requires 'objective', 'max-attempts', and 'on-success'")
+        if any(
+            (
+                self.next,
+                self.when is not None,
+                self.on_failure,
+                self.then_step,
+                self.else_step,
+                self.branches,
+                self.join,
+                self.compensate_with,
+            )
+        ):
+            raise ValueError(
+                "Retry workflow step only supports 'objective', "
+                "'max-attempts', 'on-success', optional 'on-exhausted', "
+                "and 'description'"
+            )
 
-        # END step
-        if (
-            self.objective
-            or self.next
-            or self.when is not None
-            or self.on_success
-            or self.on_failure
-            or self.on_exhausted
-            or self.then_step
-            or self.else_step
-            or self.cases
-            or self.default_step
-            or self.branches
-            or self.join
-            or self.workflow
-            or self.max_attempts is not None
-            or self.compensate_with
+    def _validate_call_type(self) -> None:
+        if not self.workflow or not self.on_success:
+            raise ValueError("Call workflow step requires 'workflow' and 'on-success'")
+        if any(
+            (
+                self.objective,
+                self.next,
+                self.on_exhausted,
+                self.when is not None,
+                self.then_step,
+                self.else_step,
+                self.cases,
+                self.default_step,
+                self.branches,
+                self.join,
+                self.max_attempts is not None,
+            )
+        ):
+            raise ValueError(
+                "Call workflow step only supports 'workflow', "
+                "'on-success', optional 'on-failure', optional "
+                "'compensate-with', and 'description'"
+            )
+
+    def _validate_end_type(self) -> None:
+        if any(
+            (
+                self.objective,
+                self.next,
+                self.when is not None,
+                self.on_success,
+                self.on_failure,
+                self.on_exhausted,
+                self.then_step,
+                self.else_step,
+                self.cases,
+                self.default_step,
+                self.branches,
+                self.join,
+                self.workflow,
+                self.max_attempts is not None,
+                self.compensate_with,
+            )
         ):
             raise ValueError("End workflow step only supports 'type' and 'description'")
-        return self
