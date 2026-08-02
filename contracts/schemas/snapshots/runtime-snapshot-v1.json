@@ -800,6 +800,17 @@
       "title": "ExplicitnessProvenance",
       "type": "string"
     },
+    "ObservationStrength": {
+      "description": "Strongest evidence a backend configuration emits for one concern.",
+      "enum": [
+        "none",
+        "driver-reported",
+        "daemon-observed",
+        "guest-observed"
+      ],
+      "title": "ObservationStrength",
+      "type": "string"
+    },
     "OutcomeInterpretationSourceLayer": {
       "description": "Semantic layers that may feed a SEM-215 interpretation rule.",
       "enum": [
@@ -10428,6 +10439,56 @@
       "title": "RealizationEnvelopeIdentityModel",
       "type": "object"
     },
+    "RealizationObservationDisclosureModel": {
+      "additionalProperties": false,
+      "description": "Value-free corroboration metadata for one realized inventory concern.",
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "observation_strength": {
+          "$ref": "#/$defs/ObservationStrength",
+          "not": {
+            "const": "none"
+          }
+        },
+        "requirement_kind": {
+          "minLength": 1,
+          "title": "Requirement Kind",
+          "type": "string"
+        },
+        "verification_scope": {
+          "$ref": "#/$defs/RealizationVerificationScope"
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "domain",
+        "requirement_kind",
+        "verification_scope",
+        "observation_strength"
+      ],
+      "title": "RealizationObservationDisclosureModel",
+      "type": "object"
+    },
     "RealizationProvenanceEntryModel": {
       "additionalProperties": false,
       "description": "SEM-218 invariant I5: provenance for one realized realization concern.\n\nDistinguishes ``author-declared`` / ``processor-derived`` / ``backend-realized``\norigins for a realized concern recorded on the snapshot's result / history\nsurfaces. Carries field-path and kind references only (never the realized\nvalue, per the SEM-218 host-exposure gate). Kept distinct from ADR-054\nlifecycle ``phase_realization`` and API-407 participant feature support.",
@@ -10493,6 +10554,15 @@
       ],
       "title": "RealizationProvenanceEntryModel",
       "type": "object"
+    },
+    "RealizationVerificationScope": {
+      "description": "Closed scope at which an inventory realization was corroborated.",
+      "enum": [
+        "presence",
+        "configuration"
+      ],
+      "title": "RealizationVerificationScope",
+      "type": "string"
     },
     "RuntimeClockStateModel": {
       "additionalProperties": false,
@@ -11426,6 +11496,13 @@
         }
       ],
       "default": null
+    },
+    "realization_observations": {
+      "items": {
+        "$ref": "#/$defs/RealizationObservationDisclosureModel"
+      },
+      "title": "Realization Observations",
+      "type": "array"
     },
     "realization_provenance": {
       "items": {

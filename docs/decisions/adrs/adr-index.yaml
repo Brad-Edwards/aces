@@ -248,11 +248,14 @@ adrs:
         summary: "Replaced product-category completeness profiles with composable provider-neutral capabilities and retained legacy product/category content fields as deprecated compatible input."
   - id: ADR-050
     path: docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md
-    pin: 8eaecd0c498353822c5fec91f83fa6af6b7a7bb32451025f97661673cc1b832c
+    pin: 00f8711cf54877551ad990c4f6f17cc4f355ecaf74e8a1282cb3e56eb0877dc5
     amendments:
       - date: 2026-05-31
         ref: e815f27
         summary: "Added scenario-level forwarding agents (top-level `Scenario.forwarding_agents`) with cross-registry ref resolution and uniqueness."
+      - date: 2026-08-01
+        ref: "#1043"
+        summary: "Defined corroborated inventory realization, closed ownership roles, and evidence-plane binding for forwarding agents."
   - id: ADR-051
     path: docs/decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md
     pin: 080e29f079007f86d1be96f5bf94a29d44cf138778b0adf43ddefa16bafdd099
@@ -288,7 +291,7 @@ adrs:
         summary: "ADR-074 realizes the explicit draft/authoring surface anticipated in the Risks section as experiment-authoring-input-v1; the archival contracts are unchanged."
   - id: ADR-056
     path: docs/decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md
-    pin: c2ff94d295a9b22dc72d8654a3fcd6bf9bb3fb4f5e4ffc411341c3e3ab164617
+    pin: fd042c405c3bf9994d998b827e817c86f0ff35245b5a071f9fe86754d281221b
     amendments:
       - date: 2026-07-13
         ref: "#417"
@@ -296,6 +299,9 @@ adrs:
       - date: 2026-07-29
         ref: "#956"
         summary: "Removed the obsolete platform-kind profile-guard claim while retaining family-local capability/category/content semantics and shared explicit-redaction handling."
+      - date: 2026-08-01
+        ref: "#1043"
+        summary: "Applied the raw-value omission boundary to forwarding-agent realization observation disclosures."
   - id: ADR-057
     path: docs/decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md
     pin: 44c638bf47df8545b8af8a3850476fabc46a4ea42b3a8003b4f9ea1e89f72f49
@@ -322,11 +328,14 @@ adrs:
     pin: 69f90581b2bcedc12bfb7ed8aa688787d7a0d9aa4cc49a90f8c631ecbae8a356
   - id: ADR-066
     path: docs/decisions/adrs/adr-066-observability-evidence-plane-separation.md
-    pin: c2a8cf0bafdf53007df8a6c40f60bd63114656887b3c2feaca6f678ef6ae6d65
+    pin: 5d061a0667b2505d311803adf94e507781c4ba70550892bbfbe50cc82c4120ac
     amendments:
       - date: 2026-06-23
         ref: "#335"
         summary: "Recorded SEM-225 run-level augmentation disclosure implementation coverage."
+      - date: 2026-08-01
+        ref: "#1043"
+        summary: "Separated forwarding-agent ownership, realization corroboration, evidence binding, and operational behavior claims."
   - id: ADR-068
     path: docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md
     pin: 12e6d644f7a90d50956964d8f0608737f9b4d8c7627819419a69974184c2781f

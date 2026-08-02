@@ -91,6 +91,38 @@ service is then resolved on that node. `RelationshipForwardingEdge.forwarder_ref
 resolves across both node-hosted and scenario-level forwarding-agent registries.
 `forwarding_agent_id` values must be unique across both registries.
 
+### 5. Define realization as corroborated inventory, not behavior
+
+For the SEM-218 `forwarding-agents` concern, realization means that the
+agent's identity, placement, implementation, and declared configuration
+projection are present and independently corroborated. The existing
+`project_forwarding_agents` projection remains the exact comparison surface.
+It does not prove that the agent shipped an event, applied a transform, reached
+the declared destination, or caused a reload.
+
+Backend manifests disclose concern-keyed observation capability using the
+closed verification scopes `presence` and `configuration`, paired with the
+existing observation-strength source axis. Runtime snapshots disclose the
+scope and source actually used without copying realized values. An exact
+declaration fails closed when the capability or returned disclosure is missing
+or weaker than the authored scope; equality with an echoed plan payload is not
+corroboration.
+
+### 6. Classify agent ownership and bind apparatus evidence inward
+
+Each forwarding agent has a closed `ownership_role`:
+
+- `system_under_test` means the agent is scenario state; and
+- `measurement_apparatus` means the agent exists to collect experiment
+  evidence.
+
+The role is authored ownership, not an execution mode, visibility claim, or
+backend configuration field. A measurement-apparatus agent must be named by an
+inbound apparatus-class `EvidenceRequirement.source_refs` binding. The same
+binding is invalid for an agent marked `system_under_test`. Forwarding agents
+do not carry evidence destinations, credentials, capture payloads, or reverse
+evidence-reference fields.
+
 ## Security and Validation Gates
 
 - Parser/model gate: stable agent and child ids are concrete symbols, not
@@ -164,3 +196,4 @@ resolves across both node-hosted and scenario-level forwarding-agent registries.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-05-31 | e815f27 | Added scenario-level forwarding agents (top-level `Scenario.forwarding_agents`) with cross-registry ref resolution and uniqueness. |
+| 2026-08-01 | #1043 | Defined corroborated inventory realization, closed ownership roles, and evidence-plane binding for forwarding agents. |

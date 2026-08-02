@@ -13,6 +13,7 @@ from raes_contracts.addressing import require_compiled_address
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_autonomous_state import require_participant_autonomous_state_snapshot
 from raes_contracts.planning import RuntimeDomain
+from raes_contracts.realization_observation import RealizationObservationDisclosure
 from raes_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
 
 if TYPE_CHECKING:
@@ -102,6 +103,7 @@ class RuntimeSnapshot:
     # SEM-218 invariant I5: per-concern provenance for realized realization
     # concerns recorded across this snapshot's result / history surfaces.
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
+    realization_observations: tuple[RealizationObservationDisclosure, ...] = ()
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -116,6 +118,14 @@ class RuntimeSnapshot:
             self.participant_resource_pool_states,
             self.participant_resource_budget_events,
         )
+        if any(not isinstance(entry, RealizationObservationDisclosure) for entry in self.realization_observations):
+            raise TypeError("RuntimeSnapshot realization_observations must contain typed disclosures")
+        observation_keys = [
+            (entry.address, entry.field_path, entry.domain, entry.requirement_kind)
+            for entry in self.realization_observations
+        ]
+        if len(observation_keys) != len(set(observation_keys)):
+            raise ValueError("RuntimeSnapshot realization_observations must identify unique concerns")
 
     def get(self, address: str) -> SnapshotEntry | None:
         return self.entries.get(address)
@@ -257,6 +267,11 @@ def _snapshot_updates(
             "realization_provenance",
             snapshot.realization_provenance,
         ),
+        "realization_observations": _observation_disclosures_update(
+            updates,
+            "realization_observations",
+            snapshot.realization_observations,
+        ),
         "realization_envelope": _identity_update(
             updates,
             "realization_envelope",
@@ -289,6 +304,7 @@ _SNAPSHOT_UPDATE_KEYS = {
     "time_management_contexts",
     "time_model_state",
     "realization_provenance",
+    "realization_observations",
     "realization_envelope",
     "metadata",
 }
@@ -361,6 +377,19 @@ def _provenance_update(
         return tuple(current)
     if not isinstance(raw, tuple) or any(not isinstance(entry, RealizationProvenanceEntry) for entry in raw):
         raise TypeError(f"{key} must be a tuple of RealizationProvenanceEntry")
+    return raw
+
+
+def _observation_disclosures_update(
+    updates: Mapping[str, object],
+    key: str,
+    current: tuple[RealizationObservationDisclosure, ...],
+) -> tuple[RealizationObservationDisclosure, ...]:
+    raw = updates.get(key)
+    if raw is None:
+        return tuple(current)
+    if not isinstance(raw, tuple) or any(not isinstance(entry, RealizationObservationDisclosure) for entry in raw):
+        raise TypeError(f"{key} must be a tuple of RealizationObservationDisclosure")
     return raw
 
 
@@ -461,6 +490,7 @@ __all__ = (
     "OperationReceipt",
     "OperationState",
     "OperationStatus",
+    "RealizationObservationDisclosure",
     "RealizationProvenanceEntry",
     "RuntimeSnapshot",
     "RuntimeSnapshotEnvelope",

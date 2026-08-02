@@ -348,7 +348,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 1,
-      "content_sha256": "99272388e9cc884d18398cc320802e82f9e655b4f67ae72bd7cd8f1309a8dfaa"
+      "content_sha256": "a3f6e034b696f0254f5d1321b747d5a3cefe6df65784a5d88e1615b1eeec4749"
     },
     {
       "path": "docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md",
@@ -495,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "985885071792c50bfdc23be4991dee1dbeeb12647278aaee0a9c4edbd3c363cb"
+      "content_sha256": "f5ee5174c7d30e1ed859187c90dacac3b64a3e3dac0f185cca2fe71c263495c9"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1524,7 +1524,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
-      "content_sha256": "631b59c4a40ec935a68ab975814c023d3824e5c42e62415e3176b88baacf6519"
+      "content_sha256": "cf2625cc1cd3a0314c4c7a1f87c56ed1bbfdfe8b400381372107e276bbbb2b03"
     },
     {
       "path": "docs/research/formal-semantic-validation/execution-snapshot-v1.json",

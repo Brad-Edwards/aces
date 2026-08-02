@@ -52,6 +52,12 @@
         "operation-status-v1",
         "runtime-snapshot-v1"
       ],
+      "observation_capabilities": {
+        "forwarding-agents": {
+          "verification_scope": "configuration",
+          "observation_strength": "daemon-observed"
+        }
+      },
       "constraints": {}
     }
   ],

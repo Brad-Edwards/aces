@@ -195,6 +195,17 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
                 }
                 for entry in snapshot.realization_provenance
             ],
+            "realization_observations": [
+                {
+                    "address": entry.address,
+                    "field_path": entry.field_path,
+                    "domain": entry.domain,
+                    "requirement_kind": entry.requirement_kind,
+                    "verification_scope": entry.verification_scope.value,
+                    "observation_strength": entry.observation_strength.value,
+                }
+                for entry in snapshot.realization_observations
+            ],
             "realization_envelope": (
                 snapshot.realization_envelope.model_dump(mode="json")
                 if snapshot.realization_envelope is not None

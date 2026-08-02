@@ -279,6 +279,9 @@ def project_forwarding_agents(value: object, observed: bool = False) -> object:
         if not isinstance(agent_id, str) or not agent_id:
             raise ValueError("forwarding agents require a forwarding_agent_id")
         agent = _without_annotations(record)
+        # Ownership is authored experiment meaning, not backend-observed
+        # forwarding-agent configuration.
+        agent.pop("ownership_role", None)
         for field, identity in (
             ("sources", "source_id"),
             ("transforms", "transform_id"),
