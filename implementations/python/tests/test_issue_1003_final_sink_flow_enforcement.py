@@ -227,11 +227,10 @@ def test_secure_default_requires_flow_sink_resolver_capability() -> None:
     # Final-sink enforcement is fail-closed by default: a policy-governing control
     # plane refuses to construct with a resolver that cannot resolve the SEM-233
     # permit, rather than silently admitting effects with no final-sink decision.
+    target = policy_capable_target("participant_ingress_admission")
+    resolver = StaticCrossingResolver()
     with pytest.raises(ValueError, match="resolve_flow_sink_decision"):
-        RuntimeControlPlane(
-            policy_capable_target("participant_ingress_admission"),
-            crossing_policy_resolver=StaticCrossingResolver(),
-        )
+        RuntimeControlPlane(target, crossing_policy_resolver=resolver)
 
 
 # --- Idempotency and replay ----------------------------------------------

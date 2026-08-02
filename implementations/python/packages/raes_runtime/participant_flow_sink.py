@@ -120,11 +120,38 @@ def resolve_participant_flow_sink_decision(
         if getattr(control_plane, "_enforce_final_sink_flow_control", False):
             return _denied(ParticipantFlowFinalDisposition.UNRESOLVED, "flow-sink-enforcement-required")
         return None
+    return _resolved_flow_sink_decision(control_plane, crossing, hook, sink_kind)
 
+
+def _resolved_flow_sink_decision(
+    control_plane: object,
+    crossing: PreparedParticipantCrossing,
+    hook: object,
+    sink_kind: ParticipantFlowSinkKind,
+) -> ParticipantFlowSinkDecision:
     decision_occurrence = crossing.decision
     if decision_occurrence is None:
         return _denied(ParticipantFlowFinalDisposition.UNRESOLVED, "flow-sink-unresolved")
     head_refs = flow_sink_history_head_refs(control_plane, crossing.intent.participant_address)
+    resolution = _resolve_flow_sink_relation(control_plane, crossing, hook, sink_kind, head_refs)
+    if not isinstance(resolution, ParticipantFlowSinkResolution):
+        return resolution
+    return _bind_flow_sink_decision(
+        resolution.relation,
+        crossing,
+        sink_kind,
+        head_refs,
+        decision_occurrence.occurrence.decision_id,
+    )
+
+
+def _resolve_flow_sink_relation(
+    control_plane: object,
+    crossing: PreparedParticipantCrossing,
+    hook: object,
+    sink_kind: ParticipantFlowSinkKind,
+    head_refs: tuple[str, ...],
+) -> ParticipantFlowSinkResolution | ParticipantFlowSinkDecision:
     try:
         resolution = hook(
             snapshot=control_plane._snapshot,
@@ -139,7 +166,12 @@ def resolve_participant_flow_sink_decision(
         return _denied(ParticipantFlowFinalDisposition.UNRESOLVED, "flow-sink-unresolved")
     if not isinstance(resolution, ParticipantFlowSinkResolution):
         return _denied(ParticipantFlowFinalDisposition.UNRESOLVED, "flow-sink-unresolved")
+    return _validated_flow_sink_relation(resolution)
 
+
+def _validated_flow_sink_relation(
+    resolution: ParticipantFlowSinkResolution,
+) -> ParticipantFlowSinkResolution | ParticipantFlowSinkDecision:
     try:
         validate_participant_flow_control_resolved_context(
             resolution.relation,
@@ -147,14 +179,20 @@ def resolve_participant_flow_sink_decision(
         )
     except Exception:
         return _denied(ParticipantFlowFinalDisposition.UNRESOLVED, "flow-sink-context-invalid")
+    return resolution
 
-    relation = resolution.relation
-    reference = decision_occurrence.occurrence.decision_id
+
+def _bind_flow_sink_decision(
+    relation: ParticipantFlowControlRelationModel,
+    crossing: PreparedParticipantCrossing,
+    sink_kind: ParticipantFlowSinkKind,
+    head_refs: tuple[str, ...],
+    reference: str,
+) -> ParticipantFlowSinkDecision:
     matches = [decision for decision in relation.sink_decisions if decision.api_423_decision_ref == reference]
     if len(matches) != 1:
         return _denied(ParticipantFlowFinalDisposition.UNRESOLVED, "flow-sink-unresolved")
     decision = matches[0]
-
     if (
         decision.sink.sink_kind != sink_kind
         or decision.subject.participant_address != crossing.intent.participant_address
@@ -163,10 +201,8 @@ def resolve_participant_flow_sink_decision(
         or decision.sink.audience_scope_ref != crossing.intent.audience_scope_ref
     ):
         return _denied(ParticipantFlowFinalDisposition.UNRESOLVED, "flow-sink-binding-mismatch")
-
-    permitted = decision.final_disposition == ParticipantFlowFinalDisposition.PERMIT
     return _from_relation(
-        permitted=permitted,
+        permitted=decision.final_disposition == ParticipantFlowFinalDisposition.PERMIT,
         disposition=decision.final_disposition,
         decision=decision,
         relation=relation,
@@ -187,7 +223,8 @@ def flow_sink_audit_details(decision: ParticipantFlowSinkDecision) -> dict[str, 
 def apply_flow_sink_details(audit: AuditEvent, decision: ParticipantFlowSinkDecision) -> AuditEvent:
     """Fold the SEM-233 final-sink reference into a committed crossing audit event."""
 
-    return replace(audit, details={**audit.details, **flow_sink_audit_details(decision)})
+    updated: AuditEvent = replace(audit, details={**audit.details, **flow_sink_audit_details(decision)})
+    return updated
 
 
 def flow_sink_denied_record(crossing: PreparedParticipantCrossing) -> ControlPlaneOperationRecord:
@@ -201,7 +238,10 @@ def flow_sink_denied_record(crossing: PreparedParticipantCrossing) -> ControlPla
     )
     rejected_receipt = replace(crossing.record.receipt, accepted=False, diagnostics=[diagnostic])
     rejected_status = replace(crossing.record.status, state=OperationState.FAILED, diagnostics=[diagnostic])
-    return replace(crossing.record, receipt=rejected_receipt, status=rejected_status)
+    rejected_record: ControlPlaneOperationRecord = replace(
+        crossing.record, receipt=rejected_receipt, status=rejected_status
+    )
+    return rejected_record
 
 
 def commit_flow_sink_denial(

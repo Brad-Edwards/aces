@@ -125,10 +125,9 @@ class ParticipantCrossingControlIngressMixin:
                 idempotency_key=idempotency_key,
                 incumbent_carrier=intent,
             )
-            if crossing.existing_receipt is not None:
-                return crossing.existing_receipt
-            if not crossing.record.receipt.accepted:
-                return commit_prepared_crossing(self, crossing)
+            early = _early_crossing_receipt(self, crossing)
+            if early is not None:
+                return early
 
             sink_decision = resolve_participant_flow_sink_decision(
                 self,
@@ -192,6 +191,19 @@ class ParticipantCrossingControlIngressMixin:
             return record.receipt
 
 
+def _early_crossing_receipt(
+    control_plane: object,
+    crossing: PreparedParticipantCrossing,
+) -> OperationReceipt | None:
+    """Return an idempotent replay or committed denial receipt, else None to continue."""
+
+    if crossing.existing_receipt is not None:
+        return crossing.existing_receipt
+    if not crossing.record.receipt.accepted:
+        return commit_prepared_crossing(control_plane, crossing)
+    return None
+
+
 def execute_action_ingress_crossing(
     control_plane: object,
     participant_behavior: ParticipantBehaviorRuntime,
@@ -219,10 +231,9 @@ def execute_action_ingress_crossing(
             idempotency_key=execution.idempotency_key,
             incumbent_carrier=request,
         )
-        if crossing.existing_receipt is not None:
-            return crossing.existing_receipt
-        if not crossing.record.receipt.accepted:
-            return commit_prepared_crossing(control_plane, crossing)
+        early = _early_crossing_receipt(control_plane, crossing)
+        if early is not None:
+            return early
 
         sink_decision = resolve_participant_flow_sink_decision(
             control_plane,
