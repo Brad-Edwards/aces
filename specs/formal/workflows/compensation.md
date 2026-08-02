@@ -97,7 +97,7 @@ workflow can be `cancelled` or `timed_out` while compensation is `running` or
 
 ## Implementation Mapping
 
-- SDL authoring models: `implementations/python/packages/raes/orchestration.py`
+- SDL authoring models: `implementations/python/packages/raes/orchestration/__init__.py`
 - semantic validation: `implementations/python/packages/raes/validator/`
 - compiled contracts: `implementations/python/packages/raes_processor/compiler/`
 - runtime state/history models: `implementations/python/packages/raes_processor/models/`
