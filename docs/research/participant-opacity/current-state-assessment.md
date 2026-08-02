@@ -87,6 +87,36 @@ It cannot presently provide:
 Those outcomes are deliberately assigned to issues #961 through #965.
 Nothing in issue #810 advances those assurance states.
 
+## Delivery Update Through #965
+
+The repository now retains exact historical bounded, model-check, and proof
+authorities and adds one separate finite runtime-enforcement lane. The
+`participant-opacity-runtime-reference-v1` profile binds an individual active
+observer to a complete concrete inventory for decision occurrence/content,
+failures and declared opportunities, delivery, retry, logical order and timing
+buckets, policy/supervisor effects, participant retrieval, and evidence
+visibility. RUN-319 persists only safe profile/predicate/inventory/rule refs and
+digests on the owning API-423 decision; the full inventory remains in the
+trusted runtime-support context. The supported enforcement rule normalizes
+every protected crossing to the same denial, releases no payload or participant
+state, and commits the withheld delivery opportunity atomically. Catalog
+runtime assurance is therefore `partial`; useful allowed-action and delivered-
+view modes remain absent.
+
+Issue #965 adds one separately governed API-407 feature declaration for
+`participant_predicate_opacity` without making it a policy-operation feature.
+The reference backend declares bounded support for
+`participant-opacity-runtime-reference-v1@sem-231/runtime-rev2`. The generic
+target runner records declaration, backend-native realization, and observed
+bounded conformance as three independent shared claim bindings, and binds the
+exact manifest, profile, configuration, tool, environment, and probe-set
+digests. A complete closed observation transcript covers decision and failure
+shape, action availability, delivery and omission, retry, logical timing and
+order, release-policy effects, external effects, and payload release.
+Adversarial changes, unobserved runtime mediation, stale digests, weakening,
+and secret-bearing exceptions all fail closed. This remains finite reference-
+backend evidence, not proof, universal opacity, or cross-backend equivalence.
+
 ## Recommendation
 
 Adopt the one-sided possibilistic kernel in ADR-099 and the focused formal

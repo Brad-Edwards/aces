@@ -26,6 +26,7 @@ _MAX_PROFILE_BYTES = 256 * 1024
 SUPPORTED_BEHAVIORAL_RELATION_PROFILE_IDS = frozenset(
     {
         "participant-opacity-baseline-v1",
+        "participant-opacity-runtime-reference-v1",
         "participant-opacity-theorem-v1",
     }
 )
@@ -451,6 +452,12 @@ _HISTORICAL_PROFILE_PATHS = {
         "participant-opacity-baseline-v1",
         "sem-231/rev2",
     ): behavioral_relation_profiles_root() / "history" / "participant-opacity-baseline-v1-sem-231-rev2.json",
+    (
+        "participant-opacity-runtime-reference-v1",
+        "sem-231/runtime-rev1",
+    ): behavioral_relation_profiles_root()
+    / "history"
+    / "participant-opacity-runtime-reference-v1-sem-231-runtime-rev1.json",
 }
 
 

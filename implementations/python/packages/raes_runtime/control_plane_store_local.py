@@ -192,6 +192,7 @@ def _participant_transition_count(snapshot: RuntimeSnapshot) -> int:
         for history in (
             snapshot.participant_control_history,
             snapshot.participant_crossing_history,
+            snapshot.information_state_history,
         )
         for events in history.values()
     )

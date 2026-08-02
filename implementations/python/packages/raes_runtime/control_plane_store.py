@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
-from raes_contracts.contracts import RealizationEnvelopeIdentityModel
+from raes_contracts.contracts import RealizationEnvelopeIdentityModel, RealizationObservationDisclosureModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
 from raes_contracts.participant_autonomous_state import require_participant_autonomous_runtime_snapshot
 from raes_contracts.planning import RuntimeDomain
@@ -17,11 +19,13 @@ from raes_contracts.runtime_state import (
     ExplicitnessProvenance,
     OperationReceipt,
     OperationStatus,
+    RealizationObservationDisclosure,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
     SnapshotEntry,
 )
+from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 
 if TYPE_CHECKING:
     from .control_plane_store_local import LocalControlPlaneStore
@@ -137,9 +141,11 @@ def _require_expected_control_head(
 def _participant_history_head(snapshot: RuntimeSnapshot, history_key: str) -> str | None:
     history_name, separator, participant_address = history_key.partition(":")
     histories = {
+        "participant_episode_history": snapshot.participant_episode_history,
         "participant_behavior_history": snapshot.participant_behavior_history,
         "participant_control_history": snapshot.participant_control_history,
         "participant_crossing_history": snapshot.participant_crossing_history,
+        "information_state_history": snapshot.information_state_history,
     }
     history = histories.get(history_name)
     if not separator or not participant_address or history is None:
@@ -148,7 +154,10 @@ def _participant_history_head(snapshot: RuntimeSnapshot, history_key: str) -> st
     if not events:
         return None
     event_id = events[-1].get("event_id")
-    return event_id if isinstance(event_id, str) and event_id else None
+    if isinstance(event_id, str) and event_id:
+        return event_id
+    encoded = json.dumps(events[-1], sort_keys=True, separators=(",", ":"), default=str).encode()
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
 def _require_expected_history_heads(
@@ -198,6 +207,10 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             participant_address: list(events)
             for participant_address, events in snapshot.participant_crossing_history.items()
         },
+        "information_state_history": {
+            participant_address: list(records)
+            for participant_address, records in snapshot.information_state_history.items()
+        },
         "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
         "participant_execution_services": dict(snapshot.participant_execution_services),
         "participant_resource_budget_states": dict(snapshot.participant_resource_budget_states),
@@ -228,6 +241,17 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
                 ),
             }
             for entry in snapshot.realization_provenance
+        ],
+        "realization_observations": [
+            {
+                "address": entry.address,
+                "field_path": entry.field_path,
+                "domain": entry.domain,
+                "requirement_kind": entry.requirement_kind,
+                "verification_scope": entry.verification_scope.value,
+                "observation_strength": entry.observation_strength.value,
+            }
+            for entry in snapshot.realization_observations
         ],
         "realization_envelope": (
             snapshot.realization_envelope.model_dump(mode="json") if snapshot.realization_envelope is not None else None
@@ -277,6 +301,10 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             participant_address: list(events)
             for participant_address, events in payload.get("participant_crossing_history", {}).items()
         },
+        information_state_history={
+            participant_address: list(records)
+            for participant_address, records in payload.get("information_state_history", {}).items()
+        },
         participant_autonomous_execution_states=dict(payload.get("participant_autonomous_execution_states", {})),
         participant_execution_services=dict(payload.get("participant_execution_services", {})),
         participant_resource_budget_states=dict(payload.get("participant_resource_budget_states", {})),
@@ -313,6 +341,11 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             for item in payload.get("realization_provenance", [])
             if isinstance(item, dict)
         ),
+        realization_observations=tuple(
+            _realization_observation_from_payload(item)
+            for item in payload.get("realization_observations", [])
+            if isinstance(item, dict)
+        ),
         realization_envelope=(
             RealizationEnvelopeIdentityModel.model_validate(payload["realization_envelope"])
             if payload.get("realization_envelope") is not None
@@ -322,6 +355,18 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
     )
     require_participant_autonomous_runtime_snapshot(snapshot)
     return snapshot
+
+
+def _realization_observation_from_payload(payload: dict[str, Any]) -> RealizationObservationDisclosure:
+    model = RealizationObservationDisclosureModel.model_validate(payload)
+    return RealizationObservationDisclosure(
+        address=model.address,
+        field_path=model.field_path,
+        domain=model.domain,
+        requirement_kind=model.requirement_kind,
+        verification_scope=RealizationVerificationScope(model.verification_scope),
+        observation_strength=ObservationStrength(model.observation_strength),
+    )
 
 
 class InMemoryControlPlaneStore:

@@ -58,6 +58,35 @@ class RealizationSupportMode(str, Enum):
     OPEN_REALIZATION = "open-realization"
 
 
+class ObservationStrength(str, Enum):
+    """Strongest evidence a backend configuration emits for one concern."""
+
+    NONE = "none"
+    DRIVER_REPORTED = "driver-reported"
+    DAEMON_OBSERVED = "daemon-observed"
+    GUEST_OBSERVED = "guest-observed"
+
+
+class RealizationVerificationScope(str, Enum):
+    """Closed scope at which an inventory realization was corroborated."""
+
+    PRESENCE = "presence"
+    CONFIGURATION = "configuration"
+
+
+def verification_scope_satisfies(
+    actual: RealizationVerificationScope,
+    required: RealizationVerificationScope,
+) -> bool:
+    """Return whether an observation covers the required inventory scope."""
+
+    rank = {
+        RealizationVerificationScope.PRESENCE: 0,
+        RealizationVerificationScope.CONFIGURATION: 1,
+    }
+    return rank[actual] >= rank[required]
+
+
 class Closure(str, Enum):
     """Whether unspecified realizable dimensions under a scope are admitted."""
 

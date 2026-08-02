@@ -44,6 +44,14 @@ The common invariant is:
 - the shared secret-name vocabulary is helper logic, not a source of credential
   values.
 
+Realization corroboration follows the same exposure boundary. A runtime
+observation disclosure carries only the concern address, field path, kind,
+verification scope, and observation strength. It MUST NOT repeat a forwarding
+setting, enrollment material, native inspect object, evidence location, or
+credential. Secret-safe commitments remain the comparison form for permitted
+forwarding settings; observation metadata does not become a second value
+carrier.
+
 This invariant is implemented as a shared helper in `runtime_values.py`. Family
 models call that helper only where the semantics are actually shared. Family
 models still own their ids, refs, scopes, provenance enums, and closed/open
@@ -138,3 +146,4 @@ Rejected alternatives:
 |------|-----------|---------|
 | 2026-07-13 | #417 | Narrowed the authored SDL boundary: health results, generated network identity, scanner-derived package findings, and scanner capture provenance use evidence/derived carriers rather than `Node.runtime`; the shared redaction invariant continues to govern the remaining declarative runtime fields. |
 | 2026-07-29 | #956 | Removed the obsolete platform-kind profile-guard claim; platform capability and legacy category/content semantics remain family-local while shared explicit-redaction handling is unchanged. |
+| 2026-08-01 | #1043 | Applied the raw-value omission boundary to forwarding-agent realization observation disclosures. |

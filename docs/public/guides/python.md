@@ -25,3 +25,60 @@ semantic checks on unless your workflow has a clear reason to inspect the file
 shape alone.
 
 See the [API reference](../api/sdl.rst) for signatures and model details.
+
+## Transform an admitted artifact
+
+Transformation functions operate on already parsed models and never write
+files. A successful result contains a newly admitted output and a portable
+report; a refusal contains no output.
+
+Rename one declaration by its exact canonical address:
+
+```python
+from raes import RenameSDLDeclarationRequest, rename_sdl_declaration
+
+result = rename_sdl_declaration(
+    scenario,
+    RenameSDLDeclarationRequest(
+        target_address="nodes.web",
+        new_local_name="frontend",
+    ),
+)
+if result.succeeded:
+    transformed = result.output
+else:
+    for diagnostic in result.report.diagnostics:
+        print(diagnostic.code)
+```
+
+The rename updates resolved references, module exports, and any explicitly
+supplied external-concept binding documents as one all-or-none operation. An
+alias, collision, stale linked artifact, or invalid target is refused.
+
+Loss is rejected by default. Removal therefore requires a policy naming the
+exact accepted loss kind:
+
+```python
+from raes import (
+    ArtifactTransformationPolicy,
+    RemoveSDLDeclarationRequest,
+    remove_sdl_declaration,
+)
+from raes_contracts.contracts import ArtifactTransformationLossKind
+
+result = remove_sdl_declaration(
+    scenario,
+    RemoveSDLDeclarationRequest(target_address="nodes.obsolete"),
+    policy=ArtifactTransformationPolicy(
+        allowed_loss_kinds=(
+            ArtifactTransformationLossKind.DECLARATION_REMOVED,
+        )
+    ),
+)
+```
+
+Use `canonicalize_portable_contract()` to reconstruct an isolated portable
+contract under its closed model, and `compare_canonical_artifacts()` for exact
+canonical identity before and after an operation. Canonical identity is not a
+claim of behavioral or backend equivalence. Consumers remain responsible for
+file transactions, pack layout, persistence, and user-interface behavior.

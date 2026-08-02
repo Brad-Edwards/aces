@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "6e0c1ee6fb1752832a07c220d6762dfbdfd71d39effe38bc2e44ea0c0d3b8e7c",
+  "content_hash": "9d6d499a20736a20d0a931d3c5a473eca4388fdb994ee995e9ca9d7464e2885f",
   "last_change": {
-    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
-    "content_hash": "6e0c1ee6fb1752832a07c220d6762dfbdfd71d39effe38bc2e44ea0c0d3b8e7c"
+    "summary": "Propagated forwarding-agent ownership roles for issue #1043.",
+    "content_hash": "9d6d499a20736a20d0a931d3c5a473eca4388fdb994ee995e9ca9d7464e2885f"
   }
 }

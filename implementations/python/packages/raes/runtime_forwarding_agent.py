@@ -30,6 +30,7 @@ from ._identifiers import require_qualified_identifier
 from .runtime_forwarding_agent_vocab import (
     RuntimeForwardingAgentImplementation,
     RuntimeForwardingAgentKind,
+    RuntimeForwardingAgentOwnershipRole,
     RuntimeForwardingBufferCrypto,
     RuntimeForwardingEnrollmentClassification,
     RuntimeForwardingParseFormat,
@@ -52,6 +53,7 @@ __all__ = [
     "RuntimeForwardingAgent",
     "RuntimeForwardingAgentImplementation",
     "RuntimeForwardingAgentKind",
+    "RuntimeForwardingAgentOwnershipRole",
     "RuntimeForwardingBufferCrypto",
     "RuntimeForwardingBufferPolicy",
     "RuntimeForwardingEnrollmentClassification",
@@ -294,6 +296,7 @@ class RuntimeForwardingAgent(SDLModel):
     forwarding_agent_id: str
     implementation: RuntimeForwardingAgentImplementation | str = RuntimeForwardingAgentImplementation.UNKNOWN
     agent_kind: RuntimeForwardingAgentKind | str = RuntimeForwardingAgentKind.UNKNOWN
+    ownership_role: RuntimeForwardingAgentOwnershipRole | str = RuntimeForwardingAgentOwnershipRole.SYSTEM_UNDER_TEST
     version: str = ""
     name: str = ""
     sources: list[RuntimeForwardingSource] = Field(default_factory=list)
@@ -318,6 +321,11 @@ class RuntimeForwardingAgent(SDLModel):
     @classmethod
     def normalize_agent_kind(cls, v: RuntimeForwardingAgentKind | str) -> object:
         return parse_runtime_enum_or_var(v, RuntimeForwardingAgentKind, field_name="agent_kind")
+
+    @field_validator("ownership_role", mode="before")
+    @classmethod
+    def normalize_ownership_role(cls, v: RuntimeForwardingAgentOwnershipRole | str) -> object:
+        return parse_runtime_enum_or_var(v, RuntimeForwardingAgentOwnershipRole, field_name="ownership_role")
 
     @model_validator(mode="after")
     def validate_forwarding_agent(self) -> "RuntimeForwardingAgent":

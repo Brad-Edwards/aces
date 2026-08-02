@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from raes.runtime_forwarding_agent import RuntimeForwardingAgentOwnershipRole
+
 
 class _EvidenceRequirementsMixin:
     def _verify_evidence_requirements(self) -> None:
@@ -12,6 +14,44 @@ class _EvidenceRequirementsMixin:
             self._verify_evidence_requirement_refs(requirement.channel_refs, owner_label, "channel_ref")
             self._verify_evidence_requirement_ref(requirement.trigger_ref, owner_label, "trigger_ref")
             self._verify_evidence_requirement_ref(requirement.boundary_ref, owner_label, "boundary_ref")
+        self._verify_forwarding_agent_evidence_roles()
+
+    def _verify_forwarding_agent_evidence_roles(self) -> None:
+        agents = self._forwarding_agents_by_address()
+        apparatus_bindings: set[str] = set()
+        for requirement in self._s.evidence_requirements.values():
+            source_class = getattr(requirement.source_class, "value", requirement.source_class)
+            if source_class != "apparatus":
+                continue
+            for source_ref in requirement.source_refs:
+                apparatus_bindings.update(self._declaration_index.resolve(source_ref) & agents.keys())
+
+        for address, agent in agents.items():
+            role = agent.ownership_role
+            if role is RuntimeForwardingAgentOwnershipRole.MEASUREMENT_APPARATUS and address not in apparatus_bindings:
+                self._err(
+                    f"Forwarding agent '{address}' ownership_role 'measurement_apparatus' requires an inbound "
+                    "EvidenceRequirement.source_refs binding with source_class 'apparatus'"
+                )
+            elif role is RuntimeForwardingAgentOwnershipRole.SYSTEM_UNDER_TEST and address in apparatus_bindings:
+                self._err(
+                    f"Forwarding agent '{address}' ownership_role 'system_under_test' cannot be targeted by an "
+                    "evidence requirement with source_class 'apparatus'"
+                )
+
+    def _forwarding_agents_by_address(self) -> dict[str, object]:
+        agents = {f"forwarding_agents.{agent.forwarding_agent_id}": agent for agent in self._s.forwarding_agents}
+        for node_name, node in self._s.nodes.items():
+            runtime = node.runtime
+            if runtime is None:
+                continue
+            agents.update(
+                {
+                    f"nodes.{node_name}.runtime.forwarding_agents.{agent.forwarding_agent_id}": agent
+                    for agent in runtime.forwarding_agents
+                }
+            )
+        return agents
 
     def _verify_evidence_requirement_refs(
         self,

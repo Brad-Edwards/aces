@@ -22,6 +22,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "satisfiability" / f"{name}.json"
     if name.startswith("artifact-requirement-v"):
         return schemas_dir / "artifact-requirements" / f"{name}.json"
+    if name.startswith("artifact-transformation-report-v"):
+        return schemas_dir / "artifact-transformations" / f"{name}.json"
     if name.startswith("exploit-path-analysis-evidence-v"):
         return schemas_dir / "exploit-path-analysis" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
@@ -66,6 +68,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("random-stream-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("participant-information-reconstruction-profile-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("random-stream-vector-v"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("behavioral-relation-profile-v"):
@@ -79,6 +83,7 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
     if name in {
         "participant-lifecycle-event-v1",
         "participant-observation-envelope-v1",
+        "participant-information-state-record-v1",
         "participant-shared-state-record-v1",
         "participant-joint-action-record-v1",
         "participant-time-management-context-v1",

@@ -678,7 +678,7 @@ def _check_module_boundaries(
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
             failures.extend(_check_module_imports(rel_path, rule, known_modules, tree))
-            if rule["id"] == "raes_backend_protocols" and rel_path.endswith("protocols.py"):
+            if rule["id"] == "raes_backend_protocols":
                 failures.extend(_check_backend_protocol_contract_annotations(rel_path, tree))
     return failures
 

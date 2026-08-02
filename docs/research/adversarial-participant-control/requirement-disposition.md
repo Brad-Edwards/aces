@@ -24,6 +24,11 @@ evidence.
 Issue #812 defines both authorities but does not satisfy their positive
 implementation or evaluation clauses.
 
+Issue #1001 publishes the bounded `sem-233/rev1` definition and finite
+falsification evidence for SEM-233. The requirement remains DRAFT because
+portable contracts, runtime enforcement, backend realization, and adversarial
+evaluation remain owned by #1002, #1003, #1004, and #1007.
+
 ## Reused and downstream authority
 
 | Requirement | Disposition | Scope | Boundary |

@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-27",
+  "reviewed_on": "2026-08-01",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -440,6 +440,156 @@
       "canonical_url": "https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/gen-ai-metrics.md",
       "verified_on": "2026-07-27",
       "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-899-scoped-resource-governance-review"
+    },
+    {
+      "citation_id": "denning-1976",
+      "title": "A Lattice Model of Secure Information Flow",
+      "authors_or_maintainer": [
+        "Dorothy E. Denning"
+      ],
+      "year": 1976,
+      "container_title": "Communications of the ACM 19(5)",
+      "doi": "10.1145/360051.360056",
+      "canonical_url": "https://doi.org/10.1145/360051.360056",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "myers-liskov-1998",
+      "title": "Complete, Safe Information Flow with Decentralized Labels",
+      "authors_or_maintainer": [
+        "Andrew C. Myers",
+        "Barbara Liskov"
+      ],
+      "year": 1998,
+      "container_title": "1998 IEEE Symposium on Security and Privacy",
+      "doi": "10.1109/SECPRI.1998.674834",
+      "canonical_url": "https://doi.org/10.1109/SECPRI.1998.674834",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "myers-sabelfeld-zdancewic-2006",
+      "title": "Enforcing Robust Declassification and Qualified Robustness",
+      "authors_or_maintainer": [
+        "Andrew C. Myers",
+        "Andrei Sabelfeld",
+        "Steve Zdancewic"
+      ],
+      "year": 2006,
+      "container_title": "Journal of Computer Security 14(2)",
+      "doi": "10.3233/JCS-2006-14203",
+      "canonical_url": "https://doi.org/10.3233/JCS-2006-14203",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "cecchetti-myers-arden-2017",
+      "title": "Nonmalleable Information Flow Control",
+      "authors_or_maintainer": [
+        "Ethan Cecchetti",
+        "Andrew C. Myers",
+        "Owen Arden"
+      ],
+      "year": 2017,
+      "container_title": "ACM SIGSAC Conference on Computer and Communications Security",
+      "doi": "10.1145/3133956.3134054",
+      "canonical_url": "https://doi.org/10.1145/3133956.3134054",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "histar-2006",
+      "title": "Making Information Flow Explicit in HiStar",
+      "authors_or_maintainer": [
+        "Nickolai Zeldovich",
+        "Silas Boyd-Wickizer",
+        "Eddie Kohler",
+        "David Mazières"
+      ],
+      "year": 2006,
+      "container_title": "7th USENIX Symposium on Operating Systems Design and Implementation",
+      "canonical_url": "https://www.usenix.org/conference/osdi-06/making-information-flow-explicit-histar",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "flume-2007",
+      "title": "Information Flow Control for Standard OS Abstractions",
+      "authors_or_maintainer": [
+        "Maxwell Krohn",
+        "Alexander Yip",
+        "Micah Brodsky",
+        "Natan Cliffer",
+        "M. Frans Kaashoek",
+        "Eddie Kohler",
+        "Robert Morris"
+      ],
+      "year": 2007,
+      "container_title": "21st ACM Symposium on Operating Systems Principles",
+      "canonical_url": "https://pdos.csail.mit.edu/papers/flume-sosp07.pdf",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "nist-sp-800-53r5-ac4",
+      "title": "Security and Privacy Controls for Information Systems and Organizations: AC-4 Information Flow Enforcement",
+      "authors_or_maintainer": [
+        "National Institute of Standards and Technology"
+      ],
+      "year": 2020,
+      "container_title": "NIST Special Publication 800-53 Revision 5",
+      "canonical_url": "https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "nsa-cross-domain-2026",
+      "title": "National Cross Domain Strategy and Management Office",
+      "authors_or_maintainer": [
+        "National Security Agency"
+      ],
+      "year": 2026,
+      "canonical_url": "https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "taintdroid-2010",
+      "title": "TaintDroid: An Information-Flow Tracking System for Realtime Privacy Monitoring on Smartphones",
+      "authors_or_maintainer": [
+        "William Enck",
+        "Peter Gilbert",
+        "Byung-Gon Chun",
+        "Landon P. Cox",
+        "Jaeyeon Jung",
+        "Patrick McDaniel",
+        "Anmol N. Sheth"
+      ],
+      "year": 2010,
+      "container_title": "9th USENIX Symposium on Operating Systems Design and Implementation",
+      "canonical_url": "https://www.usenix.org/conference/osdi10/taintdroid-information-flow-tracking-system-realtime-privacy-monitoring",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
+    },
+    {
+      "citation_id": "pasquier-et-al-2017",
+      "title": "Practical Whole-System Provenance Capture",
+      "authors_or_maintainer": [
+        "Thomas Pasquier",
+        "Xueyuan Han",
+        "Mark Goldstein",
+        "Thomas Moyer",
+        "David Eyers",
+        "Margo Seltzer",
+        "Jean Bacon"
+      ],
+      "year": 2017,
+      "container_title": "ACM Symposium on Cloud Computing",
+      "doi": "10.1145/3127479.3129249",
+      "canonical_url": "https://doi.org/10.1145/3127479.3129249",
+      "verified_on": "2026-08-01",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-1001-boundary-flow-control-sources"
     }
   ],
   "sources": [
@@ -737,6 +887,88 @@
       "canonical_url": "https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/gen-ai-metrics.md",
       "maintaining_body": "OpenTelemetry",
       "citation_ref": "opentelemetry-genai-metrics-2026"
+    },
+    {
+      "source_id": "denning-1976",
+      "kind": "publication",
+      "title": "A Lattice Model of Secure Information Flow",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1145/360051.360056",
+      "citation_ref": "denning-1976"
+    },
+    {
+      "source_id": "myers-liskov-1998",
+      "kind": "publication",
+      "title": "Complete, Safe Information Flow with Decentralized Labels",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1109/SECPRI.1998.674834",
+      "citation_ref": "myers-liskov-1998"
+    },
+    {
+      "source_id": "myers-sabelfeld-zdancewic-2006",
+      "kind": "publication",
+      "title": "Enforcing Robust Declassification and Qualified Robustness",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.3233/JCS-2006-14203",
+      "citation_ref": "myers-sabelfeld-zdancewic-2006"
+    },
+    {
+      "source_id": "cecchetti-myers-arden-2017",
+      "kind": "publication",
+      "title": "Nonmalleable Information Flow Control",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1145/3133956.3134054",
+      "citation_ref": "cecchetti-myers-arden-2017"
+    },
+    {
+      "source_id": "histar-2006",
+      "kind": "publication",
+      "title": "Making Information Flow Explicit in HiStar",
+      "version_or_edition": "OSDI 2006 publication",
+      "canonical_url": "https://www.usenix.org/conference/osdi-06/making-information-flow-explicit-histar",
+      "citation_ref": "histar-2006"
+    },
+    {
+      "source_id": "flume-2007",
+      "kind": "publication",
+      "title": "Information Flow Control for Standard OS Abstractions",
+      "version_or_edition": "SOSP 2007 publication",
+      "canonical_url": "https://pdos.csail.mit.edu/papers/flume-sosp07.pdf",
+      "citation_ref": "flume-2007"
+    },
+    {
+      "source_id": "nist-sp-800-53r5-ac4",
+      "kind": "standard",
+      "title": "NIST SP 800-53 Revision 5 AC-4 Information Flow Enforcement",
+      "version_or_edition": "Revision 5 Update 1",
+      "canonical_url": "https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final",
+      "maintaining_body": "National Institute of Standards and Technology",
+      "citation_ref": "nist-sp-800-53r5-ac4"
+    },
+    {
+      "source_id": "nsa-cross-domain-2026",
+      "kind": "standard",
+      "title": "National Cross Domain Strategy and Management Office",
+      "version_or_edition": "program guidance reviewed 2026-08-01",
+      "canonical_url": "https://www.nsa.gov/Cybersecurity/Partnership/National-Cross-Domain-Strategy-Management-Office/",
+      "maintaining_body": "National Security Agency",
+      "citation_ref": "nsa-cross-domain-2026"
+    },
+    {
+      "source_id": "taintdroid-2010",
+      "kind": "publication",
+      "title": "TaintDroid: An Information-Flow Tracking System for Realtime Privacy Monitoring on Smartphones",
+      "version_or_edition": "OSDI 2010 publication",
+      "canonical_url": "https://www.usenix.org/conference/osdi10/taintdroid-information-flow-tracking-system-realtime-privacy-monitoring",
+      "citation_ref": "taintdroid-2010"
+    },
+    {
+      "source_id": "pasquier-et-al-2017",
+      "kind": "publication",
+      "title": "Practical Whole-System Provenance Capture",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1145/3127479.3129249",
+      "citation_ref": "pasquier-et-al-2017"
     }
   ],
   "subjects": [
@@ -3306,6 +3538,95 @@
             "specs/formal/participant-semantics/information-flow-control.md",
             "specs/formal/participant-runtime/README.md",
             "specs/formal/behavioral-relations/README.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "denning-1976",
+            "myers-liskov-1998",
+            "myers-sabelfeld-zdancewic-2006",
+            "cecchetti-myers-arden-2017",
+            "histar-2006",
+            "flume-2007",
+            "nist-sp-800-53r5-ac4",
+            "nsa-cross-domain-2026",
+            "taintdroid-2010",
+            "pasquier-et-al-2017"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/behavioral-relations-v1.json",
+              "symbol_or_pointer": "#/relations/policy-noninterference"
+            },
+            {
+              "artifact": "specs/formal/participant-semantics/adversarial-flow-control.md",
+              "symbol_or_pointer": "Exact Revision-1 Flow Algebra"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "A Lattice Model of Secure Information Flow",
+              "symbol_or_pointer": "lattice order and conservative join"
+            },
+            {
+              "artifact": "Complete, Safe Information Flow with Decentralized Labels",
+              "symbol_or_pointer": "principal-relative policies and authority-bounded declassification"
+            },
+            {
+              "artifact": "Enforcing Robust Declassification and Qualified Robustness",
+              "symbol_or_pointer": "robust declassification and endorsement duality"
+            },
+            {
+              "artifact": "Nonmalleable Information Flow Control",
+              "symbol_or_pointer": "confidentiality/integrity downgrade interaction and attacker influence"
+            },
+            {
+              "artifact": "Making Information Flow Explicit in HiStar",
+              "symbol_or_pointer": "decentralized labels, privilege, and trusted declassifier boundary"
+            },
+            {
+              "artifact": "Information Flow Control for Standard OS Abstractions",
+              "symbol_or_pointer": "practical decentralized IFC and conservative propagation"
+            },
+            {
+              "artifact": "NIST SP 800-53 Revision 5 AC-4",
+              "symbol_or_pointer": "controlled-interface information-flow enforcement"
+            },
+            {
+              "artifact": "National Cross Domain Strategy and Management Office",
+              "symbol_or_pointer": "cross-domain controlled-interface lifecycle and assurance"
+            },
+            {
+              "artifact": "TaintDroid",
+              "symbol_or_pointer": "dynamic explicit-flow tracking and coverage limitations"
+            },
+            {
+              "artifact": "Practical Whole-System Provenance Capture",
+              "symbol_or_pointer": "whole-system source/derivation capture and operational limitations"
+            }
+          ],
+          "divergence": "RAES composes the lattice, decentralized-label, robust-downgrade, deployed-IFC, cross-domain-boundary, dynamic-tracking, and provenance precedents into the ACES-native SEM-233 sem-233/rev1 two-coordinate obligation powerset over existing participant carriers. It separates immutable provenance/influence evidence from label obligations and authority; preserves labels across handoff/replay; and adds an exact-cut final-sink predicate. RAES does not adopt a source label vocabulary, operating-system API, guard product profile, dynamic-taint coverage claim, provenance-as-authorization rule, wire format, certification, runtime implementation, or covert-channel guarantee.",
+          "compatibility": "none",
+          "citation_refs": [
+            "denning-1976",
+            "myers-liskov-1998",
+            "myers-sabelfeld-zdancewic-2006",
+            "cecchetti-myers-arden-2017",
+            "histar-2006",
+            "flume-2007",
+            "nist-sp-800-53r5-ac4",
+            "nsa-cross-domain-2026",
+            "taintdroid-2010",
+            "pasquier-et-al-2017"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md",
+            "specs/formal/participant-semantics/adversarial-flow-control.md",
+            "implementations/python/tests/test_sem_233_adversarial_boundary_flow.py",
+            "docs/research/adversarial-participant-control/current-state-assessment.md"
           ],
           "compatibility_direction": "aces_relative_to_source"
         },

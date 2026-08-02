@@ -12,6 +12,7 @@ from ..addressing import CompiledAddress
 from ..artifact_requirements import ArtifactSatisfactionDisclosureModel
 from ..planning import RuntimeDomain, require_plan_operation_identity
 from ..versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
+from ..vocabulary import ObservationStrength, RealizationVerificationScope
 from .base import ContractModel, NonEmptyString
 from .execution_state import (
     EvaluationHistoryEventModel,
@@ -28,6 +29,7 @@ from .participant_envelopes import (
     ParticipantTimeManagementContextModel,
 )
 from .participant_execution import ParticipantExecutionServiceStateModel
+from .participant_information_state import ParticipantInformationStateRecordModel
 from .participant_resource_budgets import (
     ParticipantResourceBudgetEventModel,
     ParticipantResourceBudgetStateModel,
@@ -155,6 +157,23 @@ class RealizationProvenanceEntryModel(ContractModel):
     )
 
 
+class RealizationObservationDisclosureModel(ContractModel):
+    """Value-free corroboration metadata for one realized inventory concern."""
+
+    address: CompiledAddress
+    field_path: NonEmptyString
+    domain: NonEmptyString
+    requirement_kind: NonEmptyString
+    verification_scope: RealizationVerificationScope
+    observation_strength: ObservationStrength = Field(json_schema_extra={"not": {"const": "none"}})
+
+    @model_validator(mode="after")
+    def _require_evidence(self) -> RealizationObservationDisclosureModel:
+        if self.observation_strength is ObservationStrength.NONE:
+            raise ValueError("realization observation disclosure must provide non-none evidence")
+        return self
+
+
 def _require_embedded_map_keys(
     values: Mapping[str, object],
     attribute: str,
@@ -223,6 +242,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
     participant_control_history: dict[str, list[ParticipantControlOccurrenceModel]] = Field(default_factory=dict)
     participant_crossing_history: dict[str, list[ParticipantCrossingOccurrenceModel]] = Field(default_factory=dict)
+    information_state_history: dict[str, list[ParticipantInformationStateRecordModel]] = Field(default_factory=dict)
     participant_autonomous_execution_states: dict[str, ParticipantAutonomousExecutionStateModel] = Field(
         default_factory=dict
     )
@@ -236,6 +256,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     time_management_contexts: dict[str, ParticipantTimeManagementContextModel] = Field(default_factory=dict)
     time_model_state: TimeRuntimeStateModel | None = None
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
+    realization_observations: list[RealizationObservationDisclosureModel] = Field(default_factory=list)
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -276,10 +297,19 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
         )
         for values, attribute, message in key_checks:
             _require_embedded_map_keys(values, attribute, message)
+        for participant_address, records in self.information_state_history.items():
+            if any(record.participant_address != participant_address for record in records):
+                raise ValueError("Information-state history map key must equal embedded participant_address")
         _validate_execution_service_budget_projection(
             self.participant_execution_services,
             self.participant_resource_budget_states,
         )
+        observation_keys = [
+            (entry.address, entry.field_path, entry.domain, entry.requirement_kind)
+            for entry in self.realization_observations
+        ]
+        if len(observation_keys) != len(set(observation_keys)):
+            raise ValueError("Runtime snapshot realization_observations must identify unique concerns")
         return self
 
 

@@ -38,6 +38,7 @@ from .participant_crossing_policy import (
     _decision_gates,
     _resolve_backend_support,
 )
+from .participant_crossing_state_cut import expected_participant_history_heads as _expected_history_heads
 
 
 def _utc_now() -> str:
@@ -56,6 +57,37 @@ class _CrossingDecisionPreparation:
     scoped_key: str
 
 
+def _next_crossing_snapshot(
+    control_plane: object,
+    intent: ParticipantCrossingIntent,
+    records: list[ParticipantCrossingOccurrenceModel],
+) -> RuntimeSnapshot:
+    history = list(control_plane._snapshot.participant_crossing_history.get(intent.participant_address, ()))
+    candidate_history = [
+        *history,
+        *(record.model_dump(mode="json", exclude_none=True) for record in records),
+    ]
+    next_snapshot = control_plane._snapshot.with_entries(
+        dict(control_plane._snapshot.entries),
+        participant_crossing_history={
+            **control_plane._snapshot.participant_crossing_history,
+            intent.participant_address: candidate_history,
+        },
+    )
+    context = control_plane._crossing_policy_resolver.validation_context(
+        control_plane._snapshot,
+        intent.participant_address,
+    )
+    validate_participant_crossing_occurrence_context(
+        [ParticipantCrossingOccurrenceModel.model_validate(item) for item in candidate_history],
+        known_subjects=context.known_subjects,
+        policies=context.policies,
+        known_evidence_refs=context.known_evidence_refs,
+        known_authority_basis_refs=context.known_authority_basis_refs,
+    )
+    return next_snapshot
+
+
 def _prepare_crossing_decision(
     control_plane: object,
     intent: ParticipantCrossingIntent,
@@ -66,7 +98,6 @@ def _prepare_crossing_decision(
     support = preparation.support
     gates = preparation.gates
     disposition = preparation.disposition
-    history = list(control_plane._snapshot.participant_crossing_history.get(intent.participant_address, ()))
     request, decision = _crossing_records(intent, identity, resolution, support, gates, disposition)
     records = [request, decision]
     final_decision = decision
@@ -107,25 +138,7 @@ def _prepare_crossing_decision(
             records.extend((fresh_request, fresh_decision))
             final_decision = fresh_decision
             final_disposition = fresh_disposition
-    candidate_history = [*history, *(record.model_dump(mode="json") for record in records)]
-    next_snapshot = control_plane._snapshot.with_entries(
-        dict(control_plane._snapshot.entries),
-        participant_crossing_history={
-            **control_plane._snapshot.participant_crossing_history,
-            intent.participant_address: candidate_history,
-        },
-    )
-    context = control_plane._crossing_policy_resolver.validation_context(
-        control_plane._snapshot,
-        intent.participant_address,
-    )
-    validate_participant_crossing_occurrence_context(
-        [ParticipantCrossingOccurrenceModel.model_validate(item) for item in candidate_history],
-        known_subjects=context.known_subjects,
-        policies=context.policies,
-        known_evidence_refs=context.known_evidence_refs,
-        known_authority_basis_refs=context.known_authority_basis_refs,
-    )
+    next_snapshot = _next_crossing_snapshot(control_plane, intent, records)
     record, audit_event = _operation_artifacts(
         intent,
         identity,
@@ -215,6 +228,11 @@ def _crossing_records(
                 "disposition": disposition.value,
                 "reason_code": reason_code,
                 "required_evidence_refs": list(intent.required_evidence_refs),
+                **(
+                    {"opacity_enforcement": resolution.opacity_enforcement.model_dump(mode="json")}
+                    if resolution.opacity_enforcement is not None
+                    else {}
+                ),
                 **(
                     {"required_operation": resolution.required_operation.value}
                     if disposition is ParticipantCrossingDecisionDisposition.TRANSFORM
@@ -433,6 +451,11 @@ def _semantic_fingerprint(
         "allowed_downgrades": {key: value.value for key, value in sorted(resolution.allowed_downgrades.items())},
         "backend": asdict(support),
         "transformation": (asdict(resolution.transformation) if resolution.transformation is not None else None),
+        "opacity_enforcement": (
+            resolution.opacity_enforcement.model_dump(mode="json")
+            if resolution.opacity_enforcement is not None
+            else None
+        ),
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
     return hashlib.sha256(encoded).hexdigest()
@@ -457,24 +480,6 @@ def _scoped_idempotency_key(
         )
     ).encode()
     return f"participant-crossing:{hashlib.sha256(encoded).hexdigest()}"
-
-
-def _expected_history_heads(
-    snapshot: RuntimeSnapshot,
-    participant_address: str,
-) -> dict[str, str | None]:
-    def head(history: dict[str, list[dict[str, object]]]) -> str | None:
-        events = history.get(participant_address, ())
-        if not events:
-            return None
-        value = events[-1].get("event_id")
-        return value if isinstance(value, str) and value else None
-
-    return {
-        f"participant_behavior_history:{participant_address}": head(snapshot.participant_behavior_history),
-        f"participant_control_history:{participant_address}": head(snapshot.participant_control_history),
-        f"participant_crossing_history:{participant_address}": head(snapshot.participant_crossing_history),
-    }
 
 
 __all__ = (

@@ -347,6 +347,28 @@ backed only by finite evidence, refuses a `native_conformance` flag with no
 natively-executed case, and refuses a claim whose cited cases — including
 failed, unsupported, and counterexample cases — are not all present.
 
+## Participant-Opacity Backend Probes
+
+The `participant_predicate_opacity` family feature follows the same generic
+target runner but is intentionally separate from participant-policy
+operations. A typed in-process harness supplies only exact profile-bound case
+inputs and an observation adapter. The runner instruments the target, invokes
+both governed possible points, compares the complete closed transcript, and
+owns the verdict. A declaration with no harness is an explicit unsupported
+case; a harness that never calls the backend cannot claim backend-native
+realization.
+
+Each passing case carries three independent catalog-validated bindings:
+`backend-declaration/declared/structural`,
+`backend-realization/realized/finite`, and
+`backend-conformance/conformant/finite`. The case separately records the
+realization owner and execution basis, plus exact profile, manifest,
+configuration, tool, environment, and probe-set digests. Report-level meaning
+remains `bounded-probe-success`. A method, boolean, payload-redaction pair,
+runtime-mediated denial, or `native-live` label cannot substitute for the
+observed backend transcript, and finite conformance is not proof or universal
+opacity.
+
 ## Non-Goals
 
 This preflight does not implement `ASR-502`, change requirement status, add new

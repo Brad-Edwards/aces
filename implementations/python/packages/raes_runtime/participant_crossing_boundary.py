@@ -231,6 +231,11 @@ def execute_action_ingress_crossing(
             request=governed_request,
             snapshot=control_plane._snapshot,
             address=execution.address,
+            information_state_context_resolver=getattr(
+                control_plane,
+                "_information_state_context_resolver",
+                None,
+            ),
         )
         next_snapshot = result.snapshot.with_entries(
             dict(result.snapshot.entries),

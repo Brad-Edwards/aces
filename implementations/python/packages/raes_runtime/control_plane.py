@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from threading import RLock
 from uuid import uuid4
 
+from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.manifest_authority import PARTICIPANT_RUNTIME_POLICY_FEATURES
 from raes_contracts.planning import (
@@ -50,12 +51,13 @@ from .participant_crossing_mediation import (
     ParticipantCrossingPolicyResolver,
     validate_persisted_crossing_history,
 )
+from .participant_information_state_validation import require_participant_information_state_snapshot
 from .participant_retrieval import ParticipantRetrievalMixin
-from .registry import RuntimeTarget
+from .registry import RuntimeTarget as _RuntimeTarget
 
 
 def _require_crossing_policy_configuration(
-    target: RuntimeTarget,
+    target: _RuntimeTarget,
     resolver: ParticipantCrossingPolicyResolver | None,
 ) -> None:
     capabilities = target.manifest.participant_runtime
@@ -77,12 +79,13 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
 
     def __init__(
         self,
-        target: RuntimeTarget,
+        target: _RuntimeTarget,
         *,
         initial_snapshot: RuntimeSnapshot | None = None,
         store: ControlPlaneStore | None = None,
         behavior_specifications: Mapping[str, ParticipantBehaviorSpecificationRuntime] | None = None,
         crossing_policy_resolver: ParticipantCrossingPolicyResolver | None = None,
+        information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
     ) -> None:
         _require_crossing_policy_configuration(target, crossing_policy_resolver)
         self._target = target
@@ -91,7 +94,12 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
         self._behavior_specifications = dict(behavior_specifications or {})
         self._crossing_policy_resolver = crossing_policy_resolver
+        self._information_state_context_resolver = information_state_context_resolver
         self._participant_control_lock = RLock()
+        require_participant_information_state_snapshot(
+            self._snapshot,
+            information_state_context_resolver,
+        )
         if self._snapshot.participant_crossing_history:
             if crossing_policy_resolver is None:
                 raise ValueError("persisted participant crossing history requires a policy resolver")

@@ -817,6 +817,57 @@ def test_module_boundaries_reject_backend_protocol_any_signatures(tmp_path: Path
     assert [f.rule_id for f in failures] == ["backend-protocol-untyped-contract"]
 
 
+def test_module_boundaries_reject_backend_protocol_any_signatures_outside_protocols_module(
+    tmp_path: Path,
+) -> None:
+    # ADR-036 requires the Any-signature ban package-wide, not only in protocols.py.
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/raes_backend_protocols/participant_reset.py"
+    write_text(
+        repo_root / rel,
+        "from typing import Any, Protocol\n\n"
+        "class ParticipantReset(Protocol):\n"
+        "    def reset(self, request: Any) -> Any: ...\n",
+    )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["backend-protocol-untyped-contract"]
+
+
+def test_module_boundaries_allow_typed_backend_protocol_outside_protocols_module(
+    tmp_path: Path,
+) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/raes_backend_protocols/participant_reset.py"
+    write_text(
+        repo_root / rel,
+        "from typing import Protocol\n\n"
+        "class ParticipantReset(Protocol):\n"
+        "    def reset(self, request: str) -> bool: ...\n",
+    )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert failures == []
+
+
+def test_module_boundaries_allow_structural_backend_protocol_attributes_outside_protocols_module(
+    tmp_path: Path,
+) -> None:
+    # Non-method structural protocol attributes are not signatures and must not be flagged.
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/raes_backend_protocols/participant_resource_admission.py"
+    write_text(
+        repo_root / rel,
+        "from typing import Any, Protocol\n\nclass ParticipantResourceAdmission(Protocol):\n    limit: Any\n",
+    )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert failures == []
+
+
 def test_module_boundaries_config_is_required(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     policy = _load_test_policy(repo_root)

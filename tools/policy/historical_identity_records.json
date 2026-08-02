@@ -32,8 +32,8 @@
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
       "rationale": "Preserves append-only lineage observations recorded before the RAES identity cutover.",
-      "occurrences": 346,
-      "content_sha256": "362f96df38c79d9d33f85e69a919b4f0e3732482e9589b26c932470bc6e7d82f"
+      "occurrences": 349,
+      "content_sha256": "b1766af5a23efec003c395b529cf17362942573e1147427d579af39f62c8ee9f"
     },
     {
       "path": "contracts/schema-publication/tombstones/\u0061ces-semantic-invariants-v1.json",
@@ -348,7 +348,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 1,
-      "content_sha256": "99272388e9cc884d18398cc320802e82f9e655b4f67ae72bd7cd8f1309a8dfaa"
+      "content_sha256": "a3f6e034b696f0254f5d1321b747d5a3cefe6df65784a5d88e1615b1eeec4749"
     },
     {
       "path": "docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md",
@@ -481,7 +481,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 2,
-      "content_sha256": "966cb55a1a2d74350403996a5ae2eaa81e59876d35f0f3000ddcf2941600aff7"
+      "content_sha256": "61975da4806840eb6324bde3af893cd6425d62d99f35cfcce1128289a5685ded"
     },
     {
       "path": "docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md",
@@ -495,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "16f7d3e9f87fc6008c7f4333b14e1c8ae993dd6a7925ba4795e0c2b6ce5370a4"
+      "content_sha256": "f5ee5174c7d30e1ed859187c90dacac3b64a3e3dac0f185cca2fe71c263495c9"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1524,7 +1524,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
-      "content_sha256": "631b59c4a40ec935a68ab975814c023d3824e5c42e62415e3176b88baacf6519"
+      "content_sha256": "cf2625cc1cd3a0314c4c7a1f87c56ed1bbfdfe8b400381372107e276bbbb2b03"
     },
     {
       "path": "docs/research/formal-semantic-validation/execution-snapshot-v1.json",
@@ -1565,8 +1565,8 @@
       "path": "docs/research/lineage/source-audit-2026-07-12.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 24,
-      "content_sha256": "89676790565dc970e4f07ff48dd705094124877bdd4f4aaa7e574c4cce4af9e9"
+      "occurrences": 25,
+      "content_sha256": "2dc32335c8e8ada53615b3bcd25195729738ef388dcf5cf7d686b7aa72707669"
     },
     {
       "path": "docs/research/participant-backend-contracts/index.md",
@@ -1720,42 +1720,42 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 5,
-      "content_sha256": "c3cd8dd7faeb7d7ea69164e6fb9e9069b1e7c3cc3e28989b70a9a1fe56b86114"
+      "content_sha256": "e3c106de9c2f7fb70113a8400b48b13a4be9c6073bfdae585525ae3610962075"
     },
     {
       "path": "docs/research/specification-coverage/analysis-v1.json",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 5,
-      "content_sha256": "c4c2308607e12741e1dc43f518f9313095b7882849b5fdd5c408b54f86a0032b"
+      "content_sha256": "4960c27b6b9bddda77c0c4d830eddb8c181544400d83eeb2293dbea4764bf38a"
     },
     {
       "path": "docs/research/specification-coverage/bundles/\u0061ces-standardized-specification-coverage-8bf12ee-v1.json",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 1,
-      "content_sha256": "32f61b3f381982572d1d79d2374f3fb312bebb3657bb757096bf40883afe0f78"
+      "content_sha256": "51513e923425510585f0507ce84e979435318b5832b5a0531c9d2e76cc2504dd"
     },
     {
       "path": "docs/research/specification-coverage/bundles/\u0061ces-standardized-specification-coverage-9347f64-v1.json",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 1,
-      "content_sha256": "c87a61a2dfa44f572d5abb47c1c26cbfabfb4937709b8f037382ed0d66cd5482"
+      "content_sha256": "dbdec80e4f1f9e47dbd6b0a46e94513639647c1054791de387293d8e300fa713"
     },
     {
       "path": "docs/research/specification-coverage/execution-snapshot-v1.1.json",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 13,
-      "content_sha256": "5f8e060dc651021350dcee3e0e8bf03d2d5a25849c1fe6f760255ef286712119"
+      "content_sha256": "281e69e3b7dee7ad1fffa4dd1b20e7ad9d6a5a222a802d5c327af03ceac3a1bc"
     },
     {
       "path": "docs/research/specification-coverage/execution-snapshot-v1.json",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 13,
-      "content_sha256": "e88617c6b378b4c11e63bcc23039fa81d0e0fd1a2211180c6dfa6b902159f8aa"
+      "content_sha256": "1cca169b829d841d36f71c49c0dbb8e59a0ea70f83eb809325087aeb06f7e387"
     },
     {
       "path": "docs/research/specification-coverage/index.md",

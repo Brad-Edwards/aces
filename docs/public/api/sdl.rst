@@ -56,6 +56,12 @@ Composition
 .. automodule:: raes.composition
    :members:
 
+Artifact Transformations
+------------------------
+
+.. automodule:: raes.transformations
+   :members:
+
 Module Registry
 ---------------
 

@@ -9,6 +9,7 @@ implementation program. It does not claim runtime or backend enforcement or a
 successful adversarial evaluation.
 
 - [Architecture preflight](../../decisions/issue-812-adversarial-agent-control-preflight.md)
+- [Issue #1001 SEM-233 semantic-authority preflight](../../decisions/issue-1001-sem-233-boundary-flow-semantics-preflight.md)
 - [ADR-101](../../decisions/adrs/adr-101-adversarial-participant-flow-control.md)
 - [Current-state and primary-source assessment](current-state-assessment.md)
 - [Threat model](threat-model.md)

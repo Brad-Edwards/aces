@@ -85,6 +85,9 @@ subsystems:
   - id: behavioral-relations
     path: specs/formal/behavioral-relations
     fm_level: FM2
+  - id: artifact-transformations
+    path: specs/formal/artifact-transformations
+    fm_level: FM2
   - id: time-model
     path: specs/formal/time-model
     fm_level: FM3
@@ -94,6 +97,18 @@ subsystems:
 # a known gap with an ISO date and the tracking issue(s) under which it will be
 # closed.
 entries:
+  - subsystem: artifact-transformations
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/artifact-transformations/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_artifact_transformations.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/artifact-transformations/artifact-transformation-report-v1.json
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_artifact_transformations.py
+    waived_artifacts: []
+
   - subsystem: time-model
     delivered_artifacts:
       - kind: invariant_list
@@ -333,8 +348,9 @@ entries:
           model exists; #486 tracks the executable invariant oracle.
 
   - subsystem: participant-semantics
-    # SEM-230 adds an executable bounded policy model and ASR-535 adds bounded
-    # enforcement and backend-conformance falsification over it, while
+    # SEM-230 adds an executable bounded policy model, SEM-233 adds an exact
+    # two-coordinate algebra with a test-local finite falsification model, and
+    # ASR-535 adds bounded enforcement and backend-conformance falsification, while
     # runtime-wide typed contract coverage remains incomplete for the broader
     # participant surface. ASR-535 makes no model-check or proof claim.
     delivered_artifacts:
@@ -344,12 +360,18 @@ entries:
         path: implementations/python/tests/test_sem_230_information_flow_control.py
       - kind: unit_tests
         path: implementations/python/tests/test_asr_535_participant_flow_assurance.py
+      - kind: unit_tests
+        path: implementations/python/tests/test_sem_233_adversarial_boundary_flow.py
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_sem_230_information_flow_control.py
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_asr_535_participant_flow_assurance.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_sem_233_adversarial_boundary_flow.py
       - kind: abstract_state_machine_model
         path: specs/formal/participant-semantics/information-flow-control.md
+      - kind: abstract_state_machine_model
+        path: specs/formal/participant-semantics/adversarial-flow-control.md
     waived_artifacts:
       - kind: typed_ir_or_contract_coverage
         date: 2026-06-13

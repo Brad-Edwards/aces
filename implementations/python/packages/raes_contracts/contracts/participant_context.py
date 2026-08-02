@@ -25,6 +25,7 @@ ParticipantContextParticipantScope = Literal["participant_local"]
 ParticipantContextSourceLayer = Literal[
     "source_snapshot",
     "participant_observation",
+    "participant_information_state",
     "participant_behavior_history",
     "participant_episode_state",
     "participant_status_view",

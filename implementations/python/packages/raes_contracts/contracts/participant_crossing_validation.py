@@ -300,9 +300,17 @@ def _validate_delivery_attempt_stage(
     indexes: _RecordIndexes,
 ) -> None:
     prior = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, _CROSSING_DECISION)
-    _require_permitted_decision(prior)
     decision = prior.occurrence
     assert isinstance(decision, ParticipantCrossingDecisionModel)
+    if occurrence.disposition == "withheld":
+        if decision.disposition != ParticipantCrossingDecisionDisposition.DENY:
+            raise ValueError("withheld participant crossing delivery requires a deny decision")
+        if occurrence.transformation_ref is not None:
+            raise ValueError("withheld participant crossing delivery cannot name a transformation")
+        _validate_successor(record, prior, require_same_subject=True)
+        _require_subject_owner(record, occurrence.owning_occurrence_ref, _DELIVERY_ATTEMPT)
+        return
+    _require_permitted_decision(prior)
     if decision.disposition == ParticipantCrossingDecisionDisposition.TRANSFORM:
         if occurrence.transformation_ref is None:
             raise ValueError("transform decisions require a transformation before delivery attempt")

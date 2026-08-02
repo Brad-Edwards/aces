@@ -169,6 +169,8 @@ def test_isabelle_download_falls_back_between_integrity_checked_official_mirrors
 
 def test_current_and_historical_authority_resolve_by_exact_revision() -> None:
     current_catalog = load_behavioral_relation_catalog()
+    semantic_catalog = load_behavioral_relation_catalog_revision("rev11")
+    proof_catalog = load_behavioral_relation_catalog_revision("rev9")
     historical_catalog = load_behavioral_relation_catalog_revision("rev8")
     current_profile = load_behavioral_relation_profile("participant-opacity-baseline-v1")
     historical_profile = load_behavioral_relation_profile_revision(
@@ -176,7 +178,9 @@ def test_current_and_historical_authority_resolve_by_exact_revision() -> None:
         "sem-231/rev2",
     )
 
-    assert current_catalog.taxonomy_revision == "rev9"
+    assert current_catalog.taxonomy_revision == "rev12"
+    assert semantic_catalog.taxonomy_revision == "rev11"
+    assert proof_catalog.taxonomy_revision == "rev9"
     assert current_profile.profile_revision == "sem-231/rev3"
     assert current_profile.taxonomy_revision == "rev9"
     assert historical_catalog.taxonomy_revision == "rev8"

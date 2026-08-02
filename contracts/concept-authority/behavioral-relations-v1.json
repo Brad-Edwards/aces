@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev9",
+  "taxonomy_revision": "rev12",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -151,6 +151,67 @@
       "immutable_locator": {
         "kind": "doi",
         "value": "10.3233/JCS-2009-0352"
+      }
+    },
+    {
+      "source_id": "denning-1976",
+      "title": "A Lattice Model of Secure Information Flow",
+      "authors": [
+        "Dorothy E. Denning"
+      ],
+      "publication_year": 1976,
+      "publication_venue": "Communications of the ACM 19(5), 236-243",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1145/360051.360056"
+      }
+    },
+    {
+      "source_id": "myers-liskov-1998",
+      "title": "Complete, Safe Information Flow with Decentralized Labels",
+      "authors": [
+        "Andrew C. Myers",
+        "Barbara Liskov"
+      ],
+      "publication_year": 1998,
+      "publication_venue": "1998 IEEE Symposium on Security and Privacy, 186-197",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/SECPRI.1998.674834"
+      }
+    },
+    {
+      "source_id": "myers-sabelfeld-zdancewic-2006",
+      "title": "Enforcing Robust Declassification and Qualified Robustness",
+      "authors": [
+        "Andrew C. Myers",
+        "Andrei Sabelfeld",
+        "Steve Zdancewic"
+      ],
+      "publication_year": 2006,
+      "publication_venue": "Journal of Computer Security 14(2), 157-196",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.3233/JCS-2006-14203"
+      }
+    },
+    {
+      "source_id": "cecchetti-myers-arden-2017",
+      "title": "Nonmalleable Information Flow Control",
+      "authors": [
+        "Ethan Cecchetti",
+        "Andrew C. Myers",
+        "Owen Arden"
+      ],
+      "publication_year": 2017,
+      "publication_venue": "Proceedings of the 2017 ACM SIGSAC Conference on Computer and Communications Security",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1145/3133956.3134054"
       }
     },
     {
@@ -2001,7 +2062,9 @@
         "The participant-opacity finite-state checker derives the complete reachable fixed point from an exact transition model, checks every reachable secret evaluation point, and binds catalog, profile, model, assumptions, explored coverage, tool version, result or safe counterexample, and replay evidence.",
         "The committed model-check input and evidence fixtures retain the exact positive baseline model, result, digests, complete coverage, tool identity, and explicit nonclaims; invalid fixtures exercise count and partial-result promotion failures.",
         "implementations/python/tests/test_issue_962_participant_opacity_model_check.py covers pair-probe incompleteness, supervisor behavior, active strategies, coalition fusion, retained memory, release changes, order and probability non-promotion, exact bounds, replay, and agreement with the bounded lane.",
-        "The Isabelle/HOL Participant_Opacity session kernel-checks the SEM-231 one-sided opacity definition, its information-cell knowledge characterization, and the conditional implication from a matching SEM-230 noninterference instance for an eligible predicate; checked countermodels preserve the invalid-promotion boundaries."
+        "The Isabelle/HOL Participant_Opacity session kernel-checks the SEM-231 one-sided opacity definition, its information-cell knowledge characterization, and the conditional implication from a matching SEM-230 noninterference instance for an eligible predicate; checked countermodels preserve the invalid-promotion boundaries.",
+        "The participant-opacity-runtime-reference-v1 profile and RUN-319 crossing boundary enforce one exact finite observation inventory with safe, atomic runtime-enforcement decision bindings."
+        ,"The reference backend declares bounded support for the exact runtime profile; generic target conformance separately observes backend-native realization across the protected and complement points and binds the manifest, profile, configuration, tool, environment, and probe-set digests."
       ],
       "explicit_non_claims": [
         "Relation definition, catalog validation, claim-profile binding, and bounded finite analysis do not establish opacity of RAES, RUN-319, or any backend outside the exact admitted artifact.",
@@ -2009,6 +2072,8 @@
         "Taxonomy revision rev7 adds only an in-process bounded-test checker; it does not add a model check, mathematical proof, runtime enforcement, supervisor synthesis, backend declaration, backend realization, or backend conformance.",
         "Taxonomy revision rev8 adds one exact finite-state model-check result; it does not add a mathematical proof, runtime enforcement, supervisor synthesis, backend declaration, backend realization, or backend conformance.",
         "Taxonomy revision rev9 adds only the abstract conditional mathematical theorem bound to participant-opacity-theorem-v1; it does not prove opacity of RAES, a runtime, a deployment, a backend, or the finite fixture profile.",
+        "Taxonomy revision rev10 adds partial runtime enforcement only for participant-opacity-runtime-reference-v1; it does not establish general opacity, live model checking or proof, supervisor synthesis, backend declaration, backend realization, or backend conformance.",
+        "Taxonomy revision rev11 adds one bounded reference-backend declaration, realization, and conformance lane; it does not establish universal opacity, proof of a live execution, native realization for other backends, or cross-backend equivalence.",
         "Bounded evidence authenticates only the normalized-input digest; it does not authenticate a claimed source artifact or materializer.",
         "Opacity of one predicate does not imply SEM-230 policy noninterference, projected-history equivalence, epistemic indistinguishability of two selected worlds, trace inclusion or equivalence, simulation, refinement, or strong or weak bisimulation.",
         "The possibilistic baseline makes no posterior-risk, entropy, probabilistic, differential-privacy, timed, progress-sensitive, or universal partial-order claim."
@@ -2025,10 +2090,10 @@
         "proof_status": "proved",
         "checker_status": "implemented",
         "model_check_status": "model-checked",
-        "runtime_enforcement_status": "not-enforced",
-        "backend_declaration_status": "not-declared",
-        "backend_realization_status": "not-realized",
-        "backend_conformance_status": "not-tested",
+        "runtime_enforcement_status": "partial",
+        "backend_declaration_status": "declared",
+        "backend_realization_status": "partial",
+        "backend_conformance_status": "bounded",
         "evidence_refs": [
           "docs/decisions/adrs/adr-099-participant-relative-predicate-opacity.md",
           "specs/formal/participant-semantics/participant-predicate-opacity.md",
@@ -2047,7 +2112,14 @@
           "specs/formal/participant-semantics/isabelle/Participant_Opacity.thy",
           "specs/formal/participant-semantics/participant-opacity-proof-evidence.json",
           "tools/check_participant_opacity_proof.py",
-          "tools/isabelle_tool.py"
+          "tools/isabelle_tool.py",
+          "contracts/profiles/behavioral-relation/participant-opacity-runtime-reference-v1.json",
+          "implementations/python/packages/raes_contracts/participant_opacity_runtime.py",
+          "implementations/python/packages/raes_runtime/participant_crossing_mediation.py",
+          "implementations/python/tests/test_issue_964_participant_opacity_runtime.py",
+          "docs/decisions/issue-965-participant-opacity-backend-realization-preflight.md",
+          "implementations/python/packages/raes_conformance/conformance/participant_opacity_probes.py",
+          "implementations/python/tests/test_issue_965_participant_opacity_backend.py"
         ]
       },
       "source_refs": [
@@ -2155,14 +2227,14 @@
       "relation_id": "policy-noninterference",
       "display_name": "Participant-policy noninterference",
       "relation_class": "behavioral",
-      "definition": "For a fixed participant, episode and memory scope, model, environment class, scheduler class, order model, exact-cut policy-decision sequence, permitted declassification schedule, and low-strategy class, every low participant strategy produces equal support sets of projected participant-visible histories from low-equivalent initial states despite unauthorized high variation.",
+      "definition": "For a fixed participant, episode and memory scope, model, environment class, scheduler class, order model, exact-cut policy-decision sequence, SEM-233 revisioned confidentiality/integrity flow-policy profile, permitted declassification and endorsement schedule, and low-strategy class, every low participant strategy produces equal support sets of projected participant-visible histories from low-equivalent initial states despite unauthorized high variation.",
       "left_carrier": "The support set of valid labelled participant-policy runs from one low-equivalent initial state under one adaptive low strategy.",
       "right_carrier": "The support set of valid labelled participant-policy runs from another low-equivalent initial state under the same adaptive low strategy.",
-      "initial_states": "Initial world, participant-view, delivered decision-surface history, participant memory, archival-evidence, controller, authority, marking, and policy states related by the SEM-230 low-equivalence relation at the declared initial state cut.",
+      "initial_states": "Initial world, participant-view, delivered decision-surface history, participant memory, archival-evidence, controller, authority, marking, policy, immutable provenance/influence, and revisioned two-coordinate flow-label states related by the SEM-230 low-equivalence relation at the declared initial state cut.",
       "transition_signature": {
         "applicability": "applicable",
         "labels": "The closed SEM-230 alphabet for proposal, approval or denial, direction, intervention, handoff, override or cancellation, admission or rejection, attempt or result, disclosure or withholding, concealment, revocation, transformation, delivery, observation, policy change, evidence, and audit actions.",
-        "transition_relation": "The SEM-230 participant-policy crossing relation over existing world, view, local-history, archival-evidence, action, lifecycle, ordering, marking, controller, authority, policy, and provenance state.",
+        "transition_relation": "The SEM-230 participant-policy crossing relation, parameterized by SEM-233 sem-233/rev1 confidentiality/integrity obligation joins and final-sink predicates, over existing world, view, local-history, archival-evidence, action, lifecycle, ordering, marking, controller, authority, policy, provenance, and influence state.",
         "observable_actions": "Labels retained for the named participant and audience by the exact-cut policy decision, marking/declassification intersection, and declared state-cut projection, including delivered decision surfaces.",
         "hidden_actions": "Only labels mapped to tau by the named participant-, audience-, policy-decision-, and state-cut-relative projection; backend-internal actions are not intrinsically hidden.",
         "stuttering_actions": "Finite hidden stuttering is removed by the declared tau closure; the baseline is termination- and progress-insensitive and does not claim divergence-sensitive preservation."
@@ -2170,9 +2242,9 @@
       "observation_projection": {
         "applicability": "required",
         "subject": "Named participant and audience within one episode scope",
-        "policy_ref": "SEM-230 participant-information-flow policy",
-        "policy_revision": "The complete declared policy-decision sequence and exact state-cut bindings",
-        "redaction_scope": "Projection, masking, redaction, declassification, transformation, marking, loss, and weakening remain distinct and are evaluated deny-first.",
+        "policy_ref": "SEM-230 participant-information-flow policy parameterized by participant-boundary-flow-policy-v1",
+        "policy_revision": "The complete declared policy-decision sequence and exact state-cut bindings plus SEM-233 sem-233/rev1 and participant-boundary-flow-policy-v1@rev1",
+        "redaction_scope": "Projection, masking, redaction, confidentiality declassification, integrity endorsement, transformation, marking, loss, and weakening remain distinct and are evaluated deny-first.",
         "order_treatment": "Compare occurrence-preserving visible histories under the same declared total, partial, causal, simultaneous, or backend-serialized order model; one convenient linearization is insufficient for a partial-order claim.",
         "simultaneity_treatment": "Preserve declared simultaneity groups and visible order relations; timestamp equality does not establish simultaneity."
       },
@@ -2214,10 +2286,12 @@
       },
       "bounded_evidence": [
         "implementations/python/tests/test_sem_230_information_flow_control.py checks finite unauthorized-high, declassification-order, policy-revision, participant-relative hiding, deny-first, append-only-history, transformation-admission, and support-set counterexamples.",
-        "implementations/python/tests/test_asr_535_participant_flow_assurance.py exhausts a declared finite crossing domain for unauthorized-high purge and exact-cut declassification, and drives the shipped RUN-319 boundary for denial, withholding, redaction, governed declassification, transformation, stale or revoked policy, cross-participant leakage, participant-directed inject delivery, backend weakening, unsupported capability, and adversarial overclaim."
+        "implementations/python/tests/test_asr_535_participant_flow_assurance.py exhausts a declared finite crossing domain for unauthorized-high purge and exact-cut declassification, and drives the shipped RUN-319 boundary for denial, withholding, redaction, governed declassification, transformation, stale or revoked policy, cross-participant leakage, participant-directed inject delivery, backend weakening, unsupported capability, and adversarial overclaim.",
+        "implementations/python/tests/test_sem_233_adversarial_boundary_flow.py checks the finite SEM-233 sem-233/rev1 two-coordinate powerset algebra, conservative possible-influence joins, missing labels and provenance/influence refs, laundering, coordinate-specific release operations, handoff and cross-episode carriage, stale cuts, and deny-first sink predicates."
       ],
       "explicit_non_claims": [
         "The finite SEM-230 executable cases do not establish universal noninterference.",
+        "The SEM-233 definition and test-local finite model do not publish a portable contract or establish runtime enforcement, backend realization, instrumentation completeness, intentional-subversion robustness, monitor honesty, model alignment, or covert-channel control.",
         "Projected-history equality does not establish policy noninterference without the stated low-equivalence, adaptive-strategy, memory, exact-cut policy, purge, declassification, scheduler, environment, and quantifier obligations.",
         "No trace equivalence, simulation, refinement, strong or weak bisimulation, epistemic indistinguishability, timing security, probabilistic security, or backend realization is claimed.",
         "The ASR-535 finite enumeration, runtime probes, and backend conformance cases are bounded falsification evidence and are not a model check or a proof; issues #810 to #813 own any stronger opacity, bisimulation, adversarial-control, or cross-backend status."
@@ -2235,7 +2309,9 @@
         "proof_status": "deliberately-unproved",
         "evidence_refs": [
           "specs/formal/participant-semantics/information-flow-control.md",
+          "specs/formal/participant-semantics/adversarial-flow-control.md",
           "implementations/python/tests/test_sem_230_information_flow_control.py",
+          "implementations/python/tests/test_sem_233_adversarial_boundary_flow.py",
           "implementations/python/packages/raes_runtime/participant_crossing_policy.py",
           "implementations/python/packages/raes_conformance/conformance/participant_policy_probes.py",
           "implementations/python/tests/test_run_319_participant_flow_policy.py",
@@ -2244,10 +2320,14 @@
       },
       "source_refs": [
         "bohannon-pierce-sjoberg-weirich-zdancewic-2009",
+        "cecchetti-myers-arden-2017",
         "clarkson-schneider-2010",
+        "denning-1976",
         "fagin-halpern-moses-vardi-1995",
         "goguen-meseguer-1982",
         "milner-1980",
+        "myers-liskov-1998",
+        "myers-sabelfeld-zdancewic-2006",
         "sabelfeld-sands-2009",
         "van-glabbeek-1990"
       ]
@@ -2909,7 +2989,7 @@
       "intended_relation_ids": [
         "policy-noninterference"
       ],
-      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, memory scope, exact-cut policy-decision sequence, low-equivalence, adaptive low-strategy class, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to finite models, finite reference-runtime enforcement probes, and finite backend-conformance cases.",
+      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, memory scope, exact-cut policy-decision sequence, low-equivalence, adaptive low-strategy class, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. SEM-233 sem-233/rev1 parameterizes it with participant-boundary-flow-policy-v1@rev1, independent confidentiality/integrity obligation sets, conservative provenance/influence carriage, coordinate-specific release operations, and final-sink predicates. Current SEM-233 executable evidence is a test-local finite model; existing runtime and backend probes implement SEM-230 only.",
       "prohibited_relation_ids": [
         "participant-projected-history-equivalence",
         "trace-equivalence",
@@ -2923,6 +3003,7 @@
       ],
       "explicit_non_claims": [
         "Definition, catalog validation, claim-policy checks, and finite counterexamples do not prove universal noninterference or runtime/backend realization.",
+        "SEM-233 bounded algebra tests do not establish portable-contract support, runtime enforcement, backend realization, intentional-subversion robustness, model alignment, monitor honesty, instrumentation completeness, or covert-channel control.",
         "Reference-runtime enforcement and passing backend-conformance probes establish neither universal noninterference nor native-backend realization."
       ]
     },

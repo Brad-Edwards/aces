@@ -190,6 +190,18 @@
         {
           "constraint_refs": [],
           "disclosure_refs": [
+            "disclosure:participant_predicate_opacity:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_predicate_opacity",
+          "limitation_refs": [
+            "limitation:participant_predicate_opacity:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
             "disclosure:participant_transformation:unsupported"
           ],
           "evidence_refs": [],
@@ -368,6 +380,7 @@
         "runtime-snapshot-v1"
       ],
       "domain": "runtime-realization",
+      "observation_capabilities": {},
       "support_mode": "constrained",
       "supported_constraint_kinds": [
         "account-feature",

@@ -313,6 +313,9 @@ def behavioral_relation_catalog_path() -> Path:
 
 _HISTORICAL_CATALOG_PATHS = {
     "rev8": corpus_family_root(CONCEPT_AUTHORITY) / "history" / "behavioral-relations-v1-rev8.json",
+    "rev9": corpus_family_root(CONCEPT_AUTHORITY) / "history" / "behavioral-relations-v1-rev9.json",
+    "rev10": corpus_family_root(CONCEPT_AUTHORITY) / "history" / "behavioral-relations-v1-rev10.json",
+    "rev11": corpus_family_root(CONCEPT_AUTHORITY) / "history" / "behavioral-relations-v1-rev11.json",
 }
 
 

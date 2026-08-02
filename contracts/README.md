@@ -68,6 +68,18 @@ participant-local scope, audience scope, observation point, governed source
 layers, transformation rule, evidence/provenance basis, semantic limitations,
 and explicit comparability disclosure.
 
+The participant-runtime `participant-information-state-record-v1` contract
+closes ACT-604's portable information-state reference at one exact participant,
+episode, state cut, projection, memory scope, and information guarantee. Strong
+claims resolve through the immutable
+`participant-information-reconstruction-profile-v1` corpus and preserve every
+visible occurrence as a typed source relation. Conformance, snapshot reload,
+and backend ingestion fail closed unless a trusted resolver supplies the
+occurrence history, typed sources, proof digest, exact-cut membership, and
+projection/policy coordinates needed by the contextual invariant. The record
+is not a mutable fact map, hidden-world snapshot, or operational-holdings
+taxonomy; ACT-615 remains the owner of concrete holdings kinds and lifecycle.
+
 The participant-runtime `runtime-fact-binding-plane-v1` contract defines typed
 run-local fact declarations, immutable versions, compiled late-bound action
 sinks, value-free binding provenance, and redacted participant/workflow

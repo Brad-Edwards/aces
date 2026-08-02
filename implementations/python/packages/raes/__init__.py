@@ -35,6 +35,16 @@ __all__ = [
     "load_sdl_fragment",
     "parse_sdl",
     "parse_sdl_file",
+    "ArtifactTransformationPolicy",
+    "CanonicalArtifactComparison",
+    "PortableContractTransformationResult",
+    "RemoveSDLDeclarationRequest",
+    "RenameSDLDeclarationRequest",
+    "canonicalize_portable_contract",
+    "compare_canonical_artifacts",
+    "remove_sdl_declaration",
+    "rename_sdl_declaration",
+    "SDLTransformationResult",
     "select_scenario_family",
     "Scenario",
     "SDLError",
@@ -94,6 +104,19 @@ def __getattr__(name: str):
         module = import_module("raes.selected_scenario")
     elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:
         module = import_module("raes.parser")
+    elif name in {
+        "ArtifactTransformationPolicy",
+        "CanonicalArtifactComparison",
+        "PortableContractTransformationResult",
+        "RemoveSDLDeclarationRequest",
+        "RenameSDLDeclarationRequest",
+        "canonicalize_portable_contract",
+        "compare_canonical_artifacts",
+        "remove_sdl_declaration",
+        "rename_sdl_declaration",
+        "SDLTransformationResult",
+    }:
+        module = import_module("raes.transformations")
     elif name in {"InstantiatedScenario", "Scenario"}:
         module = import_module("raes.scenario")
     else:

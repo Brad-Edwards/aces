@@ -8,7 +8,7 @@ from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
-from ..manifest_authority import PARTICIPANT_RUNTIME_POLICY_FEATURES
+from ..manifest_authority import PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES
 from ..vocabulary import ParticipantFeatureSupportLevel
 from .base import ContractModel, NonEmptyString
 from .validators import _validate_unique_string_values
@@ -58,7 +58,7 @@ class ParticipantFeatureSupportModel(ContractModel):
                 f"feature_support entry '{self.feature}' declares support_level "
                 f"'{self.support_level.value}' below 'exact' and must carry at least one disclosure_refs entry"
             )
-        if self.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+        if self.feature in PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES:
             if self.support_level != ParticipantFeatureSupportLevel.EXACT and not self.limitation_refs:
                 raise ValueError(f"feature_support entry '{self.feature}' below 'exact' must carry limitation_refs")
             if self.support_level == ParticipantFeatureSupportLevel.BOUNDED and not self.constraint_refs:
@@ -94,7 +94,7 @@ class ParticipantFeatureSupportModel(ContractModel):
                 },
             }
         )
-        policy_features = sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+        policy_features = sorted(PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES)
         json_schema["allOf"].extend(
             [
                 {

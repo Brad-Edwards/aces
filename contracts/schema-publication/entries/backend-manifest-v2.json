@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "4e9f3694ba9be9dff9236ad94b895591f28863f295724d013c243b6d290ae37f",
+  "content_hash": "fe27901e088649ac3b9f7a53e4cc43474bd1ac0fbef28e7cb2545e33fd703c57",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "4e9f3694ba9be9dff9236ad94b895591f28863f295724d013c243b6d290ae37f"
+    "summary": "Added concern-keyed realization observation capabilities for issue #1043.",
+    "content_hash": "fe27901e088649ac3b9f7a53e4cc43474bd1ac0fbef28e7cb2545e33fd703c57"
   }
 }

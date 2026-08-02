@@ -8,6 +8,7 @@ import pytest
 from raes_contracts.behavioral_relations import (
     RelationAssuranceModel,
     load_behavioral_relation_catalog,
+    load_behavioral_relation_catalog_revision,
     validate_behavioral_claim_binding,
 )
 from raes_contracts.contracts import BehavioralClaimBindingModel
@@ -41,7 +42,7 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     catalog = load_behavioral_relation_catalog()
     relation = catalog.relations["participant-predicate-opacity"]
 
-    assert catalog.taxonomy_revision == "rev9"
+    assert catalog.taxonomy_revision == "rev12"
     assert relation.relation_class == "epistemic"
     assert relation.direction == "unary"
     assert relation.relation_parameter_profile_required is True
@@ -55,10 +56,10 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     assert relation.assurance.test_status == "bounded"
     assert relation.assurance.model_check_status == "model-checked"
     assert relation.assurance.proof_status == "proved"
-    assert relation.assurance.runtime_enforcement_status == "not-enforced"
-    assert relation.assurance.backend_declaration_status == "not-declared"
-    assert relation.assurance.backend_realization_status == "not-realized"
-    assert relation.assurance.backend_conformance_status == "not-tested"
+    assert relation.assurance.runtime_enforcement_status == "partial"
+    assert relation.assurance.backend_declaration_status == "declared"
+    assert relation.assurance.backend_realization_status == "partial"
+    assert relation.assurance.backend_conformance_status == "bounded"
     assert {
         "contracts/profiles/behavioral-relation/history/participant-opacity-baseline-v1-sem-231-rev2.json",
         "contracts/profiles/behavioral-relation/participant-opacity-theorem-v1.json",
@@ -74,7 +75,7 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
 
 
 def test_opacity_binding_requires_a_revisioned_parameter_profile_and_assurance_axis() -> None:
-    catalog = load_behavioral_relation_catalog()
+    catalog = load_behavioral_relation_catalog_revision("rev9")
 
     missing_profile = _opacity_binding().model_copy(
         update={

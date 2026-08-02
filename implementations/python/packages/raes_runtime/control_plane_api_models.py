@@ -165,6 +165,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "participant_behavior_history": dict(snapshot.participant_behavior_history),
             "participant_control_history": dict(snapshot.participant_control_history),
             "participant_crossing_history": dict(snapshot.participant_crossing_history),
+            "information_state_history": dict(snapshot.information_state_history),
             "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
             "participant_execution_services": dict(snapshot.participant_execution_services),
             "participant_resource_budget_states": dict(snapshot.participant_resource_budget_states),
@@ -193,6 +194,17 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
                     ),
                 }
                 for entry in snapshot.realization_provenance
+            ],
+            "realization_observations": [
+                {
+                    "address": entry.address,
+                    "field_path": entry.field_path,
+                    "domain": entry.domain,
+                    "requirement_kind": entry.requirement_kind,
+                    "verification_scope": entry.verification_scope.value,
+                    "observation_strength": entry.observation_strength.value,
+                }
+                for entry in snapshot.realization_observations
             ],
             "realization_envelope": (
                 snapshot.realization_envelope.model_dump(mode="json")

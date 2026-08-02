@@ -9,7 +9,9 @@ from pydantic_core import CoreSchema
 from ..artifact_requirements import ArtifactMechanismCapability
 from ..vocabulary import (
     GeneratedArtifactKind,
+    ObservationStrength,
     RealizationSupportMode,
+    RealizationVerificationScope,
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
@@ -292,12 +294,26 @@ class ProcessorCompatibilityModel(ContractModel):
     backends: list[NonEmptyString] = Field(min_length=1)
 
 
+class RealizationObservationCapabilityModel(ContractModel):
+    """Concern-specific scope and source of backend corroboration."""
+
+    verification_scope: RealizationVerificationScope
+    observation_strength: ObservationStrength = Field(json_schema_extra={"not": {"const": "none"}})
+
+    @model_validator(mode="after")
+    def _require_evidence(self) -> RealizationObservationCapabilityModel:
+        if self.observation_strength is ObservationStrength.NONE:
+            raise ValueError("realization observation capability must provide non-none evidence")
+        return self
+
+
 class RealizationSupportDeclarationModel(ContractModel):
     domain: NonEmptyString
     support_mode: RealizationSupportMode
     supported_constraint_kinds: list[NonEmptyString] = Field(default_factory=list)
     supported_exact_requirement_kinds: list[NonEmptyString] = Field(default_factory=list)
     disclosure_kinds: list[NonEmptyString] = Field(min_length=1)
+    observation_capabilities: dict[NonEmptyString, RealizationObservationCapabilityModel] = Field(default_factory=dict)
     artifact_mechanisms: list[ArtifactMechanismCapability] = Field(default_factory=list)
     constraints: dict[str, str] = Field(default_factory=dict)
 
