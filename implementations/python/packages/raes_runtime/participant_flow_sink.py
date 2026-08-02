@@ -33,7 +33,7 @@ from raes_contracts.runtime_state import OperationReceipt, OperationState
 
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 from .participant_crossing_action import combined_crossing_audit
-from .participant_crossing_mediation import PreparedParticipantCrossing
+from .participant_crossing_mediation import PreparedParticipantCrossing, commit_prepared_crossing
 from .participant_crossing_state_cut import expected_participant_history_heads
 
 
@@ -273,11 +273,30 @@ def commit_flow_sink_denial(
     return record.receipt
 
 
+def early_crossing_receipt(
+    control_plane: object,
+    crossing: PreparedParticipantCrossing,
+) -> OperationReceipt | None:
+    """Return an idempotent replay or committed denial receipt, else None to continue.
+
+    Runs immediately before the SEM-233 final-sink guard at each governed sink: an
+    already-decided (idempotent) or API-423-denied crossing short-circuits here with
+    zero further effect; a live accepted crossing proceeds to the final-sink permit.
+    """
+
+    if crossing.existing_receipt is not None:
+        return crossing.existing_receipt
+    if not crossing.record.receipt.accepted:
+        return commit_prepared_crossing(control_plane, crossing)
+    return None
+
+
 __all__ = (
     "ParticipantFlowSinkDecision",
     "ParticipantFlowSinkResolution",
     "apply_flow_sink_details",
     "commit_flow_sink_denial",
+    "early_crossing_receipt",
     "flow_sink_audit_details",
     "flow_sink_denied_record",
     "flow_sink_history_head_refs",
