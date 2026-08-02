@@ -33,7 +33,7 @@
       "record_class": "provenance-record",
       "rationale": "Preserves append-only lineage observations recorded before the RAES identity cutover.",
       "occurrences": 349,
-      "content_sha256": "cdbc71ae3650fa608f4326b2c304ed1cd281402195ca4701c7f632ccd16183f3"
+      "content_sha256": "5f1731f1ddde34108d0d253a2363a85fac19b36d4f0797c866cd60b44d71b939"
     },
     {
       "path": "contracts/schema-publication/tombstones/\u0061ces-semantic-invariants-v1.json",

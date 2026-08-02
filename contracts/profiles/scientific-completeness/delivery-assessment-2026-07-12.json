@@ -98,7 +98,7 @@
     {
       "concern_id": "workflow-compensation", "status": "implemented", "limitation": "Compensation is bounded workflow behavior, not universal resource rollback.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/raes/orchestration.py", "claim": "Workflow compensation surface."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/orchestration/__init__.py", "claim": "Workflow compensation surface."},
         {"kind": "test", "path": "implementations/python/tests/test_fm2_semantics.py", "claim": "Workflow semantic invariants."}
       ]
     },
@@ -139,7 +139,7 @@
     {
       "concern_id": "participant-action-observation", "status": "partial", "limitation": "Action contracts, observation boundaries, and reference-runtime participant information-flow admission exist with bounded falsification evidence; native-backend realization and universal noninterference remain unestablished.", "issue_refs": ["#747", "#800"],
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior.py", "claim": "Current action-contract and observation-boundary models."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior/__init__.py", "claim": "Current action-contract and observation-boundary models."},
         {"kind": "implementation", "path": "implementations/python/packages/raes_runtime/participant_crossing_policy.py", "claim": "Deny-first crossing gates for authority, admission, visibility, marking, declassification, transformation, and backend support."},
         {"kind": "conformance", "path": "implementations/python/packages/raes_conformance/conformance/participant_policy_probes.py", "claim": "Finite participant-policy probes that record a declared capability no harness executed as unsupported rather than passing."},
         {"kind": "test", "path": "implementations/python/tests/test_asr_535_participant_flow_assurance.py", "claim": "Bounded denial, withholding, redaction, governed declassification, transformation, stale-policy, cross-participant-leakage, inject-delivery, weakening, unsupported-capability, and overclaim cases."}
@@ -206,7 +206,7 @@
     },
     {
       "concern_id": "flexible-step-tooling", "status": "partial", "limitation": "Scripts and workflows exist, but portable tool selection and affordance binding remain incomplete.", "issue_refs": ["#653"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/orchestration.py", "claim": "Current script and workflow step surfaces."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/orchestration/__init__.py", "claim": "Current script and workflow step surfaces."}]
     },
     {
       "concern_id": "portable-behavior-contracts", "status": "partial", "limitation": "Behavior specifications and action contracts exist, but portable participant affordance and realization coverage is incomplete.", "issue_refs": ["#653", "#800"],

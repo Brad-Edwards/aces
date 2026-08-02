@@ -1832,7 +1832,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/raes/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration/__init__.py",
               "symbol_or_pointer": "events"
             }
           ],
@@ -2117,7 +2117,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/raes/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration/__init__.py",
               "symbol_or_pointer": "injects"
             }
           ],
@@ -2571,7 +2571,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/raes/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration/__init__.py",
               "symbol_or_pointer": "scripts"
             }
           ],
@@ -2635,7 +2635,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/raes/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration/__init__.py",
               "symbol_or_pointer": "stories"
             }
           ],
@@ -4494,7 +4494,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/raes/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration/__init__.py",
               "symbol_or_pointer": "events"
             }
           ],
@@ -4992,7 +4992,7 @@
           "symbol_or_pointer": "Entity model lineage"
         },
         {
-          "artifact": "implementations/python/packages/raes/orchestration.py",
+          "artifact": "implementations/python/packages/raes/orchestration/__init__.py",
           "symbol_or_pointer": "Inject, Event, Script, and Story model lineage"
         },
         {
