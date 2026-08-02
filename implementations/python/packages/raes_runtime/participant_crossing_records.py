@@ -21,7 +21,7 @@ from raes_contracts.contracts.participant_crossing_validation import (
 )
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import RuntimeDomain
-from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus
+from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
 
 from .control_plane_security import ControlPlaneIdentity
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
@@ -57,6 +57,37 @@ class _CrossingDecisionPreparation:
     scoped_key: str
 
 
+def _next_crossing_snapshot(
+    control_plane: object,
+    intent: ParticipantCrossingIntent,
+    records: list[ParticipantCrossingOccurrenceModel],
+) -> RuntimeSnapshot:
+    history = list(control_plane._snapshot.participant_crossing_history.get(intent.participant_address, ()))
+    candidate_history = [
+        *history,
+        *(record.model_dump(mode="json", exclude_none=True) for record in records),
+    ]
+    next_snapshot = control_plane._snapshot.with_entries(
+        dict(control_plane._snapshot.entries),
+        participant_crossing_history={
+            **control_plane._snapshot.participant_crossing_history,
+            intent.participant_address: candidate_history,
+        },
+    )
+    context = control_plane._crossing_policy_resolver.validation_context(
+        control_plane._snapshot,
+        intent.participant_address,
+    )
+    validate_participant_crossing_occurrence_context(
+        [ParticipantCrossingOccurrenceModel.model_validate(item) for item in candidate_history],
+        known_subjects=context.known_subjects,
+        policies=context.policies,
+        known_evidence_refs=context.known_evidence_refs,
+        known_authority_basis_refs=context.known_authority_basis_refs,
+    )
+    return next_snapshot
+
+
 def _prepare_crossing_decision(
     control_plane: object,
     intent: ParticipantCrossingIntent,
@@ -67,7 +98,6 @@ def _prepare_crossing_decision(
     support = preparation.support
     gates = preparation.gates
     disposition = preparation.disposition
-    history = list(control_plane._snapshot.participant_crossing_history.get(intent.participant_address, ()))
     request, decision = _crossing_records(intent, identity, resolution, support, gates, disposition)
     records = [request, decision]
     final_decision = decision
@@ -108,28 +138,7 @@ def _prepare_crossing_decision(
             records.extend((fresh_request, fresh_decision))
             final_decision = fresh_decision
             final_disposition = fresh_disposition
-    candidate_history = [
-        *history,
-        *(record.model_dump(mode="json", exclude_none=True) for record in records),
-    ]
-    next_snapshot = control_plane._snapshot.with_entries(
-        dict(control_plane._snapshot.entries),
-        participant_crossing_history={
-            **control_plane._snapshot.participant_crossing_history,
-            intent.participant_address: candidate_history,
-        },
-    )
-    context = control_plane._crossing_policy_resolver.validation_context(
-        control_plane._snapshot,
-        intent.participant_address,
-    )
-    validate_participant_crossing_occurrence_context(
-        [ParticipantCrossingOccurrenceModel.model_validate(item) for item in candidate_history],
-        known_subjects=context.known_subjects,
-        policies=context.policies,
-        known_evidence_refs=context.known_evidence_refs,
-        known_authority_basis_refs=context.known_authority_basis_refs,
-    )
+    next_snapshot = _next_crossing_snapshot(control_plane, intent, records)
     record, audit_event = _operation_artifacts(
         intent,
         identity,
