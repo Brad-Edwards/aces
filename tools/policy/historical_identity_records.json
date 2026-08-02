@@ -24,7 +24,7 @@
       "binding_class": "external-service-project-key",
       "rationale": "Retains the existing service-owned SonarCloud project designation without treating it as current RAES product identity.",
       "occurrences": 2,
-      "content_sha256": "df85536b996b633de8f1400941ce9a8b47e72c22bfe1cb5736e520a02d0fe361"
+      "content_sha256": "bcb2fa9327da30146ede9dba4f6294e0ed94c9e86287a8b278d7be2508c806f0"
     }
   ],
   "records": [
@@ -1524,7 +1524,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
-      "content_sha256": "cf2625cc1cd3a0314c4c7a1f87c56ed1bbfdfe8b400381372107e276bbbb2b03"
+      "content_sha256": "a6d09bbad5d9417a2a9ceb8053b2fd0f5fdf2674cf67f4248c37dacc216ef714"
     },
     {
       "path": "docs/research/formal-semantic-validation/execution-snapshot-v1.json",

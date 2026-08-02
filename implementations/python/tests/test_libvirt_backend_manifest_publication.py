@@ -54,6 +54,7 @@ PROVISIONING_ONLY_PROFILE = "provisioning-only"
 _CONSTRAINT_KIND_TO_PROVISIONER_SURFACE = {
     "node-type": "supported_node_types",
     "os-family": "supported_os_families",
+    "node-architecture": "supported_node_architectures",
     "content-type": "supported_content_types",
     "account-feature": "supported_account_features",
 }

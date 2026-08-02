@@ -18,6 +18,11 @@ from ._base import (
 from ._identifiers import OptionalPortableIdentifier, PortableIdentifier
 from ._runtime_service_families import install_runtime_service_family_exports
 from ._source import Source
+from .architectures import (
+    AuthoredNodeArchitectureString,
+    NodeArchitecture,
+    normalize_architecture,
+)
 from .deployment_tenancy import EndpointPersona
 from .image_provenance import (
     ContainerImageBuildProvenance,
@@ -103,6 +108,7 @@ __all__ = [
     "ImageVerificationStatus",
     "MAX_NODE_NAME_LENGTH",
     "Node",
+    "NodeArchitecture",
     "NodeType",
     "OSFamily",
     "Resources",
@@ -280,6 +286,7 @@ class Node(SDLModel):
     resources: Resources | None = None
     os: OSFamily | str | None = None
     os_version: str = ""
+    architecture: NodeArchitecture | AuthoredNodeArchitectureString | None = None
     features: dict[str, str] = Field(default_factory=dict)
     conditions: dict[str, str] = Field(default_factory=dict)
     injects: dict[str, str] = Field(default_factory=dict)
@@ -294,6 +301,11 @@ class Node(SDLModel):
     @classmethod
     def normalize_os(cls, v):
         return parse_enum_or_var(v, OSFamily, field_name="os") if v is not None else v
+
+    @field_validator("architecture", mode="before")
+    @classmethod
+    def normalize_architecture_value(cls, v: object) -> object:
+        return normalize_architecture(v)
 
     @field_validator("endpoint_persona", mode="before")
     @classmethod
@@ -317,6 +329,7 @@ class Node(SDLModel):
             "resources": self.resources is not None,
             "os": self.os is not None,
             "os_version": bool(self.os_version),
+            "architecture": self.architecture is not None,
             "features": bool(self.features),
             "conditions": bool(self.conditions),
             "injects": bool(self.injects),

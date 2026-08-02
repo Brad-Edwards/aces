@@ -108,6 +108,7 @@ def test_load_controlled_vocabulary_catalog():
         "workflow-state-predicate-features",
         "provisioner-node-types",
         "provisioner-os-families",
+        "provisioner-node-architectures",
         "provisioner-content-types",
         "provisioner-account-features",
         "orchestrator-supported-sections",

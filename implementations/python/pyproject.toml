@@ -135,6 +135,12 @@ source = [
     "raes_processor",
     "raes_runtime",
     "raes",
+    # Repo CI tooling (issue #54): the `tools/` tree lives at the repo root and
+    # is imported as the top-level `tools` package via pytest's `pythonpath`
+    # (`../..`). Coverage matches source packages by module name, so its
+    # `tools.*` modules are measured even though pytest runs from
+    # `implementations/python/`.
+    "tools",
 ]
 
 [tool.coverage.report]

@@ -101,9 +101,15 @@ def _constraint_node_refs(
         if len(parts) != 4 or parts[1] not in {"nodes", "infrastructure"}:
             continue
         field_name = parts[3]
-        if (parts[1], field_name) not in {("nodes", "os"), ("infrastructure", "count")}:
+        if (parts[1], field_name) not in {
+            ("nodes", "os"),
+            ("nodes", "architecture"),
+            ("infrastructure", "count"),
+        }:
             continue
         node_name = parts[2].replace("~1", "/").replace("~0", "~")
+        # ``architecture`` is populated only when present so nodes without an
+        # architecture constraint keep a byte-identical canonical projection.
         refs.setdefault(node_name, {"os": None, "count": None})[field_name] = _legacy_constraint_name(
             constraint.parameter
         )

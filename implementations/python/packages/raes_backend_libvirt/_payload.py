@@ -45,6 +45,15 @@ def _os_family(payload: Mapping[str, object]) -> str:
     return node_os if isinstance(node_os, str) else ""
 
 
+def _architecture(payload: Mapping[str, object]) -> str:
+    architecture = payload.get("architecture")
+    if isinstance(architecture, str) and architecture:
+        return architecture
+    node = _spec(payload).get("node")
+    node_architecture = node.get("architecture") if isinstance(node, Mapping) else None
+    return node_architecture if isinstance(node_architecture, str) else ""
+
+
 def _node_type(payload: Mapping[str, object]) -> str:
     node_type = payload.get("node_type")
     if isinstance(node_type, str) and node_type:

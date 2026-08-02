@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import cast
 
 import rfc8785
+from raes.architectures import NodeArchitecture
 from raes.canonical import canonical_sdl_digest
 from raes.infrastructure import ACLAction
 from raes.nodes import OSFamily
@@ -276,6 +277,8 @@ def _target_domain(
     match parts:
         case ["nodes", _, "os"] if symbol.sort is ConstraintSort.STRING:
             result = _string_vocabulary_domain(symbol, {item.value for item in OSFamily})
+        case ["nodes", _, "architecture"] if symbol.sort is ConstraintSort.STRING:
+            result = _string_vocabulary_domain(symbol, {item.value for item in NodeArchitecture})
         case ["infrastructure", _, "acls", _, "action"] if symbol.sort is ConstraintSort.STRING:
             result = _string_vocabulary_domain(symbol, {item.value for item in ACLAction})
         case ["infrastructure", _, "count"] if symbol.sort is ConstraintSort.INTEGER:

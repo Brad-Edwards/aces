@@ -384,6 +384,7 @@ class TestNode:
         ("field_name", "value"),
         [
             ("os", "linux"),
+            ("architecture", "x86_64"),
             ("os_version", "22.04"),
             ("features", {"nginx": ""}),
             ("conditions", {"health-check": ""}),

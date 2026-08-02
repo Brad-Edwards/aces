@@ -28,6 +28,7 @@ from ._base import (
     parse_int_or_var,
 )
 from ._runtime_service_families import install_runtime_service_family_exports
+from .architectures import PackageArchitectureString, normalize_architecture
 from .runtime_capabilities import (
     RuntimeCapabilityOverrideScope,
     RuntimeCapabilityPolicy,
@@ -294,9 +295,23 @@ class RuntimePackage(SDLModel):
     manager: str
     name: str
     version: str
-    architecture: str = ""
+    architecture: PackageArchitectureString = ""
     source: str = ""
     purl: str = ""
+
+    @field_validator("architecture", mode="before")
+    @classmethod
+    def normalize_package_architecture(cls, v: object) -> object:
+        """Normalize a populated package architecture to a canonical token.
+
+        Empty stays empty (the package is not architecture-constrained); a
+        populated value uses the same governed vocabulary as ``Node.architecture``
+        so target/package comparison is exact.
+        """
+        if v is None or v == "":
+            return v
+        normalized = normalize_architecture(v)
+        return normalized.value if hasattr(normalized, "value") else normalized
 
 
 class RuntimeDependencyManifest(SDLModel):

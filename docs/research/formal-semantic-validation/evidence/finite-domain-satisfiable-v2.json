@@ -195,6 +195,7 @@
         "name": "satisfiable-control",
         "nodes": {
           "target": {
+            "architecture": null,
             "asset_value": null,
             "conditions": {},
             "description": "",
@@ -229,6 +230,6 @@
         "workflows": {}
       }
     },
-    "snapshot_digest": "sha256:f8933367f961796fc19128e4e8c1c316ebd246bed8b592bac6fda10436a6257d"
+    "snapshot_digest": "sha256:723322b22e9847b6a646bb2158339c6df24981f923428ab116ab6c79e4e4b27b"
   }
 }
