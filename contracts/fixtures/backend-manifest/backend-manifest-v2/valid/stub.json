@@ -30,6 +30,7 @@
     "participant-resource-budget-event-v1",
     "participant-control-occurrence-v1",
     "participant-crossing-occurrence-v1",
+    "participant-flow-control-relation-v1",
     "participant-lifecycle-event-v1",
     "participant-observation-envelope-v1",
     "participant-shared-state-record-v1",
@@ -280,6 +281,18 @@
       ],
       "feature_support": [
         {
+          "feature": "participant_boundary_flow_resolution",
+          "support_level": "unsupported",
+          "constraint_refs": [],
+          "limitation_refs": [
+            "limitation:participant_boundary_flow_resolution:not-realized"
+          ],
+          "disclosure_refs": [
+            "disclosure:participant_boundary_flow_resolution:unsupported"
+          ],
+          "evidence_refs": []
+        },
+        {
           "feature": "participant_declassification",
           "support_level": "unsupported",
           "constraint_refs": [],
@@ -316,6 +329,18 @@
           "evidence_refs": []
         },
         {
+          "feature": "participant_final_sink_mediation",
+          "support_level": "unsupported",
+          "constraint_refs": [],
+          "limitation_refs": [
+            "limitation:participant_final_sink_mediation:not-realized"
+          ],
+          "disclosure_refs": [
+            "disclosure:participant_final_sink_mediation:unsupported"
+          ],
+          "evidence_refs": []
+        },
+        {
           "feature": "participant_ingress_admission",
           "support_level": "unsupported",
           "constraint_refs": [],
@@ -340,6 +365,18 @@
           "evidence_refs": []
         },
         {
+          "feature": "participant_monitor_topology",
+          "support_level": "unsupported",
+          "constraint_refs": [],
+          "limitation_refs": [
+            "limitation:participant_monitor_topology:not-realized"
+          ],
+          "disclosure_refs": [
+            "disclosure:participant_monitor_topology:unsupported"
+          ],
+          "evidence_refs": []
+        },
+        {
           "feature": "participant_predicate_opacity",
           "support_level": "unsupported",
           "constraint_refs": [],
@@ -348,6 +385,30 @@
           ],
           "disclosure_refs": [
             "disclosure:participant_predicate_opacity:unsupported"
+          ],
+          "evidence_refs": []
+        },
+        {
+          "feature": "participant_processing_role_trust",
+          "support_level": "unsupported",
+          "constraint_refs": [],
+          "limitation_refs": [
+            "limitation:participant_processing_role_trust:not-realized"
+          ],
+          "disclosure_refs": [
+            "disclosure:participant_processing_role_trust:unsupported"
+          ],
+          "evidence_refs": []
+        },
+        {
+          "feature": "participant_quarantined_processing",
+          "support_level": "unsupported",
+          "constraint_refs": [],
+          "limitation_refs": [
+            "limitation:participant_quarantined_processing:not-realized"
+          ],
+          "disclosure_refs": [
+            "disclosure:participant_quarantined_processing:unsupported"
           ],
           "evidence_refs": []
         },
