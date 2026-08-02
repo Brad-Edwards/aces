@@ -214,10 +214,14 @@ def _prepared_plane(
     """Build the plane on the target under evaluation and run the case's setup."""
 
     instrumented, counter = _instrumented_target(target)
+    # Conformance cases exercise API-423 crossing realization with legacy
+    # resolvers that predate the SEM-233 final-sink permit hook, so final-sink
+    # flow-control enforcement is explicitly opted out here.
     plane = RuntimeControlPlane(
         instrumented,
         crossing_policy_resolver=case.resolver,
         behavior_specifications=case.behavior_specifications,
+        enforce_final_sink_flow_control=False,
     )
     plane.initialize_participant_episode(case.participant_address, episode_id=case.episode_id)
     for request, key in case.setup_requests:

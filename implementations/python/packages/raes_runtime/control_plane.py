@@ -74,6 +74,30 @@ def _require_crossing_policy_configuration(
         raise ValueError(f"participant policy capabilities require a crossing policy resolver: {features}")
 
 
+def _require_final_sink_flow_control_configuration(
+    resolver: ParticipantCrossingPolicyResolver | None,
+    enforce_final_sink_flow_control: bool,
+) -> None:
+    """Reject a policy resolver that cannot resolve the SEM-233 final-sink permit.
+
+    Final-sink enforcement is fail-closed by default: a control plane that
+    governs participant crossings must resolve a fresh exact-cut SEM-233 permit
+    immediately before every effect. A resolver without ``resolve_flow_sink_decision``
+    cannot, so the control plane refuses to construct rather than silently
+    admitting effects with no final-sink decision. A deployment that intentionally
+    runs the legacy API-423-only path passes ``enforce_final_sink_flow_control=False``.
+    """
+
+    if not enforce_final_sink_flow_control or resolver is None:
+        return
+    if not callable(getattr(resolver, "resolve_flow_sink_decision", None)):
+        raise ValueError(
+            "participant final-sink flow-control enforcement requires the crossing policy "
+            "resolver to implement resolve_flow_sink_decision; pass "
+            "enforce_final_sink_flow_control=False to run the legacy API-423-only path"
+        )
+
+
 class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, ParticipantRetrievalMixin):
     """Reference control plane for async runtime submission and observation."""
 
@@ -86,9 +110,12 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         behavior_specifications: Mapping[str, ParticipantBehaviorSpecificationRuntime] | None = None,
         crossing_policy_resolver: ParticipantCrossingPolicyResolver | None = None,
         information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+        enforce_final_sink_flow_control: bool = True,
     ) -> None:
         _require_crossing_policy_configuration(target, crossing_policy_resolver)
+        _require_final_sink_flow_control_configuration(crossing_policy_resolver, enforce_final_sink_flow_control)
         self._target = target
+        self._enforce_final_sink_flow_control = enforce_final_sink_flow_control
         self._store = store or InMemoryControlPlaneStore(initial_snapshot)
         self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
         self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
