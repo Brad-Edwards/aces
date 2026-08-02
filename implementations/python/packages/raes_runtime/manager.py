@@ -28,8 +28,7 @@ from .time_control import RuntimeTimeControlMixin
 
 _RUNTIME_APPLY_ADDRESS, _APPLY_EVALUATOR_ADDRESS = "runtime.apply", "runtime.apply.evaluator"
 _APPLY_ORCHESTRATOR_ADDRESS = "runtime.apply.orchestrator"
-_APPLY_PHASE_FAILED = "runtime.apply-phase-failed"
-_DESTROY_PHASE_FAILED = "runtime.destroy-phase-failed"
+_APPLY_PHASE_FAILED, _DESTROY_PHASE_FAILED = "runtime.apply-phase-failed", "runtime.destroy-phase-failed"
 _ROLLBACK_EVALUATOR_ADDRESS = "runtime.rollback.evaluator"
 _ROLLBACK_ORCHESTRATOR_ADDRESS = "runtime.rollback.orchestrator"
 
