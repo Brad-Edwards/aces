@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import dataclass
 
 from raes_contracts.semantic_comparison import (
     ComparisonReason,
@@ -14,6 +15,14 @@ from raes_contracts.semantic_comparison import (
     SemanticChangeModel,
     SemanticComparisonRequestModel,
 )
+
+
+@dataclass
+class _TraversalState:
+    queue: deque[tuple[str, tuple[ImpactPathStepModel, ...]]]
+    visited: set[str]
+    paths: list[ImpactPathModel]
+    reasons: set[ComparisonReason]
 
 
 def impact_paths(
@@ -68,13 +77,12 @@ def _append_source_paths(
     paths: list[ImpactPathModel],
     reasons: set[ComparisonReason],
 ) -> bool:
-    queue: deque[tuple[str, tuple[ImpactPathStepModel, ...]]] = deque([(source, ())])
-    visited = {source}
+    state = _TraversalState(deque([(source, ())]), {source}, paths, reasons)
     exhausted = False
-    while queue and not exhausted:
-        current, steps = queue.popleft()
+    while state.queue and not exhausted:
+        current, steps = state.queue.popleft()
         for step in _bounded_outgoing(request, current, steps, adjacency, reasons):
-            exhausted = _append_path_step(request, source, step, steps, queue, visited, paths, reasons)
+            exhausted = _append_path_step(request, source, step, steps, state)
             if exhausted:
                 break
     return exhausted
@@ -99,25 +107,22 @@ def _append_path_step(
     source: str,
     step: ImpactPathStepModel,
     steps: tuple[ImpactPathStepModel, ...],
-    queue: deque[tuple[str, tuple[ImpactPathStepModel, ...]]],
-    visited: set[str],
-    paths: list[ImpactPathModel],
-    reasons: set[ComparisonReason],
+    state: _TraversalState,
 ) -> bool:
     next_steps = (*steps, step)
-    paths.append(
+    state.paths.append(
         ImpactPathModel(
             source_identity=source,
             affected_identity=step.dependent_identity,
             steps=next_steps,
         )
     )
-    exhausted = len(paths) >= request.limits.max_paths
+    exhausted = len(state.paths) >= request.limits.max_paths
     if exhausted:
-        reasons.add(ComparisonReason.IMPACT_PATH_BOUND_EXHAUSTED)
-    elif step.dependent_identity not in visited:
-        visited.add(step.dependent_identity)
-        queue.append((step.dependent_identity, next_steps))
+        state.reasons.add(ComparisonReason.IMPACT_PATH_BOUND_EXHAUSTED)
+    elif step.dependent_identity not in state.visited:
+        state.visited.add(step.dependent_identity)
+        state.queue.append((step.dependent_identity, next_steps))
     return exhausted
 
 
