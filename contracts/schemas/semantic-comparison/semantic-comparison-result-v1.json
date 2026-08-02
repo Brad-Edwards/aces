@@ -1,0 +1,1276 @@
+{
+  "$defs": {
+    "ComparisonCompleteness": {
+      "enum": [
+        "complete",
+        "bounded",
+        "indeterminate"
+      ],
+      "title": "ComparisonCompleteness",
+      "type": "string"
+    },
+    "ComparisonReason": {
+      "enum": [
+        "representation-evidence-missing",
+        "version-pair-incomparable",
+        "impact-scope-partial",
+        "impact-scope-redacted",
+        "impact-scope-unverified",
+        "subject-bound-exhausted",
+        "dependency-edge-bound-exhausted",
+        "impact-path-depth-exhausted",
+        "impact-path-bound-exhausted",
+        "unresolved-reference",
+        "ambiguous-reference",
+        "withheld-reference",
+        "transformation-evidence-not-successful",
+        "transformation-evidence-digest-mismatch",
+        "transformation-evidence-profile-mismatch",
+        "transformation-evidence-lossy"
+      ],
+      "title": "ComparisonReason",
+      "type": "string"
+    },
+    "DependencyChangeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DependencyStateModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "before": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DependencyStateModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "dependent_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Dependent Identity",
+          "type": "string"
+        },
+        "relation": {
+          "$ref": "#/$defs/DependencyRelation"
+        },
+        "rule_id": {
+          "enum": [
+            "scenario-import",
+            "experiment-task-scenario-reference",
+            "experiment-run-task-reference",
+            "experiment-run-scenario-snapshot-reference",
+            "experiment-capture-scope-reference",
+            "experiment-study-membership",
+            "external-concept-subject"
+          ],
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_version": {
+          "const": "1",
+          "default": "1",
+          "title": "Rule Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dependent_identity",
+        "rule_id",
+        "relation"
+      ],
+      "title": "DependencyChangeModel",
+      "type": "object"
+    },
+    "DependencyRelation": {
+      "enum": [
+        "unchanged",
+        "added",
+        "removed",
+        "changed"
+      ],
+      "title": "DependencyRelation",
+      "type": "string"
+    },
+    "DependencyResolutionStatus": {
+      "enum": [
+        "resolved",
+        "unresolved",
+        "ambiguous",
+        "withheld"
+      ],
+      "title": "DependencyResolutionStatus",
+      "type": "string"
+    },
+    "DependencyStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "dependency_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Dependency Identity",
+          "type": "string"
+        },
+        "provenance_digests": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+            "type": "string"
+          },
+          "title": "Provenance Digests",
+          "type": "array"
+        },
+        "reason_codes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ComparisonReason"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "resolution_status": {
+          "$ref": "#/$defs/DependencyResolutionStatus"
+        }
+      },
+      "required": [
+        "dependency_identity",
+        "resolution_status"
+      ],
+      "title": "DependencyStateModel",
+      "type": "object"
+    },
+    "DiagnosticModel": {
+      "additionalProperties": false,
+      "description": "Closed portable diagnostic shape for published contracts.",
+      "properties": {
+        "address": {
+          "maxLength": 4096,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Address",
+          "type": "string"
+        },
+        "code": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "domain": {
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Domain",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "error"
+        }
+      },
+      "required": [
+        "code",
+        "domain",
+        "address",
+        "message"
+      ],
+      "title": "DiagnosticModel",
+      "type": "object"
+    },
+    "EvidenceSpecificationCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "const": "evidence-specification",
+          "default": "evidence-specification",
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "canonical_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "canonical_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Canonical Identity",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9-]+/v[1-9][0-9]*$",
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "capture_spec_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Capture Spec Id",
+          "type": "string"
+        },
+        "exact_representation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExactRepresentationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lifecycle_phase": {
+          "const": "portable-contract",
+          "default": "portable-contract",
+          "title": "Lifecycle Phase",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "experiment-capture-spec/v1",
+          "default": "experiment-capture-spec/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "spec_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Spec Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_identity",
+        "canonicalization_profile",
+        "canonical_digest",
+        "capture_spec_id",
+        "spec_version"
+      ],
+      "title": "EvidenceSpecificationCoordinateModel",
+      "type": "object"
+    },
+    "ExactRepresentationModel": {
+      "additionalProperties": false,
+      "description": "Digest-only evidence for one exact representation, never a host path.",
+      "properties": {
+        "byte_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Byte Digest",
+          "type": "string"
+        },
+        "media_type": {
+          "enum": [
+            "application/json",
+            "application/yaml"
+          ],
+          "title": "Media Type",
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "utf8-json/v1",
+            "utf8-yaml/v1"
+          ],
+          "title": "Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "media_type",
+        "byte_digest"
+      ],
+      "title": "ExactRepresentationModel",
+      "type": "object"
+    },
+    "ExternalConceptBindingsCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "const": "external-concept-bindings",
+          "default": "external-concept-bindings",
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "binding_set_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Binding Set Id",
+          "type": "string"
+        },
+        "binding_set_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Binding Set Version",
+          "type": "string"
+        },
+        "canonical_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "canonical_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Canonical Identity",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9-]+/v[1-9][0-9]*$",
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "exact_representation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExactRepresentationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lifecycle_phase": {
+          "const": "portable-contract",
+          "default": "portable-contract",
+          "title": "Lifecycle Phase",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "external-concept-bindings/v1",
+          "default": "external-concept-bindings/v1",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_identity",
+        "canonicalization_profile",
+        "canonical_digest",
+        "binding_set_id",
+        "binding_set_version"
+      ],
+      "title": "ExternalConceptBindingsCoordinateModel",
+      "type": "object"
+    },
+    "IdentityRelation": {
+      "enum": [
+        "same",
+        "added",
+        "removed",
+        "renamed",
+        "indeterminate"
+      ],
+      "title": "IdentityRelation",
+      "type": "string"
+    },
+    "ImpactClosureStatus": {
+      "enum": [
+        "complete",
+        "partial",
+        "redacted",
+        "unverified"
+      ],
+      "title": "ImpactClosureStatus",
+      "type": "string"
+    },
+    "ImpactPathModel": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Affected Identity",
+          "type": "string"
+        },
+        "source_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Source Identity",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/ImpactPathStepModel"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_identity",
+        "affected_identity",
+        "steps"
+      ],
+      "title": "ImpactPathModel",
+      "type": "object"
+    },
+    "ImpactPathStepModel": {
+      "additionalProperties": false,
+      "properties": {
+        "dependency_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Dependency Identity",
+          "type": "string"
+        },
+        "dependent_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Dependent Identity",
+          "type": "string"
+        },
+        "evidence_side": {
+          "enum": [
+            "before",
+            "after"
+          ],
+          "title": "Evidence Side",
+          "type": "string"
+        },
+        "rule_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_version": {
+          "const": "1",
+          "default": "1",
+          "title": "Rule Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dependent_identity",
+        "dependency_identity",
+        "rule_id",
+        "evidence_side"
+      ],
+      "title": "ImpactPathStepModel",
+      "type": "object"
+    },
+    "ImpactScopeModel": {
+      "additionalProperties": false,
+      "description": "Exact two-sided artifact universe relative to which impact is reported.",
+      "properties": {
+        "after_artifacts": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "evidence-specification": "#/$defs/EvidenceSpecificationCoordinateModel",
+                "external-concept-bindings": "#/$defs/ExternalConceptBindingsCoordinateModel",
+                "module": "#/$defs/ModuleCoordinateModel",
+                "run": "#/$defs/RunCoordinateModel",
+                "scenario": "#/$defs/ScenarioCoordinateModel",
+                "study": "#/$defs/StudyCoordinateModel",
+                "task": "#/$defs/TaskCoordinateModel"
+              },
+              "propertyName": "artifact_kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ScenarioCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/ModuleCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/TaskCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/RunCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/EvidenceSpecificationCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/StudyCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/ExternalConceptBindingsCoordinateModel"
+              }
+            ]
+          },
+          "maxItems": 4096,
+          "minItems": 1,
+          "title": "After Artifacts",
+          "type": "array"
+        },
+        "before_artifacts": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "evidence-specification": "#/$defs/EvidenceSpecificationCoordinateModel",
+                "external-concept-bindings": "#/$defs/ExternalConceptBindingsCoordinateModel",
+                "module": "#/$defs/ModuleCoordinateModel",
+                "run": "#/$defs/RunCoordinateModel",
+                "scenario": "#/$defs/ScenarioCoordinateModel",
+                "study": "#/$defs/StudyCoordinateModel",
+                "task": "#/$defs/TaskCoordinateModel"
+              },
+              "propertyName": "artifact_kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ScenarioCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/ModuleCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/TaskCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/RunCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/EvidenceSpecificationCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/StudyCoordinateModel"
+              },
+              {
+                "$ref": "#/$defs/ExternalConceptBindingsCoordinateModel"
+              }
+            ]
+          },
+          "maxItems": 4096,
+          "minItems": 1,
+          "title": "Before Artifacts",
+          "type": "array"
+        },
+        "closure_policy": {
+          "const": "declared-exact-artifact-set/v1",
+          "default": "declared-exact-artifact-set/v1",
+          "title": "Closure Policy",
+          "type": "string"
+        },
+        "closure_status": {
+          "$ref": "#/$defs/ImpactClosureStatus"
+        },
+        "scope_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Scope Digest",
+          "type": "string"
+        },
+        "scope_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "traversal_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4096,
+          "minItems": 1,
+          "title": "Traversal Roots",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scope_id",
+        "closure_status",
+        "traversal_roots",
+        "before_artifacts",
+        "after_artifacts",
+        "scope_digest"
+      ],
+      "title": "ImpactScopeModel",
+      "type": "object"
+    },
+    "ModuleCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "const": "module",
+          "default": "module",
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "canonical_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "canonical_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Canonical Identity",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9-]+/v[1-9][0-9]*$",
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "exact_representation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExactRepresentationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lifecycle_phase": {
+          "const": "resolved-import",
+          "default": "resolved-import",
+          "title": "Lifecycle Phase",
+          "type": "string"
+        },
+        "module_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Module Id",
+          "type": "string"
+        },
+        "module_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Module Version",
+          "type": "string"
+        },
+        "provenance_profile": {
+          "const": "resolved-import-provenance/v1",
+          "default": "resolved-import-provenance/v1",
+          "title": "Provenance Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_identity",
+        "canonicalization_profile",
+        "canonical_digest",
+        "module_id",
+        "module_version"
+      ],
+      "title": "ModuleCoordinateModel",
+      "type": "object"
+    },
+    "RelationStatus": {
+      "enum": [
+        "unchanged",
+        "changed",
+        "unknown",
+        "incomparable",
+        "not-applicable"
+      ],
+      "title": "RelationStatus",
+      "type": "string"
+    },
+    "RunCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "const": "run",
+          "default": "run",
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "canonical_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "canonical_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Canonical Identity",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9-]+/v[1-9][0-9]*$",
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "exact_representation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExactRepresentationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lifecycle_phase": {
+          "const": "portable-contract",
+          "default": "portable-contract",
+          "title": "Lifecycle Phase",
+          "type": "string"
+        },
+        "run_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "run_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Run Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "experiment-run/v1",
+          "default": "experiment-run/v1",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_identity",
+        "canonicalization_profile",
+        "canonical_digest",
+        "run_id",
+        "run_version"
+      ],
+      "title": "RunCoordinateModel",
+      "type": "object"
+    },
+    "ScenarioCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "const": "scenario",
+          "default": "scenario",
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "canonical_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "canonical_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Canonical Identity",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9-]+/v[1-9][0-9]*$",
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "exact_representation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExactRepresentationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lifecycle_phase": {
+          "const": "normalized-authoring",
+          "default": "normalized-authoring",
+          "title": "Lifecycle Phase",
+          "type": "string"
+        },
+        "scenario_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Scenario Version",
+          "type": "string"
+        },
+        "source_profile": {
+          "const": "sdl-normalized-authoring/v1",
+          "default": "sdl-normalized-authoring/v1",
+          "title": "Source Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_identity",
+        "canonicalization_profile",
+        "canonical_digest",
+        "scenario_id",
+        "scenario_version"
+      ],
+      "title": "ScenarioCoordinateModel",
+      "type": "object"
+    },
+    "SemanticChangeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "after_identity": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After Identity"
+        },
+        "before_identity": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before Identity"
+        },
+        "identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Identity",
+          "type": "string"
+        },
+        "identity_relation": {
+          "$ref": "#/$defs/IdentityRelation"
+        },
+        "reason_codes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ComparisonReason"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "semantic_relation": {
+          "$ref": "#/$defs/RelationStatus"
+        },
+        "structural_relation": {
+          "$ref": "#/$defs/RelationStatus"
+        },
+        "textual_relation": {
+          "$ref": "#/$defs/RelationStatus"
+        }
+      },
+      "required": [
+        "identity",
+        "identity_relation",
+        "textual_relation",
+        "structural_relation",
+        "semantic_relation"
+      ],
+      "title": "SemanticChangeModel",
+      "type": "object"
+    },
+    "Severity": {
+      "description": "Diagnostic severity level.",
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "StudyCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "const": "study",
+          "default": "study",
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "canonical_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "canonical_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Canonical Identity",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9-]+/v[1-9][0-9]*$",
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "exact_representation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExactRepresentationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lifecycle_phase": {
+          "const": "portable-contract",
+          "default": "portable-contract",
+          "title": "Lifecycle Phase",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "experiment-study/v1",
+          "default": "experiment-study/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "study_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Study Id",
+          "type": "string"
+        },
+        "study_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Study Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_identity",
+        "canonicalization_profile",
+        "canonical_digest",
+        "study_id",
+        "study_version"
+      ],
+      "title": "StudyCoordinateModel",
+      "type": "object"
+    },
+    "TaskCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "const": "task",
+          "default": "task",
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "canonical_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "canonical_identity": {
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]*$",
+          "title": "Canonical Identity",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9-]+/v[1-9][0-9]*$",
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "exact_representation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExactRepresentationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lifecycle_phase": {
+          "const": "portable-contract",
+          "default": "portable-contract",
+          "title": "Lifecycle Phase",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "experiment-task/v1",
+          "default": "experiment-task/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "task_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Task Id",
+          "type": "string"
+        },
+        "task_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Task Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_identity",
+        "canonicalization_profile",
+        "canonical_digest",
+        "task_id",
+        "task_version"
+      ],
+      "title": "TaskCoordinateModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://openrae.github.io/rae/schemas/semantic-comparison-result-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "after": {
+      "discriminator": {
+        "mapping": {
+          "evidence-specification": "#/$defs/EvidenceSpecificationCoordinateModel",
+          "external-concept-bindings": "#/$defs/ExternalConceptBindingsCoordinateModel",
+          "module": "#/$defs/ModuleCoordinateModel",
+          "run": "#/$defs/RunCoordinateModel",
+          "scenario": "#/$defs/ScenarioCoordinateModel",
+          "study": "#/$defs/StudyCoordinateModel",
+          "task": "#/$defs/TaskCoordinateModel"
+        },
+        "propertyName": "artifact_kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ScenarioCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/ModuleCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/TaskCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/RunCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/EvidenceSpecificationCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/StudyCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/ExternalConceptBindingsCoordinateModel"
+        }
+      ],
+      "title": "After"
+    },
+    "analyzer_profile": {
+      "const": "raes-reference-semantic-comparator/v1",
+      "title": "Analyzer Profile",
+      "type": "string"
+    },
+    "before": {
+      "discriminator": {
+        "mapping": {
+          "evidence-specification": "#/$defs/EvidenceSpecificationCoordinateModel",
+          "external-concept-bindings": "#/$defs/ExternalConceptBindingsCoordinateModel",
+          "module": "#/$defs/ModuleCoordinateModel",
+          "run": "#/$defs/RunCoordinateModel",
+          "scenario": "#/$defs/ScenarioCoordinateModel",
+          "study": "#/$defs/StudyCoordinateModel",
+          "task": "#/$defs/TaskCoordinateModel"
+        },
+        "propertyName": "artifact_kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ScenarioCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/ModuleCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/TaskCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/RunCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/EvidenceSpecificationCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/StudyCoordinateModel"
+        },
+        {
+          "$ref": "#/$defs/ExternalConceptBindingsCoordinateModel"
+        }
+      ],
+      "title": "Before"
+    },
+    "changes": {
+      "items": {
+        "$ref": "#/$defs/SemanticChangeModel"
+      },
+      "maxItems": 4096,
+      "title": "Changes",
+      "type": "array"
+    },
+    "comparison_profile": {
+      "const": "raes-semantic-comparison/v1",
+      "title": "Comparison Profile",
+      "type": "string"
+    },
+    "comparison_profile_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Comparison Profile Digest",
+      "type": "string"
+    },
+    "completeness": {
+      "$ref": "#/$defs/ComparisonCompleteness"
+    },
+    "context_digests": {
+      "default": [],
+      "items": {
+        "minLength": 1,
+        "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+        "type": "string"
+      },
+      "maxItems": 128,
+      "title": "Context Digests",
+      "type": "array"
+    },
+    "dependencies": {
+      "items": {
+        "$ref": "#/$defs/DependencyChangeModel"
+      },
+      "maxItems": 8192,
+      "title": "Dependencies",
+      "type": "array"
+    },
+    "diagnostics": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DiagnosticModel"
+      },
+      "maxItems": 64,
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "impact_paths": {
+      "items": {
+        "$ref": "#/$defs/ImpactPathModel"
+      },
+      "maxItems": 4096,
+      "title": "Impact Paths",
+      "type": "array"
+    },
+    "impact_scope": {
+      "$ref": "#/$defs/ImpactScopeModel"
+    },
+    "impact_scope_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Impact Scope Digest",
+      "type": "string"
+    },
+    "reason_codes": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ComparisonReason"
+      },
+      "maxItems": 128,
+      "title": "Reason Codes",
+      "type": "array"
+    },
+    "request_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Request Digest",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "semantic-comparison-result/v1",
+      "default": "semantic-comparison-result/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "comparison_profile",
+    "comparison_profile_digest",
+    "analyzer_profile",
+    "request_digest",
+    "before",
+    "after",
+    "impact_scope",
+    "impact_scope_digest",
+    "changes",
+    "dependencies",
+    "impact_paths",
+    "completeness"
+  ],
+  "title": "SemanticComparisonResultModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "Identity, exact representation, structure, and semantic relations remain independent.",
+      "id": "semantic-comparison-independent-change-axes",
+      "inputs": [
+        {
+          "contract_id": "semantic-comparison-result-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.semantic_comparison.SemanticComparisonResultModel.model_validate"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "semantic-comparison-result-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}
