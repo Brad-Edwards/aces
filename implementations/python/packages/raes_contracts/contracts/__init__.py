@@ -1,5 +1,4 @@
 """Schema-first external contract models for RAES artifact boundaries."""
-
 # This module is an intentional re-export facade governed by PUBLIC_EXPORTS.
 # ruff: noqa: F401, F403
 
@@ -38,7 +37,9 @@ from ..versions import (
     FIPA_COMMUNICATIVE_ACTS_SOURCE_SCHEMA_VERSION,
     NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION,
     OPERATION_SCHEMA_VERSION,
+    PARTICIPANT_BOUNDARY_FLOW_POLICY_V1_SCHEMA_VERSION,
     PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
+    PARTICIPANT_FLOW_CONTROL_RELATION_V1_SCHEMA_VERSION,
     PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION,
     PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION,
     PARTICIPANT_OPACITY_ANALYSIS_EVIDENCE_SCHEMA_VERSION,
@@ -282,6 +283,38 @@ from .participant_envelopes import (
     RawDataIntegrityModel,
     SourcePipelineModel,
     SourceStatusModel,
+)
+from .participant_flow_control import (
+    ParticipantBoundaryFlowPolicyProfileModel,
+    ParticipantEffectiveFlowLabelModel,
+    ParticipantFlowBindingKind,
+    ParticipantFlowControlRelationModel,
+    ParticipantFlowCoordinateResult,
+    ParticipantFlowDeclassificationModel,
+    ParticipantFlowDerivationModel,
+    ParticipantFlowEndorsementModel,
+    ParticipantFlowFinalDisposition,
+    ParticipantFlowLabelResolutionStatus,
+    ParticipantFlowPolicyCutReferenceModel,
+    ParticipantFlowProfileReferenceModel,
+    ParticipantFlowRelationTargetKind,
+    ParticipantFlowReleaseKind,
+    ParticipantFlowRuleReferenceModel,
+    ParticipantFlowSinkDecisionModel,
+    ParticipantFlowSinkKind,
+    ParticipantFlowSubjectKind,
+    ParticipantFlowSubjectReferenceModel,
+)
+from .participant_flow_control_validation import (
+    ParticipantFlowActionAdmissionResolution,
+    ParticipantFlowCapabilityResolution,
+    ParticipantFlowControlContextResolver,
+    ParticipantFlowControlValidationContext,
+    ParticipantFlowHistoryHeadResolution,
+    ParticipantFlowReleaseAuthorityCoordinate,
+    ParticipantFlowSinkCoordinate,
+    validate_participant_flow_control_context,
+    validate_participant_flow_control_resolved_context,
 )
 from .participant_information_state import (
     ParticipantInformationReconstructionProfileModel,

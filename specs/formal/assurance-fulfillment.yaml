@@ -372,14 +372,21 @@ entries:
         path: specs/formal/participant-semantics/information-flow-control.md
       - kind: abstract_state_machine_model
         path: specs/formal/participant-semantics/adversarial-flow-control.md
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/profiles/participant-boundary-flow-policy-v1.json
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/participant-runtime/participant-flow-control-relation-v1.json
+      - kind: unit_tests
+        path: implementations/python/tests/test_sem_233_flow_control_contracts.py
     waived_artifacts:
       - kind: typed_ir_or_contract_coverage
-        date: 2026-06-13
+        date: 2026-08-02
         tracking:
           - "#487"
         rationale: >-
-          The SEM-230 relation catalog and test-local model do not deliver the
-          broader participant-semantics SDL/compiler/runtime contract surface.
+          SEM-233 now has exact portable profile and relation contracts, but
+          the broader participant-semantics SDL/compiler/runtime contract
+          surface remains incomplete.
 
   - subsystem: participant-behavior-model
     # Design coverage for ACT-602/603/606/607/608 plus executable ACT-602
