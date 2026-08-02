@@ -1524,7 +1524,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
-      "content_sha256": "cf2625cc1cd3a0314c4c7a1f87c56ed1bbfdfe8b400381372107e276bbbb2b03"
+      "content_sha256": "a6d09bbad5d9417a2a9ceb8053b2fd0f5fdf2674cf67f4248c37dacc216ef714"
     },
     {
       "path": "docs/research/formal-semantic-validation/execution-snapshot-v1.json",

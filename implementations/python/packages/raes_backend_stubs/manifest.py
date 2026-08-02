@@ -114,6 +114,7 @@ def _stub_concept_bindings(
     bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+        ConceptBinding(scope="capabilities.provisioner.supported_node_architectures", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
         ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
         ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
@@ -160,6 +161,7 @@ def _stub_realization_support() -> tuple[RealizationSupportDeclaration, ...]:
                 {
                     "node-type",
                     "os-family",
+                    "node-architecture",
                     "content-type",
                     "account-feature",
                     "workflow-feature",
@@ -177,6 +179,7 @@ def _stub_provisioner() -> ProvisionerCapabilities:
         name="stub-provisioner",
         supported_node_types=frozenset({"vm", "switch"}),
         supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
+        supported_node_architectures=frozenset({"x86_64", "aarch64"}),
         supported_content_types=frozenset({"file", "dataset", "directory"}),
         supported_account_features=frozenset({"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}),
         supported_domain_profiles=frozenset({"active_directory"}),

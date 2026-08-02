@@ -95,8 +95,9 @@ It defines:
   categories
 - governed-extension vocabularies for backend capability surfaces where stable
   portable terms exist but controlled local extension space is still needed:
-  provisioner node types, operating-system families, content types, account
-  features, orchestrator supported sections, and evaluator supported sections
+  provisioner node types, operating-system families, node CPU architectures,
+  content types, account features, orchestrator supported sections, and
+  evaluator supported sections
 - a governed-extension vocabulary for
   `participant-offensive-behavior-activities`, whose base terms are a direct
   adoption of MITRE ATT&CK Enterprise tactics v19.1. The pinned source artifact

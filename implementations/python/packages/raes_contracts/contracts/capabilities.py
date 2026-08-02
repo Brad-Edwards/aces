@@ -23,6 +23,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
     name: NonEmptyString
     supported_node_types: list[NonEmptyString] = Field(min_length=1)
     supported_os_families: list[NonEmptyString] = Field(min_length=1)
+    supported_node_architectures: list[NonEmptyString] = Field(default_factory=list)
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
     supported_domain_profiles: list[NonEmptyString] = Field(default_factory=list)
@@ -47,6 +48,10 @@ class ProvisionerCapabilitiesModel(ContractModel):
         _validate_controlled_vocabulary_terms(
             "capabilities.provisioner.supported_os_families",
             self.supported_os_families,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.provisioner.supported_node_architectures",
+            self.supported_node_architectures,
         )
         _validate_controlled_vocabulary_terms(
             "capabilities.provisioner.supported_content_types",

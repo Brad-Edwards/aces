@@ -13,8 +13,11 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from raes_contracts.contracts import ContractModel, NonEmptyString, RealizationEnvelopeIdentityModel
+from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
 from raes_contracts.realization_envelope import RealizationEnvelopeModel
 from raes_contracts.vocabulary import ObservationStrength
+
+_NODE_ARCHITECTURE_VOCABULARY = "provisioner-node-architectures"
 
 DigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
 
@@ -95,6 +98,14 @@ class RealizerConfigurationModel(ContractModel):
             values = getattr(self, field_name)
             if len(values) != len(set(values)):
                 raise ValueError(f"{field_name} must not contain duplicates")
+        # The configuration-bound realized target architecture is a governed
+        # canonical CPU-architecture term (issue #674), so a backend's declared
+        # realization architecture stays in the same portable vocabulary as the
+        # authored SDL requirement it must agree with.
+        try:
+            validate_controlled_vocabulary_value(_NODE_ARCHITECTURE_VOCABULARY, self.architecture)
+        except ValueError as exc:
+            raise ValueError(f"architecture must be a governed node CPU architecture term: {exc}") from exc
         return self
 
     @classmethod

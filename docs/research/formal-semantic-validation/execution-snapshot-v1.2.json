@@ -76,7 +76,7 @@
       "replayable": true,
       "actual_outcome": "accepted",
       "diagnostic_kind": null,
-      "result_digest": "3a1b039ac1946679a41f5db71871e7fff8014110c7487b0d8cbe28095bb05ee2",
+      "result_digest": "ba0ecbfcb3090ffd6b660cb51324fafcd47ca8dedbbb985e98b6e7f64f8cc25b",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/semantic-valid.sdl.yaml"
       ],
@@ -230,7 +230,7 @@
       "replayable": true,
       "actual_outcome": "stable",
       "diagnostic_kind": null,
-      "result_digest": "6a0db7d28a756d83974dd681df810f6c93ddd97c371d369242fe2425cbdd0d11",
+      "result_digest": "111478766ed79ae88f3ea3b5e60dba113f1af03996f092e66bb1eec9044a2675",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
         "implementations/python/tests/test_pipeline_determinism.py"
@@ -246,7 +246,7 @@
       "replayable": true,
       "actual_outcome": "distinguishable",
       "diagnostic_kind": null,
-      "result_digest": "333be367e829e54fb836ac20297fe98b92c9d5b7e81b23c5a6891171564af531",
+      "result_digest": "bb4c3fb88962baecd0b29e70c922a6b11f5062834280f1ad820a5a7f398ed297",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
         "docs/research/formal-semantic-validation/corpus/determinism-b.sdl.yaml"

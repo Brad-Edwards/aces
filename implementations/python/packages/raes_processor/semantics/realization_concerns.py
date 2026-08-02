@@ -119,6 +119,12 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("os_family",),
     ),
     RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("architecture",),
+        concern_kind="node-architecture",
+        payload_path=("architecture",),
+    ),
+    RealizationConcernDescriptor(
         section="content",
         authored_path=("type",),
         concern_kind="content-type",

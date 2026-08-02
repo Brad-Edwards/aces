@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "d4a810ad9cd6fabd884e7422e425b670cb5efa0e2652d34b9db1ebb8a3a8f74d",
+  "content_hash": "3c5a909b00d8c551c42d20875b00e6f68828739ea98f71e2b8b1e60e4d848dfc",
   "last_change": {
-    "summary": "Added forwarding-agent ownership roles for issue #1043.",
-    "content_hash": "d4a810ad9cd6fabd884e7422e425b670cb5efa0e2652d34b9db1ebb8a3a8f74d"
+    "summary": "Propagated the governed target-node CPU architecture field (Node.architecture) into the instantiated scenario model for issue #674.",
+    "content_hash": "3c5a909b00d8c551c42d20875b00e6f68828739ea98f71e2b8b1e60e4d848dfc"
   }
 }

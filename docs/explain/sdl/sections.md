@@ -75,6 +75,7 @@ nodes:
   web-server:
     type: VM
     os: linux                           # windows, linux, macos, freebsd, other
+    architecture: x86_64                 # target-node CPU architecture: x86_64, aarch64
     os_version: "Ubuntu 22.04"
     source: ubuntu-22.04                # provider-neutral image reference
     resources:
@@ -707,9 +708,11 @@ nodes:
       availability: critical
 ```
 
-**Switch** nodes are pure connectivity objects. They may define `type` and an optional `description`, but `source`, `resources`, `os`, `os_version`, `features`, `conditions`, `injects`, `vulnerabilities`, `roles`, `services`, `asset_value`, and `runtime` are rejected.
+**Switch** nodes are pure connectivity objects. They may define `type` and an optional `description`, but `source`, `resources`, `os`, `architecture`, `os_version`, `features`, `conditions`, `injects`, `vulnerabilities`, `roles`, `services`, `asset_value`, and `runtime` are rejected.
 
 For **VM** nodes, `resources` remain optional at the SDL layer to preserve abstract specifications, but a VM without `resources` emits a non-fatal advisory because many deployment backends will need explicit sizing or well-defined defaults.
+
+**Target-node architecture:** `architecture` is the CPU architecture the target node or guest requires. Canonical values are `x86_64` and `aarch64`; case-insensitive aliases (`amd64`, `x64`, `x86-64`, `arm64`) normalize to them, and a custom architecture uses the governed `x-<owner>:<term>` extension form. It is distinct from a runtime package's artifact architecture and from a backend host's architecture. Absence means the scenario imposes no target-node architecture requirement; it never implies the host, runner, or image architecture. When a node declares `architecture`, every architecture-constrained runtime package on that node must resolve to the same canonical value, and a node without `architecture` may not carry an architecture-constrained package.
 
 **Feature list shorthand:** `features: [nginx, php]` expands to `{nginx: "", php: ""}` (no role binding required).
 

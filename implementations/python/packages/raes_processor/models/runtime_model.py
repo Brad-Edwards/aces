@@ -82,7 +82,7 @@ class CompiledCapabilityConstraint:
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address, field_name="capability constraint address")
-        if self.concern not in {"nodes.os", "infrastructure.count"}:
+        if self.concern not in {"nodes.os", "nodes.architecture", "infrastructure.count"}:
             raise ValueError("compiled capability constraint has an unsupported concern")
         if not self.parameter or any(not segment for segment in self.parameter):
             raise ValueError("compiled capability constraint requires a parameter identity")
