@@ -138,7 +138,7 @@ _PARTICIPANT_INJECT_DELIVERY_VALIDATOR = (
     "[participant-inject delivery validator]"
     "(../../implementations/python/packages/raes/validator/_participant_inject_deliveries.py)"
 )
-_BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/raes/participant_behavior.py)"
+_BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/raes/participant_behavior/__init__.py)"
 _MIXED_CONTROL_MODEL = (
     "[behavior model](../../implementations/python/packages/raes/participant_behavior_specification.py)"
 )

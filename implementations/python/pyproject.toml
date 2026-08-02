@@ -184,4 +184,7 @@ ignore = [
 "packages/raes_mcp/tools/inspection/__init__.py" = ["F401"]  # intentional facade re-export (register)
 "packages/raes/semantics/objective_semantics/__init__.py" = ["F401"]  # intentional facade re-exports
 "packages/raes/semantics/participant_behavior/__init__.py" = ["F401"]  # intentional facade re-exports
+"packages/raes/composition/__init__.py" = ["F401"]  # intentional facade re-exports
+"packages/raes/orchestration/__init__.py" = ["F401"]  # intentional facade re-exports
+"packages/raes/participant_behavior/__init__.py" = ["F401"]  # intentional facade re-exports
 "packages/raes_contracts/realization_envelope.py" = ["E402"]  # late import breaks a carrier dependency cycle
