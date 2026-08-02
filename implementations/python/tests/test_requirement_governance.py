@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 from io import BytesIO
@@ -12,13 +13,23 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.check_requirement_governance import governed_requirement_paths, is_dev_to_main_promotion
+from tools.check_requirement_governance import (
+    _env_flag,
+    governed_requirement_paths,
+    is_dev_to_main_promotion,
+    report_unevaluated,
+)
 from tools.policy import requirement_governance
 from tools.policy.requirement_governance import (
+    GroundControlAuthRequired,
     GroundControlHttpClient,
+    GroundControlUnavailable,
     detect_requirement_uid,
     evaluate_requirement_governance,
     requirement_uid_from_context,
+    resolve_base_url,
+    resolve_timeout_seconds,
+    resolve_token,
 )
 
 
@@ -413,3 +424,172 @@ def test_requirement_governance_accepts_camel_case_traceability_payload(tmp_path
     )
 
     assert failures == []
+
+
+class _StubResponse:
+    def __init__(self, payload: bytes = b'{"status":"ACTIVE"}') -> None:
+        self._payload = payload
+
+    def __enter__(self) -> _StubResponse:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._payload
+
+
+def test_resolve_timeout_seconds_defaults_and_env_override(monkeypatch) -> None:
+    monkeypatch.delenv("GC_HTTP_TIMEOUT_SECONDS", raising=False)
+    assert resolve_timeout_seconds() == 5.0
+
+    monkeypatch.setenv("GC_HTTP_TIMEOUT_SECONDS", "12.5")
+    assert resolve_timeout_seconds() == 12.5
+
+    # A non-numeric or non-positive override falls back to the safe default
+    # rather than disabling the timeout.
+    monkeypatch.setenv("GC_HTTP_TIMEOUT_SECONDS", "not-a-number")
+    assert resolve_timeout_seconds() == 5.0
+    monkeypatch.setenv("GC_HTTP_TIMEOUT_SECONDS", "0")
+    assert resolve_timeout_seconds() == 5.0
+
+
+def test_ground_control_http_client_sends_bearer_auth(monkeypatch) -> None:
+    captured: dict[str, str | None] = {}
+
+    def fake_urlopen(request, *, timeout: float):
+        captured["auth"] = request.get_header("Authorization")
+        return _StubResponse()
+
+    monkeypatch.setattr(requirement_governance, "urlopen", fake_urlopen)
+    client = GroundControlHttpClient("http://ground-control.invalid", token="secret-token")
+
+    assert client.get_requirement("project", "ASR-535") == {"status": "ACTIVE"}
+    assert captured["auth"] == "Bearer secret-token"
+
+
+def test_ground_control_http_client_omits_auth_without_token(monkeypatch) -> None:
+    captured: dict[str, str | None] = {}
+
+    def fake_urlopen(request, *, timeout: float):
+        captured["auth"] = request.get_header("Authorization")
+        return _StubResponse(b"{}")
+
+    monkeypatch.setattr(requirement_governance, "urlopen", fake_urlopen)
+
+    GroundControlHttpClient("http://ground-control.invalid").get_requirement("project", "ASR-1")
+    assert captured["auth"] is None
+
+
+@pytest.mark.parametrize("code", (401, 403))
+def test_auth_rejection_raises_auth_required(monkeypatch, code: int) -> None:
+    def failing_urlopen(_request, *, timeout: float):
+        raise HTTPError("http://ground-control.invalid", code, "auth", None, BytesIO(b"authentication_required"))
+
+    monkeypatch.setattr(requirement_governance, "urlopen", failing_urlopen)
+    client = GroundControlHttpClient("http://ground-control.invalid", token="token")
+
+    with pytest.raises(GroundControlAuthRequired, match=str(code)):
+        client.get_requirement("project", "ASR-1")
+
+
+def test_non_auth_http_error_raises_unavailable(monkeypatch) -> None:
+    def failing_urlopen(_request, *, timeout: float):
+        raise HTTPError("http://ground-control.invalid", 503, "down", None, BytesIO(b"offline"))
+
+    monkeypatch.setattr(requirement_governance, "urlopen", failing_urlopen)
+    client = GroundControlHttpClient("http://ground-control.invalid")
+
+    # A 503 is transport-unavailable, not an auth rejection.
+    with pytest.raises(GroundControlUnavailable, match="503: offline"):
+        client.get_requirement("project", "ASR-1")
+    # The two conditions are disjoint: an unavailable error must not be
+    # catchable as an auth-required error.
+    assert not issubclass(GroundControlUnavailable, GroundControlAuthRequired)
+
+
+def test_resolve_base_url_prefers_env_then_mcp(monkeypatch, tmp_path: Path) -> None:
+    write_text(
+        tmp_path / ".mcp.json",
+        json.dumps({"mcpServers": {"ground-control": {"env": {"GC_BASE_URL": "http://from-mcp:8000"}}}}),
+    )
+
+    monkeypatch.setenv("GC_BASE_URL", "http://from-env:8000")
+    assert resolve_base_url(tmp_path) == "http://from-env:8000"
+
+    monkeypatch.delenv("GC_BASE_URL")
+    assert resolve_base_url(tmp_path) == "http://from-mcp:8000"
+
+
+def test_resolve_base_url_is_none_without_env_or_mcp(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.delenv("GC_BASE_URL", raising=False)
+    # No .mcp.json in tmp_path and no baked-in gc-dev default.
+    assert resolve_base_url(tmp_path) is None
+
+
+def test_resolve_token_prefers_env_then_mcp(monkeypatch, tmp_path: Path) -> None:
+    write_text(
+        tmp_path / ".mcp.json",
+        json.dumps({"mcpServers": {"ground-control": {"env": {"GROUND_CONTROL_API_TOKEN": "mcp-token"}}}}),
+    )
+
+    monkeypatch.setenv("GROUND_CONTROL_API_TOKEN", "env-token")
+    assert resolve_token(tmp_path) == "env-token"
+
+    monkeypatch.delenv("GROUND_CONTROL_API_TOKEN")
+    assert resolve_token(tmp_path) == "mcp-token"
+
+
+def test_report_unevaluated_skips_by_default(capsys) -> None:
+    exit_code = report_unevaluated(
+        rule_id="ground-control-unavailable",
+        message="connection refused",
+        require_governance=False,
+        as_json=False,
+    )
+    assert exit_code == 0
+    err = capsys.readouterr().err
+    assert "ground-control-unavailable" in err
+    assert "skipping governance check" in err
+
+
+def test_report_unevaluated_fails_when_governance_required(capsys) -> None:
+    exit_code = report_unevaluated(
+        rule_id="ground-control-unavailable",
+        message="connection refused",
+        require_governance=True,
+        as_json=False,
+    )
+    assert exit_code == 1
+    assert "failing" in capsys.readouterr().err
+
+
+def test_report_unevaluated_json_status_separates_skip_from_pass(capsys) -> None:
+    exit_code = report_unevaluated(
+        rule_id="ground-control-auth-required",
+        message="401: authentication_required",
+        require_governance=False,
+        as_json=True,
+    )
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == [
+        {
+            "rule_id": "ground-control-auth-required",
+            "message": "401: authentication_required",
+            "path": None,
+            "status": "skipped-unavailable",
+        }
+    ]
+
+
+def test_env_flag_parses_truthy_and_falsy_values(monkeypatch) -> None:
+    for truthy in ("1", "true", "YES", "on"):
+        monkeypatch.setenv("GC_REQUIRE_GOVERNANCE", truthy)
+        assert _env_flag("GC_REQUIRE_GOVERNANCE")
+
+    monkeypatch.setenv("GC_REQUIRE_GOVERNANCE", "0")
+    assert not _env_flag("GC_REQUIRE_GOVERNANCE")
+    monkeypatch.delenv("GC_REQUIRE_GOVERNANCE")
+    assert not _env_flag("GC_REQUIRE_GOVERNANCE")

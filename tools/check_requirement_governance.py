@@ -15,9 +15,14 @@ if str(REPO_ROOT) not in sys.path:
 
 from tools.policy.common import apply_exceptions, changed_paths, failures_to_json, load_exceptions
 from tools.policy.requirement_governance import (
+    GroundControlAuthRequired,
     GroundControlHttpClient,
+    GroundControlUnavailable,
     evaluate_requirement_governance,
     requirement_uid_from_context,
+    resolve_base_url,
+    resolve_timeout_seconds,
+    resolve_token,
 )
 
 GOVERNED_ROOTS = ("implementations/", "contracts/", "specs/", "docs/")
@@ -47,8 +52,42 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-rev", help="Compare against a specific git revision.")
     parser.add_argument("--json", action="store_true", help="Emit JSON failures.")
     parser.add_argument("--requirement-uid", help="Explicit requirement UID override.")
+    parser.add_argument(
+        "--require-governance",
+        action="store_true",
+        help=(
+            "Fail (non-zero) when governance cannot be evaluated (endpoint unreachable, "
+            "unauthenticated, or unconfigured) instead of skipping. Also enabled by "
+            "GC_REQUIRE_GOVERNANCE."
+        ),
+    )
     parser.add_argument("paths", nargs="*", help="Explicit repo-relative paths to check.")
     return parser.parse_args()
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def report_unevaluated(*, rule_id: str, message: str, require_governance: bool, as_json: bool) -> int:
+    """Emit a machine-readable, non-misleading signal that governance was not evaluated.
+
+    Returns 1 when governance is required (so a degraded run can never be mistaken
+    for a verified pass), else 0 with a diagnostic that is clearly distinct from a
+    genuine pass.
+    """
+    status = "required-unevaluated" if require_governance else "skipped-unavailable"
+    if as_json:
+        print(
+            json.dumps(
+                [{"rule_id": rule_id, "message": message, "path": None, "status": status}],
+                indent=2,
+            )
+        )
+    else:
+        suffix = "governance is required — failing" if require_governance else "skipping governance check"
+        print(f"[{rule_id}] {message} — {suffix}", file=sys.stderr)
+    return 1 if require_governance else 0
 
 
 def current_branch(repo_root: Path) -> str | None:
@@ -124,12 +163,41 @@ def main() -> int:
             )
         return 1
 
-    client = GroundControlHttpClient(base_url=(os.environ.get("GC_BASE_URL") or "http://gc-dev:8000"))
+    require_governance = args.require_governance or _env_flag("GC_REQUIRE_GOVERNANCE")
+
+    base_url = resolve_base_url(REPO_ROOT)
+    if base_url is None:
+        return report_unevaluated(
+            rule_id="ground-control-config-missing",
+            message=(
+                "GC_BASE_URL is not set; configure it in the environment or the repo-local "
+                ".mcp.json ground-control server env"
+            ),
+            require_governance=require_governance,
+            as_json=args.json,
+        )
+
+    client = GroundControlHttpClient(
+        base_url=base_url,
+        token=resolve_token(REPO_ROOT),
+        timeout_seconds=resolve_timeout_seconds(),
+    )
     try:
         failures = evaluate_requirement_governance(REPO_ROOT, effective_paths, client=client, requirement_uid=uid)
-    except RuntimeError as exc:
-        print(f"[ground-control-unavailable] {exc} — skipping governance check", file=sys.stderr)
-        return 0
+    except GroundControlAuthRequired as exc:
+        return report_unevaluated(
+            rule_id="ground-control-auth-required",
+            message=f"Ground Control requires authentication ({exc})",
+            require_governance=require_governance,
+            as_json=args.json,
+        )
+    except GroundControlUnavailable as exc:
+        return report_unevaluated(
+            rule_id="ground-control-unavailable",
+            message=str(exc),
+            require_governance=require_governance,
+            as_json=args.json,
+        )
 
     failures = apply_exceptions(failures, load_exceptions(REPO_ROOT), requirement_uid=uid)
     if failures:
