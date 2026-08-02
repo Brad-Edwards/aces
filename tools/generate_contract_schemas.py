@@ -70,6 +70,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("participant-information-reconstruction-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("participant-boundary-flow-policy-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("random-stream-vector-v"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("behavioral-relation-profile-v"):
@@ -89,6 +91,7 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "participant-time-management-context-v1",
         "participant-control-occurrence-v1",
         "participant-crossing-occurrence-v1",
+        "participant-flow-control-relation-v1",
         "participant-execution-binding-v1",
         "participant-execution-control-v1",
         "participant-execution-service-state-v1",

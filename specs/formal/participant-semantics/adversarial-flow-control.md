@@ -1,6 +1,6 @@
 # SEM-233 And ASR-536 Adversarial Participant Flow Control
 
-Status: SEM-233 definition authority is published; portable-contract,
+Status: SEM-233 definition and portable-contract authority are published;
 runtime, backend, and ASR-536 evaluation obligations remain DRAFT.
 
 Requirements: `SEM-233`, `ASR-536`.
@@ -8,6 +8,9 @@ Requirements: `SEM-233`, `ASR-536`.
 SEM-233 authority revision: `sem-233/rev1`.
 
 Flow-policy profile: `participant-boundary-flow-policy-v1@rev1`.
+
+Portable contracts: `participant-boundary-flow-policy-v1` and
+`participant-flow-control-relation-v1`.
 
 Decision authority:
 [ADR-101](../../../docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md).
@@ -422,9 +425,11 @@ noninterference result, or intentional-subversion evaluation.
 | API-407 | declared/effective backend support, realization, downgrade, and conformance |
 | ASR-535 | bounded flow falsification and evidence/claim discipline |
 
-SEM-233 and ASR-536 remain DRAFT until their downstream positive obligations
-are satisfied. Issue #812 supplies design authority and an implementation
-program only.
+SEM-233 and ASR-536 remain DRAFT until their remaining downstream positive
+obligations are satisfied. Issue #812 supplies design authority and the
+implementation program; #1001 publishes the SEM-233 revision-1 algebra, and
+#1002 publishes its profile and relation contracts. Neither delivery claims
+runtime enforcement, backend realization, or ASR-536 evaluation evidence.
 
 ## Nonclaims
 
