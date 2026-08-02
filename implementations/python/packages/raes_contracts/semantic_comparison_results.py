@@ -100,18 +100,9 @@ class DependencyChangeModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_sides(self) -> DependencyChangeModel:
-        if self.relation == DependencyRelation.ADDED and (self.before is not None or self.after is None):
-            raise ValueError("added dependencies require only an after state")
-        if self.relation == DependencyRelation.REMOVED and (self.before is None or self.after is not None):
-            raise ValueError("removed dependencies require only a before state")
-        if self.relation in {DependencyRelation.UNCHANGED, DependencyRelation.CHANGED} and (
-            self.before is None or self.after is None
-        ):
-            raise ValueError("paired dependencies require before and after states")
-        if self.relation == DependencyRelation.UNCHANGED and self.before != self.after:
-            raise ValueError("unchanged dependencies require equal states")
-        if self.relation == DependencyRelation.CHANGED and self.before == self.after:
-            raise ValueError("changed dependencies require distinct states")
+        error = _dependency_sides_error(self.relation, self.before, self.after)
+        if error is not None:
+            raise ValueError(error)
         return self
 
 
@@ -193,6 +184,50 @@ class SemanticComparisonResultModel(ContractModel):
 
 def _change_key(change: SemanticChangeModel) -> tuple[str, str, str]:
     return (change.identity, change.before_identity or "", change.after_identity or "")
+
+
+def _has_only_after(before: DependencyStateModel | None, after: DependencyStateModel | None) -> bool:
+    return before is None and after is not None
+
+
+def _has_only_before(before: DependencyStateModel | None, after: DependencyStateModel | None) -> bool:
+    return before is not None and after is None
+
+
+def _has_both_sides(before: DependencyStateModel | None, after: DependencyStateModel | None) -> bool:
+    return before is not None and after is not None
+
+
+def _dependency_sides_error(
+    relation: DependencyRelation,
+    before: DependencyStateModel | None,
+    after: DependencyStateModel | None,
+) -> str | None:
+    validators = {
+        DependencyRelation.ADDED: _added_sides_error,
+        DependencyRelation.REMOVED: _removed_sides_error,
+        DependencyRelation.UNCHANGED: _unchanged_sides_error,
+        DependencyRelation.CHANGED: _changed_sides_error,
+    }
+    return validators[relation](before, after)
+
+
+def _added_sides_error(before: DependencyStateModel | None, after: DependencyStateModel | None) -> str | None:
+    return None if _has_only_after(before, after) else "added dependencies require only an after state"
+
+
+def _removed_sides_error(before: DependencyStateModel | None, after: DependencyStateModel | None) -> str | None:
+    return None if _has_only_before(before, after) else "removed dependencies require only a before state"
+
+
+def _unchanged_sides_error(before: DependencyStateModel | None, after: DependencyStateModel | None) -> str | None:
+    valid = _has_both_sides(before, after) and before == after
+    return None if valid else "unchanged dependencies require equal before and after states"
+
+
+def _changed_sides_error(before: DependencyStateModel | None, after: DependencyStateModel | None) -> str | None:
+    valid = _has_both_sides(before, after) and before != after
+    return None if valid else "changed dependencies require distinct before and after states"
 
 
 def _dependency_key(change: DependencyChangeModel) -> tuple[str, str, str, str]:

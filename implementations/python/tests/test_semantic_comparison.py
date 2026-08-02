@@ -162,12 +162,11 @@ def test_owner_specific_adapters_cover_every_admitted_family(
         coordinate_for_artifact({"artifact_kind": "scenario", "semantic_digest": "caller-selected"})
 
     scenario_coordinate = coordinates[0]
+    invalid_coordinate = scenario_coordinate.model_copy(
+        update={"canonical_identity": "scenario:somebody-else"}
+    ).model_dump(mode="json")
     with pytest.raises(ValidationError, match="canonical identity"):
-        ScenarioCoordinateModel.model_validate(
-            scenario_coordinate.model_copy(update={"canonical_identity": "scenario:somebody-else"}).model_dump(
-                mode="json"
-            )
-        )
+        ScenarioCoordinateModel.model_validate(invalid_coordinate)
 
 
 def test_typed_artifacts_are_compared_without_caller_supplied_projections(
@@ -414,8 +413,7 @@ def test_result_contract_rejects_scope_digest_tampering(
     scenario = Scenario(name="arena", version="1.0.0")
     request = _request(profile, scenario, scenario)
     result = analyze_semantic_comparison(profile, request, scenario, scenario)
+    invalid_result = result.model_copy(update={"impact_scope_digest": "sha256:" + "f" * 64}).model_dump(mode="json")
 
     with pytest.raises(ValidationError, match="scope digest"):
-        SemanticComparisonResultModel.model_validate(
-            result.model_copy(update={"impact_scope_digest": "sha256:" + "f" * 64}).model_dump(mode="json")
-        )
+        SemanticComparisonResultModel.model_validate(invalid_result)

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from collections import deque
-
 from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.contracts import (
+    ArtifactTransformationReportModel,
     ArtifactTransformationStatus,
 )
 from raes_contracts.semantic_comparison import (
@@ -19,8 +18,6 @@ from raes_contracts.semantic_comparison import (
     DependencyStateModel,
     IdentityRelation,
     ImpactClosureStatus,
-    ImpactPathModel,
-    ImpactPathStepModel,
     ImpactScopeModel,
     ModuleCoordinateModel,
     RelationStatus,
@@ -43,6 +40,7 @@ from .semantic_comparison_adapters import (
     coordinate_for_artifact,
     project_artifact,
 )
+from .semantic_comparison_impact import impact_paths as _impact_paths
 
 
 def analyze_semantic_comparison(
@@ -132,47 +130,64 @@ def _compare_subjects(
     before_map = {item.identity: item for item in before.subjects}
     after_map = {item.identity: item for item in after.subjects}
     rename_map = _rename_map(request, context, reasons)
-    identities = sorted(set(before_map) | set(after_map))
+    allowed = _bounded_subject_identities(request, before_map, after_map, reasons)
+    changes, consumed_before, consumed_after = _paired_subject_changes(
+        before_map, after_map, rename_map, allowed, reasons
+    )
+    changes.extend(
+        _unpaired_change(identity, IdentityRelation.ADDED)
+        for identity in sorted((set(after_map) & allowed) - consumed_after)
+    )
+    changes.extend(
+        _unpaired_change(identity, IdentityRelation.REMOVED)
+        for identity in sorted((set(before_map) & allowed) - consumed_before)
+    )
+    return tuple(
+        sorted(changes, key=lambda item: (item.identity, item.before_identity or "", item.after_identity or ""))
+    )
+
+
+def _bounded_subject_identities(
+    request: SemanticComparisonRequestModel,
+    before: dict[str, _Subject],
+    after: dict[str, _Subject],
+    reasons: set[ComparisonReason],
+) -> set[str]:
+    identities = sorted(set(before) | set(after))
     if len(identities) > request.limits.max_subjects:
         identities = identities[: request.limits.max_subjects]
         reasons.add(ComparisonReason.SUBJECT_BOUND_EXHAUSTED)
-    allowed = set(identities)
-    consumed_before: set[str] = set()
-    consumed_after: set[str] = set()
-    changes: list[SemanticChangeModel] = []
-    for identity in sorted(set(before_map) & set(after_map) & allowed):
-        changes.append(_paired_change(before_map[identity], after_map[identity], IdentityRelation.SAME, reasons))
-        consumed_before.add(identity)
-        consumed_after.add(identity)
+    return set(identities)
+
+
+def _paired_subject_changes(
+    before: dict[str, _Subject],
+    after: dict[str, _Subject],
+    rename_map: dict[str, str],
+    allowed: set[str],
+    reasons: set[ComparisonReason],
+) -> tuple[list[SemanticChangeModel], set[str], set[str]]:
+    same = sorted(set(before) & set(after) & allowed)
+    changes = [_paired_change(before[item], after[item], IdentityRelation.SAME, reasons) for item in same]
+    consumed_before = set(same)
+    consumed_after = set(same)
     for old, new in sorted(rename_map.items()):
-        if old in before_map and new in after_map and old in allowed and new in allowed:
-            changes.append(_paired_change(before_map[old], after_map[new], IdentityRelation.RENAMED, reasons))
+        if old in before and new in after and old in allowed and new in allowed:
+            changes.append(_paired_change(before[old], after[new], IdentityRelation.RENAMED, reasons))
             consumed_before.add(old)
             consumed_after.add(new)
-    for identity in sorted((set(after_map) & allowed) - consumed_after):
-        changes.append(
-            SemanticChangeModel(
-                identity=identity,
-                after_identity=identity,
-                identity_relation=IdentityRelation.ADDED,
-                textual_relation=RelationStatus.NOT_APPLICABLE,
-                structural_relation=RelationStatus.NOT_APPLICABLE,
-                semantic_relation=RelationStatus.NOT_APPLICABLE,
-            )
-        )
-    for identity in sorted((set(before_map) & allowed) - consumed_before):
-        changes.append(
-            SemanticChangeModel(
-                identity=identity,
-                before_identity=identity,
-                identity_relation=IdentityRelation.REMOVED,
-                textual_relation=RelationStatus.NOT_APPLICABLE,
-                structural_relation=RelationStatus.NOT_APPLICABLE,
-                semantic_relation=RelationStatus.NOT_APPLICABLE,
-            )
-        )
-    return tuple(
-        sorted(changes, key=lambda item: (item.identity, item.before_identity or "", item.after_identity or ""))
+    return changes, consumed_before, consumed_after
+
+
+def _unpaired_change(identity: str, relation: IdentityRelation) -> SemanticChangeModel:
+    return SemanticChangeModel(
+        identity=identity,
+        before_identity=identity if relation == IdentityRelation.REMOVED else None,
+        after_identity=identity if relation == IdentityRelation.ADDED else None,
+        identity_relation=relation,
+        textual_relation=RelationStatus.NOT_APPLICABLE,
+        structural_relation=RelationStatus.NOT_APPLICABLE,
+        semantic_relation=RelationStatus.NOT_APPLICABLE,
     )
 
 
@@ -224,28 +239,39 @@ def _rename_map(
     reasons: set[ComparisonReason],
 ) -> dict[str, str]:
     report = context.transformation_report
-    if report is None:
-        return {}
-    if report.status != ArtifactTransformationStatus.SUCCESS:
-        reasons.add(ComparisonReason.TRANSFORMATION_EVIDENCE_NOT_SUCCESSFUL)
-        return {}
-    if (
-        report.source_digest != request.before.canonical_digest
-        or report.target_digest != request.after.canonical_digest
-    ):
-        reasons.add(ComparisonReason.TRANSFORMATION_EVIDENCE_DIGEST_MISMATCH)
-        return {}
+    rename_map: dict[str, str] = {}
+    if report is not None:
+        if report.status != ArtifactTransformationStatus.SUCCESS:
+            reasons.add(ComparisonReason.TRANSFORMATION_EVIDENCE_NOT_SUCCESSFUL)
+        elif not _transformation_digests_match(request, report.source_digest, report.target_digest):
+            reasons.add(ComparisonReason.TRANSFORMATION_EVIDENCE_DIGEST_MISMATCH)
+        elif not _transformation_profiles_match(request, report):
+            reasons.add(ComparisonReason.TRANSFORMATION_EVIDENCE_PROFILE_MISMATCH)
+        else:
+            rename_map = {item.before: item.after for item in report.identity_map}
+    return rename_map
+
+
+def _transformation_digests_match(
+    request: SemanticComparisonRequestModel,
+    source_digest: str,
+    target_digest: str,
+) -> bool:
+    return source_digest == request.before.canonical_digest and target_digest == request.after.canonical_digest
+
+
+def _transformation_profiles_match(
+    request: SemanticComparisonRequestModel,
+    report: ArtifactTransformationReportModel,
+) -> bool:
     expected_before_profile = _coordinate_owner_profile(request.before)
     expected_after_profile = _coordinate_owner_profile(request.after)
-    if (
-        report.source_profile != expected_before_profile
-        or report.target_profile != expected_after_profile
-        or report.canonicalization_profile != request.before.canonicalization_profile
-        or report.canonicalization_profile != request.after.canonicalization_profile
-    ):
-        reasons.add(ComparisonReason.TRANSFORMATION_EVIDENCE_PROFILE_MISMATCH)
-        return {}
-    return {item.before: item.after for item in report.identity_map}
+    return (
+        report.source_profile == expected_before_profile
+        and report.target_profile == expected_after_profile
+        and report.canonicalization_profile == request.before.canonicalization_profile
+        and report.canonicalization_profile == request.after.canonicalization_profile
+    )
 
 
 def _compare_dependencies(
@@ -262,27 +288,36 @@ def _compare_dependencies(
     grouped_before = _group_dependencies(before)
     grouped_after = _group_dependencies(after)
     for key in sorted(set(grouped_before) | set(grouped_after)):
-        old = grouped_before.get(key, [])
-        new = grouped_after.get(key, [])
-        old_by_key = {_state_key(item): item for item in old}
-        new_by_key = {_state_key(item): item for item in new}
-        unchanged = [old_by_key[state_key] for state_key in sorted(set(old_by_key) & set(new_by_key))]
-        for state in unchanged:
-            changes.append(_dependency_change(key, DependencyRelation.UNCHANGED, state, state))
-        old_remaining = sorted((item for item in old if item not in unchanged), key=_state_key)
-        new_remaining = sorted((item for item in new if item not in unchanged), key=_state_key)
-        for old_state, new_state in zip(old_remaining, new_remaining, strict=False):
-            changes.append(_dependency_change(key, DependencyRelation.CHANGED, old_state, new_state))
-        if len(old_remaining) > len(new_remaining):
-            for state in old_remaining[len(new_remaining) :]:
-                changes.append(_dependency_change(key, DependencyRelation.REMOVED, state, None))
-        if len(new_remaining) > len(old_remaining):
-            for state in new_remaining[len(old_remaining) :]:
-                changes.append(_dependency_change(key, DependencyRelation.ADDED, None, state))
+        changes.extend(_dependency_group_changes(key, grouped_before.get(key, []), grouped_after.get(key, [])))
     if len(changes) > request.limits.max_dependency_edges:
         changes = changes[: request.limits.max_dependency_edges]
         reasons.add(ComparisonReason.DEPENDENCY_EDGE_BOUND_EXHAUSTED)
     return tuple(sorted(changes, key=_dependency_change_key))
+
+
+def _dependency_group_changes(
+    key: tuple[str, str],
+    old: list[DependencyStateModel],
+    new: list[DependencyStateModel],
+) -> list[DependencyChangeModel]:
+    old_by_key = {_state_key(item): item for item in old}
+    new_by_key = {_state_key(item): item for item in new}
+    unchanged = [old_by_key[state_key] for state_key in sorted(set(old_by_key) & set(new_by_key))]
+    changes = [_dependency_change(key, DependencyRelation.UNCHANGED, state, state) for state in unchanged]
+    old_remaining = sorted((item for item in old if item not in unchanged), key=_state_key)
+    new_remaining = sorted((item for item in new if item not in unchanged), key=_state_key)
+    changes.extend(
+        _dependency_change(key, DependencyRelation.CHANGED, old_state, new_state)
+        for old_state, new_state in zip(old_remaining, new_remaining, strict=False)
+    )
+    changes.extend(
+        _dependency_change(key, DependencyRelation.REMOVED, state, None)
+        for state in old_remaining[len(new_remaining) :]
+    )
+    changes.extend(
+        _dependency_change(key, DependencyRelation.ADDED, None, state) for state in new_remaining[len(old_remaining) :]
+    )
+    return changes
 
 
 def _stateful(
@@ -329,60 +364,6 @@ def _dependency_change(
         before=before,
         after=after,
     )
-
-
-def _impact_paths(
-    request: SemanticComparisonRequestModel,
-    changes: tuple[SemanticChangeModel, ...],
-    dependencies: tuple[DependencyChangeModel, ...],
-    reasons: set[ComparisonReason],
-) -> tuple[ImpactPathModel, ...]:
-    adjacency: dict[str, list[ImpactPathStepModel]] = {}
-    for dependency in dependencies:
-        state = dependency.after if dependency.after is not None else dependency.before
-        side = "after" if dependency.after is not None else "before"
-        if state is None:
-            continue
-        step = ImpactPathStepModel(
-            dependent_identity=dependency.dependent_identity,
-            dependency_identity=state.dependency_identity,
-            rule_id=dependency.rule_id,
-            evidence_side=side,
-        )
-        adjacency.setdefault(state.dependency_identity, []).append(step)
-    sources = sorted(
-        change.identity
-        for change in changes
-        if change.identity_relation != IdentityRelation.SAME
-        or change.semantic_relation == RelationStatus.CHANGED
-        or change.structural_relation == RelationStatus.CHANGED
-    )
-    paths: list[ImpactPathModel] = []
-    for source in sources:
-        queue: deque[tuple[str, tuple[ImpactPathStepModel, ...]]] = deque([(source, ())])
-        visited = {source}
-        while queue:
-            current, steps = queue.popleft()
-            outgoing = sorted(adjacency.get(current, ()), key=lambda item: (item.dependent_identity, item.rule_id))
-            if outgoing and len(steps) >= request.limits.max_path_depth:
-                reasons.add(ComparisonReason.IMPACT_PATH_DEPTH_EXHAUSTED)
-                continue
-            for step in outgoing:
-                next_steps = (*steps, step)
-                paths.append(
-                    ImpactPathModel(
-                        source_identity=source,
-                        affected_identity=step.dependent_identity,
-                        steps=next_steps,
-                    )
-                )
-                if len(paths) >= request.limits.max_paths:
-                    reasons.add(ComparisonReason.IMPACT_PATH_BOUND_EXHAUSTED)
-                    return tuple(sorted(paths, key=_path_key))
-                if step.dependent_identity not in visited:
-                    visited.add(step.dependent_identity)
-                    queue.append((step.dependent_identity, next_steps))
-    return tuple(sorted(paths, key=_path_key))
 
 
 def _record_scope_status(status: ImpactClosureStatus, reasons: set[ComparisonReason]) -> None:
@@ -438,14 +419,6 @@ def _dependency_change_key(change: DependencyChangeModel) -> tuple[str, str, str
         change.rule_id,
         change.before.dependency_identity if change.before else "",
         change.after.dependency_identity if change.after else "",
-    )
-
-
-def _path_key(path: ImpactPathModel) -> tuple[str, str, tuple[tuple[str, str, str], ...]]:
-    return (
-        path.source_identity,
-        path.affected_identity,
-        tuple((step.dependency_identity, step.dependent_identity, step.rule_id) for step in path.steps),
     )
 
 

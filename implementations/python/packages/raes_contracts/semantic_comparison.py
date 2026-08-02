@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal, TypeAlias
+from importlib import import_module
+from typing import Annotated, Literal
 
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
@@ -207,7 +208,7 @@ class ExternalConceptBindingsCoordinateModel(_CoordinateBase):
         return self
 
 
-ArtifactCoordinate: TypeAlias = Annotated[
+ArtifactCoordinate = Annotated[
     ScenarioCoordinateModel
     | ModuleCoordinateModel
     | TaskCoordinateModel
@@ -353,15 +354,14 @@ def _require_sorted_unique(values: tuple[object, ...], label: str) -> None:
         raise ValueError(f"{label} must be sorted and unique")
 
 
-from .semantic_comparison_results import (  # noqa: E402
-    DependencyChangeModel,
-    DependencyStateModel,
-    ImpactPathModel,
-    ImpactPathStepModel,
-    SemanticChangeModel,
-    SemanticComparisonContextModel,
-    SemanticComparisonResultModel,
-)
+_results = import_module(".semantic_comparison_results", __package__)
+DependencyChangeModel = _results.DependencyChangeModel
+DependencyStateModel = _results.DependencyStateModel
+ImpactPathModel = _results.ImpactPathModel
+ImpactPathStepModel = _results.ImpactPathStepModel
+SemanticChangeModel = _results.SemanticChangeModel
+SemanticComparisonContextModel = _results.SemanticComparisonContextModel
+SemanticComparisonResultModel = _results.SemanticComparisonResultModel
 
 __all__ = [
     "ArtifactCoordinate",

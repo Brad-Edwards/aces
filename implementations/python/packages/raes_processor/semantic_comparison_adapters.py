@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TypeAlias
 
 from pydantic import BaseModel
 from raes.phase_contracts import ResolvedImportProvenance
@@ -39,7 +38,7 @@ from .semantic_comparison_projections import (
     _without_editorial_description,
 )
 
-AdmittedArtifact: TypeAlias = (
+AdmittedArtifact = (
     Scenario
     | ResolvedImportProvenance
     | ExperimentTaskModel
@@ -48,6 +47,8 @@ AdmittedArtifact: TypeAlias = (
     | ExperimentStudyModel
     | ExternalConceptBindingDocumentModel
 )
+
+_CONTRACT_CANONICALIZATION_PROFILE = "rfc8785-jcs-sha256/v1"
 
 
 @dataclass(frozen=True)
@@ -87,63 +88,66 @@ def coordinate_for_artifact(
         "canonical_digest": digest,
         "exact_representation": exact_representation,
     }
+    coordinate: ArtifactCoordinate | None = None
     if type(artifact) is Scenario:
-        return ScenarioCoordinateModel(
+        coordinate = ScenarioCoordinateModel(
             canonical_identity=f"scenario:{artifact.name}",
             canonicalization_profile="raes-canonical-sdl/v1",
             scenario_id=artifact.name,
             scenario_version=artifact.version,
             **common,
         )
-    if type(artifact) is ResolvedImportProvenance:
-        return ModuleCoordinateModel(
+    elif type(artifact) is ResolvedImportProvenance:
+        coordinate = ModuleCoordinateModel(
             canonical_identity=f"module:{artifact.module_id}",
-            canonicalization_profile="rfc8785-jcs-sha256/v1",
+            canonicalization_profile=_CONTRACT_CANONICALIZATION_PROFILE,
             module_id=artifact.module_id,
             module_version=artifact.module_version,
             **common,
         )
-    if type(artifact) is ExperimentTaskModel:
-        return TaskCoordinateModel(
+    elif type(artifact) is ExperimentTaskModel:
+        coordinate = TaskCoordinateModel(
             canonical_identity=f"task:{artifact.task_id}",
-            canonicalization_profile="rfc8785-jcs-sha256/v1",
+            canonicalization_profile=_CONTRACT_CANONICALIZATION_PROFILE,
             task_id=artifact.task_id,
             task_version=artifact.task_version,
             **common,
         )
-    if type(artifact) is ExperimentRunModel:
-        return RunCoordinateModel(
+    elif type(artifact) is ExperimentRunModel:
+        coordinate = RunCoordinateModel(
             canonical_identity=f"run:{artifact.run_id}",
-            canonicalization_profile="rfc8785-jcs-sha256/v1",
+            canonicalization_profile=_CONTRACT_CANONICALIZATION_PROFILE,
             run_id=artifact.run_id,
             run_version=artifact.run_version,
             **common,
         )
-    if type(artifact) is ExperimentCaptureSpecModel:
-        return EvidenceSpecificationCoordinateModel(
+    elif type(artifact) is ExperimentCaptureSpecModel:
+        coordinate = EvidenceSpecificationCoordinateModel(
             canonical_identity=f"capture-spec:{artifact.capture_spec_id}",
-            canonicalization_profile="rfc8785-jcs-sha256/v1",
+            canonicalization_profile=_CONTRACT_CANONICALIZATION_PROFILE,
             capture_spec_id=artifact.capture_spec_id,
             spec_version=artifact.spec_version,
             **common,
         )
-    if type(artifact) is ExperimentStudyModel:
-        return StudyCoordinateModel(
+    elif type(artifact) is ExperimentStudyModel:
+        coordinate = StudyCoordinateModel(
             canonical_identity=f"study:{artifact.study_id}",
-            canonicalization_profile="rfc8785-jcs-sha256/v1",
+            canonicalization_profile=_CONTRACT_CANONICALIZATION_PROFILE,
             study_id=artifact.study_id,
             study_version=artifact.study_version,
             **common,
         )
-    if type(artifact) is ExternalConceptBindingDocumentModel:
-        return ExternalConceptBindingsCoordinateModel(
+    elif type(artifact) is ExternalConceptBindingDocumentModel:
+        coordinate = ExternalConceptBindingsCoordinateModel(
             canonical_identity=f"external-concept-bindings:{artifact.binding_set_id}",
-            canonicalization_profile="rfc8785-jcs-sha256/v1",
+            canonicalization_profile=_CONTRACT_CANONICALIZATION_PROFILE,
             binding_set_id=artifact.binding_set_id,
             binding_set_version=artifact.binding_set_version,
             **common,
         )
-    raise TypeError("semantic comparison requires an admitted RAES artifact model")
+    if coordinate is None:
+        raise TypeError("semantic comparison requires an admitted RAES artifact model")
+    return coordinate
 
 
 def build_impact_scope(
@@ -292,12 +296,13 @@ def _external_binding_subjects(
 
 def _dependencies(artifact: AdmittedArtifact) -> list[_Dependency]:
     dependent = coordinate_for_artifact(artifact).canonical_identity
+    dependencies: list[_Dependency]
     if type(artifact) is Scenario:
-        return [
+        dependencies = [
             _dependency(dependent, f"module:{item.namespace}", "scenario-import", item) for item in artifact.imports
         ]
-    if type(artifact) is ExperimentTaskModel:
-        return [
+    elif type(artifact) is ExperimentTaskModel:
+        dependencies = [
             _dependency(
                 dependent,
                 f"scenario:{artifact.scenario_ref.ref_id}",
@@ -305,8 +310,8 @@ def _dependencies(artifact: AdmittedArtifact) -> list[_Dependency]:
                 artifact.scenario_ref,
             )
         ]
-    if type(artifact) is ExperimentRunModel:
-        return [
+    elif type(artifact) is ExperimentRunModel:
+        dependencies = [
             _dependency(
                 dependent, f"task:{artifact.task_ref.ref_id}", "experiment-run-task-reference", artifact.task_ref
             ),
@@ -317,8 +322,8 @@ def _dependencies(artifact: AdmittedArtifact) -> list[_Dependency]:
                 artifact.scenario_snapshot_ref,
             ),
         ]
-    if type(artifact) is ExperimentCaptureSpecModel:
-        return [
+    elif type(artifact) is ExperimentCaptureSpecModel:
+        dependencies = [
             _dependency(
                 dependent,
                 _reference_identity(item.ref_kind, item.ref_id),
@@ -327,8 +332,8 @@ def _dependencies(artifact: AdmittedArtifact) -> list[_Dependency]:
             )
             for item in artifact.scope_refs
         ]
-    if type(artifact) is ExperimentStudyModel:
-        return [
+    elif type(artifact) is ExperimentStudyModel:
+        dependencies = [
             _dependency(
                 dependent,
                 _reference_identity(member.target_ref.ref_kind, member.target_ref.ref_id),
@@ -337,8 +342,8 @@ def _dependencies(artifact: AdmittedArtifact) -> list[_Dependency]:
             )
             for member in artifact.membership.values()
         ]
-    if type(artifact) is ExternalConceptBindingDocumentModel:
-        return [
+    elif type(artifact) is ExternalConceptBindingDocumentModel:
+        dependencies = [
             _dependency(
                 dependent,
                 binding.subject.canonical_ref,
@@ -347,7 +352,9 @@ def _dependencies(artifact: AdmittedArtifact) -> list[_Dependency]:
             )
             for binding in artifact.bindings.values()
         ]
-    return []
+    else:
+        dependencies = []
+    return dependencies
 
 
 def _dependency(dependent: str, dependency: str, rule: str, evidence: BaseModel) -> _Dependency:
