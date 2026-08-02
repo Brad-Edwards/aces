@@ -1,6 +1,6 @@
 # Adversarial Participant Control Current-State Assessment
 
-Date: 2026-07-30
+Date: 2026-08-02
 
 Parent issue: [#812](https://github.com/OpenRAE/rae/issues/812).
 
@@ -106,8 +106,25 @@ ADR-101 and the formal authority add two DRAFT owners:
 
 Issue #1001 publishes the exact `sem-233/rev1` powerset algebra, typed carrier
 mapping, lineage, and bounded test-local falsification evidence. SEM-233 stays
-DRAFT: portable contracts, runtime enforcement, backend realization, and the
-ASR-536 evaluation remain separate downstream work.
+DRAFT: runtime enforcement, backend realization, and the ASR-536 evaluation
+remain separate downstream work.
+
+Issue #1002 publishes the portable part of SEM-233 through the immutable
+`participant-boundary-flow-policy-v1@rev1` corpus artifact and the closed
+`participant-flow-control-relation-v1` schema. The relation carries two-
+coordinate effective labels, complete possible-input derivations, distinct
+fresh-result declassification and endorsement, final-sink decisions, and
+exact typed bindings to runtime facts, normalized action arguments, API-409,
+and API-423. A typed trusted context resolver validates exact revisions,
+authority, safe evidence, incumbent carrier semantics, capability and history
+coordinates, and all sink conjuncts; schema-only conformance is explicitly
+`structural-context-required`.
+
+The #1002 delivery records validation evidence rather than executing a flow
+decision. It adds no runtime store, event stream, message envelope, policy
+engine, backend capability, effect/disclosure mediation, or assurance claim.
+Those positive obligations remain with #1003, #1004, and the later ASR-536
+work.
 
 Issue #812 also opens six ordered implementation issues. It does not alter
 published schemas or runtime behavior and does not claim either DRAFT

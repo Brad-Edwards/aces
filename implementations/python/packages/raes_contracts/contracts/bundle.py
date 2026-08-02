@@ -56,6 +56,10 @@ from .participant_execution import (
     ParticipantExecutionControlRequestModel,
     ParticipantExecutionServiceStateModel,
 )
+from .participant_flow_control import (
+    ParticipantBoundaryFlowPolicyProfileModel,
+    ParticipantFlowControlRelationModel,
+)
 from .participant_information_state import (
     ParticipantInformationReconstructionProfileModel,
     ParticipantInformationStateRecordModel,
@@ -187,6 +191,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-information-reconstruction-profile-v1": (
             ParticipantInformationReconstructionProfileModel.model_json_schema()
         ),
+        "participant-boundary-flow-policy-v1": ParticipantBoundaryFlowPolicyProfileModel.model_json_schema(),
         "random-stream-vector-v1": RandomStreamVectorModel.model_json_schema(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
         "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
@@ -255,6 +260,7 @@ def _runtime_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),
         "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_json_schema(),
         "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_json_schema(),
+        "participant-flow-control-relation-v1": ParticipantFlowControlRelationModel.model_json_schema(),
         "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),

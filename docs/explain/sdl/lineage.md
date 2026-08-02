@@ -1656,6 +1656,19 @@ conformance through those generic declarations.
   confidentiality and integrity predicates at the same exact cut. Its finite
   executable model is bounded falsification evidence, not a portable contract,
   runtime or backend implementation, model check, proof, or covert-flow claim.
+- Issue #1002 publishes the portable contract boundary as the immutable
+  `participant-boundary-flow-policy-v1@rev1` artifact and the closed
+  `participant-flow-control-relation-v1` document. The contract adapts
+  [DStar's cross-host DIFC](https://www.usenix.org/conference/nsdi-08/securing-distributed-systems-information-flow-control),
+  [SIF's end-to-end confidentiality and integrity](https://www.cs.cornell.edu/andru/papers/usenix07-html/paper.html),
+  and [W3C PROV-DM's identified derivation and influence](https://www.w3.org/TR/2013/REC-prov-dm-20130430/)
+  into exact reference-only bindings over runtime facts, normalized action
+  arguments, API-409 control occurrences, and API-423 crossing occurrences.
+  Its trusted resolver validates exact profile revisions, carrier context,
+  authority, evidence, history heads, and all final-sink conjuncts. The schema
+  alone is structurally valid but explicitly not trusted without that context.
+  This delivery adds no runtime store, event stream, policy engine, backend
+  enforcement, PROV serialization compatibility, or covert-flow guarantee.
 - Issue #812 is design authority. Its DRAFT requirements and program do not
   establish runtime enforcement, backend realization, intentional-subversion
   robustness, model alignment, monitor honesty, private-reasoning safety, or

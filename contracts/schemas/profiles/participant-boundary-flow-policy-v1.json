@@ -1,0 +1,160 @@
+{
+  "$defs": {
+    "ParticipantFlowRuleReferenceModel": {
+      "additionalProperties": false,
+      "description": "Exact identity of one declarative rule used by the flow profile.",
+      "properties": {
+        "rule_ref": {
+          "minLength": 1,
+          "title": "Rule Ref",
+          "type": "string"
+        },
+        "rule_revision": {
+          "minLength": 1,
+          "title": "Rule Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_ref",
+        "rule_revision"
+      ],
+      "title": "ParticipantFlowRuleReferenceModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://openrae.github.io/rae/schemas/participant-boundary-flow-policy-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Immutable, non-executable two-coordinate SEM-233 flow algebra profile.",
+  "properties": {
+    "authority_revision": {
+      "const": "sem-233/rev1",
+      "title": "Authority Revision",
+      "type": "string"
+    },
+    "confidentiality_obligation_refs": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Confidentiality Obligation Refs",
+      "type": "array"
+    },
+    "declassification_authority": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "derivation_rule": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "endorsement_authority": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "integrity_obligation_refs": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Integrity Obligation Refs",
+      "type": "array"
+    },
+    "join": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "nonclaims": {
+      "items": {
+        "enum": [
+          "backend-realization",
+          "covert-channel-control",
+          "intentional-subversion-robustness",
+          "model-alignment",
+          "runtime-enforcement",
+          "universal-noninterference"
+        ],
+        "type": "string"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "Nonclaims",
+      "type": "array"
+    },
+    "normalization": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "order": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "profile_id": {
+      "const": "participant-boundary-flow-policy-v1",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "profile_revision": {
+      "const": "rev1",
+      "title": "Profile Revision",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-boundary-flow-policy/v1",
+      "default": "participant-boundary-flow-policy/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sink_policy": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "source_label_resolver": {
+      "$ref": "#/$defs/ParticipantFlowRuleReferenceModel"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "unknown_confidentiality_obligation_ref": {
+      "minLength": 1,
+      "title": "Unknown Confidentiality Obligation Ref",
+      "type": "string"
+    },
+    "unknown_integrity_obligation_ref": {
+      "minLength": 1,
+      "title": "Unknown Integrity Obligation Ref",
+      "type": "string"
+    },
+    "unknown_source_posture": {
+      "const": "unsupported-top",
+      "title": "Unknown Source Posture",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "profile_revision",
+    "authority_revision",
+    "title",
+    "description",
+    "confidentiality_obligation_refs",
+    "integrity_obligation_refs",
+    "unknown_confidentiality_obligation_ref",
+    "unknown_integrity_obligation_ref",
+    "normalization",
+    "order",
+    "join",
+    "source_label_resolver",
+    "derivation_rule",
+    "declassification_authority",
+    "endorsement_authority",
+    "sink_policy",
+    "unknown_source_posture",
+    "nonclaims"
+  ],
+  "title": "ParticipantBoundaryFlowPolicyProfileModel",
+  "type": "object"
+}
