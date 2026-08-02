@@ -538,36 +538,44 @@ entries:
         path: specs/formal/participant-episode-model/README.md
       - kind: abstract_state_machine_model
         path: specs/formal/participant-episode-model/README.md
+      # Delivered by #305 (SEM-222): episode/termination semantic gates, the RL
+      # termination/truncation closure record, and the invariant oracle.
+      - kind: unit_tests
+        path: implementations/python/tests/test_sem_222_episode_termination_semantics.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_sem_222_episode_termination_oracle.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/raes_contracts/participant_episode_closure.py
     waived_artifacts:
       - kind: unit_tests
         date: 2026-08-02
         tracking:
-          - "#305"
           - "#306"
           - "#307"
           - "#308"
           - "#309"
           - "#310"
         rationale: >-
-          Design-only joint-design run (#122). Per-requirement unit tests for
-          episode/termination and budget/exhaustion semantics are owned by the
-          spawned implementation issues #305-#310.
+          Joint-design run (#122). #305 (SEM-222) delivers the episode/termination
+          unit tests above; per-requirement unit tests for budget/exhaustion
+          semantics and the authored SDL surfaces remain owned by the spawned
+          implementation issues #306-#310.
       - kind: typed_ir_or_contract_coverage
         date: 2026-08-02
         tracking:
           - "#307"
           - "#308"
         rationale: >-
-          Authored episode-structure and interaction-budget SDL contracts and
-          their generated schemas are delivered by the DSL implementation issues
-          #307 (DSL-120) and #308 (DSL-121); this design run adds no executable
-          contract.
+          #305 (SEM-222) delivers the typed RL termination/truncation
+          closure-record contract above; the authored episode-structure and
+          interaction-budget SDL contracts and their generated schemas remain
+          owned by the DSL implementation issues #307 (DSL-120) and #308
+          (DSL-121).
       - kind: property_based_or_differential_tests
         date: 2026-08-02
         tracking:
-          - "#305"
           - "#306"
         rationale: >-
-          Property/differential coverage of episode identity/terminal-reason and
-          budget reserve/commit/reconcile invariants is owned by the SEM
-          implementation issues #305 (SEM-222) and #306 (SEM-223).
+          #305 (SEM-222) delivers the episode identity/terminal-reason invariant
+          oracle above; property/differential coverage of budget
+          reserve/commit/reconcile invariants remains owned by #306 (SEM-223).
