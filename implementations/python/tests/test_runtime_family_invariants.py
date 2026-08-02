@@ -323,14 +323,22 @@ def test_runtime_modules_do_not_redeclare_shared_validation_helpers() -> None:
     """Runtime families import shared helper policy instead of shadowing it."""
 
     package_dir = Path(raes.__file__).resolve().parent
+    # Discover both flat ``runtime_*.py`` modules and the submodules of
+    # ``runtime_*`` packages (a runtime family may be split into a package
+    # behind an API-stable re-export ``__init__``), so the no-shadowing
+    # invariant keeps enforcing after a modularity split.
+    runtime_module_paths = [
+        *package_dir.glob("runtime_*.py"),
+        *package_dir.glob("runtime_*/**/*.py"),
+    ]
     offenders: list[str] = []
-    for path in sorted(package_dir.glob("runtime_*.py")):
+    for path in sorted(runtime_module_paths):
         if path.name == "runtime_values.py":
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name in _SHARED_HELPER_DEFINITION_NAMES:
-                offenders.append(f"{path.name}:{node.lineno}:{node.name}")
+                offenders.append(f"{path.relative_to(package_dir)}:{node.lineno}:{node.name}")
 
     assert not offenders, "Runtime modules must not redeclare shared validation helpers:\n  " + "\n  ".join(offenders)
 
@@ -359,31 +367,57 @@ def test_primary_id_field_exists_on_model() -> None:
         )
 
 
-def _runtime_family_enums() -> dict[str, type[enum.Enum]]:
-    """Collect every Enum subclass *defined in* a runtime-family module.
+def _runtime_family_modules() -> dict[str, list[str]]:
+    """Map each top-level ``runtime_*`` family to the modules that define it.
 
-    A runtime-family module is any ``raes`` submodule whose name starts
-    with ``runtime_`` (this includes the ``*_vocab`` and ``*_definitions``
-    modules). Only enums whose ``__module__`` is that module are returned, so
-    enums merely re-exported or imported from another module are not
-    double-counted against the wrong module.
+    A runtime-family is any ``raes`` submodule whose name starts with
+    ``runtime_`` (this includes the ``*_vocab`` and ``*_definitions`` modules).
+    When a modularity split turns such a module into a *package* behind an
+    API-stable re-export ``__init__``, its concrete declarations live in private
+    submodules; the value list therefore carries the package ``__init__`` plus
+    every submodule, discovered by walking the real package files rather than
+    trusting what ``__init__`` happens to re-export.
     """
 
-    found: dict[str, type[enum.Enum]] = {}
+    families: dict[str, list[str]] = {}
     for module_info in pkgutil.iter_modules(raes.__path__):
         name = module_info.name
         if not name.startswith("runtime_"):
             continue
         qualified = f"raes.{name}"
-        module = importlib.import_module(qualified)
-        for value in vars(module).values():
-            if (
-                isinstance(value, type)
-                and issubclass(value, enum.Enum)
-                and value is not enum.Enum
-                and value.__module__ == qualified
-            ):
-                found[f"{name}.{value.__name__}"] = value
+        module_names = [qualified]
+        if module_info.ispkg:
+            package = importlib.import_module(qualified)
+            module_names.extend(info.name for info in pkgutil.walk_packages(package.__path__, prefix=f"{qualified}."))
+        families[name] = module_names
+    return families
+
+
+def _runtime_family_enums() -> dict[str, type[enum.Enum]]:
+    """Collect every Enum subclass *defined in* a runtime-family module.
+
+    Discovery walks each family's real modules (a flat ``runtime_*.py`` or every
+    submodule of a ``runtime_*`` package — see :func:`_runtime_family_modules`)
+    and keeps enums whose ``__module__`` is the module being inspected. Reading
+    each concrete submodule directly — instead of ``vars`` of a re-exporting
+    ``__init__`` — means an enum defined in a private submodule but never
+    re-exported is still seen, so it cannot silently opt out of the
+    open/closed-sentinel lint; enums merely re-exported or imported from another
+    module are counted once, against their defining module.
+    """
+
+    found: dict[str, type[enum.Enum]] = {}
+    for name, module_names in _runtime_family_modules().items():
+        for module_name in module_names:
+            module = importlib.import_module(module_name)
+            for value in vars(module).values():
+                if (
+                    isinstance(value, type)
+                    and issubclass(value, enum.Enum)
+                    and value is not enum.Enum
+                    and value.__module__ == module_name
+                ):
+                    found[f"{name}.{value.__name__}"] = value
     return found
 
 

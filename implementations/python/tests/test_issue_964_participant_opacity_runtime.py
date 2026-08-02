@@ -453,7 +453,7 @@ def test_catalog_preserves_runtime_assurance_while_extending_backend_axes() -> N
     relation = catalog.relations["participant-predicate-opacity"]
     historical = load_behavioral_relation_catalog_revision("rev10").relations["participant-predicate-opacity"]
 
-    assert catalog.taxonomy_revision == "rev11"
+    assert catalog.taxonomy_revision == "rev12"
     assert relation.assurance.runtime_enforcement_status == "partial"
     assert relation.assurance.backend_declaration_status == "declared"
     assert relation.assurance.backend_realization_status == "partial"

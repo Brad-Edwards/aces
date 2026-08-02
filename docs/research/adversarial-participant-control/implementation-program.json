@@ -1,10 +1,11 @@
 {
   "schema_version": "adversarial-participant-control-program/v1",
-  "assessment_date": "2026-07-30",
+  "assessment_date": "2026-08-01",
   "parent_issue": 812,
   "milestone": "Participant Information-Flow & Behavioral Equivalence",
   "deliverables": [
     "docs/decisions/issue-812-adversarial-agent-control-preflight.md",
+    "docs/decisions/issue-1001-sem-233-boundary-flow-semantics-preflight.md",
     "docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md",
     "docs/research/adversarial-participant-control/index.md",
     "docs/research/adversarial-participant-control/current-state-assessment.md",
@@ -15,6 +16,8 @@
     "docs/research/adversarial-participant-control/implementation-program.md",
     "docs/research/adversarial-participant-control/implementation-program.json",
     "specs/formal/participant-semantics/adversarial-flow-control.md",
+    "implementations/python/tests/sem233_boundary_flow_model.py",
+    "implementations/python/tests/test_sem_233_adversarial_boundary_flow.py",
     "docs/public/participant-control.md",
     "docs/explain/sdl/lineage.md"
   ],
@@ -248,19 +251,41 @@
   "flow_policy_profile": {
     "profile_id": "participant-boundary-flow-policy-v1",
     "revision": "rev1",
+    "authority_revision": "sem-233/rev1",
+    "definition_status": "published",
     "confidentiality": {
       "independent_coordinate": true,
       "meaning": "maximum permitted audiences, principals, destinations, and sink classes",
       "join": "least-upper-bound",
+      "exact_domain": "powerset-of-closed-confidentiality-obligation-universe",
+      "order": "subset-with-more-obligations-more-restrictive",
+      "bottom": "empty-obligation-set",
+      "top": "complete-profile-obligation-universe",
+      "exact_join": "set-union",
       "release_operation": "declassification"
     },
     "integrity": {
       "independent_coordinate": true,
       "meaning": "origins and possible writers that may have influenced the value plus sink-required trust",
       "join": "conservative-influence-union",
+      "exact_domain": "powerset-of-closed-possible-influence-obligation-universe",
+      "order": "subset-with-more-unresolved-influences-more-restrictive",
+      "bottom": "empty-obligation-set",
+      "top": "complete-profile-obligation-universe",
+      "exact_join": "set-union",
       "release_operation": "integrity-endorsement"
     },
+    "algebraic_laws": [
+      "closure",
+      "associativity",
+      "commutativity",
+      "idempotence",
+      "monotonicity",
+      "traversal-order-independence"
+    ],
+    "sink_predicate": "both-coordinate-obligation-subset-plus-existing-exact-cut-gates",
     "unknown_source_default": "confidential-and-untrusted",
+    "unknown_algebra_value": "top-with-unresolved-status-and-deny-at-sink",
     "missing_or_unknown_behavior": "deny-or-explicitly-unsupported",
     "opaque_transformation": "retain-join-of-all-possible-inputs",
     "historical_labels_are_immutable": true,

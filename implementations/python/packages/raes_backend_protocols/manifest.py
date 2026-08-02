@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from raes_contracts.apparatus import ApparatusIdentity, ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.apparatus import (
+    ApparatusIdentity,
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
 from raes_contracts.contracts import (
     ApparatusIdentityModel,
     BackendCapabilitiesV2Model,
@@ -17,6 +22,7 @@ from raes_contracts.contracts import (
     OrchestratorCapabilitiesModel,
     ParticipantFeatureSupportModel,
     ParticipantRuntimeCapabilitiesModel,
+    RealizationObservationCapabilityModel,
     RealizationSupportDeclarationModel,
     TimeCapabilitiesModel,
 )
@@ -91,6 +97,13 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 supported_constraint_kinds=sorted(declaration.supported_constraint_kinds),
                 supported_exact_requirement_kinds=sorted(declaration.supported_exact_requirement_kinds),
                 disclosure_kinds=sorted(declaration.disclosure_kinds),
+                observation_capabilities={
+                    concern_kind: RealizationObservationCapabilityModel(
+                        verification_scope=capability.verification_scope,
+                        observation_strength=capability.observation_strength,
+                    )
+                    for concern_kind, capability in sorted(declaration.observation_capabilities.items())
+                },
                 artifact_mechanisms=list(declaration.artifact_mechanisms),
                 constraints=dict(declaration.constraints),
             )
@@ -257,6 +270,13 @@ def _realization_support_from_model(model: RealizationSupportDeclarationModel) -
         supported_constraint_kinds=frozenset(model.supported_constraint_kinds),
         supported_exact_requirement_kinds=frozenset(model.supported_exact_requirement_kinds),
         disclosure_kinds=frozenset(model.disclosure_kinds),
+        observation_capabilities={
+            concern_kind: RealizationObservationCapability(
+                verification_scope=capability.verification_scope,
+                observation_strength=capability.observation_strength,
+            )
+            for concern_kind, capability in model.observation_capabilities.items()
+        },
         artifact_mechanisms=tuple(model.artifact_mechanisms),
         constraints=dict(model.constraints),
     )

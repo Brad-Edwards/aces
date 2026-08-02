@@ -12,6 +12,7 @@ from enum import Enum
 __all__ = [
     "RuntimeForwardingAgentImplementation",
     "RuntimeForwardingAgentKind",
+    "RuntimeForwardingAgentOwnershipRole",
     "RuntimeForwardingBufferCrypto",
     "RuntimeForwardingEnrollmentClassification",
     "RuntimeForwardingParseFormat",
@@ -48,6 +49,13 @@ class RuntimeForwardingAgentKind(str, Enum):
     CONTENT_SYNC = "content_sync"
     UNKNOWN = "unknown"
     OTHER = "other"
+
+
+class RuntimeForwardingAgentOwnershipRole(str, Enum):
+    """Closed ownership of an agent relative to the system under test."""
+
+    SYSTEM_UNDER_TEST = "system_under_test"
+    MEASUREMENT_APPARATUS = "measurement_apparatus"
 
 
 class RuntimeForwardingSourceKind(str, Enum):

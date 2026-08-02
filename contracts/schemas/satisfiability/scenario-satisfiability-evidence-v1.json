@@ -13652,6 +13652,18 @@
           "title": "Name",
           "type": "string"
         },
+        "ownership_role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingAgentOwnershipRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "system_under_test",
+          "title": "Ownership Role"
+        },
         "reload_channels": {
           "items": {
             "$ref": "#/$defs/RuntimeForwardingReloadChannel"
@@ -13727,6 +13739,15 @@
         "other"
       ],
       "title": "RuntimeForwardingAgentKind",
+      "type": "string"
+    },
+    "RuntimeForwardingAgentOwnershipRole": {
+      "description": "Closed ownership of an agent relative to the system under test.",
+      "enum": [
+        "system_under_test",
+        "measurement_apparatus"
+      ],
+      "title": "RuntimeForwardingAgentOwnershipRole",
       "type": "string"
     },
     "RuntimeForwardingBufferCrypto": {

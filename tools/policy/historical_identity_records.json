@@ -32,8 +32,8 @@
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
       "rationale": "Preserves append-only lineage observations recorded before the RAES identity cutover.",
-      "occurrences": 346,
-      "content_sha256": "362f96df38c79d9d33f85e69a919b4f0e3732482e9589b26c932470bc6e7d82f"
+      "occurrences": 349,
+      "content_sha256": "b1766af5a23efec003c395b529cf17362942573e1147427d579af39f62c8ee9f"
     },
     {
       "path": "contracts/schema-publication/tombstones/\u0061ces-semantic-invariants-v1.json",
@@ -348,7 +348,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 1,
-      "content_sha256": "99272388e9cc884d18398cc320802e82f9e655b4f67ae72bd7cd8f1309a8dfaa"
+      "content_sha256": "a3f6e034b696f0254f5d1321b747d5a3cefe6df65784a5d88e1615b1eeec4749"
     },
     {
       "path": "docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md",
@@ -495,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "985885071792c50bfdc23be4991dee1dbeeb12647278aaee0a9c4edbd3c363cb"
+      "content_sha256": "f5ee5174c7d30e1ed859187c90dacac3b64a3e3dac0f185cca2fe71c263495c9"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1524,7 +1524,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
-      "content_sha256": "631b59c4a40ec935a68ab975814c023d3824e5c42e62415e3176b88baacf6519"
+      "content_sha256": "cf2625cc1cd3a0314c4c7a1f87c56ed1bbfdfe8b400381372107e276bbbb2b03"
     },
     {
       "path": "docs/research/formal-semantic-validation/execution-snapshot-v1.json",
@@ -1565,8 +1565,8 @@
       "path": "docs/research/lineage/source-audit-2026-07-12.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 24,
-      "content_sha256": "89676790565dc970e4f07ff48dd705094124877bdd4f4aaa7e574c4cce4af9e9"
+      "occurrences": 25,
+      "content_sha256": "2dc32335c8e8ada53615b3bcd25195729738ef388dcf5cf7d686b7aa72707669"
     },
     {
       "path": "docs/research/participant-backend-contracts/index.md",

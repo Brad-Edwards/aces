@@ -115,7 +115,7 @@ _PARTICIPANT_VALIDATOR = (
     "[participant validator](../../implementations/python/packages/raes/validator/_content_objectives.py)"
 )
 _PARTICIPANT_SEMANTICS = (
-    "[participant semantics](../../implementations/python/packages/raes/semantics/participant_behavior.py)"
+    "[participant semantics](../../implementations/python/packages/raes/semantics/participant_behavior/__init__.py)"
 )
 _PARTICIPANT_INTERACTIVE_ACCESS_SEMANTICS = (
     "[participant interactive-access semantics]"
@@ -123,7 +123,7 @@ _PARTICIPANT_INTERACTIVE_ACCESS_SEMANTICS = (
 )
 _OUTCOME_SEMANTICS = "[outcome semantics](../../implementations/python/packages/raes/semantics/participant_outcome.py)"
 _BEHAVIOR_SEMANTICS = (
-    "[behavior semantics](../../implementations/python/packages/raes/semantics/participant_behavior.py)"
+    "[behavior semantics](../../implementations/python/packages/raes/semantics/participant_behavior/__init__.py)"
 )
 _BEHAVIOR_VALIDATOR = (
     "[behavior validator](../../implementations/python/packages/raes/validator/_content_objectives.py)"
@@ -146,7 +146,7 @@ _EVIDENCE_VALIDATOR = (
     "[evidence validator](../../implementations/python/packages/raes/validator/_evidence_requirements.py)"
 )
 _OBJECTIVE_SEMANTICS = (
-    "[objective semantics](../../implementations/python/packages/raes/semantics/objective_semantics.py)"
+    "[objective semantics](../../implementations/python/packages/raes/semantics/objective_semantics/__init__.py)"
 )
 _WORKFLOW_SEMANTICS = "[workflow validator](../../implementations/python/packages/raes/validator/_workflows_verify.py)"
 _PROPOSITION_VALIDATOR = (

@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
+from raes_contracts.vocabulary import RealizationVerificationScope
+
 from .realization_concern_observations import (
     validate_capability_policy_observation,
     validate_environment_observation,
@@ -35,6 +37,7 @@ class RealizationConcernDescriptor:
     projector: Callable[[object, bool], object] | None = None
     sanitizer: Callable[[object, bool], object] | None = None
     observed_validator: Callable[[object], None] | None = None
+    verification_scope: Callable[[object], RealizationVerificationScope] | None = None
     non_stateful_mounts_only: bool = False
 
     @property
@@ -63,6 +66,11 @@ class RealizationConcernDescriptor:
         projector = self.sanitizer or self.projector
         return projector(value, observed) if projector is not None else value
 
+    def required_verification_scope(self, value: object) -> RealizationVerificationScope | None:
+        """Return the authored inventory scope that must be corroborated."""
+
+        return self.verification_scope(value) if self.verification_scope is not None else None
+
 
 @dataclass(frozen=True)
 class RegisteredRealizationConcern:
@@ -79,6 +87,22 @@ class RegisteredRealizationConcern:
 def _mount_source_kind(item: object) -> object:
     source_kind = item.get("source_kind") if isinstance(item, Mapping) else getattr(item, "source_kind", None)
     return getattr(source_kind, "value", source_kind)
+
+
+def _forwarding_agent_verification_scope(value: object) -> RealizationVerificationScope:
+    """Classify identity-only inventory separately from authored configuration."""
+
+    for agent in value if isinstance(value, list) else ():
+        for field_name in ("sources", "transforms", "ship_targets", "reload_channels", "settings"):
+            field_value = agent.get(field_name) if isinstance(agent, Mapping) else getattr(agent, field_name, None)
+            if field_value:
+                return RealizationVerificationScope.CONFIGURATION
+        buffer_policy = (
+            agent.get("buffer_policy") if isinstance(agent, Mapping) else getattr(agent, "buffer_policy", None)
+        )
+        if buffer_policy is not None:
+            return RealizationVerificationScope.CONFIGURATION
+    return RealizationVerificationScope.PRESENCE
 
 
 _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
@@ -141,6 +165,7 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("spec", "node", "runtime", "forwarding_agents"),
         projector=project_forwarding_agents,
         observed_validator=validate_forwarding_agents_observation,
+        verification_scope=_forwarding_agent_verification_scope,
     ),
     RealizationConcernDescriptor(
         section="nodes",

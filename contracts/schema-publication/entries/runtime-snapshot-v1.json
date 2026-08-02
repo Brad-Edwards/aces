@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "5770a30cc288096d4586cbc80356a7e7436583274ed2598945a3c3dd7e68f9ed",
+  "content_hash": "0dc5926aa421eac52576a6ad7235b2fc99a62466a023ac1e4524aacab5a84417",
   "last_change": {
-    "summary": "Added ACT-604 participant information-state history and propagated issue #964 participant-opacity bindings through the runtime snapshot.",
-    "content_hash": "5770a30cc288096d4586cbc80356a7e7436583274ed2598945a3c3dd7e68f9ed"
+    "summary": "Added value-free realization observation disclosures for issue #1043.",
+    "content_hash": "0dc5926aa421eac52576a6ad7235b2fc99a62466a023ac1e4524aacab5a84417"
   }
 }

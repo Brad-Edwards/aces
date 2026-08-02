@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from .vocabulary import RealizationSupportMode
+from .vocabulary import ObservationStrength, RealizationSupportMode, RealizationVerificationScope
 
 if TYPE_CHECKING:
     from .artifact_requirements import ArtifactMechanismCapability
@@ -48,6 +48,22 @@ class ConceptBinding:
 
 
 @dataclass(frozen=True)
+class RealizationObservationCapability:
+    """Declared concern-specific corroboration available from a backend."""
+
+    verification_scope: RealizationVerificationScope
+    observation_strength: ObservationStrength
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.verification_scope, RealizationVerificationScope):
+            raise TypeError("verification_scope must be RealizationVerificationScope")
+        if not isinstance(self.observation_strength, ObservationStrength):
+            raise TypeError("observation_strength must be ObservationStrength")
+        if self.observation_strength is ObservationStrength.NONE:
+            raise ValueError("realization observation capability must provide non-none evidence")
+
+
+@dataclass(frozen=True)
 class RealizationSupportDeclaration:
     """Declared realization-support and disclosure surface for one concern domain."""
 
@@ -56,6 +72,7 @@ class RealizationSupportDeclaration:
     supported_constraint_kinds: frozenset[str] = frozenset()
     supported_exact_requirement_kinds: frozenset[str] = frozenset()
     disclosure_kinds: frozenset[str] = frozenset()
+    observation_capabilities: dict[str, RealizationObservationCapability] = field(default_factory=dict)
     artifact_mechanisms: tuple[ArtifactMechanismCapability, ...] = ()
     constraints: dict[str, str] = field(default_factory=dict)
 
@@ -68,6 +85,13 @@ class RealizationSupportDeclaration:
             field_name="supported_exact_requirement_kinds",
         )
         _require_non_empty_strings(self.disclosure_kinds, field_name="disclosure_kinds")
+        if any(not kind.strip() for kind in self.observation_capabilities):
+            raise ValueError("observation_capabilities must not contain empty concern kinds")
+        if any(
+            not isinstance(capability, RealizationObservationCapability)
+            for capability in self.observation_capabilities.values()
+        ):
+            raise TypeError("observation_capabilities values must be RealizationObservationCapability")
         if not self.disclosure_kinds:
             raise ValueError("RealizationSupportDeclaration.disclosure_kinds must not be empty")
         if not (self.supported_constraint_kinds or self.supported_exact_requirement_kinds):

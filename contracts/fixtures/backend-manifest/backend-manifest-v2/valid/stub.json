@@ -380,6 +380,7 @@
         "runtime-snapshot-v1"
       ],
       "domain": "runtime-realization",
+      "observation_capabilities": {},
       "support_mode": "constrained",
       "supported_constraint_kinds": [
         "account-feature",

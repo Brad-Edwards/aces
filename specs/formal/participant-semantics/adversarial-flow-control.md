@@ -1,9 +1,13 @@
-# SEM-233 and ASR-536 Adversarial Participant Flow Control
+# SEM-233 And ASR-536 Adversarial Participant Flow Control
 
-Status: design authority; positive implementation and evaluation obligations
-remain DRAFT.
+Status: SEM-233 definition authority is published; portable-contract,
+runtime, backend, and ASR-536 evaluation obligations remain DRAFT.
 
 Requirements: `SEM-233`, `ASR-536`.
+
+SEM-233 authority revision: `sem-233/rev1`.
+
+Flow-policy profile: `participant-boundary-flow-policy-v1@rev1`.
 
 Decision authority:
 [ADR-101](../../../docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md).
@@ -50,61 +54,131 @@ Every derived identity is fresh and binds the source identities, derivation
 kind, profile and revision, exact policy/state cut, authority, destination or
 sink, and safe evidence refs. No release operation mutates a prior fact.
 
-## Flow labels
+## Exact Revision-1 Flow Algebra
 
-The effective label of `x` is:
+For revision 1, profile `phi` declares two independent, closed, finite
+universes:
+
+```text
+C_phi = confidentiality-obligation tokens admitted by phi
+I_phi = integrity-obligation tokens admitted by phi
+```
+
+A confidentiality token is one revisioned policy clause, such as an
+owner-relative audience, destination, or sink restriction. An integrity token
+is one unresolved possible-influence obligation. The source-label resolver
+maps a possible writer or influence to the applicable integrity tokens; the
+immutable influence refs remain in provenance even if a later endorsement
+discharges an obligation. Tokens are stable typed refs, not raw values or open
+metadata keys.
+
+The effective label domain is the product powerset:
 
 ```text
 Label_phi(x,c) = (Conf_phi(x,c), Int_phi(x,c))
+Conf_phi(x,c) in P(C_phi)
+Int_phi(x,c)  in P(I_phi)
 ```
 
-where:
+Normalization validates every token against the named profile revision,
+removes duplicates, and orders the canonical serialization lexically. An
+unknown token, unresolved profile/revision, or cross-profile comparison is
+unsupported; it is never silently discarded or coerced.
 
-- `Conf_phi(x,c)` is ordered by permitted audience, principal, destination, and
-  sink exposure; higher labels are at least as restrictive; and
-- `Int_phi(x,c)` conservatively records origins or possible writers that may
-  have influenced `x`, plus the sink-required integrity predicate.
+For labels `l1 = (C1, I1)` and `l2 = (C2, I2)`, revision 1 defines:
 
-These coordinates are independent. Authentication, signatures, hashes,
-markings, sensitivity, confidence, roles, and monitor scores can contribute
-governed evidence but cannot define both coordinates.
+```text
+l1 <=_phi l2   iff C1 subset-of C2 and I1 subset-of I2
+l1 join_phi l2 = (C1 union C2, I1 union I2)
+bottom_phi      = (empty-set, empty-set)
+top_phi         = (C_phi, I_phi)
+```
+
+Upward means at least as restrictive: more confidentiality clauses must be
+satisfied and more possible-influence obligations must be admitted or
+explicitly endorsed. Owner-relative clauses make labels for mutually
+distrustful principals or audiences incomparable when neither obligation set
+contains the other. Neither coordinate is a global classification or trust
+ladder.
+
+The join is closed, associative, commutative, idempotent, and monotone in each
+argument. Its componentwise union makes it independent of traversal order.
+Adding a possible input cannot remove an obligation, and a successful decision
+for `l2` cannot imply success for a strictly more restrictive label unless the
+sink satisfies the added obligations.
+
+For sink policy `S` at the exact cut, let `SatC_phi(S)` and `SatI_phi(S)` be the
+closed sets of confidentiality and integrity obligations that its resolved
+audience, destination, sink class, and release authorities satisfy:
+
+```text
+ConfidentialityObligationsSatisfied_phi(l,S) iff Conf_phi(l) subset-of SatC_phi(S)
+IntegrityObligationsSatisfied_phi(l,S)       iff Int_phi(l)  subset-of SatI_phi(S)
+```
+
+The predicates are independent. A sink may satisfy one and fail the other.
+Authentication, signatures, hashes, markings, sensitivity, confidence, roles,
+and monitor scores may contribute evidence to a revisioned resolver, but none
+is a label coordinate or satisfies both predicates.
 
 ### Source defaults
 
-`SourceLabel_phi(src,c)` resolves through the revisioned source authority.
-When the source, profile, revision, or authority cannot be resolved, the
-result is the profile's maximum-confidentiality and minimum-trust default. A
-deployment may use a narrower deny-only representation, but it cannot default
-to public or trusted.
+`SourceLabel_phi(src,c)` resolves through the revisioned source authority. A
+known source returns a normalized member of `P(C_phi) x P(I_phi)`. When the
+source, profile, revision, label, or authority cannot be resolved, the result
+is either typed `unsupported` or the deny-equivalent `top_phi` accompanied by
+an unresolved status. A sink decision rejects unresolved status even if its
+ordinary obligation sets would otherwise cover `top_phi`. Empty input is not
+evidence for `bottom_phi`, public, or trusted.
 
 ### Conservative composition
 
-For a derivation `d` whose possible inputs are `I(d)`:
+For a derivation `d` whose complete possible-input set is `Inputs(d)`:
 
 ```text
-Conf_phi(d,c) = join_conf { Conf_phi(x,c) | x in I(d) }
-Int_phi(d,c)  = join_int  { Int_phi(x,c)  | x in I(d) }
+Conf_phi(d,c) = union { Conf_phi(x,c) | x in Inputs(d) }
+Int_phi(d,c)  = union { Int_phi(x,c)  | x in Inputs(d) }
 ```
 
-`join_conf` is the profile's least upper bound. `join_int` is conservative
-influence union under the profile's integrity order.
-
-An opaque participant, model, service, script, summary, copy, redaction, or
-transformation retains the join of every input that could have influenced its
-result. A typed transformation can narrow the influence set only when its
-closed contract and evidence establish that relation. Apparatus claims alone
-cannot do so.
+`Inputs(d)` includes participant context, retained memory, shared/joint state,
+tool and destination arguments, error branches, and each participant, tool,
+service, transformation, monitor, or apparatus source that may influence the
+result. An opaque model, script, summary, copy, redaction, edit, parse, or
+transformation retains all inputs. A typed transformation may exclude an
+influence only through a closed, revisioned non-influence relation and safe
+evidence; omission from caller-supplied provenance is not such evidence.
 
 ### Cross-participant and cross-episode carriage
 
 API-409 handoff, API-423 crossing, controller change, participant change,
-shared state, joint state, or episode reset never clears labels or provenance.
-A receiving participant inherits the effective upstream label and source
-history through the governed crossing.
+shared state, joint state, or episode reset never clears labels, unresolved
+status, provenance, influence refs, or release history. A receiving
+participant inherits the effective upstream state through the governed
+crossing.
 
 Cross-episode replay binds the original source, profile, revision, policy
 decisions, release events, SEM-230 memory scope, and expected history heads.
-Replay under a later cut receives a fresh decision.
+Replay under a later cut receives a fresh final-sink decision; the later policy
+does not reinterpret the historical label or release.
+
+## Typed Carrier And Derivation Mapping
+
+The mapping is semantic and reference-based. Issue #1001 does not change the
+incumbent contracts.
+
+| Flow stage | Existing typed owner | Required SEM-233 refs and possible inputs |
+| --- | --- | --- |
+| observation, retrieval, tool result, runtime fact | participant observation envelope and runtime-fact declaration/version/binding/sink models | source-label decision, profile/revision, source/provenance refs, and every source or apparatus that may affect the value; sensitivity is resolver evidence only |
+| participant context, information state, retained memory, shared/joint state | SEM-230 participant view/history/memory and episode carriers | effective label, unresolved status, derivation/release history, and all retained upstream source/influence refs |
+| proposal, participant output, action and destination/tool arguments | participant decision surfaces, action definitions, and `ParticipantActionAdmissionRequest` | join of context, memory, observations, participant process, transformation apparatus, and every argument source; structural/action admission remains a separate gate |
+| controller change and handoff | ACT-617 and API-409 control occurrences/context validation | unchanged flow label and history plus fresh controller/authority occurrence refs; handoff is not declassification, endorsement, or admission |
+| crossing, projection, redaction, transformation, disclosure | API-423 typed subjects, predecessor stages, exact policy/cut refs, and contextual validator | source/result identities, transformation relation, full input label join, immutable provenance/influence refs, and any coordinate-specific release ref |
+| participant/external output, delivery, stream, callback, persistent write, and error | API-423 disclosure/delivery/observation stages and participant-facing views | a fresh final-sink decision for every serialization/effect; disclosure, delivery, and observation remain distinct; each stream chunk is independently governed or derived from one governed complete value |
+| snapshot, retry, replay, and cross-episode reuse | RUN-310/RUN-319 snapshot/history/idempotency/expected-head carriers | original profile/policy/cut, label, unresolved status, provenance/influence/release histories, new exact cut, and fresh sink decision |
+
+An open `taint`, `security_labels`, `context`, `metadata`, prompt, diagnostic,
+header, query parameter, environment variable, or backend-options bag is not a
+typed carrier for this mapping.
 
 ## Distinct operations
 
@@ -127,6 +201,11 @@ The following operations are semantically distinct:
 | advice | supplies evidence or recommendation without authority |
 | execution or delivery | realizes an already permitted effect or disclosure |
 
+Declassification removes only named members of `Conf_phi`; endorsement removes
+only named members of `Int_phi`. Both require the obligation to exist in the
+source label and require explicit authority for the exact removal. Endorsement
+does not delete the possible-writer/influence refs that caused the obligation.
+
 Declassification and endorsement each bind:
 
 - source and fresh result identity;
@@ -146,11 +225,14 @@ For effective label `l`, exact cut `c`, sink `s`, authority `a`, destination
 `d`, participant `p`, and effective capability posture `k`:
 
 ```text
-MayRelease_phi(p,l,s,d,a,c,k)
-  = FlowPolicy_phi(l,s,d,c)
+MayFlowAtSink_phi(p,l,s,d,a,c,k)
+  = ConfidentialityObligationsSatisfied_phi(l,s,d,c)
+    and IntegrityObligationsSatisfied_phi(l,s,d,c)
+    and AuthenticatedIdentityBinding(a,p,s,d,c)
     and Authorized(a,p,s,d,c)
     and Admitted(p,s,c)
     and EffectiveCapability(k,phi,s)
+    and ExistingMayCrossAndTransformationGates(p,l,s,d,c)
     and FreshHeads(c)
 ```
 
@@ -158,7 +240,8 @@ Every conjunct is deny-first. Heuristic monitor output is not a conjunct that
 can turn denial into permission. A profile may require monitor evidence as a
 precondition, but only deterministic policy interprets that evidence.
 
-The runtime evaluates `MayRelease`:
+The downstream runtime obligation owned by issue #1003 is to evaluate
+`MayFlowAtSink`:
 
 - after the last label, provenance, policy, authority, destination,
   participant, audience, capability, and state-cut resolution;
@@ -167,10 +250,11 @@ The runtime evaluates `MayRelease`:
 - immediately before participant-facing or external serialization, streaming,
   delivery, error output, or other disclosure.
 
-It commits the decision and all predecessor/history changes atomically before
-effect. A denial, unsupported result, missing label or provenance, ambiguous
-join, stale cut, history-head conflict, or failed commit causes no external
-call and no disclosure.
+That future runtime must commit the decision and all predecessor/history
+changes atomically before effect. A denial, unsupported result, missing label
+or provenance, ambiguous join, stale cut, history-head conflict, or failed
+commit causes no external call and no disclosure. This definition and its
+test-local finite model do not implement that boundary.
 
 Each streaming chunk is either governed before release or derived from a
 complete materialized value whose entire release is governed by the profile.
@@ -184,7 +268,7 @@ limitations, and safe evidence.
 
 ```text
 MonitorResult != Authorization
-MonitorFailure does not widen MayRelease
+MonitorFailure does not widen MayFlowAtSink
 ```
 
 Monitor roles are apparatus and experiment declarations. A profile states:
@@ -291,6 +375,22 @@ exact cut. Handoff grants neither trust nor action admission.
 Every denied case records zero prohibited `RuntimeTarget` calls and zero
 participant/external disclosure. Tests also inspect append-only histories,
 safe audit/error evidence, and replay.
+
+## Bounded Executable Evidence
+
+`implementations/python/tests/sem233_boundary_flow_model.py` is a test-local
+finite interpretation of the revision-1 powerset algebra. Its companion
+`test_sem_233_adversarial_boundary_flow.py` exercises closure, associativity,
+commutativity, idempotence, monotonicity, traversal-order independence,
+coordinate independence, conservative derivation, unknown/missing labels,
+cross-profile joins, laundering attempts, coordinate-specific rewrites,
+release-operation conflation, handoff, cross-episode replay, stale cuts, sink
+obligations, and every deny-first final predicate conjunct.
+
+Those cases are bounded falsification evidence over synthetic refs. The model
+is not a portable contract, runtime implementation, backend realization,
+complete instrumentation claim, model check, proof, universal
+noninterference result, or intentional-subversion evaluation.
 
 ## Security and evidence boundary
 
