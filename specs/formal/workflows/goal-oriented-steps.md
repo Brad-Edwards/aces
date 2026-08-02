@@ -53,7 +53,7 @@ same objective without changing its backend-neutral success meaning.
 ## Implementation Mapping
 
 - authored mode and fail-closed validation:
-  `implementations/python/packages/raes/orchestration.py`
+  `implementations/python/packages/raes/orchestration/__init__.py`
 - compiled realization projection and feature requirements:
   `implementations/python/packages/raes_processor/compiler/workflow_steps.py`
 - portable attempt provenance:

@@ -55,12 +55,13 @@ result.
 Issue #812 and ADR-101 add the SEM-233 boundary-flow and ASR-536
 intentional-subversion evaluation design. Issue #1001 publishes the exact
 `sem-233/rev1` two-coordinate obligation algebra, carrier mapping, and bounded
-falsification evidence; ASR-536 remains design-only. Their normative profiles are in
+falsification evidence. Issue #1002 publishes the immutable flow profile and
+portable relation contract; ASR-536 remains design-only. Their normative profiles are in
 [`adversarial-flow-control.md`](adversarial-flow-control.md). The design
 extends the existing participant, control, crossing, runtime, backend, and
 experiment carriers with independent confidentiality and integrity
 coordinates, conservative derivation, final-sink mediation, and explicit
-attack-protocol variables. The SEM-233 finite model is not a portable contract,
+attack-protocol variables. The #1001 SEM-233 finite model is not the #1002 portable contract,
 runtime enforcement, backend realization, monitor-honesty, covert-channel, or
 adversarial-robustness result.
 
@@ -779,7 +780,7 @@ Minimum future implementation artifacts:
 
 Current implementation artifacts for the `SEM-208` slice:
 
-- `implementations/python/packages/raes/participant_behavior.py` defines
+- `implementations/python/packages/raes/participant_behavior/__init__.py` defines
   typed action contracts and observation boundaries;
 - `implementations/python/packages/raes/semantics/participant_behavior.py`
   and `implementations/python/packages/raes/validator/` fail closed on
@@ -821,7 +822,7 @@ Minimum future implementation artifacts:
 
 Current implementation artifacts for the `SEM-209` slice:
 
-- `implementations/python/packages/raes/participant_behavior.py` defines
+- `implementations/python/packages/raes/participant_behavior/__init__.py` defines
   interaction classes, target references, related actions, and shared-state
   references on action contracts;
 - `implementations/python/packages/raes/semantics/participant_behavior.py`
@@ -890,7 +891,7 @@ Implemented transition discipline:
 
 Current implementation artifacts for the `SEM-210` slice:
 
-- `implementations/python/packages/raes/participant_behavior.py` defines
+- `implementations/python/packages/raes/participant_behavior/__init__.py` defines
   participant information-boundary classes, view dispositions, explicit view
   rules, time-indexed view transitions, realized-view disclosure metadata, and
   observation-boundary hidden, observable, and evidence-only reference
@@ -971,7 +972,7 @@ Current implementation artifacts for the `SEM-211` slice:
 - `implementations/python/packages/raes/participant_action_semantics.py`
   defines controlled precondition, effect, and portable failure vocabularies
   plus typed action-contract declarations and backend failure mappings;
-- `implementations/python/packages/raes/participant_behavior.py` embeds
+- `implementations/python/packages/raes/participant_behavior/__init__.py` embeds
   those typed declarations in governed participant action contracts;
 - `implementations/python/packages/raes_processor/compiler/` carries the
   typed precondition classes, effect classes, failure classes, and backend
@@ -1066,7 +1067,7 @@ Current implementation artifacts for the first `SEM-213` slice:
   defines typed time domains, temporal event points, schedule/cadence/deadline/
   dwell/latency/time-window contract kinds, backend timing disclosure kinds,
   support modes, and abstract temporal states;
-- `implementations/python/packages/raes/participant_behavior.py` embeds
+- `implementations/python/packages/raes/participant_behavior/__init__.py` embeds
   temporal contracts and backend timing disclosures in governed participant
   action contracts, requires temporal preconditions to resolve to typed
   temporal contracts, and fails closed on unknown backend disclosure refs;
@@ -1776,10 +1777,11 @@ strategies, collusion and correlated failure, audit and intervention
 protocols, memory/replay, and separate safety, usefulness, cost, uncertainty,
 limitation, and nonclaim measures.
 
-Issue #812 supplies the design authority and child program only. SEM-233 and
-ASR-536 remain DRAFT; issues #1001, #1002, #1003, #1004, #1007, and #1008 own
-their semantic, contract, runtime, apparatus/backend, evaluation, and
-documentation work.
+Issue #812 supplies the design authority and child program. Issue #1001
+publishes the SEM-233 revision-1 algebra, and #1002 publishes its exact
+profile plus portable relation contract with resolver-backed context
+validation. SEM-233 and ASR-536 remain DRAFT; #1003, #1004, #1007, and #1008
+retain the runtime, apparatus/backend, evaluation, and documentation work.
 
 ## Required Future Verification
 

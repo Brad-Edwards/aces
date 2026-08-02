@@ -1,20 +1,17 @@
-"""Runtime mail-service inventory models for SDL nodes.
+"""Element models for the runtime mail-service inventory.
 
-This surface expresses participant-observable mail-server logical state under
-``Node.runtime``. Transport exposure remains in ``Node.services``; mail records
-reference same-node services and add typed protocol, mailbox, routing, queue,
-and configuration facts that do not fit HTTP routes, filesystem entries, or
-generic scenario accounts.
+These are the typed leaf records (components, listeners, domains, mailbox
+stores, mailboxes, aliases, routing rules, queues, and settings) aggregated by
+:class:`raes.runtime_mail_service.RuntimeMailService`.
 """
 
 import re
-from typing import Any
 
 from pydantic import Field, field_validator, model_validator
 
-from ._base import SDLModel, is_variable_ref, parse_int_or_var
-from .runtime_filesystem import RuntimeSensitivityClassification
-from .runtime_mail_vocab import (
+from .._base import SDLModel, is_variable_ref, parse_int_or_var
+from ..runtime_filesystem import RuntimeSensitivityClassification
+from ..runtime_mail_vocab import (
     RuntimeMailAuthMechanism,
     RuntimeMailComponentKind,
     RuntimeMailCredentialClassification,
@@ -30,50 +27,20 @@ from .runtime_mail_vocab import (
     RuntimeMailSettingProvenance,
     RuntimeMailTlsMode,
 )
-from .runtime_values import (
+from ..runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
     enforce_observed_value_redaction,
     parse_runtime_enum_or_var,
-    reject_duplicates,
     require_non_empty,
     require_symbol,
 )
-
-__all__ = [
-    "RelationshipMailAccess",
-    "RuntimeMailAlias",
-    "RuntimeMailAuthMechanism",
-    "RuntimeMailComponent",
-    "RuntimeMailComponentKind",
-    "RuntimeMailCredentialClassification",
-    "RuntimeMailDomain",
-    "RuntimeMailDomainRole",
-    "RuntimeMailListener",
-    "RuntimeMailListenerRole",
-    "RuntimeMailMailbox",
-    "RuntimeMailMailboxRole",
-    "RuntimeMailMailboxStatus",
-    "RuntimeMailMailboxStore",
-    "RuntimeMailMailboxStoreKind",
-    "RuntimeMailProtocol",
-    "RuntimeMailQueue",
-    "RuntimeMailQueueKind",
-    "RuntimeMailQueueStability",
-    "RuntimeMailRoutingKind",
-    "RuntimeMailRoutingRule",
-    "RuntimeMailService",
-    "RuntimeMailSetting",
-    "RuntimeMailSettingProvenance",
-    "RuntimeMailTlsMode",
-]
 
 _EMAIL_ADDRESS = re.compile(r"^[^@\s]+@[^@\s]+$")
 _REDACTED_SENSITIVITIES = (
     RuntimeSensitivityClassification.REDACTED,
     RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
-_DUPLICATE_MAIL_TEMPLATE = "Duplicate runtime mail-service {label} '{value}' in {container_label}"
 
 
 def _mail_address_or_var(value: str, *, field_name: str) -> str:
@@ -152,12 +119,12 @@ class RuntimeMailListener(SDLModel):
 
     @field_validator("capabilities", "tls_versions", mode="before")
     @classmethod
-    def coerce_string_lists(cls, v: Any) -> list[str]:
+    def coerce_string_lists(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("auth_mechanisms", mode="before")
     @classmethod
-    def coerce_auth_mechanisms(cls, v: Any) -> list[Any]:
+    def coerce_auth_mechanisms(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("auth_mechanisms")
@@ -263,7 +230,7 @@ class RuntimeMailMailbox(SDLModel):
 
     @field_validator("auth_mechanisms", mode="before")
     @classmethod
-    def coerce_auth_mechanisms(cls, v: Any) -> list[Any]:
+    def coerce_auth_mechanisms(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("auth_mechanisms")
@@ -308,7 +275,7 @@ class RuntimeMailAlias(SDLModel):
 
     @field_validator("target_refs", "external_targets", mode="before")
     @classmethod
-    def coerce_targets(cls, v: Any) -> list[str]:
+    def coerce_targets(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("external_targets")
@@ -420,106 +387,3 @@ class RuntimeMailSetting(SDLModel):
             redacted_classifications=_REDACTED_SENSITIVITIES,
         )
         return self
-
-
-class RuntimeMailService(SDLModel):
-    """A node-scoped runtime mail-service logical inventory."""
-
-    mail_service_id: str
-    service: str = ""
-    engine: str = ""
-    version: str = ""
-    name: str = ""
-    description: str = ""
-    components: list[RuntimeMailComponent] = Field(default_factory=list)
-    listeners: list[RuntimeMailListener] = Field(default_factory=list)
-    domains: list[RuntimeMailDomain] = Field(default_factory=list)
-    mailbox_stores: list[RuntimeMailMailboxStore] = Field(default_factory=list)
-    mailboxes: list[RuntimeMailMailbox] = Field(default_factory=list)
-    aliases: list[RuntimeMailAlias] = Field(default_factory=list)
-    routing_rules: list[RuntimeMailRoutingRule] = Field(default_factory=list)
-    queues: list[RuntimeMailQueue] = Field(default_factory=list)
-    settings: list[RuntimeMailSetting] = Field(default_factory=list)
-
-    @field_validator("mail_service_id")
-    @classmethod
-    def validate_mail_service_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="mail_service_id")
-
-    @model_validator(mode="after")
-    def validate_service(self) -> "RuntimeMailService":
-        self._reject_duplicate_collection_ids()
-        self._reject_duplicate_local_ref_ids()
-        return self
-
-    def _reject_duplicate_collection_ids(self) -> None:
-        for label, attr in (
-            ("component_id", "components"),
-            ("listener_id", "listeners"),
-            ("domain_id", "domains"),
-            ("store_id", "mailbox_stores"),
-            ("mailbox_id", "mailboxes"),
-            ("alias_id", "aliases"),
-            ("rule_id", "routing_rules"),
-            ("queue_id", "queues"),
-            ("setting_id", "settings"),
-        ):
-            reject_duplicates(
-                [getattr(item, label) for item in getattr(self, attr)],
-                label=label,
-                container_label=f"mail service '{self.mail_service_id}'",
-                duplicate_template=_DUPLICATE_MAIL_TEMPLATE,
-                skip_empty=False,
-            )
-
-    def _reject_duplicate_local_ref_ids(self) -> None:
-        entries: list[tuple[str, str]] = [("mail_service_id", self.mail_service_id)]
-        for label, collection_name in (
-            ("component_id", "components"),
-            ("listener_id", "listeners"),
-            ("domain_id", "domains"),
-            ("store_id", "mailbox_stores"),
-            ("mailbox_id", "mailboxes"),
-            ("alias_id", "aliases"),
-            ("rule_id", "routing_rules"),
-            ("queue_id", "queues"),
-            ("setting_id", "settings"),
-        ):
-            entries.extend((label, getattr(item, label)) for item in getattr(self, collection_name))
-
-        seen: dict[str, str] = {}
-        for label, value in entries:
-            prior = seen.get(value)
-            if prior is not None:
-                raise ValueError(
-                    f"Duplicate runtime mail-service stable id '{value}' in service "
-                    f"'{self.mail_service_id}' across {prior} and {label}"
-                )
-            seen[value] = label
-
-
-class RelationshipMailAccess(SDLModel):
-    """Typed mail-access detail carried by a top-level relationship edge."""
-
-    protocol: RuntimeMailProtocol | str = RuntimeMailProtocol.OTHER
-    auth_mechanism: RuntimeMailAuthMechanism | str = RuntimeMailAuthMechanism.OTHER
-    tls_mode: RuntimeMailTlsMode | str = RuntimeMailTlsMode.UNKNOWN
-    listener_ref: str = ""
-    mailbox_ref: str = ""
-    domain_ref: str = ""
-    description: str = ""
-
-    @field_validator("protocol", mode="before")
-    @classmethod
-    def normalize_protocol(cls, v: RuntimeMailProtocol | str) -> RuntimeMailProtocol | str:
-        return parse_runtime_enum_or_var(v, RuntimeMailProtocol, field_name="protocol")
-
-    @field_validator("auth_mechanism", mode="before")
-    @classmethod
-    def normalize_auth_mechanism(cls, v: RuntimeMailAuthMechanism | str) -> RuntimeMailAuthMechanism | str:
-        return parse_runtime_enum_or_var(v, RuntimeMailAuthMechanism, field_name="auth_mechanism")
-
-    @field_validator("tls_mode", mode="before")
-    @classmethod
-    def normalize_tls_mode(cls, v: RuntimeMailTlsMode | str) -> RuntimeMailTlsMode | str:
-        return parse_runtime_enum_or_var(v, RuntimeMailTlsMode, field_name="tls_mode")

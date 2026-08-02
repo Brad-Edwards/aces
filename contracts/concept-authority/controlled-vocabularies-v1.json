@@ -1452,6 +1452,246 @@
         }
       }
     },
+    "participant-flow-label-resolution-statuses": {
+      "title": "Participant Flow Label Resolution Statuses",
+      "description": "Closed resolution postures for independent SEM-233 confidentiality and integrity labels.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.labels.resolution_status"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "resolved": {
+          "title": "Resolved",
+          "description": "Both label coordinates resolve under the exact profile and policy cut."
+        },
+        "unresolved": {
+          "title": "Unresolved",
+          "description": "At least one required source or coordinate is unresolved and deny-equivalent."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "The selected profile cannot resolve the required source or coordinate."
+        }
+      }
+    },
+    "participant-flow-subject-kinds": {
+      "title": "Participant Flow Subject Kinds",
+      "description": "Closed value-free subject identities admitted by the SEM-233 relation contract.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.labels.subject.subject_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "runtime-fact-version": {
+          "title": "Runtime Fact Version",
+          "description": "One exact immutable runtime-fact version identity."
+        },
+        "action-argument": {
+          "title": "Action Argument",
+          "description": "One normalized action-argument name without its value."
+        },
+        "participant-control-occurrence": {
+          "title": "Participant Control Occurrence",
+          "description": "One exact API-409 occurrence identity."
+        },
+        "participant-crossing-occurrence": {
+          "title": "Participant Crossing Occurrence",
+          "description": "One exact API-423 occurrence identity."
+        },
+        "derived-result": {
+          "title": "Derived Result",
+          "description": "A fresh value-free result identity produced by derivation or release."
+        }
+      }
+    },
+    "participant-flow-release-kinds": {
+      "title": "Participant Flow Release Kinds",
+      "description": "Closed coordinate-specific SEM-233 release operations.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.releases.kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "declassification": {
+          "title": "Declassification",
+          "description": "An authorized fresh-result change to confidentiality obligations only."
+        },
+        "endorsement": {
+          "title": "Endorsement",
+          "description": "An authorized fresh-result change to integrity obligations only."
+        }
+      }
+    },
+    "participant-flow-coordinate-results": {
+      "title": "Participant Flow Coordinate Results",
+      "description": "Closed results for each independent final-sink flow coordinate.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.sink_decisions.coordinate_result"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "satisfied": {
+          "title": "Satisfied",
+          "description": "The exact coordinate obligations are satisfied at the selected cut."
+        },
+        "deny": {
+          "title": "Deny",
+          "description": "The exact coordinate is denied."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "The coordinate cannot be supported."
+        },
+        "stale": {
+          "title": "Stale",
+          "description": "A required coordinate or history head is stale."
+        },
+        "unresolved": {
+          "title": "Unresolved",
+          "description": "A required coordinate did not resolve."
+        },
+        "unknown": {
+          "title": "Unknown",
+          "description": "The coordinate result is unknown and not permission."
+        },
+        "ambiguous": {
+          "title": "Ambiguous",
+          "description": "More than one incompatible coordinate resolution remains."
+        }
+      }
+    },
+    "participant-flow-final-dispositions": {
+      "title": "Participant Flow Final Dispositions",
+      "description": "Closed deny-first final-sink dispositions for SEM-233.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.sink_decisions.final_disposition"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "permit": {
+          "title": "Permit",
+          "description": "Both coordinates and every incumbent contextual conjunct permit."
+        },
+        "deny": {
+          "title": "Deny",
+          "description": "At least one exact conjunct denies."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "At least one required conjunct is unsupported."
+        },
+        "stale": {
+          "title": "Stale",
+          "description": "At least one required conjunct is stale."
+        },
+        "unresolved": {
+          "title": "Unresolved",
+          "description": "At least one required conjunct is unknown, ambiguous, or unresolved."
+        }
+      }
+    },
+    "participant-flow-sink-kinds": {
+      "title": "Participant Flow Sink Kinds",
+      "description": "Closed final effect and disclosure sink categories governed by SEM-233.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.sink_decisions.sink.sink_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "runtime-fact-sink": {
+          "title": "Runtime Fact Sink",
+          "description": "A compiled action input bound through the runtime-fact plane."
+        },
+        "action-argument": {
+          "title": "Action Argument",
+          "description": "A normalized participant action argument."
+        },
+        "participant-crossing": {
+          "title": "Participant Crossing",
+          "description": "An exact API-423 participant-boundary crossing."
+        },
+        "participant-output": {
+          "title": "Participant Output",
+          "description": "A participant-facing output disclosure."
+        },
+        "persistent-write": {
+          "title": "Persistent Write",
+          "description": "A persistent external or runtime write."
+        },
+        "callback": {
+          "title": "Callback",
+          "description": "An externally observable callback."
+        },
+        "error": {
+          "title": "Error",
+          "description": "An externally observable error surface."
+        },
+        "stream-chunk": {
+          "title": "Stream Chunk",
+          "description": "One independently governed streamed output chunk."
+        }
+      }
+    },
+    "participant-flow-binding-kinds": {
+      "title": "Participant Flow Binding Kinds",
+      "description": "Closed incumbent carrier families that can bind into a SEM-233 relation.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.bindings.kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "runtime-fact": {
+          "title": "Runtime Fact",
+          "description": "An exact declaration, version, sink, and binding-event join."
+        },
+        "action-argument": {
+          "title": "Action Argument",
+          "description": "An exact normalized argument name and admission join."
+        },
+        "participant-control": {
+          "title": "Participant Control",
+          "description": "An exact API-409 control-occurrence join."
+        },
+        "participant-crossing": {
+          "title": "Participant Crossing",
+          "description": "An exact API-423 crossing-occurrence join."
+        }
+      }
+    },
+    "participant-flow-relation-target-kinds": {
+      "title": "Participant Flow Relation Target Kinds",
+      "description": "Closed SEM-233 aggregate records that an incumbent carrier binding may target.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.bindings.relation_target.target_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "label": {
+          "title": "Label",
+          "description": "One effective two-coordinate flow label."
+        },
+        "derivation": {
+          "title": "Derivation",
+          "description": "One complete possible-input derivation."
+        },
+        "release": {
+          "title": "Release",
+          "description": "One coordinate-specific fresh-result release."
+        },
+        "sink-decision": {
+          "title": "Sink Decision",
+          "description": "One deny-first exact final-sink decision."
+        }
+      }
+    },
     "observation-capture-kinds": {
       "title": "Observation Capture Kinds",
       "description": "Backend-supported evidence capture categories for experiment observation capability declarations.",

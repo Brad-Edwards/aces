@@ -243,6 +243,44 @@ certification, runtime enforcement, backend completeness, or covert-channel
 control. No copied-code notice or third-party distribution obligation is
 introduced by these publication and institutional citations.
 
+## Issue 1002 Portable Flow-Control Contract Sources
+
+On 2026-08-02, issue #1002 extended the audit from the SEM-233 algebra to the
+portable record boundary. The review used these primary publication and
+standards identities:
+
+- Nickolai Zeldovich, Silas Boyd-Wickizer, and David Mazières, *Securing
+  Distributed Systems with Information Flow Control*, NSDI 2008,
+  <https://www.usenix.org/conference/nsdi-08/securing-distributed-systems-information-flow-control>.
+  DStar carries decentralized labels and authority across mutually distrustful
+  hosts rather than treating a network hop as a label reset.
+- Stephen Chong, K. Vikram, and Andrew C. Myers, *SIF: Enforcing
+  Confidentiality and Integrity in Web Applications*, USENIX Security 2007,
+  <https://www.cs.cornell.edu/andru/papers/usenix07-html/paper.html>. SIF
+  demonstrates end-to-end confidentiality and integrity enforcement across
+  request boundaries and untrusted application code.
+- W3C Provenance Working Group, Luc Moreau, and Paolo Missier, *PROV-DM: The
+  PROV Data Model*, W3C Recommendation, 30 April 2013,
+  <https://www.w3.org/TR/2013/REC-prov-dm-20130430/>. PROV-DM distinguishes
+  identified entities, activities, derivations, agents, and influence so that
+  provenance can remain a validation input without becoming an authorization
+  decision.
+
+RAES adapts those lessons into two closed ACES-native roots: an immutable
+profile artifact and a relation document. Records bind exact profile,
+concrete-policy, state-cut, participant, episode, carrier, predecessor,
+provenance, and possible-influence identities. Declassification and
+endorsement produce fresh results, and final-sink permission requires both
+SEM-233 coordinates plus the incumbent API-423 and action-admission gates.
+The records contain refs and safe evidence only, never the governed runtime
+fact, action argument, prompt, observation, or disclosure value.
+
+The implementation does not copy DStar, SIF, Jif, or PROV syntax or code. It
+does not claim compatibility with their protocols, compiler/runtime,
+serialization, or interchange model. Publication of these semantic
+adaptations therefore introduces no copied-code notice or third-party
+distribution obligation.
+
 ## DSL-437 Participant And Simulation Sources
 
 This addendum was reviewed on 2026-07-24 for DSL-437. It records semantic
