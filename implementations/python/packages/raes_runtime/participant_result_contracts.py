@@ -24,6 +24,7 @@ from raes_contracts.participant_crossing_history import (
     iter_participant_crossing_history_transition_violations,
 )
 from raes_contracts.participant_episode import iter_participant_episode_snapshot_violations
+from raes_contracts.participant_episode_closure import iter_participant_episode_closure_violations
 from raes_contracts.participant_information_state_history import (
     iter_participant_information_state_history_transition_violations,
     iter_participant_information_state_snapshot_violations,
@@ -57,6 +58,33 @@ def participant_episode_contract_diagnostics(
     ]
 
 
+def participant_episode_closure_contract_diagnostics(
+    snapshot: RuntimeSnapshot,
+) -> list[Diagnostic]:
+    """Validate SEM-222 episode closure records against realized episode history.
+
+    A backend RL/game ``termination``/``truncation`` step signal relates to an
+    ADR-013 episode terminal reason only through an explicit, evidence-bearing
+    closure record (EBM-10). This validates the snapshot's
+    ``participant_episode_closure_records`` against its append-only episode
+    history via ``iter_participant_episode_closure_violations`` and wraps each
+    violation in a ``runtime.backend-contract-invalid`` diagnostic. It never
+    mutates episode history; a closure record that references a terminal fact
+    absent from the history head is a violation, not a fact. The same check runs
+    inside ``participant_runtime_state_contract_diagnostics`` so backend results
+    cannot persist contradictory closure records; this helper is the focused
+    single-concern seam over the shared iterator.
+    """
+
+    return [
+        _failure_diagnostic("runtime.backend-contract-invalid", address, message)
+        for address, message in iter_participant_episode_closure_violations(
+            snapshot.participant_episode_closure_records,
+            snapshot.participant_episode_history,
+        )
+    ]
+
+
 def participant_runtime_state_contract_diagnostics(
     snapshot: RuntimeSnapshot,
     *,
@@ -74,6 +102,10 @@ def participant_runtime_state_contract_diagnostics(
     violations = [
         *iter_participant_episode_snapshot_violations(
             snapshot.participant_episode_results,
+            snapshot.participant_episode_history,
+        ),
+        *iter_participant_episode_closure_violations(
+            snapshot.participant_episode_closure_records,
             snapshot.participant_episode_history,
         ),
         *iter_participant_behavior_snapshot_violations(
