@@ -281,6 +281,5 @@ class TestEvaluationResultEnvelope:
         )
         contract = EvaluationResultContract(resource_type="metric")
         assert any(
-            "does not match compiled contract" in violation
-            for violation in validate_evaluation_result(contract, state)
+            "does not match compiled contract" in violation for violation in validate_evaluation_result(contract, state)
         )

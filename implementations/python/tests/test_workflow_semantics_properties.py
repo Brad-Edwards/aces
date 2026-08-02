@@ -177,9 +177,7 @@ class TestStepResultContract:
         contract, lifecycle, outcome, attempts = payload
         assert validate_workflow_step_result(
             contract, lifecycle=lifecycle, outcome=outcome, attempts=attempts
-        ) == validate_workflow_step_result_contract(
-            contract, lifecycle=lifecycle, outcome=outcome, attempts=attempts
-        )
+        ) == validate_workflow_step_result_contract(contract, lifecycle=lifecycle, outcome=outcome, attempts=attempts)
 
     @given(st.sampled_from(_NON_OBSERVABLE_STEP_TYPES), st.integers(max_value=-1))
     @settings(deadline=None)
