@@ -19,7 +19,9 @@ leaves every legacy API-423 path unchanged.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
+from typing import cast
 
 from raes_contracts.contracts import (
     ParticipantFlowControlRelationModel,
@@ -126,7 +128,7 @@ def resolve_participant_flow_sink_decision(
 def _resolved_flow_sink_decision(
     control_plane: object,
     crossing: PreparedParticipantCrossing,
-    hook: object,
+    hook: Callable[..., object],
     sink_kind: ParticipantFlowSinkKind,
 ) -> ParticipantFlowSinkDecision:
     decision_occurrence = crossing.decision
@@ -148,7 +150,7 @@ def _resolved_flow_sink_decision(
 def _resolve_flow_sink_relation(
     control_plane: object,
     crossing: PreparedParticipantCrossing,
-    hook: object,
+    hook: Callable[..., object],
     sink_kind: ParticipantFlowSinkKind,
     head_refs: tuple[str, ...],
 ) -> ParticipantFlowSinkResolution | ParticipantFlowSinkDecision:
@@ -223,8 +225,7 @@ def flow_sink_audit_details(decision: ParticipantFlowSinkDecision) -> dict[str, 
 def apply_flow_sink_details(audit: AuditEvent, decision: ParticipantFlowSinkDecision) -> AuditEvent:
     """Fold the SEM-233 final-sink reference into a committed crossing audit event."""
 
-    updated: AuditEvent = replace(audit, details={**audit.details, **flow_sink_audit_details(decision)})
-    return updated
+    return cast(AuditEvent, replace(audit, details={**audit.details, **flow_sink_audit_details(decision)}))
 
 
 def flow_sink_denied_record(crossing: PreparedParticipantCrossing) -> ControlPlaneOperationRecord:
@@ -238,10 +239,10 @@ def flow_sink_denied_record(crossing: PreparedParticipantCrossing) -> ControlPla
     )
     rejected_receipt = replace(crossing.record.receipt, accepted=False, diagnostics=[diagnostic])
     rejected_status = replace(crossing.record.status, state=OperationState.FAILED, diagnostics=[diagnostic])
-    rejected_record: ControlPlaneOperationRecord = replace(
-        crossing.record, receipt=rejected_receipt, status=rejected_status
+    return cast(
+        ControlPlaneOperationRecord,
+        replace(crossing.record, receipt=rejected_receipt, status=rejected_status),
     )
-    return rejected_record
 
 
 def commit_flow_sink_denial(
