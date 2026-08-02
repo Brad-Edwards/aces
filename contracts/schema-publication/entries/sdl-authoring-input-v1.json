@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "b06b178b3611f9ce587968b1dc7d73e50b500cfe3cbb367b641e77cfcea0b6a0",
+  "content_hash": "7dd0c097ac64e715c161c95db3796d44ca3a86e440fe9bd94dd56a260d928181",
   "last_change": {
-    "summary": "Added forwarding-agent ownership roles for issue #1043.",
-    "content_hash": "b06b178b3611f9ce587968b1dc7d73e50b500cfe3cbb367b641e77cfcea0b6a0"
+    "summary": "Added the target-node CPU architecture requirement (Node.architecture) with its governed vocabulary, aliases, and governed x-<owner>:<term> extension for issue #674; the schema constrains the value to that governed vocabulary (no unrestricted string branch), keeps target/package/host architecture distinct, and defines fail-closed target/runtime-package compatibility, including the ADR-061 tightening that a node without a target architecture may not carry an architecture-constrained package.",
+    "content_hash": "7dd0c097ac64e715c161c95db3796d44ca3a86e440fe9bd94dd56a260d928181"
   }
 }

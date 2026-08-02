@@ -213,13 +213,20 @@ def _capture_capability_constraints(
 
     constraints: list[CapabilityConstraint] = []
     for node_name, node in scenario.nodes.items():
-        constraint = _finite_domain_constraint(
+        os_constraint = _finite_domain_constraint(
             field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/os",
             value=node.os,
             variables=scenario.variables,
         )
-        if constraint is not None:
-            constraints.append(constraint)
+        if os_constraint is not None:
+            constraints.append(os_constraint)
+        architecture_constraint = _finite_domain_constraint(
+            field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/architecture",
+            value=node.architecture,
+            variables=scenario.variables,
+        )
+        if architecture_constraint is not None:
+            constraints.append(architecture_constraint)
     for node_name, infrastructure in scenario.infrastructure.items():
         constraint = _finite_domain_constraint(
             field_pointer=f"/infrastructure/{_json_pointer_segment(node_name)}/count",

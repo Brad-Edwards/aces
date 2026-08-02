@@ -30,6 +30,7 @@ class ProvisionerCapabilities:
     name: str
     supported_node_types: frozenset[str] = frozenset()
     supported_os_families: frozenset[str] = frozenset()
+    supported_node_architectures: frozenset[str] = frozenset()
     supported_content_types: frozenset[str] = frozenset()
     supported_account_features: frozenset[str] = frozenset()
     supported_domain_profiles: frozenset[str] = frozenset()
@@ -47,6 +48,7 @@ class ProvisionerCapabilities:
             raise ValueError("ProvisionerCapabilities.name must be non-empty")
         _require_string_values("supported_node_types", self.supported_node_types, required=True)
         _require_string_values("supported_os_families", self.supported_os_families, required=True)
+        _require_string_values("supported_node_architectures", self.supported_node_architectures)
         _require_string_values("supported_content_types", self.supported_content_types)
         _require_string_values("supported_account_features", self.supported_account_features)
         _require_string_values("supported_domain_profiles", self.supported_domain_profiles)
@@ -61,6 +63,10 @@ class ProvisionerCapabilities:
         validate_controlled_vocabulary_scope_values(
             "capabilities.provisioner.supported_os_families",
             self.supported_os_families,
+        )
+        validate_controlled_vocabulary_scope_values(
+            "capabilities.provisioner.supported_node_architectures",
+            self.supported_node_architectures,
         )
         validate_controlled_vocabulary_scope_values(
             "capabilities.provisioner.supported_content_types",

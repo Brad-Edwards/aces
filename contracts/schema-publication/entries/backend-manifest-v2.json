@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "fe27901e088649ac3b9f7a53e4cc43474bd1ac0fbef28e7cb2545e33fd703c57",
+  "content_hash": "67c4007b3612b4aab779794e71df620a7cf781ddaf3ad7ab4b5ff45dccea3c7f",
   "last_change": {
-    "summary": "Added concern-keyed realization observation capabilities for issue #1043.",
-    "content_hash": "fe27901e088649ac3b9f7a53e4cc43474bd1ac0fbef28e7cb2545e33fd703c57"
+    "summary": "Added the provisioner supported_node_architectures capability disclosure for issue #674, so a backend can report whether it realizes a target-node CPU architecture requirement.",
+    "content_hash": "67c4007b3612b4aab779794e71df620a7cf781ddaf3ad7ab4b5ff45dccea3c7f"
   }
 }
