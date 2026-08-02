@@ -495,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "f5ee5174c7d30e1ed859187c90dacac3b64a3e3dac0f185cca2fe71c263495c9"
+      "content_sha256": "dc023117f930026916eab8c545cf7eaa6ced7245006493c37061032e3f2ecb33"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",

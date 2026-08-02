@@ -36,6 +36,9 @@ phases:
       - ^SEM-
     blocked_until:
       - reference-implementations
+  - id: participant-model
+    patterns:
+      - ^ACT-
   - id: api400-deferred
     requirements:
       - API-405
@@ -190,6 +193,24 @@ ownership:
     - implementations/python/packages/raes
     - implementations/python/tests
     - specs/formal
+    - CHANGELOG.md
+  participant-model:
+    - contracts/concept-authority
+    - contracts/fixtures
+    - contracts/schemas
+    - contracts/schema-publication-manifest.json
+    - docs/decisions
+    - docs/explain/reference
+    - docs/explain/sdl
+    - specs/formal
+    - specs/sdl
+    - implementations/python/packages/raes
+    - implementations/python/packages/raes_processor
+    - implementations/python/packages/raes_contracts
+    - implementations/python/packages/raes_backend_protocols
+    - implementations/python/packages/raes_runtime
+    - implementations/python/tests
+    - tools/policy/requirement_order.yaml
     - CHANGELOG.md
   documentation-surfaces:
     - .bestpractices.json

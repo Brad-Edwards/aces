@@ -61,6 +61,10 @@ adrs:
   - id: ADR-013
     path: docs/decisions/adrs/adr-013-participant-episode-lifecycle-boundaries.md
     pin: aaf414e1da0eb329432562b16ff9e132522e19e8a35933a1c99329b0be27cae8
+    amendments:
+      - date: 2026-08-02
+        ref: "#122"
+        summary: "Superseded §6's no-SDL-episode-syntax non-goal for the joint episode+budget design (SEM-222/DSL-120/ACT-623, #122): DSL-120/ACT-623 add an authored episode-structure surface (init, turn structure, terminal/truncation conditions, reset policy) as intent compiling to the existing ParticipantEpisode* contracts; runtime identity, state/reason/action separation, and the schema-first boundary are unchanged."
   - id: ADR-014
     path: docs/decisions/adrs/adr-014-nox-as-canonical-verification-graph.md
     pin: 52b3bf9dfbf128658b0edc88e164114529e3e225db0360ea99e005ebc97f86bf
