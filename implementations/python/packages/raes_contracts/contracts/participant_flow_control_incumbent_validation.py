@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import TypeVar
 
 from .participant_control import (
     ParticipantApprovalOccurrenceModel,
@@ -34,6 +35,14 @@ from .participant_flow_control import (
     ParticipantRuntimeFactFlowBindingModel,
 )
 from .participant_flow_control_context import ParticipantFlowControlValidationContext
+from .runtime_facts import (
+    RuntimeFactBindingEventModel,
+    RuntimeFactDeclarationModel,
+    RuntimeFactSinkModel,
+    RuntimeFactVersionModel,
+)
+
+T = TypeVar("T")
 
 
 def _validate_bindings(
@@ -60,14 +69,31 @@ def _validate_runtime_fact_binding(
     plane = context.runtime_fact_planes.get(binding.plane_ref)
     if plane is None:
         raise ValueError("runtime fact binding plane must resolve")
-    declaration = next((item for item in plane.declarations if item.fact_id == binding.declaration_ref), None)
-    version = next((item for item in plane.versions if item.version_id == binding.fact_version_ref), None)
-    sink = next((item for item in plane.sinks if item.sink_id == binding.sink_ref), None)
-    event = next((item for item in plane.events if item.event_id == binding.binding_event_ref), None)
-    if declaration is None or version is None:
-        raise ValueError("runtime fact declaration and immutable fact version must resolve")
-    if sink is None or event is None:
-        raise ValueError("runtime fact sink and binding event must resolve")
+    declaration = _require_by_identity(plane.declarations, "fact_id", binding.declaration_ref)
+    version = _require_by_identity(plane.versions, "version_id", binding.fact_version_ref)
+    sink = _require_by_identity(plane.sinks, "sink_id", binding.sink_ref)
+    event = _require_by_identity(plane.events, "event_id", binding.binding_event_ref)
+    _validate_runtime_fact_coordinates(declaration, version, sink, event)
+    if (binding.source_participant_address, binding.source_episode_id) != (
+        event.participant_address,
+        event.episode_id,
+    ):
+        raise ValueError("runtime fact binding scope does not match")
+
+
+def _require_by_identity(items: tuple[T, ...], field_name: str, expected: str) -> T:
+    item = next((candidate for candidate in items if getattr(candidate, field_name) == expected), None)
+    if item is None:
+        raise ValueError("runtime fact declaration, version, sink, and event must resolve")
+    return item
+
+
+def _validate_runtime_fact_coordinates(
+    declaration: RuntimeFactDeclarationModel,
+    version: RuntimeFactVersionModel,
+    sink: RuntimeFactSinkModel,
+    event: RuntimeFactBindingEventModel,
+) -> None:
     if version.fact_id != declaration.fact_id or (
         event.fact_id,
         event.fact_version_id,
@@ -78,11 +104,6 @@ def _validate_runtime_fact_binding(
         sink.sink_id,
     ):
         raise ValueError("runtime fact binding coordinates do not match")
-    if (binding.source_participant_address, binding.source_episode_id) != (
-        event.participant_address,
-        event.episode_id,
-    ):
-        raise ValueError("runtime fact binding scope does not match")
 
 
 def _validate_action_argument_binding(
@@ -152,22 +173,25 @@ def _control_identity(occurrence: object) -> tuple[str, tuple[str, ...]]:
         related = tuple(
             sorted(ref for ref in (occurrence.source_proposal_ref, occurrence.transformation_ref) if ref is not None)
         )
-        return occurrence.proposal_id, related
-    if isinstance(occurrence, ParticipantApprovalOccurrenceModel | ParticipantDenialOccurrenceModel):
-        return occurrence.decision_ref, (occurrence.proposal_ref,)
-    if isinstance(occurrence, ParticipantExternalDirectionOccurrenceModel):
-        return occurrence.target_ref, ()
-    if isinstance(occurrence, ParticipantInterventionOccurrenceModel):
-        return occurrence.intervention_ref, (occurrence.affected_occurrence_ref,)
-    if isinstance(occurrence, ParticipantHandoffOccurrenceModel):
-        return occurrence.resulting_controller_state_ref, tuple(
-            sorted((occurrence.prior_controller_state_ref, occurrence.completion_evidence_ref))
+        identity = (occurrence.proposal_id, related)
+    elif isinstance(occurrence, ParticipantApprovalOccurrenceModel | ParticipantDenialOccurrenceModel):
+        identity = (occurrence.decision_ref, (occurrence.proposal_ref,))
+    elif isinstance(occurrence, ParticipantExternalDirectionOccurrenceModel):
+        identity = (occurrence.target_ref, ())
+    elif isinstance(occurrence, ParticipantInterventionOccurrenceModel):
+        identity = (occurrence.intervention_ref, (occurrence.affected_occurrence_ref,))
+    elif isinstance(occurrence, ParticipantHandoffOccurrenceModel):
+        identity = (
+            occurrence.resulting_controller_state_ref,
+            tuple(sorted((occurrence.prior_controller_state_ref, occurrence.completion_evidence_ref))),
         )
-    if isinstance(occurrence, ParticipantOverrideOccurrenceModel):
-        return occurrence.replacement_ref, (occurrence.superseded_occurrence_ref,)
-    if isinstance(occurrence, ParticipantCancellationOccurrenceModel):
-        return occurrence.target_ref, ()
-    raise ValueError("participant control occurrence kind is unsupported")
+    elif isinstance(occurrence, ParticipantOverrideOccurrenceModel):
+        identity = (occurrence.replacement_ref, (occurrence.superseded_occurrence_ref,))
+    elif isinstance(occurrence, ParticipantCancellationOccurrenceModel):
+        identity = (occurrence.target_ref, ())
+    else:
+        raise ValueError("participant control occurrence kind is unsupported")
+    return identity
 
 
 def _validate_crossing_binding(
@@ -238,44 +262,51 @@ def _validate_crossing_binding(
 
 def _crossing_identity(occurrence: object) -> tuple[str, tuple[str, ...]]:
     if isinstance(occurrence, ParticipantCrossingRequestModel):
-        return occurrence.request_id, (occurrence.action_or_projection_ref,)
-    if isinstance(occurrence, ParticipantCrossingDecisionModel):
-        return occurrence.decision_id, (occurrence.request_ref,)
-    if isinstance(occurrence, ParticipantCrossingTransformationModel):
-        return occurrence.transformation_id, tuple(
-            sorted(
-                (
-                    occurrence.decision_ref,
-                    occurrence.source_subject.subject_ref,
-                    occurrence.result_subject.subject_ref,
-                    occurrence.rule_ref,
-                )
-            )
-        )
-    if isinstance(occurrence, ParticipantCrossingDisclosureModel):
-        return occurrence.disclosure_id, tuple(
-            sorted(ref for ref in (occurrence.decision_ref, occurrence.transformation_ref) if ref is not None)
-        )
-    if isinstance(occurrence, ParticipantCrossingDeliveryAttemptModel):
-        return occurrence.attempt_id, tuple(
-            sorted(
-                ref
-                for ref in (
-                    occurrence.decision_ref,
-                    occurrence.transformation_ref,
-                    occurrence.owning_occurrence_ref,
-                )
-                if ref is not None
-            )
-        )
-    if isinstance(occurrence, ParticipantCrossingDeliveryModel):
-        return occurrence.delivery_id, tuple(
-            sorted((occurrence.decision_ref, occurrence.attempt_ref, occurrence.owning_occurrence_ref))
-        )
-    if isinstance(occurrence, ParticipantCrossingObservationModel):
-        return occurrence.observation_id, tuple(
-            sorted((occurrence.decision_ref, occurrence.delivery_ref, occurrence.owning_observation_ref))
-        )
-    if isinstance(occurrence, ParticipantCrossingAuditModel):
-        return occurrence.audit_record_ref, (occurrence.audited_event_ref,)
-    raise ValueError("participant crossing occurrence stage is unsupported")
+        identity = (occurrence.request_id, (occurrence.action_or_projection_ref,))
+    elif isinstance(occurrence, ParticipantCrossingDecisionModel):
+        identity = (occurrence.decision_id, (occurrence.request_ref,))
+    elif isinstance(occurrence, ParticipantCrossingTransformationModel):
+        identity = _transformation_identity(occurrence)
+    elif isinstance(occurrence, ParticipantCrossingDisclosureModel):
+        identity = _disclosure_identity(occurrence)
+    elif isinstance(occurrence, ParticipantCrossingDeliveryAttemptModel):
+        identity = _delivery_attempt_identity(occurrence)
+    elif isinstance(occurrence, ParticipantCrossingDeliveryModel):
+        identity = _delivery_identity(occurrence)
+    elif isinstance(occurrence, ParticipantCrossingObservationModel):
+        identity = _observation_identity(occurrence)
+    elif isinstance(occurrence, ParticipantCrossingAuditModel):
+        identity = (occurrence.audit_record_ref, (occurrence.audited_event_ref,))
+    else:
+        raise ValueError("participant crossing occurrence stage is unsupported")
+    return identity
+
+
+def _transformation_identity(occurrence: ParticipantCrossingTransformationModel) -> tuple[str, tuple[str, ...]]:
+    related = (
+        occurrence.decision_ref,
+        occurrence.source_subject.subject_ref,
+        occurrence.result_subject.subject_ref,
+        occurrence.rule_ref,
+    )
+    return occurrence.transformation_id, tuple(sorted(related))
+
+
+def _disclosure_identity(occurrence: ParticipantCrossingDisclosureModel) -> tuple[str, tuple[str, ...]]:
+    refs = (occurrence.decision_ref, occurrence.transformation_ref)
+    return occurrence.disclosure_id, tuple(sorted(ref for ref in refs if ref is not None))
+
+
+def _delivery_attempt_identity(occurrence: ParticipantCrossingDeliveryAttemptModel) -> tuple[str, tuple[str, ...]]:
+    refs = (occurrence.decision_ref, occurrence.transformation_ref, occurrence.owning_occurrence_ref)
+    return occurrence.attempt_id, tuple(sorted(ref for ref in refs if ref is not None))
+
+
+def _delivery_identity(occurrence: ParticipantCrossingDeliveryModel) -> tuple[str, tuple[str, ...]]:
+    refs = (occurrence.decision_ref, occurrence.attempt_ref, occurrence.owning_occurrence_ref)
+    return occurrence.delivery_id, tuple(sorted(refs))
+
+
+def _observation_identity(occurrence: ParticipantCrossingObservationModel) -> tuple[str, tuple[str, ...]]:
+    refs = (occurrence.decision_ref, occurrence.delivery_ref, occurrence.owning_observation_ref)
+    return occurrence.observation_id, tuple(sorted(refs))

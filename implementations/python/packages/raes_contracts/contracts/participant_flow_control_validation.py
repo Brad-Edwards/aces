@@ -19,7 +19,6 @@ from .participant_flow_control import (
     ParticipantCrossingOccurrenceFlowBindingModel,
     ParticipantFlowControlRelationModel,
     ParticipantFlowFinalDisposition,
-    ParticipantFlowLabelResolutionStatus,
     ParticipantFlowRelationTargetKind,
     ParticipantFlowSinkDecisionModel,
     participant_flow_coordinate_disposition,
@@ -33,6 +32,11 @@ from .participant_flow_control_context import (
     ParticipantFlowSinkCoordinate,
 )
 from .participant_flow_control_incumbent_validation import _validate_bindings
+from .participant_flow_control_profile_validation import (
+    validate_profile_tokens,
+    validate_safe_references,
+    validate_trusted_flow_coordinates,
+)
 from .runtime_facts import RuntimeFactBindingPlaneModel
 
 if TYPE_CHECKING:
@@ -74,9 +78,9 @@ def validate_participant_flow_control_context(
     """Validate exact profile, incumbent carrier, authority, and sink joins."""
 
     profile = _resolve_profile(document, context)
-    _validate_profile_tokens(document, profile)
-    _validate_trusted_flow_coordinates(document, context)
-    _validate_safe_references(document, context)
+    validate_profile_tokens(document, profile)
+    validate_trusted_flow_coordinates(document, context)
+    validate_safe_references(document, context)
     _validate_incumbent_context(context)
     _validate_bindings(document, context)
     _validate_sink_context(document, context)
@@ -98,110 +102,6 @@ def _resolve_profile(
     if profile != published or profile.authority_revision != profile_ref.authority_revision:
         raise ValueError("participant flow-control profile coordinates do not match published authority")
     return profile
-
-
-def _validate_profile_tokens(
-    document: ParticipantFlowControlRelationModel,
-    profile: ParticipantBoundaryFlowPolicyProfileModel,
-) -> None:
-    confidentiality = set(profile.confidentiality_obligation_refs)
-    integrity = set(profile.integrity_obligation_refs)
-    for label in document.labels:
-        if not set(label.confidentiality_obligation_refs).issubset(confidentiality):
-            raise ValueError("flow label confidentiality obligation is outside the exact profile")
-        if not set(label.integrity_obligation_refs).issubset(integrity):
-            raise ValueError("flow label integrity obligation is outside the exact profile")
-        has_unknowns = (
-            profile.unknown_confidentiality_obligation_ref in label.confidentiality_obligation_refs
-            and profile.unknown_integrity_obligation_ref in label.integrity_obligation_refs
-        )
-        if label.resolution_status == ParticipantFlowLabelResolutionStatus.RESOLVED and (
-            profile.unknown_confidentiality_obligation_ref in label.confidentiality_obligation_refs
-            or profile.unknown_integrity_obligation_ref in label.integrity_obligation_refs
-        ):
-            raise ValueError("resolved flow label cannot carry an unknown-profile obligation")
-        if label.resolution_status != ParticipantFlowLabelResolutionStatus.RESOLVED and not has_unknowns:
-            raise ValueError("unresolved flow label must carry both unknown-profile obligations")
-    for release in document.releases:
-        replacements = getattr(release, "integrity_obligation_replacements", ())
-        if any(item.result_obligation_ref not in integrity for item in replacements):
-            raise ValueError("endorsement result obligation is outside the exact profile")
-    if any(
-        (derivation.rule_ref, derivation.rule_revision)
-        != (profile.derivation_rule.rule_ref, profile.derivation_rule.rule_revision)
-        for derivation in document.derivations
-    ):
-        raise ValueError("participant flow-control derivation must use the exact profile derivation rule")
-
-
-def _validate_safe_references(
-    document: ParticipantFlowControlRelationModel,
-    context: ParticipantFlowControlValidationContext,
-) -> None:
-    evidence_refs = {
-        ref
-        for records in (document.labels, document.derivations, document.releases, document.sink_decisions)
-        for record in records
-        for ref in record.evidence_refs
-    }
-    if not evidence_refs.issubset(context.known_evidence_refs):
-        raise ValueError("participant flow-control evidence reference must resolve")
-
-
-def _validate_trusted_flow_coordinates(
-    document: ParticipantFlowControlRelationModel,
-    context: ParticipantFlowControlValidationContext,
-) -> None:
-    policy_records = (
-        *document.labels,
-        *document.derivations,
-        *document.releases,
-        *document.sink_decisions,
-        *document.bindings,
-    )
-    for record in policy_records:
-        if context.policy_cuts.get(record.policy.decision_cut_ref) != record.policy:
-            raise ValueError("participant flow-control trusted policy cut must resolve exactly")
-
-    produced_label_refs = {
-        *(derivation.result_label_ref for derivation in document.derivations),
-        *(release.result_label_ref for release in document.releases),
-    }
-    for label in document.labels:
-        if label.label_id not in produced_label_refs and context.source_labels.get(label.label_id) != label:
-            raise ValueError("participant flow-control trusted source label must resolve exactly")
-
-    known_sinks = set(context.known_sinks)
-    for release in document.releases:
-        authority = ParticipantFlowReleaseAuthorityCoordinate(
-            kind=release.kind,
-            authority_basis_ref=release.authority_basis_ref,
-            authority_revision=release.authority_revision,
-            sink_ref=release.sink_ref,
-            destination_ref=release.destination_ref,
-            audience_scope_ref=release.audience_scope_ref,
-        )
-        if authority not in context.release_authorities:
-            raise ValueError("participant flow-control exact release authority must resolve")
-        if release.authority_basis_ref not in context.known_authority_refs:
-            raise ValueError("participant flow-control release authority must resolve")
-        if not any(
-            (
-                sink.sink_ref,
-                sink.destination_ref,
-                sink.audience_scope_ref,
-            )
-            == (
-                release.sink_ref,
-                release.destination_ref,
-                release.audience_scope_ref,
-            )
-            for sink in known_sinks
-        ):
-            raise ValueError("participant flow-control release sink must resolve exactly")
-
-    if any(_decision_sink_coordinate(decision) not in known_sinks for decision in document.sink_decisions):
-        raise ValueError("participant flow-control final sink must resolve exactly")
 
 
 def _decision_sink_coordinate(
@@ -248,70 +148,84 @@ def _validate_incumbent_context(context: ParticipantFlowControlValidationContext
 
 def _validate_incumbent_sink_resolutions(context: ParticipantFlowControlValidationContext) -> None:
     for ref, resolution in context.action_admission_resolutions.items():
-        if not isinstance(resolution, ParticipantFlowActionAdmissionResolution):
-            raise ValueError("participant action admission resolution context is invalid")
-        admission = context.action_admissions.get(ref)
-        if (
-            admission is None
-            or ref != resolution.action_admission_ref
-            or (
-                admission.participant_address,
-                admission.action_contract_address,
-                admission.action_instance_id,
-            )
-            != (
-                resolution.participant_address,
-                resolution.action_contract_address,
-                resolution.action_instance_id,
-            )
-        ):
-            raise ValueError("participant action admission resolution coordinates do not match")
-        _validate_sink_resolution_fields(
-            resolution.participant_address,
-            resolution.episode_id,
-            resolution.sink,
-            resolution.disposition,
-            "participant action admission resolution",
-        )
+        _validate_action_admission_resolution(ref, resolution, context)
 
     for ref, resolution in context.capability_resolutions.items():
-        if (
-            not isinstance(resolution, ParticipantFlowCapabilityResolution)
-            or ref != resolution.capability_resolution_ref
-        ):
-            raise ValueError("participant capability resolution context is invalid")
-        _validate_sink_resolution_fields(
-            resolution.participant_address,
-            resolution.episode_id,
-            resolution.sink,
-            resolution.disposition,
-            "participant capability resolution",
-        )
+        _validate_capability_resolution(ref, resolution)
 
     history_identities: set[tuple[str, str, ParticipantFlowSinkCoordinate, tuple[str, ...]]] = set()
     for resolution in context.history_head_resolutions:
-        if not isinstance(resolution, ParticipantFlowHistoryHeadResolution):
-            raise ValueError("participant history-head resolution context is invalid")
-        _validate_sink_resolution_fields(
-            resolution.participant_address,
-            resolution.episode_id,
-            resolution.sink,
-            resolution.disposition,
-            "participant history-head resolution",
+        _validate_history_head_resolution(resolution, history_identities)
+
+
+def _validate_action_admission_resolution(
+    ref: str,
+    resolution: ParticipantFlowActionAdmissionResolution,
+    context: ParticipantFlowControlValidationContext,
+) -> None:
+    if not isinstance(resolution, ParticipantFlowActionAdmissionResolution):
+        raise ValueError("participant action admission resolution context is invalid")
+    admission = context.action_admissions.get(ref)
+    admission_coordinates = None
+    if admission is not None:
+        admission_coordinates = (
+            admission.participant_address,
+            admission.action_contract_address,
+            admission.action_instance_id,
         )
-        if not resolution.history_head_refs or resolution.history_head_refs != tuple(
-            sorted(set(resolution.history_head_refs))
-        ):
-            raise ValueError("participant history-head resolution refs must be non-empty and canonical")
-        identity = (
-            resolution.participant_address,
-            resolution.episode_id,
-            resolution.sink,
-            resolution.history_head_refs,
-        )
-        if identity in history_identities:
-            raise ValueError("participant history-head resolution identity was reused")
-        history_identities.add(identity)
+    resolution_coordinates = (
+        resolution.participant_address,
+        resolution.action_contract_address,
+        resolution.action_instance_id,
+    )
+    if ref != resolution.action_admission_ref or admission_coordinates != resolution_coordinates:
+        raise ValueError("participant action admission resolution coordinates do not match")
+    _validate_sink_resolution_fields(
+        resolution.participant_address,
+        resolution.episode_id,
+        resolution.sink,
+        resolution.disposition,
+        "participant action admission resolution",
+    )
+
+
+def _validate_capability_resolution(ref: str, resolution: ParticipantFlowCapabilityResolution) -> None:
+    if not isinstance(resolution, ParticipantFlowCapabilityResolution) or ref != resolution.capability_resolution_ref:
+        raise ValueError("participant capability resolution context is invalid")
+    _validate_sink_resolution_fields(
+        resolution.participant_address,
+        resolution.episode_id,
+        resolution.sink,
+        resolution.disposition,
+        "participant capability resolution",
+    )
+
+
+def _validate_history_head_resolution(
+    resolution: ParticipantFlowHistoryHeadResolution,
+    identities: set[tuple[str, str, ParticipantFlowSinkCoordinate, tuple[str, ...]]],
+) -> None:
+    if not isinstance(resolution, ParticipantFlowHistoryHeadResolution):
+        raise ValueError("participant history-head resolution context is invalid")
+    _validate_sink_resolution_fields(
+        resolution.participant_address,
+        resolution.episode_id,
+        resolution.sink,
+        resolution.disposition,
+        "participant history-head resolution",
+    )
+    canonical_refs = tuple(sorted(set(resolution.history_head_refs)))
+    if not resolution.history_head_refs or resolution.history_head_refs != canonical_refs:
+        raise ValueError("participant history-head resolution refs must be non-empty and canonical")
+    identity = (
+        resolution.participant_address,
+        resolution.episode_id,
+        resolution.sink,
+        resolution.history_head_refs,
+    )
+    if identity in identities:
+        raise ValueError("participant history-head resolution identity was reused")
+    identities.add(identity)
 
 
 def _validate_sink_resolution_fields(
@@ -333,36 +247,73 @@ def _validate_sink_context(
 ) -> None:
     from ..participant_binding import participant_action_admission_request_violations
 
-    crossing_decisions = {
+    crossing_decisions = _crossing_decision_index(context)
+    crossing_bindings = _crossing_sink_binding_index(document)
+    for decision in document.sink_decisions:
+        _validate_sink_decision_context(
+            decision,
+            context,
+            crossing_decisions,
+            crossing_bindings,
+            participant_action_admission_request_violations,
+        )
+
+
+def _crossing_decision_index(
+    context: ParticipantFlowControlValidationContext,
+) -> dict[str, ParticipantCrossingDecisionModel]:
+    return {
         item.occurrence.decision_id: item.occurrence
         for item in context.crossing_records
         if isinstance(item.occurrence, ParticipantCrossingDecisionModel)
     }
-    crossing_bindings = {
+
+
+def _crossing_sink_binding_index(
+    document: ParticipantFlowControlRelationModel,
+) -> dict[str, ParticipantCrossingOccurrenceFlowBindingModel]:
+    return {
         binding.stage_identity_ref: binding
         for binding in document.bindings
         if isinstance(binding, ParticipantCrossingOccurrenceFlowBindingModel)
         and binding.relation_target.target_kind == ParticipantFlowRelationTargetKind.SINK_DECISION
     }
-    for decision in document.sink_decisions:
-        admission = context.action_admissions.get(decision.action_admission_ref)
-        if admission is None or participant_action_admission_request_violations(admission):
-            raise ValueError("participant flow-control sink action admission must resolve")
-        incumbent_dispositions = _resolve_sink_conjunct_dispositions(decision, admission, context)
-        crossing = crossing_decisions.get(decision.api_423_decision_ref)
-        binding = crossing_bindings.get(decision.api_423_decision_ref)
-        if crossing is None or binding is None or binding.relation_target.target_ref != decision.decision_id:
-            raise ValueError("participant flow-control sink API-423 decision must resolve")
-        expected = _combined_final_disposition(
-            participant_flow_coordinate_disposition(
-                decision.confidentiality_result,
-                decision.integrity_result,
-            ),
-            _crossing_final_disposition(crossing),
-            *incumbent_dispositions,
-        )
-        if decision.final_disposition != expected:
-            raise ValueError("participant flow-control sink must record the exact final disposition")
+
+
+def _validate_sink_decision_context(
+    decision: ParticipantFlowSinkDecisionModel,
+    context: ParticipantFlowControlValidationContext,
+    crossing_decisions: dict[str, ParticipantCrossingDecisionModel],
+    crossing_bindings: dict[str, ParticipantCrossingOccurrenceFlowBindingModel],
+    admission_violations: Callable[[ParticipantActionAdmissionRequest], object],
+) -> None:
+    admission = context.action_admissions.get(decision.action_admission_ref)
+    if admission is None or admission_violations(admission):
+        raise ValueError("participant flow-control sink action admission must resolve")
+    incumbent_dispositions = _resolve_sink_conjunct_dispositions(decision, admission, context)
+    crossing = _resolve_crossing_sink_decision(decision, crossing_decisions, crossing_bindings)
+    expected = _combined_final_disposition(
+        participant_flow_coordinate_disposition(
+            decision.confidentiality_result,
+            decision.integrity_result,
+        ),
+        _crossing_final_disposition(crossing),
+        *incumbent_dispositions,
+    )
+    if decision.final_disposition != expected:
+        raise ValueError("participant flow-control sink must record the exact final disposition")
+
+
+def _resolve_crossing_sink_decision(
+    decision: ParticipantFlowSinkDecisionModel,
+    crossing_decisions: dict[str, ParticipantCrossingDecisionModel],
+    crossing_bindings: dict[str, ParticipantCrossingOccurrenceFlowBindingModel],
+) -> ParticipantCrossingDecisionModel:
+    crossing = crossing_decisions.get(decision.api_423_decision_ref)
+    binding = crossing_bindings.get(decision.api_423_decision_ref)
+    if crossing is None or binding is None or binding.relation_target.target_ref != decision.decision_id:
+        raise ValueError("participant flow-control sink API-423 decision must resolve")
+    return crossing
 
 
 def _resolve_sink_conjunct_dispositions(

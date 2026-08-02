@@ -1112,7 +1112,8 @@ def test_flow_contract_schemas_fixtures_bundle_and_conformance_are_published(
     fixture_root = REPO_ROOT / "contracts" / "fixtures" / schema_directory / contract_id
     valid_paths = sorted((fixture_root / "valid").glob("*.json"))
     invalid_paths = sorted((fixture_root / "invalid").glob("*.json"))
-    assert valid_paths and invalid_paths
+    assert valid_paths
+    assert invalid_paths
     validator = Draft202012Validator(schema)
     for path in valid_paths:
         payload = json.loads(path.read_text(encoding="utf-8"))

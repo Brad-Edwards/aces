@@ -382,15 +382,17 @@ def participant_flow_coordinate_disposition(
 ) -> ParticipantFlowFinalDisposition:
     values = {confidentiality, integrity}
     if ParticipantFlowCoordinateResult.DENY in values:
-        return ParticipantFlowFinalDisposition.DENY
-    if ParticipantFlowCoordinateResult.UNSUPPORTED in values:
-        return ParticipantFlowFinalDisposition.UNSUPPORTED
-    if ParticipantFlowCoordinateResult.STALE in values:
-        return ParticipantFlowFinalDisposition.STALE
-    if values & {
+        disposition = ParticipantFlowFinalDisposition.DENY
+    elif ParticipantFlowCoordinateResult.UNSUPPORTED in values:
+        disposition = ParticipantFlowFinalDisposition.UNSUPPORTED
+    elif ParticipantFlowCoordinateResult.STALE in values:
+        disposition = ParticipantFlowFinalDisposition.STALE
+    elif values & {
         ParticipantFlowCoordinateResult.UNRESOLVED,
         ParticipantFlowCoordinateResult.UNKNOWN,
         ParticipantFlowCoordinateResult.AMBIGUOUS,
     }:
-        return ParticipantFlowFinalDisposition.UNRESOLVED
-    return ParticipantFlowFinalDisposition.PERMIT
+        disposition = ParticipantFlowFinalDisposition.UNRESOLVED
+    else:
+        disposition = ParticipantFlowFinalDisposition.PERMIT
+    return disposition
