@@ -143,3 +143,9 @@ boundary between authored SDL meaning and apparatus/runtime realization.
 - If participant lifecycle logic is split between backend internals and
   processor contracts, the repo will end up with duplicate semantics and
   inconsistent failure handling.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+| --- | --- | --- |
+| 2026-08-02 | #122 | Scope boundary §6's "does not add new SDL authoring syntax for episode semantics" non-goal is superseded for the joint participant episode + budget design (SEM-222 / DSL-120 / ACT-623, issue #122). DSL-120 and ACT-623 add an **authored** episode-structure surface — initialization, turn/interaction structure, terminal and truncation conditions, and reset-related policy — as participant *intent* that compiles to the existing `ParticipantEpisode*` processor/runtime contract surface. The runtime episode identity, the lifecycle-state / terminal-reason / control-action separation (§3), reset/restart identity preservation (§4), and the schema-first boundary (§2) defined by this ADR remain authoritative and unchanged; the authored surface owns declared intent only, never episode execution state or history. See `specs/formal/participant-episode-model/README.md`. |

@@ -181,6 +181,15 @@ aggregate. Image-generation and accelerator quantities likewise name a
 portable meter/resource class rather than assuming every image or accelerator
 unit has equal cost.
 
+ACT-624's named bounds are independently governed semantics: an action attempt,
+turn/decision count, tool invocation count, logical-scenario elapsed time, and
+token use must not be silently substituted for one another. Where the initial
+catalog lacks one of those dimensions, it must be added through this governed
+resource-kind and meter/profile seam with a compatible accounting mode and
+reset/clock basis. In particular, host watchdog elapsed time is not a portable
+scenario-time quota, and a tool invocation is not merely an action unless the
+authoring contract explicitly defines that equivalence.
+
 The extension seam is a governed resource-kind plus meter/profile entry.
 Adding a future network, CPU, memory, or evidence-ingest dimension extends that
 catalog and the accounting-mode conformance table; it does not add another
