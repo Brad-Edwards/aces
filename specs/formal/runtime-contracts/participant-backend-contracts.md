@@ -146,12 +146,49 @@ Rules:
   SEM-218 explicitness/realization declarations cover cross-domain
   realization handling; the manifest carries both, and they are never merged
   or inferred from one another.
-- Evidence-required features include the six participant-policy features and
-  `participant_predicate_opacity`. A positive declaration requires evidence;
+- Evidence-required features include the six participant-policy features,
+  `participant_predicate_opacity`, and the five issue #1004 adversarial-control
+  apparatus/backend terms below. A positive declaration requires evidence;
   bounded support also requires constraints, limitations, and disclosures plus
-  every contract in that feature's required-contract map. Opacity is not a
-  policy operation and is deliberately absent from
-  `PARTICIPANT_RUNTIME_POLICY_FEATURES`.
+  every contract in that feature's required-contract map. Opacity and the five
+  adversarial-control terms are not policy operations and are deliberately
+  absent from `PARTICIPANT_RUNTIME_POLICY_FEATURES`: they carry the full
+  evidence discipline without claiming runtime enforcement, which the RUN-319
+  final-sink boundary owns.
+
+### Adversarial-control apparatus and backend support (issue #1004)
+
+The following governed `participant-runtime-behavior-features` terms let a
+backend or experiment apparatus declare bounded adversarial-control posture on
+the single existing API-407 `feature_support` surface. Each maps to the exact
+backend-facing published contract that carries its realized evidence; SEM-233
+relation/profile authoring ids are never smuggled into backend support lists.
+
+| Feature term | Declares | Required contract(s) |
+| --- | --- | --- |
+| `participant_boundary_flow_resolution` | SEM-233 two-coordinate boundary flow-label resolution and conservative provenance-preserving propagation | `participant-flow-control-relation-v1`, `participant-crossing-occurrence-v1` |
+| `participant_final_sink_mediation` | RUN-319 fail-closed exact-cut permit immediately before an RAES-controlled external effect | `participant-flow-control-relation-v1`, `participant-crossing-occurrence-v1` |
+| `participant_quarantined_processing` | bounded quarantine of unknown or untrusted source material | `participant-flow-control-relation-v1`, `participant-crossing-occurrence-v1` |
+| `participant_processing_role_trust` | trusted/untrusted processing-role declaration bound to controller and authority state | `participant-control-occurrence-v1`, `participant-crossing-occurrence-v1` |
+| `participant_monitor_topology` | monitor topology as bounded apparatus evidence | `experiment-evidence-record-v1` |
+
+Each term requires the contract that *owns* its claimed realization — the
+SEM-233 `participant-flow-control-relation-v1` (resolved by the RUN-319 runtime
+at the final sink) for the flow, final-sink, and quarantine terms — not merely a
+generic occurrence carrier. Supporting only `participant-crossing-occurrence-v1`
+therefore cannot make an effective exact flow or sink claim. The authored
+boundary-flow-policy profile stays out of backend support lists.
+
+A declaration is never proof of realization, isolation, monitor independence,
+non-collusion, flow propagation, or sink enforcement. Missing, contradictory,
+or evidence-free declarations are deny-equivalent; a weakened claim never
+retains the stronger effective level without an explicitly authorized downgrade
+(policy plus provenance references). Distinct model or process identities are
+not independence evidence, and a quarantine, gateway, sanitizer, or monitor is
+never the sole enforcement point — the RUN-319 final-sink boundary must still
+permit the exact effect. Backend realization of these terms remains
+`not-established` in the ASR-536 evaluation program until conformance evidence
+is bound to the exact `sem-233/rev1` profile.
 
 ## API-408 - Retrieval Projections
 
