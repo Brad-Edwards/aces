@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [3.3.0](https://github.com/OpenRAE/rae/compare/v3.2.0...v3.3.0) (2026-08-02)
+
+
+### Features
+
+* add dynamic participant information state ([eaa0939](https://github.com/OpenRAE/rae/commit/eaa0939047a1d519fb2e1207ec873af8b5cc5fc0))
+* add planned resource payload accessors ([f6eda51](https://github.com/OpenRAE/rae/commit/f6eda5122e65a6a18c47d83cb1a97296f703f575))
+* add planned resource payload accessors ([472bd56](https://github.com/OpenRAE/rae/commit/472bd56950621ae9c5bfcebf69d462e1bd23a94b))
+* add safe artifact transformations ([c5da811](https://github.com/OpenRAE/rae/commit/c5da811f8e306fbfa7b86006361d75ce3b3380e3))
+* declare backend participant opacity realization ([5f87c0a](https://github.com/OpenRAE/rae/commit/5f87c0a14ade8cc5cce6dc69931c35bf320e3a50))
+* define forwarding-agent realization semantics ([e1f9885](https://github.com/OpenRAE/rae/commit/e1f98856df71a5228579d5de18d3385faa67c473))
+* define forwarding-agent realization semantics ([4dd8a46](https://github.com/OpenRAE/rae/commit/4dd8a4641e04f46b83f84055742ba9171d367df7))
+* **runtime:** enforce bounded participant opacity ([58ae48b](https://github.com/OpenRAE/rae/commit/58ae48b32ba8307b25d884a894b2592f5d116aec))
+
+
+### Bug Fixes
+
+* apply backend protocol Any-signature policy to every protocol module ([3e38aa3](https://github.com/OpenRAE/rae/commit/3e38aa3b00cddd6313cdc06c3f05afc0f1ae3a80))
+* apply backend protocol Any-signature policy to every protocol module ([eb6f295](https://github.com/OpenRAE/rae/commit/eb6f295ac248c649b460cbd6601132842cd4a17b))
+* reduce realization helper complexity ([179827b](https://github.com/OpenRAE/rae/commit/179827b2029f3aac78ef0a8068e1f0d0f575184f))
+* repair oversized allowlist after dev merge (drop stale split-file entries) ([d8dfdcb](https://github.com/OpenRAE/rae/commit/d8dfdcb4b295022cde5d77ea6d9889d114f1bf8b))
+* simplify libvirt network realization ([c7c2dd4](https://github.com/OpenRAE/rae/commit/c7c2dd4f8321f688e01f704be84225f7534cffd0))
+
+
+### Documentation
+
+* reconcile ACT-605 behavior profile coverage ([8b99260](https://github.com/OpenRAE/rae/commit/8b992607a5149058823225d7b29cf674f5eaede1))
+* reconcile ACT-605 behavior profile coverage ([110f934](https://github.com/OpenRAE/rae/commit/110f934f7db4c15c35dbe04048b4c85a6f78a217))
+
 ## [3.2.0](https://github.com/OpenRAE/rae/compare/v3.1.0...v3.2.0) (2026-07-31)
 
 
