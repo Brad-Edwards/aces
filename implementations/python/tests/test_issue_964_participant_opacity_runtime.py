@@ -651,6 +651,7 @@ def test_restart_requires_the_exact_persisted_opacity_context(tmp_path) -> None:
         policy_capable_target("participant_ingress_admission"),
         store=LocalControlPlaneStore(tmp_path / "opacity-control-plane"),
         crossing_policy_resolver=restarted_resolver,
+        enforce_final_sink_flow_control=False,
     )
     assert restarted.snapshot.participant_crossing_history[CROSSING_PARTICIPANT]
 
@@ -668,6 +669,7 @@ def test_restart_requires_the_exact_persisted_opacity_context(tmp_path) -> None:
             restart_target,
             store=restart_store,
             crossing_policy_resolver=stale,
+            enforce_final_sink_flow_control=False,
         )
 
 

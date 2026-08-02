@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from typing import TypeVar, cast
 from uuid import uuid4
 
+from raes_contracts.contracts import ParticipantFlowSinkKind
 from raes_contracts.contracts.base import ContractModel
 from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingDirection,
@@ -29,6 +30,11 @@ from .participant_crossing_mediation import (
     prepare_participant_crossing,
 )
 from .participant_crossing_records import _expected_history_heads
+from .participant_flow_sink import (
+    ParticipantFlowSinkDecision,
+    flow_sink_audit_details,
+    resolve_participant_flow_sink_decision,
+)
 
 _ViewT = TypeVar("_ViewT", bound=ContractModel)
 
@@ -118,6 +124,21 @@ def serialize_participant_view(
             commit_prepared_crossing(control_plane, prepared)
             raise PermissionError("participant projection was not permitted")
 
+        sink_decision = resolve_participant_flow_sink_decision(
+            control_plane,
+            prepared,
+            sink_kind=ParticipantFlowSinkKind.PARTICIPANT_OUTPUT,
+        )
+        if sink_decision is not None and not sink_decision.permitted:
+            prepared = _with_opacity_egress_observation(
+                control_plane,
+                prepared,
+                delivered=False,
+            )
+            prepared = _with_flow_sink_denied_audit(prepared, sink_decision)
+            commit_prepared_crossing(control_plane, prepared)
+            raise PermissionError("participant projection was not permitted")
+
         governed = view
         if prepared.governed_subject != subject:
             transformer = getattr(control_plane._crossing_policy_resolver, "transform_egress", None)
@@ -140,6 +161,8 @@ def serialize_participant_view(
             prepared,
             delivered=True,
         )
+        if sink_decision is not None:
+            prepared = _with_flow_sink_permitted_audit(prepared, sink_decision)
         prepared = cast(
             PreparedParticipantCrossing,
             replace(
@@ -152,6 +175,44 @@ def serialize_participant_view(
         )
         commit_prepared_crossing(control_plane, prepared)
         return governed
+
+
+def _with_flow_sink_permitted_audit(
+    prepared: PreparedParticipantCrossing,
+    decision: ParticipantFlowSinkDecision,
+) -> PreparedParticipantCrossing:
+    """Fold the permitted SEM-233 reference into the committed egress audit."""
+
+    return cast(
+        PreparedParticipantCrossing,
+        replace(
+            prepared,
+            audit_event=replace(
+                prepared.audit_event,
+                details={**prepared.audit_event.details, **flow_sink_audit_details(decision)},
+            ),
+        ),
+    )
+
+
+def _with_flow_sink_denied_audit(
+    prepared: PreparedParticipantCrossing,
+    decision: ParticipantFlowSinkDecision,
+) -> PreparedParticipantCrossing:
+    """Record a SEM-233 final-sink denial in the atomic egress audit event."""
+
+    return cast(
+        PreparedParticipantCrossing,
+        replace(
+            prepared,
+            audit_event=replace(
+                prepared.audit_event,
+                allowed=False,
+                reason="flow-sink-denied",
+                details={**prepared.audit_event.details, **flow_sink_audit_details(decision)},
+            ),
+        ),
+    )
 
 
 def _with_opacity_egress_observation(

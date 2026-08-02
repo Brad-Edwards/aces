@@ -464,10 +464,13 @@ def _target_adapter_cases(
 
     scenario = _DEFAULT_CONFORMANCE_SCENARIO if reference_scenario is None else reference_scenario
     execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
+    # Legacy API-423-only conformance resolver: opt out of the SEM-233
+    # final-sink permit that this probe's resolver does not produce.
     control_plane = RuntimeControlPlane(
         target,
         initial_snapshot=_participant_execution_probe_snapshot(target),
         crossing_policy_resolver=_conformance_crossing_policy_resolver(target),
+        enforce_final_sink_flow_control=False,
     )
     cases.append(_provisioning_probe_case(control_plane, execution_plan.provisioning))
     if known != BackendCapabilityProfile.PROVISIONING_ONLY:
