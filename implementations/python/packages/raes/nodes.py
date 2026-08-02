@@ -304,7 +304,7 @@ class Node(SDLModel):
 
     @field_validator("architecture", mode="before")
     @classmethod
-    def normalize_architecture_value(cls, v):
+    def normalize_architecture_value(cls, v: object) -> object:
         return normalize_architecture(v)
 
     @field_validator("endpoint_persona", mode="before")

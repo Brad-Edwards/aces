@@ -158,14 +158,16 @@ class TestNodeArchitectureCompatibility:
     def test_node_present_package_mismatch_invalid(self):
         from raes import SDLValidationError, parse_sdl
 
+        scenario = _scenario(node_arch="x86_64", package_arch="aarch64")
         with pytest.raises(SDLValidationError, match="architecture"):
-            parse_sdl(_scenario(node_arch="x86_64", package_arch="aarch64"))
+            parse_sdl(scenario)
 
     def test_node_absent_package_present_invalid(self):
         from raes import SDLValidationError, parse_sdl
 
+        scenario = _scenario(node_arch=None, package_arch="x86_64")
         with pytest.raises(SDLValidationError, match="architecture"):
-            parse_sdl(_scenario(node_arch=None, package_arch="x86_64"))
+            parse_sdl(scenario)
 
     def test_variable_node_architecture_defers(self):
         from raes import parse_sdl
@@ -342,6 +344,195 @@ class TestNodeArchitectureSchemaGovernance:
             jsonschema.validate(value, schema)
 
 
+_ARCH_VAR_SCENARIO = (
+    "name: arch-var-plan\n"
+    "variables:\n"
+    "  arch: {type: string, default: x86_64, allowed_values: [x86_64, aarch64]}\n"
+    "nodes:\n"
+    "  web: {type: vm, architecture: '${arch}', resources: {ram: 1 gib, cpu: 1}}\n"
+)
+
+
+class TestNodeArchitectureVariableDomain:
+    """Finite-domain (variable-backed) planner admission (issue #674)."""
+
+    def _plan(self, scenario_yaml: str, supported: frozenset[str]):
+        from raes import parse_sdl
+        from raes_processor.compiler import compile_runtime_model
+        from raes_processor.planner import plan
+
+        return plan(compile_runtime_model(parse_sdl(scenario_yaml)), _architecture_manifest(supported))
+
+    def test_variable_domain_all_supported_passes(self):
+        execution_plan = self._plan(_ARCH_VAR_SCENARIO, frozenset({"x86_64", "aarch64"}))
+        codes = {d.code for d in execution_plan.diagnostics}
+        assert "provisioner.unsupported-node-architecture" not in codes
+        assert execution_plan.is_valid
+
+    def test_variable_domain_unsupported_member_fails(self):
+        execution_plan = self._plan(_ARCH_VAR_SCENARIO, frozenset({"x86_64"}))
+        codes = {d.code for d in execution_plan.diagnostics}
+        assert "provisioner.unsupported-node-architecture" in codes
+        assert not execution_plan.is_valid
+
+
+class TestNodeArchitecturePlannerBranches:
+    """Direct coverage of the fail-closed planner branches (issue #674)."""
+
+    @staticmethod
+    def _node(architecture: str):
+        from raes_processor.models import NodeRuntime
+
+        return NodeRuntime(address="provision.node.web", name="web", spec={}, architecture=architecture)
+
+    @staticmethod
+    def _constraint(*allowed_values: str):
+        from raes_processor.models import CompiledCapabilityConstraint
+
+        return CompiledCapabilityConstraint(
+            address="provision.node.web",
+            concern="nodes.architecture",
+            parameter=("arch",),
+            allowed_values=allowed_values,
+        )
+
+    def test_without_constraint_unbound_variable(self):
+        from raes_processor.planner.capability_domains import _node_architecture_without_constraint
+
+        diagnostics = _node_architecture_without_constraint(self._node("${arch}"), frozenset({"x86_64"}))
+        assert any(d.code == "provisioner.node-architecture-variable-ref-unbound" for d in diagnostics)
+
+    def test_with_constraint_invalid_domain_member(self):
+        from raes_processor.planner.capability_domains import _node_architecture_with_constraint
+
+        diagnostics = _node_architecture_with_constraint(
+            self._constraint("x86_64", "sparc"), self._node("x86_64"), frozenset({"x86_64", "aarch64"})
+        )
+        assert any(d.code == "provisioner.node-architecture-variable-domain-invalid" for d in diagnostics)
+
+    def test_with_constraint_unsupported_member(self):
+        from raes_processor.planner.capability_domains import _node_architecture_with_constraint
+
+        diagnostics = _node_architecture_with_constraint(
+            self._constraint("aarch64"), self._node("x86_64"), frozenset({"x86_64"})
+        )
+        assert any(d.code == "provisioner.unsupported-node-architecture" for d in diagnostics)
+
+    def test_with_constraint_all_supported_clean(self):
+        from raes_processor.planner.capability_domains import _node_architecture_with_constraint
+
+        diagnostics = _node_architecture_with_constraint(
+            self._constraint("x86_64", "aarch64"), self._node("x86_64"), frozenset({"x86_64", "aarch64"})
+        )
+        assert diagnostics == []
+
+    def test_allowed_value_non_concrete_variable_rejected(self):
+        from raes_processor.planner.capability_domains import _architecture_allowed_value
+
+        token, error = _architecture_allowed_value("${arch}", "arch", "provision.node.web")
+        assert token is None
+        assert error is not None
+        assert "non-concrete" in error.message
+
+    def test_allowed_value_unvalidatable_rejected(self):
+        from raes_processor.planner.capability_domains import _architecture_allowed_value
+
+        token, error = _architecture_allowed_value(None, "arch", "provision.node.web")
+        assert token is None
+        assert error is not None
+        assert "could not be validated" in error.message
+
+
+class TestNodeArchitectureTargetDomain:
+    """SAT finite-domain capture for `nodes.architecture` (issue #674)."""
+
+    def test_architecture_address_captures_canonical_vocabulary(self):
+        from raes_contracts.satisfiability import ConstraintSort, ConstraintSymbolModel
+        from raes_processor.satisfiability._translation import _target_domain
+
+        symbol = ConstraintSymbolModel(
+            symbol_id="symbol.web-arch",
+            variable="arch",
+            sort=ConstraintSort.STRING,
+            domain=("aarch64", "sparc", "x86_64"),
+        )
+        domain = _target_domain("/nodes/web/architecture", symbol)
+        assert domain == ("aarch64", "x86_64")
+
+
+class TestLibvirtArchitecturePayload:
+    """`_architecture` payload extraction (issue #674)."""
+
+    def test_direct_field(self):
+        from raes_backend_libvirt._payload import _architecture
+
+        assert _architecture({"architecture": "x86_64"}) == "x86_64"
+
+    def test_nested_node_spec_fallback(self):
+        from raes_backend_libvirt._payload import _architecture
+
+        assert _architecture({"spec": {"node": {"architecture": "aarch64"}}}) == "aarch64"
+
+    def test_absent(self):
+        from raes_backend_libvirt._payload import _architecture
+
+        assert _architecture({"spec": {"node": {}}}) == ""
+
+
+class TestRealizerConfigurationArchitecture:
+    """`RealizerConfigurationModel.architecture` is a governed canonical term (issue #674)."""
+
+    def _config(self, architecture: str):
+        from raes_contracts.realization_envelope_carrier import RealizerConfigurationModel
+
+        return RealizerConfigurationModel(
+            mode="techvault-appliance",
+            configuration_digest="sha256:" + "a" * 64,
+            architecture=architecture,
+            image_policy="pinned",
+            network_policy="isolated",
+            supported_node_types=["vm"],
+            supported_os_families=["linux"],
+            memory_mib={"minimum": 1024},
+            vcpus={"minimum": 1},
+        )
+
+    def test_canonical_accepted(self):
+        assert self._config("x86_64").architecture == "x86_64"
+
+    def test_ungoverned_rejected(self):
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="architecture"):
+            self._config("sparc")
+
+
+class TestProvisionerCapabilitiesArchitecture:
+    """`supported_node_architectures` is validated against the governed vocabulary (issue #674)."""
+
+    def test_governed_values_accepted(self):
+        from raes_backend_protocols.capabilities import ProvisionerCapabilities
+
+        caps = ProvisionerCapabilities(
+            name="p",
+            supported_node_types=frozenset({"vm"}),
+            supported_os_families=frozenset({"linux"}),
+            supported_node_architectures=frozenset({"x86_64", "aarch64"}),
+        )
+        assert "x86_64" in caps.supported_node_architectures
+
+    def test_ungoverned_value_rejected(self):
+        from raes_backend_protocols.capabilities import ProvisionerCapabilities
+
+        with pytest.raises(ValueError):
+            ProvisionerCapabilities(
+                name="p",
+                supported_node_types=frozenset({"vm"}),
+                supported_os_families=frozenset({"linux"}),
+                supported_node_architectures=frozenset({"sparc"}),
+            )
+
+
 class TestArchitecturesCompatible:
     def test_exact_canonical_equal(self):
         assert architectures_compatible(NodeArchitecture.X86_64, "x86_64") is True
@@ -356,3 +547,10 @@ class TestArchitecturesCompatible:
     def test_extension_tokens_exact_match(self):
         assert architectures_compatible("x-nvidia:grace", "x-nvidia:grace") is True
         assert architectures_compatible("x-nvidia:grace", "x86_64") is False
+
+    def test_empty_package_is_compatible(self):
+        assert architectures_compatible(NodeArchitecture.X86_64, "") is True
+        assert architectures_compatible(None, "") is True
+
+    def test_absent_node_with_present_package_incompatible(self):
+        assert architectures_compatible(None, "x86_64") is False

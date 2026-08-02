@@ -129,9 +129,7 @@ def normalize_architecture(value: object) -> object:
     Unknown unqualified strings fail closed with a stable message.
     """
 
-    if value is None or isinstance(value, NodeArchitecture):
-        return value
-    if is_variable_ref(value):
+    if value is None or isinstance(value, NodeArchitecture) or is_variable_ref(value):
         return value
     if not isinstance(value, str):
         raise ValueError("architecture must be a string")
@@ -151,11 +149,9 @@ def normalize_architecture(value: object) -> object:
 def _canonical_token(value: object) -> str | None:
     """Return the comparable canonical token for a normalized architecture value."""
 
-    if value is None or value == "":
-        return None
     if isinstance(value, NodeArchitecture):
         return value.value
-    if isinstance(value, str):
+    if isinstance(value, str) and value != "":
         return value
     return None
 
