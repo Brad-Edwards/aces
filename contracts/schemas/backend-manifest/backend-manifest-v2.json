@@ -1876,6 +1876,14 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_node_architectures": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Node Architectures",
+          "type": "array"
+        },
         "supported_node_types": {
           "items": {
             "minLength": 1,

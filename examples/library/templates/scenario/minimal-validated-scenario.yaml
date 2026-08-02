@@ -13,6 +13,7 @@ body:
   nodes:
     app:
       type: VM
+      architecture: x86_64
       resources: {ram: 1 GiB, cpu: 1}
       services:
         - {port: 443, name: https}

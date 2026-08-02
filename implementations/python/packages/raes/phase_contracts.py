@@ -171,9 +171,12 @@ class CapabilityConstraint(FrozenPhaseModel):
         parts = self.field_pointer.split("/")
         if len(parts) != 4 or (parts[1], parts[3]) not in {
             ("nodes", "os"),
+            ("nodes", "architecture"),
             ("infrastructure", "count"),
         }:
-            raise ValueError("field_pointer must address /nodes/<id>/os or /infrastructure/<id>/count")
+            raise ValueError(
+                "field_pointer must address /nodes/<id>/os, /nodes/<id>/architecture, or /infrastructure/<id>/count"
+            )
         declaration = parts[2].replace("~1", "/").replace("~0", "~")
         QualifiedName.parse(declaration)
         for index, value in enumerate(self.allowed_values):

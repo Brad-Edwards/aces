@@ -68,6 +68,7 @@ def _concept_bindings(*, with_time: bool) -> tuple[ConceptBinding, ...]:
     bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+        ConceptBinding(scope="capabilities.provisioner.supported_node_architectures", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
         ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
         ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
@@ -122,6 +123,7 @@ def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
                 {
                     "node-type",
                     "os-family",
+                    "node-architecture",
                     "content-type",
                     "account-feature",
                     "workflow-feature",
@@ -250,6 +252,7 @@ def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
             name="reference-emulation-provisioner",
             supported_node_types=frozenset({"vm", "switch"}),
             supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
+            supported_node_architectures=frozenset({"x86_64", "aarch64"}),
             supported_content_types=frozenset({"file", "dataset", "directory"}),
             supported_account_features=frozenset({"groups", "mail", "shell", "home", "disabled", "auth_method"}),
             supported_domain_profiles=frozenset(),

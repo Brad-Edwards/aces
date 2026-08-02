@@ -214,6 +214,7 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
     {
         "capabilities.provisioner.supported_node_types",
         "capabilities.provisioner.supported_os_families",
+        "capabilities.provisioner.supported_node_architectures",
         "capabilities.provisioner.supported_content_types",
         "capabilities.provisioner.supported_account_features",
         "capabilities.provisioner.supported_domain_profiles",

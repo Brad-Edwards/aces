@@ -5817,6 +5817,25 @@
       "additionalProperties": false,
       "description": "A scenario node \u2014 either a VM or a Switch.\n\nThe ``type`` field determines which variant is active. VM fields\nare only valid when type is VM; Switch nodes carry no extra data.",
       "properties": {
+        "architecture": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NodeArchitecture"
+            },
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "pattern": "^(?:amd64|x64|x86-64|arm64|x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*|\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
         "asset_value": {
           "anyOf": [
             {
@@ -5985,6 +6004,15 @@
       ],
       "title": "Node",
       "type": "object"
+    },
+    "NodeArchitecture": {
+      "description": "Canonical target-node CPU architecture vocabulary.\n\nGoverned-extension vocabulary (DSL-139): the closed canonical set below is\nkept deliberately small; a custom architecture uses the governed\n``x-<owner>:<term>`` extension form rather than a catch-all sentinel, so\nneither ``unknown`` nor ``other`` is carried (absence already expresses \"no\ntarget architecture requirement\"). Kept in parity with the\n``provisioner-node-architectures`` controlled vocabulary.",
+      "enum": [
+        "x86_64",
+        "aarch64"
+      ],
+      "title": "NodeArchitecture",
+      "type": "string"
     },
     "NodeType": {
       "description": "Whether a node is a virtual machine or network switch.",
@@ -20901,6 +20929,7 @@
           "not": {
             "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
           },
+          "pattern": "^(?:x86_64|aarch64|amd64|x64|x86-64|arm64|x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*|\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\})?$",
           "title": "Architecture",
           "type": "string"
         },

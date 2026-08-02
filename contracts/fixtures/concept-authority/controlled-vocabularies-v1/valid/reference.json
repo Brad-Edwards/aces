@@ -737,6 +737,26 @@
         }
       }
     },
+    "provisioner-node-architectures": {
+      "title": "Provisioner Node CPU Architectures",
+      "description": "Target-node CPU architecture vocabulary shared by SDL Node.architecture and provisioner capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_node_architectures"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "x86_64": {
+          "title": "x86-64",
+          "description": "64-bit x86 CPU architecture (AMD64 / Intel 64)."
+        },
+        "aarch64": {
+          "title": "AArch64",
+          "description": "64-bit ARM CPU architecture (ARMv8-A and later)."
+        }
+      }
+    },
     "provisioner-content-types": {
       "title": "Provisioner Content Types",
       "description": "Provisioner-supported content type vocabulary.",

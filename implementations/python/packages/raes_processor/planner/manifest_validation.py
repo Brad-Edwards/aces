@@ -3,7 +3,12 @@
 from raes_backend_protocols.capabilities import BackendManifest, OrchestratorCapabilities, ProvisionerCapabilities
 
 from ..models import Diagnostic, RuntimeModel
-from .capability_domains import _account_features, _resource_count_upper_bound, _validate_node_os_family
+from .capability_domains import (
+    _account_features,
+    _resource_count_upper_bound,
+    _validate_node_architecture,
+    _validate_node_os_family,
+)
 from .stateful_admission import generated_artifact_payload_diagnostic
 
 _ORCHESTRATION_WORKFLOWS_ADDRESS = "orchestration.workflows"
@@ -56,6 +61,13 @@ def _validate_node_type_support(model: RuntimeModel, provisioner: ProvisionerCap
                 model,
                 node,
                 provisioner.supported_os_families,
+            )
+        )
+        diagnostics.extend(
+            _validate_node_architecture(
+                model,
+                node,
+                provisioner.supported_node_architectures,
             )
         )
     return diagnostics

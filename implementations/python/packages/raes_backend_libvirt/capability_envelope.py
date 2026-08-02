@@ -26,6 +26,7 @@ from ._payload import (
     DOMAIN_CONTROLLER_PLACEMENT_RESOURCE_TYPE,
     NETWORK_RESOURCE_TYPE,
     NODE_RESOURCE_TYPE,
+    _architecture,
     _node_type,
     _os_family,
     _spec,
@@ -40,6 +41,7 @@ _SWITCH_NODE_TYPE = "switch"
 
 _CODE_UNSUPPORTED_NODE_TYPE = "libvirt-backend.realization.unsupported-node-type"
 _CODE_UNSUPPORTED_OS_FAMILY = "libvirt-backend.realization.unsupported-os-family"
+_CODE_UNSUPPORTED_NODE_ARCHITECTURE = "libvirt-backend.realization.unsupported-node-architecture"
 _CODE_UNSUPPORTED_CONTENT_TYPE = "libvirt-backend.realization.unsupported-content-type"
 _CODE_UNSUPPORTED_SERVICE_MATERIALIZATION_PROFILE = (
     "libvirt-backend.realization.unsupported-service-materialization-profile"
@@ -79,6 +81,13 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
         noun="OS family",
         extract=lambda payload: (_os_family(payload),),
         supported=lambda caps: caps.supported_os_families,
+    ),
+    _EnvelopeDimension(
+        resource_types=frozenset({NODE_RESOURCE_TYPE}),
+        code=_CODE_UNSUPPORTED_NODE_ARCHITECTURE,
+        noun="node architecture",
+        extract=lambda payload: (_architecture(payload),),
+        supported=lambda caps: caps.supported_node_architectures,
     ),
     _EnvelopeDimension(
         resource_types=frozenset({NETWORK_RESOURCE_TYPE}),

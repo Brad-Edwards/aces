@@ -1211,6 +1211,6 @@ def test_backend_manifest_v2_rejects_duplicate_binding_scopes():
 def test_backend_manifest_v2_concept_bindings_roundtrip():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
     model = BackendManifestV2Model.model_validate(payload)
-    assert len(model.concept_bindings) == 14
+    assert len(model.concept_bindings) == 15
     assert model.concept_bindings[0].scope == "capabilities.provisioner.supported_node_types"
     assert model.concept_bindings[0].family == "assets"

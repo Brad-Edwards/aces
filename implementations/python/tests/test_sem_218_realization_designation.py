@@ -34,6 +34,7 @@ from raes_runtime.control_plane_api_models import _snapshot_model
 
 _OPEN_NODE_REALIZATION_SUFFIXES = {
     "os",
+    "architecture",
     "runtime.environment",
     "runtime.mounts",
     "runtime.linux_capabilities",

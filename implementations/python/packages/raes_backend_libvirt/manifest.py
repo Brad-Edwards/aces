@@ -21,12 +21,26 @@ from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
 LIBVIRT_BACKEND_NAME = "libvirt-qemu"
 
 
+def realized_target_architecture(configuration: object) -> str:
+    """Canonical target architecture the configuration-bound realizer realizes.
+
+    The configuration-bound ``architecture`` claim is the sole target architecture
+    this backend configuration can realize; ``RealizerConfigurationModel`` validates
+    it as a governed canonical CPU-architecture term, so it is used directly rather
+    than hard-coded, and a configuration selecting a different host architecture is
+    honored without a code change.
+    """
+
+    return configuration.architecture
+
+
 def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilities:
     """Derive the coarse manifest projection from the selected governed envelope."""
 
     envelope = load_libvirt_realization_envelope(mode)
     configuration = envelope.configuration
     account_features = frozenset(configuration.supported_account_features)
+    realized_architecture = realized_target_architecture(configuration)
     return ProvisionerCapabilities(
         name=(
             "libvirt-techvault-appliance-provisioner"
@@ -35,6 +49,7 @@ def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilitie
         ),
         supported_node_types=frozenset(configuration.supported_node_types),
         supported_os_families=frozenset(configuration.supported_os_families),
+        supported_node_architectures=frozenset({realized_architecture}),
         supported_content_types=frozenset(configuration.supported_content_types),
         supported_account_features=account_features,
         supported_domain_profiles=frozenset(configuration.supported_domain_profiles),
@@ -176,6 +191,7 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
         concept_bindings=(
             ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+            ConceptBinding(scope="capabilities.provisioner.supported_node_architectures", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
             ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
             ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
@@ -188,7 +204,9 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
             RealizationSupportDeclaration(
                 domain="runtime-realization",
                 support_mode=RealizationSupportMode.CONSTRAINED,
-                supported_constraint_kinds=frozenset({"node-type", "os-family", "content-type", "account-feature"}),
+                supported_constraint_kinds=frozenset(
+                    {"node-type", "os-family", "node-architecture", "content-type", "account-feature"}
+                ),
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset(
                     {
