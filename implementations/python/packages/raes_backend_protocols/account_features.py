@@ -37,4 +37,6 @@ def provisioner_account_features(account_spec: Mapping[str, object]) -> frozense
         features.add("disabled")
     if account_spec.get("auth_method") not in ("", None, "password"):
         features.add("auth_method")
+    if account_spec.get("credential_bindings"):
+        features.add("credential_bindings")
     return frozenset(features)

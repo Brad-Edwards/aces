@@ -20,6 +20,7 @@ from pydantic import (
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from ..secret_references import SecretReferenceId
 from ..versions import (
     EXPERIMENT_BINDING_DESCRIPTORS_V1_SCHEMA_VERSION,
     PARTICIPANT_CONFIGURATION_RESULT_V1_SCHEMA_VERSION,
@@ -53,14 +54,7 @@ class SecretReferenceBindingValueModel(ContractModel):
     """Non-sensitive identity of a secret resolved only at an authorized sink."""
 
     kind: Literal["secret-reference"]
-    reference_id: Annotated[
-        str,
-        Field(
-            min_length=1,
-            max_length=256,
-            pattern=r"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
-        ),
-    ]
+    reference_id: SecretReferenceId
 
 
 BindingValue = Annotated[

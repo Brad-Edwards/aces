@@ -119,12 +119,27 @@
       "description": "A user account on a scenario node.\n\nDistinct from OCR's ``Role`` model: roles map exercise participants\nto VM logins for exercise access. Accounts describe the environment\nstate \u2014 what accounts attackers will encounter or exploit.",
       "properties": {
         "auth_method": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AccountAuthenticationMethod"
+            },
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "pattern": "^(?:password|key|certificate|x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*|\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\})$",
+              "type": "string"
+            }
+          ],
           "default": "password",
-          "not": {
-            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          "title": "Auth Method"
+        },
+        "credential_bindings": {
+          "items": {
+            "$ref": "#/$defs/AccountCredentialBinding"
           },
-          "title": "Auth Method",
-          "type": "string"
+          "title": "Credential Bindings",
+          "type": "array"
         },
         "description": {
           "default": "",
@@ -235,6 +250,104 @@
       ],
       "title": "Account",
       "type": "object"
+    },
+    "AccountAuthenticationMethod": {
+      "description": "Portable authentication methods shared by account posture and bindings.",
+      "enum": [
+        "password",
+        "key",
+        "certificate"
+      ],
+      "title": "AccountAuthenticationMethod",
+      "type": "string"
+    },
+    "AccountCredentialBinding": {
+      "additionalProperties": false,
+      "description": "One credential bound unambiguously to its owning account by nesting.",
+      "properties": {
+        "auth_method": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AccountAuthenticationMethod"
+            },
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "pattern": "^(?:password|key|certificate|x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*|\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\})$",
+              "type": "string"
+            }
+          ],
+          "title": "Auth Method"
+        },
+        "credential_id": {
+          "allOf": [
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              }
+            }
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Credential Id",
+          "type": "string"
+        },
+        "material": {
+          "discriminator": {
+            "mapping": {
+              "operator_secret": "#/$defs/OperatorSecretCredentialMaterial",
+              "secret_fixture": "#/$defs/SecretFixtureCredentialMaterial"
+            },
+            "propertyName": "classification"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SecretFixtureCredentialMaterial"
+            },
+            {
+              "$ref": "#/$defs/OperatorSecretCredentialMaterial"
+            }
+          ],
+          "title": "Material"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AccountCredentialPurpose"
+            },
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "pattern": "^(?:primary_authentication|administrative_authentication|primary-authentication|administrative-authentication|x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*|\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\})$",
+              "type": "string"
+            }
+          ],
+          "title": "Purpose"
+        }
+      },
+      "required": [
+        "credential_id",
+        "purpose",
+        "auth_method",
+        "material"
+      ],
+      "title": "AccountCredentialBinding",
+      "type": "object"
+    },
+    "AccountCredentialPurpose": {
+      "description": "Governed purposes for portable account credential bindings.",
+      "enum": [
+        "primary_authentication",
+        "administrative_authentication"
+      ],
+      "title": "AccountCredentialPurpose",
+      "type": "string"
     },
     "AdmittedBindingProvenance": {
       "additionalProperties": false,
@@ -6952,6 +7065,33 @@
         }
       },
       "title": "ObjectiveWindow",
+      "type": "object"
+    },
+    "OperatorSecretCredentialMaterial": {
+      "additionalProperties": false,
+      "description": "Value-free reference to operator-managed credential material.",
+      "properties": {
+        "classification": {
+          "const": "operator_secret",
+          "title": "Classification",
+          "type": "string"
+        },
+        "reference_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+          "title": "Reference Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "classification",
+        "reference_id"
+      ],
+      "title": "OperatorSecretCredentialMaterial",
       "type": "object"
     },
     "OutcomeInterpretationParticipantScope": {
@@ -25454,6 +25594,30 @@
       ],
       "title": "SearchIndexFieldSemantic",
       "type": "string"
+    },
+    "SecretFixtureCredentialMaterial": {
+      "additionalProperties": false,
+      "description": "Deliberately disclosed scenario credential material.",
+      "properties": {
+        "classification": {
+          "const": "secret_fixture",
+          "title": "Classification",
+          "type": "string"
+        },
+        "value": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "classification",
+        "value"
+      ],
+      "title": "SecretFixtureCredentialMaterial",
+      "type": "object"
     },
     "SemanticDigest": {
       "additionalProperties": false,

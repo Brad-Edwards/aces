@@ -16,6 +16,10 @@ from raes_backend_protocols.manifest import (
     backend_manifest_from_v2_model,
 )
 from raes_backend_stubs.manifest import create_stub_manifest
+from raes_contracts.account_credentials import (
+    account_placement_has_credential_bindings,
+    value_free_account_placement_payload,
+)
 from raes_contracts.contracts import BackendManifestV2Model
 from raes_contracts.diagnostics import diagnostic_payload
 from raes_contracts.plan_projection import (
@@ -136,13 +140,20 @@ def _load_backend_manifest(manifest_path: Path | None) -> BackendManifest:
 
 
 def _execution_plan_payload(execution_plan: ExecutionPlan) -> dict[str, Any]:
-    return {
+    payload = {
         "scenario_name": execution_plan.scenario_name,
         "provisioning": provisioning_plan_model(execution_plan.provisioning).model_dump(mode="json"),
         "orchestration": orchestration_plan_model(execution_plan.orchestration).model_dump(mode="json"),
         "evaluation": evaluation_plan_model(execution_plan.evaluation).model_dump(mode="json"),
         "diagnostics": [diagnostic_payload(diagnostic) for diagnostic in execution_plan.diagnostics],
     }
+    for operation in payload["provisioning"]["operations"]:
+        if operation["resource_type"] != "account-placement":
+            continue
+        operation_payload = operation["payload"]
+        if account_placement_has_credential_bindings(operation_payload):
+            operation["payload"] = value_free_account_placement_payload(operation_payload)
+    return payload
 
 
 @app.command("plan")

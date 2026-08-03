@@ -801,6 +801,51 @@
         }
       }
     },
+    "account-authentication-methods": {
+      "title": "Account Authentication Methods",
+      "description": "Portable authentication methods shared by account posture and credential bindings.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "sdl.accounts.auth_method",
+        "sdl.accounts.credential_bindings.auth_method"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "password": {
+          "title": "Password",
+          "description": "Authentication using password material."
+        },
+        "key": {
+          "title": "Key",
+          "description": "Authentication using key material."
+        },
+        "certificate": {
+          "title": "Certificate",
+          "description": "Authentication using certificate material."
+        }
+      }
+    },
+    "account-credential-purposes": {
+      "title": "Account Credential Purposes",
+      "description": "Portable purposes served by account credential bindings.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "sdl.accounts.credential_bindings.purpose"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "primary_authentication": {
+          "title": "Primary Authentication",
+          "description": "The primary authentication method matching account posture."
+        },
+        "administrative_authentication": {
+          "title": "Administrative Authentication",
+          "description": "An additional credential used for administrative authentication."
+        }
+      }
+    },
     "provisioner-account-features": {
       "title": "Provisioner Account Features",
       "description": "Provisioner-supported account feature vocabulary.",
@@ -838,6 +883,10 @@
         "auth_method": {
           "title": "Authentication Method",
           "description": "Authentication method attribute support."
+        },
+        "credential_bindings": {
+          "title": "Credential Bindings",
+          "description": "Typed account credential-binding realization support."
         }
       }
     },

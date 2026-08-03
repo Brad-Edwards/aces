@@ -261,13 +261,6 @@ class _ContentObjectivesMixin:
             if item.service_materialization is not None:
                 self._verify_service_materialization(name, item)
 
-    def _verify_accounts(self) -> None:
-        for name, acct in self._s.accounts.items():
-            if acct.node and not self._is_unresolved_var(acct.node) and acct.node not in self._s.nodes:
-                self._err(f"Account '{name}' references undefined node '{acct.node}'")
-            elif acct.node and not self._is_unresolved_var(acct.node) and not self._is_vm_node(acct.node):
-                self._err(f"Account '{name}' node '{acct.node}' must be a VM node")
-
     def _verify_relationships(self) -> None:
         for name, rel in self._s.relationships.items():
             if not self._is_unresolved_var(rel.source):

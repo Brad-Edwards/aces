@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "3c5a909b00d8c551c42d20875b00e6f68828739ea98f71e2b8b1e60e4d848dfc",
+  "content_hash": "98fa6c880ec8c7c73488a82a599cb184ad9796040dd097bab80df227e2d58125",
   "last_change": {
-    "summary": "Propagated the governed target-node CPU architecture field (Node.architecture) into the instantiated scenario model for issue #674.",
-    "content_hash": "3c5a909b00d8c551c42d20875b00e6f68828739ea98f71e2b8b1e60e4d848dfc"
+    "summary": "Propagated concrete typed account credential bindings into the instantiated scenario model for issue #673 and DSL-439.",
+    "content_hash": "98fa6c880ec8c7c73488a82a599cb184ad9796040dd097bab80df227e2d58125"
   }
 }

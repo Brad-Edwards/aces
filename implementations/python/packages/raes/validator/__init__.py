@@ -2,6 +2,7 @@
 validator.py). Public API is unchanged: import ``SemanticValidator``.
 """
 
+from ._accounts import _AccountsMixin
 from ._content_objectives import _ContentObjectivesMixin
 from ._core import _ValidatorCore
 from ._deployment_tenancy import _DeploymentTenancyMixin
@@ -46,6 +47,7 @@ class SemanticValidator(
     _ParticipantInjectDeliveriesMixin,
     _ParticipantToolAffordancesMixin,
     _ServiceMaterializationMixin,
+    _AccountsMixin,
     _ContentObjectivesMixin,
     _PropositionsMixin,
     _EvidenceRequirementsMixin,

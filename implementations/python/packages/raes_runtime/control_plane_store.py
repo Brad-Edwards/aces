@@ -9,6 +9,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
+from raes_contracts.account_credentials import (
+    account_placement_has_credential_bindings,
+    value_free_account_placement_payload,
+)
 from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
 from raes_contracts.contracts import RealizationEnvelopeIdentityModel, RealizationObservationDisclosureModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
@@ -171,7 +175,7 @@ def _require_expected_history_heads(
 
 def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
     require_participant_autonomous_runtime_snapshot(snapshot)
-    return {
+    payload = {
         "schema_version": RuntimeSnapshotEnvelope().schema_version,
         "entries": {
             address: {
@@ -258,6 +262,13 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         ),
         "metadata": dict(snapshot.metadata),
     }
+    for entry in payload["entries"].values():
+        if entry["resource_type"] != "account-placement":
+            continue
+        entry_payload = entry["payload"]
+        if account_placement_has_credential_bindings(entry_payload):
+            entry["payload"] = value_free_account_placement_payload(entry_payload)
+    return payload
 
 
 def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
