@@ -136,14 +136,9 @@ entries:
         path: implementations/python/tests/test_runtime_models.py
       - kind: typed_ir_or_contract_coverage
         path: contracts/schemas/control-plane/workflow-result-envelope-v1.json
-    waived_artifacts:
       - kind: property_based_or_differential_tests
-        date: 2026-06-13
-        tracking:
-          - "#521"
-        rationale: >-
-          No property-based or differential test yet exercises the workflow
-          state-machine / result-envelope semantics; tracked for delivery.
+        path: implementations/python/tests/test_workflow_semantics_properties.py
+    waived_artifacts: []
 
   - subsystem: planner
     delivered_artifacts:
@@ -189,15 +184,9 @@ entries:
         path: implementations/python/tests/test_runtime_contracts.py
       - kind: typed_ir_or_contract_coverage
         path: contracts/schemas/experiment-core/experiment-task-v1.json
-    waived_artifacts:
       - kind: property_based_or_differential_tests
-        date: 2026-06-13
-        tracking:
-          - "#521"
-        rationale: >-
-          Contract validation in test_runtime_contracts.py is example-based; no
-          property-based or differential coverage of the EXP-701-705 contracts
-          yet; tracked for delivery.
+        path: implementations/python/tests/test_experiment_core_properties.py
+    waived_artifacts: []
 
   - subsystem: scenario-variation-trial-realization
     # Executable SCE-002 coverage: #786/#787 deliver family/selection authoring,
@@ -297,14 +286,9 @@ entries:
         path: implementations/python/tests/test_runtime_contracts.py
       - kind: typed_ir_or_contract_coverage
         path: contracts/schemas/control-plane/workflow-result-envelope-v1.json
-    waived_artifacts:
       - kind: property_based_or_differential_tests
-        date: 2026-06-13
-        tracking:
-          - "#521"
-        rationale: >-
-          Portable result/evaluator envelope validation is example-based; no
-          property-based or differential coverage yet; tracked for delivery.
+        path: implementations/python/tests/test_runtime_result_envelope_properties.py
+    waived_artifacts: []
 
   - subsystem: participant-runtime
     # Design coverage only (RUN-305-308): the README is the documented invariant

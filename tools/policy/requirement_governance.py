@@ -14,6 +14,94 @@ from .common import PolicyFailure, load_yaml, path_matches_any
 
 UID_RE = re.compile(r"\b([A-Z]{3}-\d{3})\b", re.IGNORECASE)
 DEFAULT_HTTP_TIMEOUT_SECONDS = 5.0
+HTTP_TIMEOUT_ENV = "GC_HTTP_TIMEOUT_SECONDS"
+BASE_URL_ENV = "GC_BASE_URL"
+# Name of the environment variable that carries the Ground Control bearer
+# credential (matches the MCP server's own GROUND_CONTROL_API_TOKEN). This is an
+# env-var name, not a credential value.
+BEARER_ENV = "GROUND_CONTROL_API_TOKEN"
+
+
+class GroundControlError(RuntimeError):
+    """Base class for Ground Control client failures.
+
+    Subclasses RuntimeError so callers that only distinguish "the governance
+    gate could not be evaluated" keep working, while callers that need to tell
+    an auth rejection apart from a transport failure can catch the specific
+    subclasses below.
+    """
+
+
+class GroundControlUnavailable(GroundControlError):
+    """The endpoint could not be reached or returned a non-auth error.
+
+    Covers connection refusal, DNS failure, read/connect timeout, and any HTTP
+    status other than the auth-rejection codes. Governance was *not* evaluated.
+    """
+
+
+class GroundControlAuthRequired(GroundControlError):
+    """The endpoint was reachable but rejected the request for missing/invalid auth.
+
+    Distinct from :class:`GroundControlUnavailable` so a reachable-but-
+    unauthenticated Ground Control (HTTP 401/403) is never reported as
+    infrastructure downtime.
+    """
+
+
+def resolve_timeout_seconds() -> float:
+    """Resolve the HTTP timeout, allowing an env override of the 5s default."""
+    raw = os.environ.get(HTTP_TIMEOUT_ENV)
+    if raw is None or not raw.strip():
+        return DEFAULT_HTTP_TIMEOUT_SECONDS
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_HTTP_TIMEOUT_SECONDS
+    return value if value > 0 else DEFAULT_HTTP_TIMEOUT_SECONDS
+
+
+def _mcp_ground_control_env(repo_root: Path) -> dict[str, str]:
+    """Return the repo-local ``.mcp.json`` ground-control server env, or {}.
+
+    Missing, unreadable, or malformed ``.mcp.json`` yields an empty mapping so
+    resolution falls through to a clear "unset" state rather than raising.
+    """
+    try:
+        data = json.loads((repo_root / ".mcp.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    server = servers.get("ground-control") if isinstance(servers, dict) else None
+    env = server.get("env") if isinstance(server, dict) else None
+    if not isinstance(env, dict):
+        return {}
+    return {str(key): value for key, value in env.items() if isinstance(value, str)}
+
+
+def _resolve_from_env_or_mcp(repo_root: Path, name: str) -> str | None:
+    explicit = os.environ.get(name)
+    if explicit and explicit.strip():
+        return explicit.strip()
+    mcp_value = _mcp_ground_control_env(repo_root).get(name)
+    if mcp_value and mcp_value.strip():
+        return mcp_value.strip()
+    return None
+
+
+def resolve_base_url(repo_root: Path) -> str | None:
+    """Resolve GC_BASE_URL from the environment, then the repo-local .mcp.json.
+
+    There is deliberately no baked-in host default: a hardcoded fallback is
+    what let this gate hang against decommissioned infrastructure. Returns None
+    when unset so the caller can emit a clear configuration error.
+    """
+    return _resolve_from_env_or_mcp(repo_root, BASE_URL_ENV)
+
+
+def resolve_token(repo_root: Path) -> str | None:
+    """Resolve the Ground Control API bearer credential from env, then .mcp.json."""
+    return _resolve_from_env_or_mcp(repo_root, BEARER_ENV)
 
 
 def load_policy(repo_root: Path) -> dict:
@@ -31,9 +119,11 @@ class GroundControlHttpClient:
         self,
         base_url: str,
         *,
+        token: str | None = None,
         timeout_seconds: float = DEFAULT_HTTP_TIMEOUT_SECONDS,
     ) -> None:
         self.base_url = base_url.rstrip("/")
+        self.token = token
         self.timeout_seconds = timeout_seconds
 
     def _request(self, path: str, *, params: dict[str, str] | None = None) -> dict | list:
@@ -41,6 +131,8 @@ class GroundControlHttpClient:
         if params:
             url = f"{url}?{urlencode(params)}"
         request = Request(url, headers={"X-Actor": "repo-policy"})  # noqa: S310 - explicit GC HTTP endpoint
+        if self.token:
+            request.add_header("Authorization", f"Bearer {self.token}")
         try:
             with urlopen(  # noqa: S310 - explicit GC HTTP endpoint
                 request,
@@ -49,11 +141,15 @@ class GroundControlHttpClient:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"{exc.code}: {body}") from exc
+            if exc.code in {401, 403}:
+                raise GroundControlAuthRequired(f"{exc.code}: {body}") from exc
+            raise GroundControlUnavailable(f"{exc.code}: {body}") from exc
         except URLError as exc:
-            raise RuntimeError(str(exc.reason)) from exc
+            # A socket read timeout raises TimeoutError, which is NOT a URLError
+            # subclass, so it is handled separately below.
+            raise GroundControlUnavailable(str(exc.reason)) from exc
         except TimeoutError as exc:
-            raise RuntimeError("request timed out") from exc
+            raise GroundControlUnavailable("request timed out") from exc
 
     def get_requirement(self, project: str, uid: str) -> dict:
         return self._request(f"/api/v1/requirements/uid/{uid}", params={"project": project})

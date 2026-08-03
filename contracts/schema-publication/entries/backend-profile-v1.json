@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "9b55db6c28c375845132097920e730af375e66bf13dc12f9122aed9ab5b82a97",
+  "content_hash": "4f9db6e82a6cec80e3f1f64c9fdc20bd87005bafd29c6ce817d41ceee301db85",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "9b55db6c28c375845132097920e730af375e66bf13dc12f9122aed9ab5b82a97"
+    "summary": "Added participant-flow-control-relation-v1 to the backend-facing supported-contract enum for issue #1004, so a backend can declare it as the owning realization contract for the adversarial-control flow, final-sink, and quarantine feature terms.",
+    "content_hash": "4f9db6e82a6cec80e3f1f64c9fdc20bd87005bafd29c6ce817d41ceee301db85"
   }
 }

@@ -39,6 +39,7 @@
           "participant-resource-budget-event-v1",
           "participant-control-occurrence-v1",
           "participant-crossing-occurrence-v1",
+          "participant-flow-control-relation-v1",
           "participant-lifecycle-event-v1",
           "participant-observation-envelope-v1",
           "participant-shared-state-record-v1",
