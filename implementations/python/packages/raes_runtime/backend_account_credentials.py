@@ -10,7 +10,7 @@ from raes_contracts.account_credentials import (
     value_free_account_placement_payload,
 )
 from raes_contracts.diagnostics import Diagnostic
-from raes_contracts.planning import ChangeAction, ProvisioningPlan, RuntimeDomain
+from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
 _APPROVED_REALIZATION_FIELDS = frozenset(
@@ -86,18 +86,42 @@ def _require_only_approved_snapshot_changes(snapshot: RuntimeSnapshot, baseline:
             raise ValueError("credential-bearing backend changed an unapproved snapshot carrier")
 
 
-def _closed_plan_entries(
-    snapshot: RuntimeSnapshot,
-    baseline: RuntimeSnapshot,
-    plan: ProvisioningPlan,
-) -> dict[str, SnapshotEntry]:
+def _expected_entry_addresses(baseline: RuntimeSnapshot, plan: ProvisioningPlan) -> set[str]:
     expected_addresses = set(baseline.entries)
     for operation in plan.operations:
         if operation.action is ChangeAction.DELETE:
             expected_addresses.discard(operation.address)
         else:
             expected_addresses.add(operation.address)
-    if set(snapshot.entries) != expected_addresses:
+    return expected_addresses
+
+
+def _closed_plan_entry(snapshot: RuntimeSnapshot, operation: ProvisionOp) -> SnapshotEntry:
+    entry = snapshot.entries.get(operation.address)
+    if entry is None:
+        raise ValueError("credential-bearing backend omitted a submitted plan entry")
+    expected_status = "unchanged" if operation.action is ChangeAction.UNCHANGED else "applied"
+    if (
+        entry.domain is not RuntimeDomain.PROVISIONING
+        or entry.resource_type != operation.resource_type
+        or entry.ordering_dependencies != operation.ordering_dependencies
+        or entry.refresh_dependencies != operation.refresh_dependencies
+        or entry.status != expected_status
+        or entry.payload != operation.payload
+    ):
+        raise ValueError("credential-bearing backend entry does not match the submitted plan")
+    payload = deepcopy(operation.payload)
+    if operation.resource_type == "account-placement":
+        payload = value_free_account_placement_payload(operation.payload)
+    return replace(entry, payload=payload)
+
+
+def _closed_plan_entries(
+    snapshot: RuntimeSnapshot,
+    baseline: RuntimeSnapshot,
+    plan: ProvisioningPlan,
+) -> dict[str, SnapshotEntry]:
+    if set(snapshot.entries) != _expected_entry_addresses(baseline, plan):
         raise ValueError("credential-bearing backend returned entries outside the submitted plan")
 
     safe_entries = deepcopy(dict(baseline.entries))
@@ -105,23 +129,7 @@ def _closed_plan_entries(
         if operation.action is ChangeAction.DELETE:
             safe_entries.pop(operation.address, None)
             continue
-        entry = snapshot.entries.get(operation.address)
-        if entry is None:
-            raise ValueError("credential-bearing backend omitted a submitted plan entry")
-        expected_status = "unchanged" if operation.action is ChangeAction.UNCHANGED else "applied"
-        if (
-            entry.domain is not RuntimeDomain.PROVISIONING
-            or entry.resource_type != operation.resource_type
-            or entry.ordering_dependencies != operation.ordering_dependencies
-            or entry.refresh_dependencies != operation.refresh_dependencies
-            or entry.status != expected_status
-            or entry.payload != operation.payload
-        ):
-            raise ValueError("credential-bearing backend entry does not match the submitted plan")
-        payload = deepcopy(operation.payload)
-        if operation.resource_type == "account-placement":
-            payload = value_free_account_placement_payload(operation.payload)
-        safe_entries[operation.address] = replace(entry, payload=payload)
+        safe_entries[operation.address] = _closed_plan_entry(snapshot, operation)
     return safe_entries
 
 

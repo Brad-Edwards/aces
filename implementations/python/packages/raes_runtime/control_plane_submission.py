@@ -51,40 +51,40 @@ def _submitted_plan_diagnostics(
     manifest: BackendManifest | None = None,
 ) -> list[Diagnostic]:
     admitted = set(snapshot.entries) | {operation.address for operation in plan.operations}
-    diagnostics: list[Diagnostic] = []
     for operation in plan.operations:
         diagnostic = _submitted_operation_diagnostic(operation, domain, snapshot, admitted)
         if diagnostic is not None:
-            diagnostics.append(diagnostic)
-            break
-    if not diagnostics and domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
-        if manifest is None:
-            raise ValueError("provisioning submission admission requires a backend manifest")
-        account_diagnostic = _account_credential_submission_diagnostic(plan, manifest)
-        if account_diagnostic is not None:
-            diagnostics.append(account_diagnostic)
-        else:
-            stateful_diagnostic = _stateful_submission_diagnostic(plan, manifest)
-            if stateful_diagnostic is not None:
-                diagnostics.append(stateful_diagnostic)
-            else:
-                service_materialization_diagnostics = service_materialization_plan_diagnostics(
-                    plan,
-                    manifest.provisioner,
-                    manifest.realization_envelope,
-                    manifest.realization_support,
-                )
-                if service_materialization_diagnostics:
-                    diagnostics.extend(service_materialization_diagnostics[:1])
-                    return diagnostics
-                diagnostics.extend(
-                    domain_topology_plan_diagnostics(
-                        plan,
-                        snapshot=snapshot,
-                        supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
-                    )[:1]
-                )
-    return diagnostics
+            return [diagnostic]
+    if domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
+        return _provisioning_submission_diagnostics(plan, snapshot, manifest)
+    return []
+
+
+def _provisioning_submission_diagnostics(
+    plan: ProvisioningPlan,
+    snapshot: RuntimeSnapshot,
+    manifest: BackendManifest | None,
+) -> list[Diagnostic]:
+    if manifest is None:
+        raise ValueError("provisioning submission admission requires a backend manifest")
+    diagnostic = _account_credential_submission_diagnostic(plan, manifest) or _stateful_submission_diagnostic(
+        plan, manifest
+    )
+    if diagnostic is not None:
+        return [diagnostic]
+    service_diagnostics = service_materialization_plan_diagnostics(
+        plan,
+        manifest.provisioner,
+        manifest.realization_envelope,
+        manifest.realization_support,
+    )
+    if service_diagnostics:
+        return service_diagnostics[:1]
+    return domain_topology_plan_diagnostics(
+        plan,
+        snapshot=snapshot,
+        supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
+    )[:1]
 
 
 def _account_credential_submission_diagnostic(
@@ -99,37 +99,57 @@ def _account_credential_submission_diagnostic(
         spec = operation.payload.get("spec")
         if not isinstance(spec, Mapping) or not spec.get("credential_bindings"):
             continue
-        if not account_credential_spec_is_valid(spec):
-            return Diagnostic(
-                code="provisioner.account-credential-binding-invalid",
-                domain="provisioning",
-                address=operation.address,
-                message="Account credential binding payload does not satisfy the canonical account contract.",
-            )
-        account_name = operation.payload.get("account_name") or operation.payload.get("name")
-        if not isinstance(account_name, str) or operation.address != f"provision.account.{account_name}":
-            return Diagnostic(
-                code="provisioner.account-credential-binding-invalid",
-                domain="provisioning",
-                address=operation.address,
-                message="Account credential binding payload does not match its canonical account address.",
-            )
-        if not manifest.provisioner.supports_accounts:
-            return Diagnostic(
-                code="provisioner.accounts-unsupported",
-                domain="provisioning",
-                address=operation.address,
-                message="Provisioner does not support accounts.",
-            )
-        for feature in sorted(provisioner_account_features(spec)):
-            if feature not in manifest.provisioner.supported_account_features:
-                return Diagnostic(
-                    code="provisioner.unsupported-account-feature",
-                    domain="provisioning",
-                    address=operation.address,
-                    message=f"Provisioner does not support account feature '{feature}'.",
-                )
+        diagnostic = _account_credential_operation_diagnostic(operation, spec, manifest)
+        if diagnostic is not None:
+            return diagnostic
     return None
+
+
+def _account_credential_operation_diagnostic(
+    operation: PlanOperation,
+    spec: Mapping[str, object],
+    manifest: BackendManifest,
+) -> Diagnostic | None:
+    account_name = operation.payload.get("account_name") or operation.payload.get("name")
+    diagnostic: Diagnostic | None = None
+    if not account_credential_spec_is_valid(spec):
+        diagnostic = Diagnostic(
+            code="provisioner.account-credential-binding-invalid",
+            domain="provisioning",
+            address=operation.address,
+            message="Account credential binding payload does not satisfy the canonical account contract.",
+        )
+    elif not isinstance(account_name, str) or operation.address != f"provision.account.{account_name}":
+        diagnostic = Diagnostic(
+            code="provisioner.account-credential-binding-invalid",
+            domain="provisioning",
+            address=operation.address,
+            message="Account credential binding payload does not match its canonical account address.",
+        )
+    elif not manifest.provisioner.supports_accounts:
+        diagnostic = Diagnostic(
+            code="provisioner.accounts-unsupported",
+            domain="provisioning",
+            address=operation.address,
+            message="Provisioner does not support accounts.",
+        )
+    else:
+        unsupported_feature = next(
+            (
+                feature
+                for feature in sorted(provisioner_account_features(spec))
+                if feature not in manifest.provisioner.supported_account_features
+            ),
+            None,
+        )
+        if unsupported_feature is not None:
+            diagnostic = Diagnostic(
+                code="provisioner.unsupported-account-feature",
+                domain="provisioning",
+                address=operation.address,
+                message=f"Provisioner does not support account feature '{unsupported_feature}'.",
+            )
+    return diagnostic
 
 
 def _stateful_submission_diagnostic(
