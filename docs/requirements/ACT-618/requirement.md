@@ -18,8 +18,3 @@ The ecosystem shall support explicit participant-local outcome models, including
 ## Rationale
 
 Requirement inventory expansion. Participant behavior needs explicit local outcome meaning rather than only scenario-wide success or failure.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#81` (Participant model: temporal behavior profiles, operational holdings, outcome support (ACT-614, 615, 618))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#218` (Participant Outcome Model Support (ACT-618))

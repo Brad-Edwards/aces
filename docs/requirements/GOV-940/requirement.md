@@ -17,7 +17,7 @@ The ecosystem shall define explicit multi-organizational authority and governanc
 
 ## Rationale
 
-Multi-organization cyber range scenarios require more than participant visibility and evidence capture: they need portable semantics for which organization owns, may approve, may receive, must report, or may release governed information and evidence. Without this, ACES can model multiple organizations acting in a scenario but cannot precisely model the authority and governance constraints that make cross-organization exercises realistic and auditable.
+Multi-organization cyber range scenarios require more than participant visibility and evidence capture: they need portable semantics for which organization owns, may approve, may receive, must report, or may release governed information and evidence. Without this, RAES can model multiple organizations acting in a scenario but cannot precisely model the authority and governance constraints that make cross-organization exercises realistic and auditable.
 
 ## Traceability
 

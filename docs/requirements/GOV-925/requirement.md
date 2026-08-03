@@ -18,8 +18,3 @@ The ecosystem shall define standards profiles that describe mutually compatible 
 ## Rationale
 
 Users need help composing compatible stacks, not merely validating isolated artifacts one by one. Standards profiles provide a more realistic interoperability target than disconnected conformance claims.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#91` (Federation & interoperability engineering (GOV-916, 923, 924, 925))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#246` (Standards Profiles And Compatible Stack Recommendation (GOV-925))

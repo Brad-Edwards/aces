@@ -17,8 +17,3 @@ The ecosystem shall maintain conformance fixtures and checks for participant-ori
 ## Rationale
 
 Primary-source refresh shows that benchmark and verifier protocol claims need executable conformance evidence, not just prose descriptions.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#126` (Participant trajectory & benchmark assurance (ASR-520, 521, 522, 524))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#331` (Participant Benchmark Protocol Conformance (ASR-521))

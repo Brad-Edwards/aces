@@ -21,12 +21,9 @@ Requirement inventory expansion. Participant behavior must be modeled portably r
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#77` (Participant behavior model (ACT-602, 603, 606, 607, 608))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#204` (Executable Participant Behavior Model (ACT-602))
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-067-participant-behavior-model.md` (ADR-067 Participant Behavior Model)
 - IMPLEMENTS → SPEC `specs/formal/participant-behavior-model/README.md` (Formal participant behavior model specification)
 - IMPLEMENTS → GITHUB_ISSUE `77` (Issue #77 - Participant behavior model)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_conformance/conformance.py` (Participant behavior history binding conformance gate)
 - TESTS → TEST `implementations/python/tests/test_runtime_conformance.py` (Runtime conformance regression for participant behavior binding)
 - DOCUMENTS → SPEC `specs/formal/assurance-fulfillment.yaml` (ACT-602 assurance fulfillment evidence)
 - IMPLEMENTS → GITHUB_ISSUE `204` (Issue #204 - Executable Participant Behavior Model)

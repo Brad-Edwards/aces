@@ -17,8 +17,3 @@ The ecosystem shall support human-produced review, annotation, and adjudication 
 ## Rationale
 
 Primary-source refresh shows that human-reviewed and human-annotated benchmark assets are common and should not be collapsed into generic metadata or automated verifier outputs.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#125` (Participant benchmark, verifier & reward model (DSL-122, API-416, EXP-726, 727, 729, 730))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#329` (Human Review, Annotation, And Adjudication Assets (EXP-730))

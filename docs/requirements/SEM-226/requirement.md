@@ -20,9 +20,6 @@ Issue #794 retains the ADR-083 visibility model and clarifies the distinct polic
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#4` (SEM-200: Shared Semantic Integrity)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#119` (Participant tool/affordance & decision-surface semantics; exposure/visibility-boundary semantics (SEM-219, 220, 226))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#296` (Participant Exposure And Visibility-Boundary Semantics (SEM-226))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-083-participant-tool-decision-surface-and-exposure-semantics.md` (ADR-083 participant tool, decision-surface, and exposure semantics)
 - DOCUMENTS → SPEC `specs/formal/participant-semantics/README.md` (Formal SEM-219/SEM-220/SEM-226 participant semantics)
@@ -30,10 +27,6 @@ Issue #794 retains the ADR-083 visibility model and clarifies the distinct polic
 - DOCUMENTS → DOCUMENTATION `docs/explain/reference/shared-semantic-integrity.md` (Shared semantic integrity mapping for SEM-219/SEM-220/SEM-226)
 - DOCUMENTS → GITHUB_ISSUE `794` (Assess and design formal participant I/O control with information-flow and bisimulation semantics)
 - DOCUMENTS → DOCUMENTATION `docs/research/participant-io-control/requirement-disposition.md` (Issue #794 participant information-flow/control requirement disposition)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/participant_exposure.py` (SEM-226 participant exposure projection and evidence model)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/participant_exposure_authority.py` (SEM-226 participant exposure authority and audit validation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/participant_exposure_policy.py` (SEM-226 participant exposure policy operations)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/participant_decision_surface_exposure.py` (SEM-226 serialized exposure binding contract)
 - IMPLEMENTS → CONFIG `contracts/schemas/control-plane/participant-decision-surface-v1.json` (SEM-226 participant decision-surface exposure schema)
 - IMPLEMENTS → SPEC `specs/formal/participant-semantics/README.md` (SEM-226 formal participant exposure semantics)
 - IMPLEMENTS → GITHUB_ISSUE `296` (Participant Exposure And Visibility-Boundary Semantics (SEM-226))

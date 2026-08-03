@@ -20,9 +20,7 @@ Primary-source refresh shows that participant interaction surfaces vary between 
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#121` (Participant tool/affordance model & contracts (ACT-619, 620, 622, API-414))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/participant_behavior/__init__.py` (ACT-622 authored participant action-argument domains)
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#303` (Participant Action-Space Modes (ACT-622))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/contracts/participant_decision_surface.py` (ACT-622 participant decision-surface contract)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/participant_action_arguments.py` (ACT-622 normalized action-argument carrier)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/participant_binding.py` (ACT-622 fail-closed participant binding admission)

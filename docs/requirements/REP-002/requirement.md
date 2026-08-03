@@ -13,7 +13,7 @@ updated_at: 2026-07-04T02:32:46.085890Z
 
 ## Statement
 
-The Brad-Edwards/aces-adapters repository shall be established as a monorepo of isolated per-simulator adapter projects (each with its own lockfile/environment) plus a shared sim-adapter base package and backend conformance harness, with a per-adapter CI matrix so incompatible simulator dependency stacks cannot gate one another. The repository shall be fully onboarded to Ground Control: .ground-control.yaml (project registration, workflow/verify/lint/format commands, sonarcloud config, requirement governance), ADR directory, towncrier changelog, nox verify graph, pre-commit hooks, and main+dev branch protection. It shall be configured with a strict SonarCloud quality profile mirroring the aces aces-strict gate (fails on any new issue; qualitygate.wait enabled; new-code coverage, duplication, rating, and security-hotspot conditions), using the aces repository itself as the reference configuration.
+The adapters-monorepo repository shall be established as a monorepo of isolated per-simulator adapter projects (each with its own lockfile/environment) plus a shared sim-adapter base package and backend conformance harness, with a per-adapter CI matrix so incompatible simulator dependency stacks cannot gate one another. The repository shall be fully onboarded to Ground Control: .ground-control.yaml (project registration, workflow/verify/lint/format commands, sonarcloud config, requirement governance), ADR directory, towncrier changelog, nox verify graph, pre-commit hooks, and main+dev branch protection. It shall be configured with a strict SonarCloud quality profile mirroring the raes raes-strict gate (fails on any new issue; qualitygate.wait enabled; new-code coverage, duplication, rating, and security-hotspot conditions), using the raes repository itself as the reference configuration.
 
 ## Rationale
 
@@ -22,4 +22,3 @@ Amortizes the expensive Ground Control onboarding and strict-Sonar setup across 
 ## Traceability
 
 - DOCUMENTS → GITHUB_ISSUE `636` (REP-002 — Adapters monorepo standup with Ground Control onboarding and strict SonarCloud)
-- IMPLEMENTS → SPEC `https://github.com/Brad-Edwards/aces-adapters` (aces-adapters monorepo (REP-002 standup))

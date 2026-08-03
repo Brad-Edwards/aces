@@ -21,14 +21,9 @@ Requirement inventory expansion. Defensive behavior needs its own expressible vo
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#78` (Participant behavior vocabularies: offensive, defensive, autonomous-agent (ACT-609, 610, 611))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#210` (Defensive Behavior Vocabularies (ACT-610))
 - IMPLEMENTS → GITHUB_ISSUE `210` (Defensive Behavior Vocabularies (ACT-610))
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/semantics/participant_behavior.py` (Defensive behavior semantic validation)
 - IMPLEMENTS → CONFIG `contracts/concept-authority/controlled-vocabularies-v1.json` (Governed participant defensive behavior vocabulary)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/participant_behavior_specification.py` (Participant defensive behavior reference model)
 - IMPLEMENTS → CONFIG `contracts/schemas/concept-authority/nist-csf-defensive-categories-source-v1.json` (NIST CSF defensive category source schema)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/vocabulary_sources.py` (Defensive vocabulary source contract runtime)
 - IMPLEMENTS → CONFIG `contracts/concept-authority/nist-csf-defensive-categories-source-v1.json` (Pinned NIST CSF 2.0 defensive category source)
 - IMPLEMENTS → CONFIG `contracts/schemas/sdl/sdl-authoring-input-v1.json` (SDL defensive behavior reference authoring contract)
 - IMPLEMENTS → SPEC `specs/formal/participant-behavior-model/README.md` (Formal defensive behavior reference contract)

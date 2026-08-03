@@ -20,18 +20,5 @@ Primary-source refresh shows that tool-using participants require an explicit au
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#120` (Participant tool/affordance & decision-exposure language surfaces (DSL-116, 117, 118, 125))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#298` (Participant Tool And Affordance Modeling (DSL-117))
 - TESTS → TEST `implementations/python/tests/test_participant_interactive_access.py` (Participant interactive-access SDL and compiler tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (contracts.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/compiler/participant_behaviors.py` (participant_behaviors.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/__init__.py` (__init__.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/behavior_resources.py` (behavior_resources.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_mapping_scopes.py` (_mapping_scopes.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_language_metadata.py` (_language_metadata.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/agents.py` (agents.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/composition.py` (composition.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/semantics/participant_interactive_access.py` (participant_interactive_access.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/_content_objectives.py` (_content_objectives.py)
 - IMPLEMENTS → PULL_REQUEST `807` (feat(sdl): add participant interactive access)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#805` (SDL: authored participant interactive-access (SSH/RDP) declarations)

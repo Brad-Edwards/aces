@@ -13,7 +13,7 @@ updated_at: 2026-04-05T15:37:12.615771Z
 
 ## Statement
 
-The ecosystem shall define explicit gateway and bridge contracts for translating or mediating between ACES-native artifacts and adjacent standards, federations, ecosystems, or runtime environments.
+The ecosystem shall define explicit gateway and bridge contracts for translating or mediating between RAES-native artifacts and adjacent standards, federations, ecosystems, or runtime environments.
 
 ## Rationale
 
@@ -22,5 +22,3 @@ Military simulation interoperability practice shows that gateways and bridges ar
 ## Traceability
 
 - DOCUMENTS → DOCUMENTATION `research/primary/reference-organizations/military-simulation-interop/README.md` (Military Simulation Interoperability Sources)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#91` (Federation & interoperability engineering (GOV-916, 923, 924, 925))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#244` (Gateway And Bridge Contracts (GOV-923))

@@ -17,8 +17,3 @@ The ecosystem shall support first-class benchmark reference targets, hidden eval
 ## Rationale
 
 Primary-source refresh shows that many benchmark protocols rely on hidden tests, gold answers, or comparable truth assets that must be modeled distinctly to preserve benchmark integrity.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#125` (Participant benchmark, verifier & reward model (DSL-122, API-416, EXP-726, 727, 729, 730))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#328` (Benchmark Reference Targets, Hidden Assets, And Gold Standards (EXP-729))

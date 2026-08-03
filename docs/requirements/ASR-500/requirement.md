@@ -18,7 +18,3 @@ The ecosystem shall provide machine-checkable assurance mechanisms that make its
 ## Rationale
 
 Current state: partially implemented. The ecosystem needs explicit proof surfaces so claims about semantics and portability can be checked rather than asserted.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#58` (ASR-500: Assurance & portability (umbrella))

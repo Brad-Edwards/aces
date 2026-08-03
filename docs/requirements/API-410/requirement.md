@@ -18,8 +18,3 @@ The ecosystem shall define plain-data contracts for shared operational state and
 ## Rationale
 
 Requirement inventory expansion. Shared state and derived context must be portable if they are visible outside a backend.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#94` (Participant intervention & shared-state contracts (API-409, 410))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#253` (Shared Operational State And Derived Context Contracts (API-410))

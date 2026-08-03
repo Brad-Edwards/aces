@@ -17,8 +17,3 @@ The language shall support references to benchmark truth assets, hidden evaluati
 ## Rationale
 
 Primary-source refresh shows that benchmark truth assets and adjudication assets are distinct from public task statements and need an authored reference surface where they are part of the experiment design.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#125` (Participant benchmark, verifier & reward model (DSL-122, API-416, EXP-726, 727, 729, 730))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#324` (Benchmark Truth And Adjudication Asset References (DSL-122))

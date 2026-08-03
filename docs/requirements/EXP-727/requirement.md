@@ -17,8 +17,3 @@ The ecosystem shall support verifier, judge, and reward models as first-class ex
 ## Rationale
 
 Primary-source refresh shows that verifiers, judges, and reward models materially shape participant evaluation and must be modeled distinctly rather than hidden inside one benchmark harness.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#125` (Participant benchmark, verifier & reward model (DSL-122, API-416, EXP-726, 727, 729, 730))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#327` (Verifier, Judge, And Reward Model (EXP-727))

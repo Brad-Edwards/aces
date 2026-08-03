@@ -21,7 +21,5 @@ Application-internal RBAC is the single highest-recurrence SCN-010 expressivity 
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_app_authorization.py` (runtime_app_authorization.py)
 - TESTS → TEST `implementations/python/tests/test_runtime_app_authorization.py` (test_runtime_app_authorization.py)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-046-app-authorization-runtime-inventory.md` (ADR-046 App Authorization Runtime Inventory)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)

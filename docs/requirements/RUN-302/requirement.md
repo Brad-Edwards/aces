@@ -26,5 +26,3 @@ Current state: implemented. A compiled representation is required so processing 
 - CONSTRAINS → SPEC `specs/formal/composition-readiness.md` (Composition Readiness)
 - TESTS → TEST `implementations/python/tests/test_runtime_models.py` (Runtime Model Compilation Tests)
 - TESTS → TEST `implementations/python/tests/test_fm2_semantics.py` (FM2 Semantic Tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models.py` (Runtime Models)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/compiler/__init__.py` (Runtime Compiler)

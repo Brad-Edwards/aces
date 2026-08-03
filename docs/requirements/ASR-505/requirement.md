@@ -21,7 +21,6 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 
 ## Traceability
 
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#68` (Classification-based assurance policy: structural/semantic/graph/stateful change → verification artifacts (ASR-505))
 - IMPLEMENTS → SPEC `specs/formal/assurance-policy.yaml` (Classification-based assurance policy (canonical machine-readable mapping))
 - IMPLEMENTS → POLICY `tools/check_assurance_policy.py` (Structural gate validator for the classification-based assurance policy)
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-018-classification-based-assurance-policy.md` (ADR-018: Canonical Mapping for the Classification-Based Assurance Policy)
@@ -30,15 +29,9 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 - IMPLEMENTS → DOCUMENTATION `docs/specs/formal.md` (Formal Specifications overview (FM Classification reference))
 - IMPLEMENTS → CONFIG `noxfile.py` (nox verification graph (wires the assurance-policy gate into policy/verify/hook sessions))
 - TESTS → TEST `implementations/python/tests/test_assurance_policy.py` (Unit tests for the assurance-policy validator (57 cases))
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#518` (changed: add FM classification assurance gate)
 - IMPLEMENTS → DOCUMENTATION `docs/explain/reference/fm-classification-ledger.yaml` (FM classification ledger for ADR-023 through ADR-058)
 - IMPLEMENTS → DOCUMENTATION `docs/decisions/adrs/TEMPLATE.md` (ADR template classification record fields)
 - IMPLEMENTS → DOCUMENTATION `docs/explain/reference/shared-semantic-integrity.md` (Shared semantic integrity reference for FM classification ledger location and gate)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#483` (Per-change FM-classification record and gate (review ADR-2))
 - IMPLEMENTS → SPEC `specs/formal/assurance-fulfillment.yaml` (Per-subsystem assurance fulfillment map (delivered/waived artifacts per classified formal domain))
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#485` (Assurance fulfillment gate: fail on classified-but-undelivered formal artifacts (review FM-1))
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#523` (Add assurance fulfillment gate for classified formal subsystems)
 - TESTS → TEST `implementations/python/tests/test_participant_runtime_invariants.py` (Participant runtime invariant oracle property tests)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#486` (Runtime invariant oracle for participant lifecycle claims)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#525` (test: add participant runtime invariant oracle)
 - DOCUMENTS → SPEC `specs/formal/participant-runtime/README.md` (Participant runtime invariant oracle predicate mapping)

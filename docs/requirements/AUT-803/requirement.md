@@ -18,8 +18,3 @@ The ecosystem shall provide a human-facing graphical surface for authoring, brow
 ## Rationale
 
 Requirement inventory expansion. A mature ecosystem needs a graphical surface for human-centered authoring and inspection.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#101` (Human graphical surface & visual inspection/navigation (AUT-803, 808))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#263` (Human Graphical Surface (AUT-803))

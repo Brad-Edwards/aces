@@ -18,7 +18,3 @@ The ecosystem shall govern the coexistence and disclosure of external knowledge 
 ## Rationale
 
 Requirement inventory expansion. Native constructs should be able to align with external knowledge ecosystems without forcing one mandatory taxonomy.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#112` (External knowledge binding governance (GOV-907))

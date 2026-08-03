@@ -18,7 +18,3 @@ The ecosystem shall provide first-class participant semantics across adversarial
 ## Rationale
 
 Requirement inventory expansion. Participant behavior and interaction are first-class ecosystem concerns rather than backend-local additions.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#60` (ACT-600: Participant semantics (umbrella))

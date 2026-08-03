@@ -18,8 +18,3 @@ The ecosystem shall support portable archival and later retrieval of run metadat
 ## Rationale
 
 Requirement inventory expansion. Longitudinal experiment work depends on portable preservation of runs, evidence, and results.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#107` (Experiment: archive/preservation, metadata/annotation, evidence integrity & chain of custody (EXP-714, 716, 717))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#271` (Archive And Preservation Model (EXP-714))

@@ -18,8 +18,3 @@ The ecosystem shall support interoperable exchange with adjacent scenario, workf
 ## Rationale
 
 Requirement inventory expansion. Mature ecosystems need exchange with adjacent ecosystems without losing their own conceptual integrity.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#111` (Cross-ecosystem interoperable exchange, translation-loss disclosure & federation VV&A/accreditation (GOV-905, 906, 926))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#276` (Interoperable Exchange With Adjacent Ecosystems (GOV-905))

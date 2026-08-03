@@ -20,7 +20,6 @@ Primary-source refresh shows that episode lifecycle meaning must be explicit if 
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#122` (Participant episode/reset & budget/quota: semantics + language surfaces + model (SEM-222, 223, DSL-120, 121, ACT-623, 624))
 - DOCUMENTS → SPEC `specs/formal/participant-episode-model/README.md` (Participant episode + budget model formal design (issue #122))
 - TESTS → TEST `implementations/python/tests/test_sem_222_episode_termination_semantics.py` (SEM-222 episode/termination semantic-gate + closure-record unit tests)
 - TESTS → TEST `implementations/python/tests/test_sem_222_episode_termination_oracle.py` (SEM-222 EBM-02/03/08/10 executable invariant oracle)
@@ -29,4 +28,3 @@ Primary-source refresh shows that episode lifecycle meaning must be explicit if 
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/result_contracts.py` (SEM-222 public re-export of participant_episode_closure_contract_diagnostics)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/runtime_state.py` (SEM-222 RuntimeSnapshot participant_episode_closure_records carrier (canonical closure-validation wiring))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/_snapshot_updates.py` (RuntimeSnapshot update-builder module split out to admit the SEM-222 closure-records field under the source-size cap)
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#305` (Participant Episode, Reset, And Termination Semantics (SEM-222))

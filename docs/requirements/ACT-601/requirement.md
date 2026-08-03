@@ -21,10 +21,6 @@ Requirement inventory expansion. Participant framing must describe who acts, und
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/__init__.py` (Semantic-validator passes for starting_conditions/authority_anchors/operating_scope)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/agents.py` (Agent Pydantic model with the three new framing fields)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/composition.py` (Module-composition rewrites for the three new framing fields)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_module_symbols.py` (Symbol-index helpers carrying section-qualified and nested ref aliases for namespacing)
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-020-declarative-participant-framing-boundaries.md` (ADR-020 Declarative Participant Framing Boundaries)
 - TESTS → TEST `implementations/python/tests/test_sdl_models.py` (Structural tests for Agent participant-framing fields)
 - TESTS → TEST `implementations/python/tests/test_sdl_validator.py` (Semantic-validator tests for the three new framing fields (TestAgentParticipantFraming))

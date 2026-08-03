@@ -20,23 +20,10 @@ Scenario authors may need to require that particular data be captured from parti
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#127` (Observability plane separation & realization-augmentation semantics; scenario-native observability & authored evidence-requirement surfaces (SEM-224, 225, DSL-123, 124))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#337` (Authored Data And Evidence Requirements (DSL-124))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-066-observability-evidence-plane-separation.md` (ADR-066 Observability evidence plane separation)
 - DOCUMENTS → SPEC `specs/formal/observability-evidence-plane.md` (Formal observability/evidence plane specification)
 - DOCUMENTS → DOCUMENTATION `specs/sdl/observability-and-evidence.md` (SDL observability and evidence authoring catalog)
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#127` (Issue #127 observability and evidence semantics)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/evidence_requirements.py` (Authored evidence requirement model)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/scenario.py` (Scenario top-level evidence requirements section)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/parser.py` (Parser support for evidence_requirements)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/_evidence_requirements.py` (Evidence requirement semantic validation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/_core.py` (Validator integration for evidence requirements)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/__init__.py` (Evidence requirement validator mixin registration)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/composition.py` (Composition namespace rewriting for evidence requirements)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/observability_plane_semantics.py` (Authored evidence plane classification)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_language_metadata.py` (Language metadata for evidence requirement fields)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_module_symbols.py` (Module symbol discovery for evidence requirements)
 - IMPLEMENTS → SPEC `contracts/schemas/sdl/sdl-authoring-input-v1.json` (Published SDL authoring schema for evidence requirements)
 - IMPLEMENTS → SPEC `contracts/schemas/sdl/instantiated-scenario-v1.json` (Published instantiated scenario schema for evidence requirements)
 - IMPLEMENTS → CONFIG `contracts/schema-publication-manifest.json` (Schema publication manifest update for evidence requirements)

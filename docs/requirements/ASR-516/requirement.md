@@ -22,14 +22,5 @@ Retains the RAES conformance responsibility while HUB-6 owns cross-product task 
 ## Traceability
 
 - DOCUMENTS → GITHUB_ISSUE `516` (Issue 516 inventory target secret boundary)
-- DOCUMENTS → DOCUMENTATION `docs/aces/inventory/asset-inventory-methodology.md` (Participant-discoverable asset inventory methodology)
-- DOCUMENTS → DOCUMENTATION `docs/aces/inventory/issue-516-redaction-boundary-preflight.md` (Issue 516 inventory redaction boundary preflight)
-- DOCUMENTS → DOCUMENTATION `.codex-skills/aces-asset-inventory-capture/SKILL.md` (Codex asset inventory capture skill)
-- DOCUMENTS → DOCUMENTATION `.claude/skills/aces-asset-inventory-capture/SKILL.md` (Claude asset inventory capture skill)
-- DOCUMENTS → CODE_FILE `.codex-skills/aces-asset-inventory-capture/scripts/capture-container-evidence-template.sh` (Codex capture container evidence template)
-- DOCUMENTS → CODE_FILE `.claude/skills/aces-asset-inventory-capture/scripts/capture-container-evidence-template.sh` (Claude capture container evidence template)
 - TESTS → TEST `implementations/python/tests/test_agent_inventory_skill.py` (Agent inventory skill and template regression tests)
-- DOCUMENTS → DOCUMENTATION `docs/aces/inventory/ad-preflight.md` (AD inventory preflight guidance)
-- DOCUMENTS → DOCUMENTATION `docs/aces/inventory/webapp-preflight.md` (Webapp inventory preflight guidance)
-- DOCUMENTS → DOCUMENTATION `docs/aces/inventory/kali-preflight.md` (Kali inventory preflight guidance)
 - DOCUMENTS → GITHUB_ISSUE `1005` (ASR-516 — RAES Authoring Adapter Semantic Consistency)

@@ -17,7 +17,3 @@ The ecosystem shall support explicit versioning and compatibility tracking for p
 ## Rationale
 
 Primary-source refresh shows that participant-supporting ecosystems depend on explicit versioning of datasets, benchmarks, and verifier assets to make comparisons and claims meaningful.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#130` (Corpus, benchmark & verifier versioning governance (GOV-915))

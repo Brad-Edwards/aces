@@ -17,8 +17,3 @@ The language shall support declaration of participant-visible decision surfaces 
 ## Rationale
 
 Current state: identified gap. The imported research consistently treats the participant-visible decision surface as a first-class authored concern distinct from abstract behavior semantics and from hidden evaluation assets.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#120` (Participant tool/affordance & decision-exposure language surfaces (DSL-116, 117, 118, 125))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#300` (Participant Decision Exposure And Visibility Surface (DSL-125))

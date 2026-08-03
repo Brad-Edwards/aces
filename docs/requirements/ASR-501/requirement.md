@@ -40,4 +40,3 @@ Current state: partially implemented. Checked-in normative schemas exist under c
 - CONSTRAINS → SPEC `contracts/schemas/sdl/instantiated-scenario-v1.json` (Instantiated SDL schema with normalized runtime inventory, filesystem, mount, container, and health fields)
 - DOCUMENTS → GITHUB_ISSUE `363` (Issue #363 requires normative SDL schema coverage for runtime filesystem inventory fields)
 - DOCUMENTS → GITHUB_ISSUE `368` (Issue #368 requires normative SDL schema coverage for container host/security/mount fields)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#401` (SDL gap: first-class directory and domain identity semantics)

@@ -17,18 +17,12 @@ The language shall represent network IDS/NDR detection-engine runtime state as t
 
 ## Rationale
 
-Issue #430 identifies a downstream inventory blocker from APTL TechVault Suricata capture: ACES can represent the surrounding sensor posture, package/process/filesystem/control-socket evidence, and SIEM manager inventory, but lacks a typed, queryable surface for the detection engine's observable parser, rule-source, zoning, output, and reload semantics.
+Issue #430 identifies a downstream inventory blocker from APTL TechVault Suricata capture: RAES can represent the surrounding sensor posture, package/process/filesystem/control-socket evidence, and SIEM manager inventory, but lacks a typed, queryable surface for the detection engine's observable parser, rule-source, zoning, output, and reload semantics.
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/__init__.py` (Semantic validation for network detection engines)
 - IMPLEMENTS → GITHUB_ISSUE `430` (SDL has no typed IDS/NDR detection-engine runtime service family)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_network_detection.py` (Network detection-engine runtime models)
 - TESTS → TEST `implementations/python/tests/test_runtime_network_detection.py` (Runtime network detection-engine tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_configuration.py` (Runtime configuration detection-engine surface wiring)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/nodes.py` (SDL node exports for network detection-engine runtime types)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_module_runtime_aliases.py` (Module alias rewriting for network detection-engine refs)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_module_symbols.py` (Symbol index wiring for network detection-engine refs)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/sections.md` (SDL sections documentation for network detection engines)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/validation.md` (SDL validation documentation for network detection engines)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/lineage.md` (SDL lineage documentation for network detection engines)

@@ -21,8 +21,6 @@ Requirement inventory expansion. Offensive behavior must be expressible as a fir
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#78` (Participant behavior vocabularies: offensive, defensive, autonomous-agent (ACT-609, 610, 611))
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#209` (Offensive Behavior Vocabularies (ACT-609))
 - IMPLEMENTS → SPEC `contracts/concept-authority/attack-enterprise-tactics-source-v1.json` (Pinned MITRE ATT&CK Enterprise tactic source record)
 - IMPLEMENTS → SPEC `contracts/concept-authority/atlas-tactics-source-v1.json` (Pinned MITRE ATLAS tactic source record)
 - IMPLEMENTS → SPEC `contracts/concept-authority/controlled-vocabularies-v1.json` (Controlled vocabulary authority artifact for offensive behavior references)
@@ -31,11 +29,6 @@ Requirement inventory expansion. Offensive behavior must be expressible as a fir
 - IMPLEMENTS → SPEC `contracts/schemas/sdl/instantiated-scenario-v1.json` (Instantiated scenario schema support for offensive behavior references)
 - IMPLEMENTS → SPEC `specs/concept-authority/controlled-vocabularies.md` (Controlled vocabulary lineage and conformance specification)
 - IMPLEMENTS → SPEC `specs/formal/participant-behavior-model/README.md` (Participant behavior model specification for offensive behavior references)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (Python contract accessors for offensive behavior vocabularies)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/participant_behavior_specification.py` (SDL participant behavior model fields for offensive behavior references)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/semantics/participant_behavior.py` (Semantic validation for offensive behavior vocabulary references)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/_content_objectives.py` (SDL content-objective diagnostics for offensive behavior references)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models.py` (Processor runtime model support for offensive behavior references)
 - IMPLEMENTS → DOCUMENTATION `docs/explain/sdl/sections.md` (SDL authoring documentation for offensive behavior references)
 - IMPLEMENTS → DOCUMENTATION `docs/decisions/issue-209-act-609-offensive-behavior-vocabularies-preflight.md` (Issue 209 vocabulary lineage and architectural preflight record)
 - TESTS → TEST `implementations/python/tests/test_controlled_vocabularies.py` (Controlled vocabulary authority, source lineage, and conformance tests)
@@ -46,6 +39,3 @@ Requirement inventory expansion. Offensive behavior must be expressible as a fir
 - IMPLEMENTS → SPEC `contracts/schemas/concept-authority/attack-enterprise-tactics-source-v1.json` (Schema for pinned MITRE ATT&CK Enterprise tactic source records)
 - IMPLEMENTS → SPEC `contracts/schemas/concept-authority/atlas-tactics-source-v1.json` (Schema for pinned MITRE ATLAS tactic source records)
 - IMPLEMENTS → CONFIG `contracts/schema-publication-manifest.json` (Schema publication manifest entries for offensive behavior vocabulary authority schemas)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/versions.py` (Contract version registry entries for offensive behavior vocabulary schemas)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_language_metadata.py` (SDL language metadata for offensive behavior reference fields)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/compiler/__init__.py` (Processor compiler propagation for offensive behavior references)

@@ -21,5 +21,4 @@ Requirement inventory expansion. A mature ecosystem needs explicit evolution, in
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#61` (GOV-900: Evolution, interoperability & information governance (umbrella))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)

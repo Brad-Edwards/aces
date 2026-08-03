@@ -17,8 +17,3 @@ The ecosystem shall support participant reference trajectories, demonstrations, 
 ## Rationale
 
 Primary-source refresh shows that reference traces and demonstrations are distinct ecosystem assets for training, replay, and evaluation and should not be collapsed into live run history or scenario meaning.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#124` (Participant trajectory & demonstration model (SEM-221, DSL-119, ACT-621, API-415, EXP-723, 724, 725, AUT-814))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#318` (Participant Reference Trajectories And Demonstrations (ACT-621))

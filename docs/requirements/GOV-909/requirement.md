@@ -21,6 +21,4 @@ Requirement inventory expansion. Sharing and reuse require first-class redaction
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#113` (Information governance: views, redaction/sanitization, public/private separation, marking (GOV-908, 909, 911, 912))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#280` (Redaction, Sanitization, And Sharing Controls (GOV-909))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)

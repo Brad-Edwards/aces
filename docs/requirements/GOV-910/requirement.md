@@ -21,5 +21,4 @@ Requirement inventory expansion. Information governance requires explicit retent
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#114` (Retention, preservation & disposition rules (GOV-910))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)

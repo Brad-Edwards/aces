@@ -21,10 +21,5 @@ APTL TechVault SCN-010 capture of wazuh.indexer (#341), thehive-es (#352), shuff
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_datastore.py` (runtime_datastore.py)
 - TESTS → TEST `implementations/python/tests/test_runtime_datastore.py` (test_runtime_datastore.py)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-048-datastore-service-runtime-inventory.md` (ADR-048 Datastore Service Runtime Inventory)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_datastore_partitions.py` (runtime_datastore_partitions.py)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_runtime_service_families.py` (_runtime_service_families.py)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#479` (PR #479)

@@ -18,7 +18,3 @@ The ecosystem shall provide first-class authoring, guidance, and interaction sur
 ## Rationale
 
 Requirement inventory expansion. A mature ecosystem must include usable authoring and interaction surfaces, not only language and runtime internals.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#62` (AUT-800: Authoring, guidance & interaction surfaces (umbrella))

@@ -21,8 +21,6 @@ Requirement inventory expansion. Repeatability claims need explicit verification
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#98` (Executable behavioral, counterfactual/necessity & determinism/stability validation (ASR-512, 513, 514))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#262` (Determinism And Stability Verification (ASR-514))
 - TESTS → TEST `implementations/python/tests/test_pipeline_determinism.py` (SDL parse/instantiate/compile determinism witness (issue #506))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_conformance/repeatability_validation.py`
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_conformance/repeatability_evidence.py`

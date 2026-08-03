@@ -21,9 +21,6 @@ Requirement inventory expansion. Scenario definitions and experiment tasks are r
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#87` (Experiment core model: tasks, task/scenario separation, runs, apparatus context, studies (EXP-701…705))
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#87` (Experiment core model: tasks, task/scenario separation, runs, apparatus context, studies)
 - IMPLEMENTS → DOCUMENTATION `docs/explain/sdl/sections.md` (SDL objectives clarified as scenario-local, not experiment tasks)
 - TESTS → TEST `implementations/python/tests/test_runtime_contracts.py` (Runtime contract schema and fixture tests)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#229` (Task And Scenario Separation (EXP-702))
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md` (Experiment core contract boundary ADR)

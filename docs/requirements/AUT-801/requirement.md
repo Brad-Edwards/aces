@@ -21,10 +21,4 @@ Requirement inventory expansion. Agents need a first-class usable surface rather
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#84` (Agent-facing & structured-editing authoring surfaces (AUT-801, 804, 811))
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/server.py` (ACES MCP server registration)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/operations.py` (Agent-facing ACES MCP operation tools)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/operation_support.py` (Shared support for agent-facing MCP operation tools)
 - TESTS → TEST `implementations/python/tests/test_mcp_server.py` (Agent-facing MCP operation tests)
-- DOCUMENTS → DOCUMENTATION `docs/explain/getting-started.md` (Getting Started With ACES)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#223` (Agent-Facing Tool Surface (AUT-801))

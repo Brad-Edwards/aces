@@ -21,7 +21,5 @@ APTL SCN-010 wazuh-sidecar-db (#343), wazuh-sidecar-suricata (#344), and misp-su
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_forwarding_agent.py` (runtime_forwarding_agent.py)
 - TESTS → TEST `implementations/python/tests/test_runtime_forwarding_agent.py` (test_runtime_forwarding_agent.py)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md` (ADR-050 Forwarding Agent Runtime Inventory)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)

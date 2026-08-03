@@ -34,6 +34,3 @@ Current state: implemented. Portable live-execution contracts are required so in
 - CONSTRAINS → SPEC `contracts/schemas/control-plane/workflow-history-event-stream-v1.json` (Workflow History Event Stream Schema)
 - CONSTRAINS → SPEC `contracts/schemas/control-plane/evaluation-history-event-stream-v1.json` (Evaluation History Event Stream Schema)
 - CONSTRAINS → SPEC `contracts/schemas/snapshots/runtime-snapshot-v1.json` (Runtime Snapshot Schema)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/contracts.py` (Processor External Contracts)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models.py` (Runtime Models)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/manager.py` (Runtime Manager)

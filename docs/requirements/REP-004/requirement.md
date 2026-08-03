@@ -13,11 +13,11 @@ updated_at: 2026-08-01T16:58:24.599823Z
 
 ## Statement
 
-aces-adapters shall provide a CybORG simulation-backend adapter that conforms to the published ACES backend protocols (Provisioner, Orchestrator, Evaluator, ParticipantRuntime). The adapter shall translate ACES provisioning, orchestration, and evaluation plans and the participant-episode lifecycle (initialize/reset/restart/terminate, preserving episode identity, sequence numbers, and previous-episode links) to and from CybORG's scenario, action, and observation model, surfacing only portable ACES references in snapshots and diagnostics. The adapter shall pass the backend conformance suite and be the first package in the aces-adapters monorepo, built on the shared sim-adapter base.
+The adapters monorepo shall provide a CybORG simulation-backend adapter that conforms to the published RAES backend protocols (Provisioner, Orchestrator, Evaluator, ParticipantRuntime). The adapter shall translate RAES provisioning, orchestration, and evaluation plans and the participant-episode lifecycle (initialize/reset/restart/terminate, preserving episode identity, sequence numbers, and previous-episode links) to and from CybORG's scenario, action, and observation model, surfacing only portable RAES references in snapshots and diagnostics. The adapter shall pass the backend conformance suite and be the first package in the adapters monorepo, built on the shared sim-adapter base.
 
 ## Rationale
 
-The conformant wrapper that makes an external simulator a drivable ACES backend; the reusable protocol skeleton is shared, the CybORG-specific translation is the substantive work.
+The conformant wrapper that makes an external simulator a drivable RAES backend; the reusable protocol skeleton is shared, the CybORG-specific translation is the substantive work.
 
 ## Traceability
 

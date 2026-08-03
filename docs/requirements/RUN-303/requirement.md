@@ -30,5 +30,3 @@ Current state: implemented. Planning needs normative semantics so lifecycle deci
 - TESTS → TEST `implementations/python/tests/test_semantics_planner.py` (Planner Semantic Tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_planner.py` (Runtime Planner Tests)
 - TESTS → TEST `implementations/python/tests/test_fm2_semantics.py` (FM2 Semantic Tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/semantics/planner.py` (Planner Semantics)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/planner/__init__.py` (Runtime Planner)

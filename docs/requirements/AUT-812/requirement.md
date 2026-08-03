@@ -18,7 +18,3 @@ The ecosystem shall support searchable discovery across modules, examples, tasks
 ## Rationale
 
 Requirement inventory expansion. Mature ecosystems need discovery surfaces across reusable assets and knowledge artifacts.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#102` (Safe refactoring/transformation; catalog, search & discovery surfaces (AUT-810, 812))

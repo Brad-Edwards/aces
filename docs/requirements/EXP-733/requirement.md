@@ -20,12 +20,6 @@ Current state: identified gap. If the same scenario can be driven by different p
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#129` (Participant implementation identity/capability/compatibility manifest, exposure conformance & implementation/exposure provenance (API-420, ASR-527, EXP-733))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#345` (Participant Implementation And Exposure Provenance (EXP-733))
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#433` (Implement participant implementation manifest contracts)
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#129` (Participant implementation manifest, exposure conformance, and provenance)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (Participant implementation provenance contract models)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/versions.py` (Participant implementation provenance contract version constants)
 - TESTS → TEST `implementations/python/tests/test_participant_implementation_manifest.py` (Participant implementation provenance validation tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_contracts.py` (Participant provenance schema bundle tests)
 - DOCUMENTS → ADR `ADR-041` (Participant Implementation Manifest and Provenance Surface)

@@ -22,5 +22,3 @@ Federation-scale interoperability cannot be justified solely from artifact-local
 ## Traceability
 
 - DOCUMENTS → DOCUMENTATION `research/primary/reference-organizations/military-simulation-interop/README.md` (Military Simulation Interoperability Sources)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#111` (Cross-ecosystem interoperable exchange, translation-loss disclosure & federation VV&A/accreditation (GOV-905, 906, 926))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#278` (Federation-Level VV&A And Accreditation Basis (GOV-926))

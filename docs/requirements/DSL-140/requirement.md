@@ -20,7 +20,5 @@ Issue #460 blocks APTL TechVault SDL reconciliation because Wazuh sidecar contai
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/__init__.py` (Semantic validation for scenario-level forwarding agents)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/scenario.py` (Scenario model top-level forwarding_agents registry)
 - TESTS → TEST `implementations/python/tests/test_runtime_forwarding_agent.py` (Scenario-level forwarding agent parser and validator tests)
 - IMPLEMENTS → GITHUB_ISSUE `460` (Runtime SDL: forwarding_edge cannot represent off-node sidecar forwarders)

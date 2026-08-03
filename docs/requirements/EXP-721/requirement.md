@@ -18,7 +18,3 @@ The ecosystem shall support optional task- or run-level declarations of required
 ## Rationale
 
 Some uses require explicit apparatus expectations while others do not, so compatibility declarations should be available without making them part of core scenario meaning or conflating them with what was actually realized in a run.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#109` (Optional apparatus compatibility declarations (EXP-721))

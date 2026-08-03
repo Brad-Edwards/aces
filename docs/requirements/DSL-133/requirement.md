@@ -22,7 +22,6 @@ The original SCN-010 design generalized directly from MISP, TheHive, Cortex, Shu
 ## Traceability
 
 - TESTS → TEST `implementations/python/tests/test_runtime_platform_application.py` (test_runtime_platform_application.py)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/runtime_platform_application.py` (Runtime platform application model)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/runtime_platform_application_content.py` (Runtime platform application capability model)
 - IMPLEMENTS → SPEC `specs/sdl/runtime-inventory.md` (SDL runtime inventory specification)

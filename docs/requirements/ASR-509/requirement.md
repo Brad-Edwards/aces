@@ -18,8 +18,3 @@ The ecosystem shall provide verification surfaces for participant replay, causal
 ## Rationale
 
 Requirement inventory expansion. Participant replay and attribution claims require explicit verification surfaces.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#96` (Participant replay/causality/history verification & multi-role assurance (ASR-509, 510))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#256` (Participant Replay, Causality, And History Verification (ASR-509))

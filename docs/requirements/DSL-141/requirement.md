@@ -22,10 +22,6 @@ APTL TechVault SCN-010 capture of wazuh.indexer (Brad-Edwards/aptl#341, OpenSear
 ## Traceability
 
 - DOCUMENTS → GITHUB_ISSUE `470` (SDL gap: search datastore node engine provenance)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_datastore_partitions.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_datastore.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_datastore_vocab.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_runtime_service_families.py`
 - TESTS → TEST `implementations/python/tests/test_runtime_datastore.py`
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md`
 - IMPLEMENTS → PULL_REQUEST `480` (added: datastore-node engine provenance and listener topology (DSL-141))

@@ -21,8 +21,6 @@ Issue #794 clarifies that behavior mode is not controller state and that supervi
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#95` (Reproducible participant execution context; intervention/handoff/supervisory lifecycle (RUN-309, 310))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#255` (Intervention, Handoff, And Supervisory Lifecycle (RUN-310))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/participant_crossing_boundary.py` (RUN-310 control-ingress lifecycle enforced at the final sink)
 - TESTS → TEST `implementations/python/tests/test_issue_1003_final_sink_flow_enforcement.py` (RUN-310 control-ingress final-sink enforcement tests)
 - IMPLEMENTS → GITHUB_ISSUE `1003` (Issue #1003 enforce participant flow policy at final runtime sinks)

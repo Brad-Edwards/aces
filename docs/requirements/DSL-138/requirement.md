@@ -21,7 +21,5 @@ The SCN-010 SOC stack is heavily integrated by API keys, log-forwarding enrollme
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/relationships.py` (Relationship typed subtype wiring)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md` (ADR-052 Typed Runtime Relationship Subtypes)
 - TESTS → TEST `implementations/python/tests/test_runtime_forwarding_agent.py` (RelationshipForwardingEdge tests)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)

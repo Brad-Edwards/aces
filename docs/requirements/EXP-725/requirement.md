@@ -17,8 +17,3 @@ The ecosystem shall preserve lineage, split semantics, and source semantics for 
 ## Rationale
 
 Primary-source refresh shows that trajectory corpora need explicit lineage, split, and source semantics to support honest training, evaluation, and comparison.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#124` (Participant trajectory & demonstration model (SEM-221, DSL-119, ACT-621, API-415, EXP-723, 724, 725, AUT-814))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#322` (Trajectory Corpus Lineage, Split, And Source Semantics (EXP-725))

@@ -17,18 +17,13 @@ The language shall represent SIEM and security-monitoring manager logical runtim
 
 ## Rationale
 
-Issue #428 identifies a downstream inventory blocker from APTL TechVault Wazuh manager capture: ACES could represent surrounding transport, process, unit, filesystem, package, and HTTP/API evidence, but lacked a typed, queryable surface for SIEM/security-monitoring manager inventory and detection-manager state.
+Issue #428 identifies a downstream inventory blocker from APTL TechVault Wazuh manager capture: RAES could represent surrounding transport, process, unit, filesystem, package, and HTTP/API evidence, but lacked a typed, queryable surface for SIEM/security-monitoring manager inventory and detection-manager state.
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/__init__.py` (Semantic validation for security-monitoring managers)
 - IMPLEMENTS → GITHUB_ISSUE `428` (SDL gap: SIEM and security-monitoring manager runtime inventory)
 - IMPLEMENTS → PULL_REQUEST `432` (Add security-monitoring manager runtime inventory)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_security_monitoring.py` (Security-monitoring runtime models)
 - TESTS → TEST `implementations/python/tests/test_runtime_security_monitoring.py` (Runtime security-monitoring tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_configuration.py` (Runtime configuration surface wiring)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/nodes.py` (SDL node exports for security-monitoring runtime types)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_module_symbols.py` (Module alias rewriting for security-monitoring refs)
 - IMPLEMENTS → CONFIG `contracts/schemas/sdl/sdl-authoring-input-v1.json` (SDL authoring schema security-monitoring surface)
 - IMPLEMENTS → CONFIG `contracts/schemas/sdl/instantiated-scenario-v1.json` (Instantiated scenario schema security-monitoring surface)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md` (ADR-040 Security-Monitoring Manager Runtime Inventory)

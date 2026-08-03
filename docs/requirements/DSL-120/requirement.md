@@ -20,6 +20,4 @@ Primary-source refresh shows that participant-supporting ecosystems frequently t
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#122` (Participant episode/reset & budget/quota: semantics + language surfaces + model (SEM-222, 223, DSL-120, 121, ACT-623, 624))
 - DOCUMENTS → SPEC `specs/formal/participant-episode-model/README.md` (Participant episode + budget model formal design (issue #122))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#307` (Participant Episode Structure And Termination Surface (DSL-120))

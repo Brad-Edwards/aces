@@ -21,6 +21,4 @@ Requirement inventory expansion. Mature experiment ecosystems need explicit audi
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#113` (Information governance: views, redaction/sanitization, public/private separation, marking (GOV-908, 909, 911, 912))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#279` (Audience-Specific Views And Disclosure Boundaries (GOV-908))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)

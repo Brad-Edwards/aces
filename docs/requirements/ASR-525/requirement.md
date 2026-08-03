@@ -20,9 +20,6 @@ The ecosystem needs executable checks against silent instrumentation and plane c
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#128` (Operational apparatus observability; observation-augmentation disclosure contracts; observability-plane/augmentation conformance; evidence-requirement refinement & realized-evidence provenance (RUN-316, API-419, ASR-525, EXP-731, 732))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#340` (Observability Plane And Augmentation Disclosure Conformance (ASR-525))
 - IMPLEMENTS → GITHUB_ISSUE `128` (Issue #128 - Observability evidence conformance implementation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_conformance/conformance.py` (Semantic diagnostics distinguish observability planes and reject incomplete augmentation disclosure)
 - TESTS → TEST `implementations/python/tests/test_observability_evidence_conformance.py` (Tests verify observability augmentation and run-refinement conformance diagnostics)
 - TESTS → TEST `contracts/fixtures/experiment-core/experiment-run-v1/invalid/augmentation-without-affected-refs.json` (Semantic-invalid fixture for incomplete augmentation provenance)

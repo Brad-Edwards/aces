@@ -18,8 +18,3 @@ The ecosystem shall support participant-consumable derived operational context v
 ## Rationale
 
 Requirement inventory expansion. Many participant behaviors depend on derived context that must be expressible without tying the ecosystem to one computation strategy.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#93` (Participant derived-context views & mixed-control operation (ACT-616, 617))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#250` (Participant-Consumable Derived Context Views (ACT-616))

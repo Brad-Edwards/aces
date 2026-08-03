@@ -21,6 +21,3 @@ Cross-domain simulation and emulation literature shows that time advancement and
 ## Traceability
 
 - DOCUMENTS → DOCUMENTATION `https://www.nsnam.org/docs/manual/html/realtime.html` (ns-3 Realtime Simulation)
-- DOCUMENTS → DOCUMENTATION `/home/atomik/src/aces-sdl/research/primary/literature/time-and-simulation/lee-thuente-sichitiu-2014-integrated-simulation-emulation-adaptive-time-dilation.pdf` (Integrated Simulation and Emulation Using Adaptive Time Dilation)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#117` (Time semantics & language/runtime surfaces (SEM-227…229, DSL-126…128, RUN-317, RUN-318))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#287` (Time Progression And Synchronization Surface (DSL-127))

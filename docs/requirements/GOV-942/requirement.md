@@ -17,7 +17,7 @@ The ecosystem shall publish versioned scientific-scenario completeness profiles 
 
 ## Rationale
 
-Academic review and range integration require a reproducible, machine-checkable scope contract showing what ACES can express today, what stronger scenario and experiment claims require, and which required surfaces remain partial, external, deliberately excluded, or missing.
+Academic review and range integration require a reproducible, machine-checkable scope contract showing what RAES can express today, what stronger scenario and experiment claims require, and which required surfaces remain partial, external, deliberately excluded, or missing.
 
 ## Traceability
 
@@ -25,15 +25,12 @@ Academic review and range integration require a reproducible, machine-checkable 
 - IMPLEMENTS → SPEC `contracts/profiles/scientific-completeness/delivery-assessment-2026-07-12.json` (Scientific completeness delivery assessment)
 - IMPLEMENTS → SPEC `specs/sdl/scientific-scenario-completeness.md` (Scientific scenario completeness specification)
 - IMPLEMENTS → CODE_FILE `tools/check_scientific_scenario_completeness.py` (Scientific completeness policy checker)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/scientific_completeness.py` (Scientific completeness contract implementation)
 - TESTS → TEST `implementations/python/tests/test_scientific_scenario_completeness.py` (Scientific completeness contract and policy tests)
 - IMPLEMENTS → GITHUB_ISSUE `727` (Define a REV1 scientific-scenario completeness profile and gap disposition)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/completeness.py` (MCP intended-use profile consumption surface)
 - TESTS → TEST `implementations/python/tests/test_mcp_server.py` (MCP completeness profile integration tests)
 - IMPLEMENTS → SPEC `contracts/concept-authority/behavioral-relations-v1.json` (Revisioned behavioral-relation taxonomy and claim authority)
 - IMPLEMENTS → SPEC `specs/formal/behavioral-relations/README.md` (Behavioral-relation formal specification)
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-081-behavioral-relation-taxonomy-and-claim-discipline.md` (ADR-081 behavioral-relation taxonomy and claim discipline)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/behavioral_relations.py` (Behavioral-relation catalog and claim-binding implementation)
 - IMPLEMENTS → POLICY `tools/check_behavioral_relation_claims.py` (Behavioral-relation semantic claim policy gate)
 - TESTS → TEST `implementations/python/tests/test_behavioral_relations.py` (Behavioral-relation catalog, binding, and counterexample tests)
 - TESTS → TEST `implementations/python/tests/test_behavioral_relation_claims.py` (Behavioral-relation claim policy tests)

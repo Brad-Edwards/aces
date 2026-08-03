@@ -20,16 +20,8 @@ Processors and backends require their own operational observability, but that co
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#128` (Operational apparatus observability; observation-augmentation disclosure contracts; observability-plane/augmentation conformance; evidence-requirement refinement & realized-evidence provenance (RUN-316, API-419, ASR-525, EXP-731, 732))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#338` (Operational Apparatus Observability (RUN-316))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)
 - IMPLEMENTS → GITHUB_ISSUE `128` (Issue #128 - Observability evidence conformance implementation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_backend_protocols/capabilities.py` (Observation capability required contracts include experiment-run-v1)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_reference_backend/manifest.py` (Reference backend declares experiment-run-v1 evidence support)
 - TESTS → TEST `implementations/python/tests/test_backend_manifest.py` (Backend manifest tests cover observation contract vocabulary and experiment-run-v1 support)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_runtime/operational_apparatus.py` (Operational apparatus summary derivation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_runtime/control_plane.py` (Runtime control-plane operational apparatus summary entrypoint)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_runtime/control_plane_api.py` (GET /apparatus/operational-summary control-plane API route)
 - TESTS → TEST `implementations/python/tests/test_runtime_control_plane_api.py` (Operational apparatus summary API tests)
 - IMPLEMENTS → GITHUB_ISSUE `338` (Operational Apparatus Observability (RUN-316))
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_backend_stubs/manifest.py` (Stub backend declares experiment-run-v1 evidence support when observation is enabled)

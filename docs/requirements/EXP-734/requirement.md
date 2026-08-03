@@ -17,10 +17,3 @@ The ecosystem shall preserve the realized time model for each run, including dec
 ## Rationale
 
 Experimental comparison and replay claims depend on preserving how time was actually realized, not merely on recording timestamps after the fact.
-
-## Traceability
-
-- DOCUMENTS → DOCUMENTATION `/home/atomik/src/aces-sdl/research/primary/reference-ecosystems/open-range/docs/how-an-episode-works.md` (OpenRange: How an Episode Works)
-- DOCUMENTS → DOCUMENTATION `/home/atomik/src/aces-sdl/research/primary/reference-ecosystems/open-range/docs/training-data-spec.md` (OpenRange Training Data Specification)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#118` (Time model contracts, conformance & provenance (API-421, ASR-528, EXP-734))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#293` (Realized Time Model And Clock Provenance (EXP-734))

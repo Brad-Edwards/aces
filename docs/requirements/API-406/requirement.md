@@ -21,16 +21,11 @@ Requirement inventory expansion. Participant behavior requires portable external
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#76` (Participant backend-facing contracts (API-405…408, 411))
 - DOCUMENTS → SPEC `contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json` (Generated participant lifecycle event schema)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-060-participant-backend-facing-contract-surface.md` (ADR-060 participant backend-facing contract surface)
 - DOCUMENTS → SPEC `specs/formal/runtime-contracts/participant-backend-contracts.md` (Participant backend-facing contracts formal design (API-406 carriers))
 - DOCUMENTS → SPEC `contracts/schemas/participant-runtime/participant-observation-envelope-v1.json` (Generated participant observation envelope schema)
 - DOCUMENTS → SPEC `contracts/schemas/participant-runtime/participant-shared-state-record-v1.json` (Generated participant shared-state record schema)
 - TESTS → TEST `implementations/python/tests/test_participant_backend_contracts.py` (Participant backend-contract carrier fixture and schema tests)
-- DOCUMENTS → PULL_REQUEST `Brad-Edwards/aces#515` (added: participant backend-facing contract surface and participant-semantics remediation)
 - IMPLEMENTS → CONFIG `contracts/profiles/backend/full-remote-control-plane.json` (Full remote control-plane backend profile API-406 carrier requirements)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_conformance/conformance.py` (API-406 carrier contract conformance validators)
 - TESTS → TEST `implementations/python/tests/test_runtime_conformance.py` (API-406 carrier profile and fixture-suite conformance tests)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#568` (feat: register API-406 backend carrier contracts)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#200` (Backend-Facing Participant Plain-Data Contracts (API-406))

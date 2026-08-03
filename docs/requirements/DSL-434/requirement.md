@@ -20,14 +20,9 @@ Issue 434 identifies that file-level security-monitoring content-set inventory c
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/__init__.py` (Semantic validation for detection-definition refs and provenance)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_security_monitoring.py` (Runtime security-monitoring detection definition models)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_module_runtime_aliases.py` (Module alias support for detection-definition refs)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/nodes.py` (Runtime detection-definition facade exports)
 - TESTS → TEST `implementations/python/tests/test_runtime_security_monitoring.py` (Runtime security-monitoring detection definition tests)
 - IMPLEMENTS → SPEC `contracts/schemas/sdl/sdl-authoring-input-v1.json` (Generated SDL authoring schema includes detection definitions)
 - IMPLEMENTS → GITHUB_ISSUE `434` (Issue 434 security-monitoring detection definition semantics)
 - IMPLEMENTS → SPEC `contracts/schemas/sdl/instantiated-scenario-v1.json` (Generated instantiated scenario schema includes detection definitions)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_security_monitoring_definitions.py` (Runtime security-monitoring detection definition subdomain models)
 - IMPLEMENTS → PULL_REQUEST `438` (Add runtime detection definition semantics)
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md` (ADR-045 security-monitoring detection-definition semantics)

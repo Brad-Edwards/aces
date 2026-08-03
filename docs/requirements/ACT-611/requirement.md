@@ -21,8 +21,6 @@ Requirement inventory expansion. Scenarios need to describe autonomous system be
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#78` (Participant behavior vocabularies: offensive, defensive, autonomous-agent (ACT-609, 610, 611))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#211` (Autonomous Service And Agent Behavior Vocabularies (ACT-611))
 - IMPLEMENTS → SPEC `specs/concept-authority/autonomous-behavior-vocabularies.md` (Autonomous behavior vocabularies specification)
 - IMPLEMENTS → SPEC `contracts/concept-authority/fipa-communicative-acts-source-v1.json` (FIPA communicative-act source contract)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_conformance/conformance/validators.py` (Canonical structural conformance registration)

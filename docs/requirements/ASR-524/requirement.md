@@ -17,8 +17,3 @@ The ecosystem shall provide assurance mechanisms that verify declared benchmark 
 ## Rationale
 
 Primary-source refresh shows that benchmark integrity depends not only on tasks and trajectories but also on the trustworthy handling of truth and adjudication assets.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#126` (Participant trajectory & benchmark assurance (ASR-520, 521, 522, 524))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#333` (Benchmark Truth And Adjudication Asset Integrity (ASR-524))

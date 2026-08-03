@@ -23,5 +23,3 @@ Primary-source review, including military simulation interoperability materials 
 
 - DOCUMENTS → DOCUMENTATION `research/primary/reference-organizations/cdo-community/README.md` (CDO Community Sources)
 - DOCUMENTS → DOCUMENTATION `research/primary/reference-organizations/military-simulation-interop/README.md` (Military Simulation Interoperability Sources)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#91` (Federation & interoperability engineering (GOV-916, 923, 924, 925))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#243` (Federation And Interoperability Engineering (GOV-916))

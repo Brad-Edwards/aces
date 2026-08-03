@@ -13,11 +13,11 @@ updated_at: 2026-07-31T15:54:25.963535Z
 
 ## Statement
 
-ACES SDL shall provide governed, provider-neutral extensions to scenario content and realization contracts for deterministic initial service state where ordinary node content placement is insufficient, including versioned content identity, exact service-target materialization requirements, reset ownership, deterministic generation inputs, and participant-equivalent readback, without treating age or narrative history as a distinct semantic object class.
+RAES SDL shall provide governed, provider-neutral extensions to scenario content and realization contracts for deterministic initial service state where ordinary node content placement is insufficient, including versioned content identity, exact service-target materialization requirements, reset ownership, deterministic generation inputs, and participant-equivalent readback, without treating age or narrative history as a distinct semantic object class.
 
 ## Rationale
 
-Scenarios need coherent pre-existing files and application data across real products. Mature simulation architectures model these as initial conditions or initial world state, while keeping recorded trajectories, provenance, and live execution separate. ACES should extend its existing content and realization authorities only where operational materializers prove a reusable gap.
+Scenarios need coherent pre-existing files and application data across real products. Mature simulation architectures model these as initial conditions or initial world state, while keeping recorded trajectories, provenance, and live execution separate. RAES should extend its existing content and realization authorities only where operational materializers prove a reusable gap.
 
 ## Traceability
 

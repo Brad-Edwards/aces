@@ -21,7 +21,5 @@ APTL SCN-010 shuffle-orborus (#355) and cortex (#357) hold the Docker socket and
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_orchestration.py` (runtime_orchestration.py)
 - TESTS → TEST `implementations/python/tests/test_runtime_orchestration.py` (test_runtime_orchestration.py)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md` (ADR-051 Orchestration Authority Runtime Inventory)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)

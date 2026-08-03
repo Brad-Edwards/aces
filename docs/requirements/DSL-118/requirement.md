@@ -17,8 +17,3 @@ The language shall support participant control-context artifacts such as directi
 ## Rationale
 
 Primary-source refresh shows that participant execution often depends on authored control context, but the ecosystem should model that context generically rather than around one prompting or policy framework.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#120` (Participant tool/affordance & decision-exposure language surfaces (DSL-116, 117, 118, 125))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#299` (Participant Control Context And Instruction Surface (DSL-118))

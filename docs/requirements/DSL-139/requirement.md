@@ -22,11 +22,8 @@ Consistency epic #439 documents that the runtime service families forked convent
 ## Traceability
 
 - VERIFIES → TEST `implementations/python/tests/test_runtime_family_invariants.py` (Cross-family invariant lint)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_values.py` (Shared name_indicates_secret helper)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)
 - TESTS → TEST `implementations/python/tests/test_runtime_observed_values.py` (Runtime observed-value secret-name classifier regression tests)
 - IMPLEMENTS → GITHUB_ISSUE `471` (Issue #471 runtime secret-name classifier boundary)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md` (ADR-057 Runtime Secret-Name Classifier Boundaries)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#530` (PR #530 runtime profile guard invariant lint)
 - TESTS → TEST `implementations/python/tests/test_runtime_family_invariants.py` (Runtime required-profile guard invariant lint)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/validation.md` (Runtime required-profile guard validation convention)

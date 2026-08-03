@@ -12,7 +12,7 @@ updated_at: 2026-07-25T16:23:46.815033Z
 
 ## Statement
 
-Repository-owned current-state prose, public command surfaces, package distribution metadata, MCP tool surfaces, machine-readable guidance surfaces, and migration documentation shall use Reproducible Agentic Environments System (RAES) as the canonical project identity, and old ACES public command, MCP, package, and guidance aliases shall be removed rather than preserved. ACES identifiers may remain only as documented source import paths, governed contract or schema identifiers, external workflow or service keys, historical records, or other surfaces whose owning migration is out of scope for issue 866.
+Repository-owned current-state prose, public command surfaces, package distribution metadata, MCP tool surfaces, machine-readable guidance surfaces, and migration documentation shall use Reproducible Agentic Environments System (RAES) as the canonical project identity, and old retired-identity public command, MCP, package, and guidance aliases shall be removed rather than preserved. Retired-identity identifiers may remain only as documented source import paths, governed contract or schema identifiers, external workflow or service keys, historical records, or other surfaces whose owning migration is out of scope for issue 866.
 
 ## Rationale
 
@@ -20,7 +20,6 @@ Issue 866 is a hard-cutover project rename that needs a durable governance and t
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `866` (Rename ACES to RAES across repository surfaces)
 - IMPLEMENTS → GITHUB_ISSUE `866` (Issue #866 RAES project identity migration)
 - IMPLEMENTS → PULL_REQUEST `870` (PR #870 feat: cut over public surfaces to RAES)
 - IMPLEMENTS → PULL_REQUEST `879` (PR #879 fix(release): publish package as raes)
@@ -29,12 +28,7 @@ Issue 866 is a hard-cutover project rename that needs a durable governance and t
 - IMPLEMENTS → CONFIG `release-please-config.json` (release-please package name set to raes)
 - IMPLEMENTS → CONFIG `.github/workflows/release-please.yml` (release workflow validates raes wheel artifacts)
 - IMPLEMENTS → CONFIG `implementations/python/pyproject.toml` (Python distribution and console scripts expose RAES package identity)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_cli/main.py` (RAES CLI version/help identity)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/server.py` (RAES MCP server identity)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/operations.py` (RAES MCP tool surface payload)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/agent_guidance.py` (RAES machine-readable guidance identifiers)
 - IMPLEMENTS → SPEC `specs/agent-guidance/agent-guidance.yaml` (RAES canonical agent guidance profile id)
-- IMPLEMENTS → CODE_FILE `implementations/python/src/aces/__init__.py` (Version derives from the raes distribution metadata)
 - IMPLEMENTS → CODE_FILE `tools/check_agent_guidance.py` (RAES agent guidance policy validation)
 - TESTS → TEST `implementations/python/tests/test_version_classification.py` (Distribution, CLI, OpenAPI version, and old command removal tests)
 - TESTS → TEST `implementations/python/tests/test_mcp_server.py` (RAES MCP registration and old alias removal tests)

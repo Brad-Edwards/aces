@@ -17,8 +17,3 @@ The ecosystem shall support participant control-context artifacts, including dir
 ## Rationale
 
 Primary-source refresh shows that participant execution is often shaped by explicit control context that should be modeled as a first-class ecosystem concern.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#121` (Participant tool/affordance model & contracts (ACT-619, 620, 622, API-414))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#302` (Participant Control Context Artifacts (ACT-620))

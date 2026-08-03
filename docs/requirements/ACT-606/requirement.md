@@ -21,17 +21,11 @@ Requirement inventory expansion. Participant behavior must be expressible as a f
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#77` (Participant behavior model (ACT-602, 603, 606, 607, 608))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#206` (First-Class Participant Behavior Specifications (ACT-606))
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-067-participant-behavior-model.md` (ADR-067 Participant Behavior Model)
 - IMPLEMENTS → SPEC `specs/formal/participant-behavior-model/README.md` (Formal participant behavior model specification)
 - IMPLEMENTS → GITHUB_ISSUE `77` (Issue #77 - Participant behavior model)
 - IMPLEMENTS → GITHUB_ISSUE `206` (First-Class Participant Behavior Specifications (ACT-606))
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/participant_behavior_specification.py` (Participant behavior specification SDL model)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/scenario.py` (Scenario behavior_specifications section)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/semantics/participant_behavior.py` (Behavior specification semantic validation)
 - IMPLEMENTS → SPEC `contracts/schemas/sdl/sdl-authoring-input-v1.json` (SDL authoring schema behavior specifications)
 - IMPLEMENTS → SPEC `contracts/schemas/sdl/instantiated-scenario-v1.json` (Instantiated scenario schema behavior specifications)
 - TESTS → TEST `implementations/python/tests/test_sem_208_participant_behavior.py` (Participant behavior specification semantic tests)
 - TESTS → TEST `implementations/python/tests/test_instantiated_scenario_schema.py` (Behavior specification instantiated-schema tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/compiler/__init__.py` (Runtime behavior specification compiler output)

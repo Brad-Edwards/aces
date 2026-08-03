@@ -25,5 +25,3 @@ Current state: implemented. A concrete instantiated scenario is needed so later 
 - CONSTRAINS → SPEC `contracts/schemas/sdl/scenario-instantiation-request-v1.json` (Scenario Instantiation Request Schema)
 - CONSTRAINS → SPEC `contracts/schemas/sdl/instantiated-scenario-v1.json` (Instantiated Scenario Schema)
 - TESTS → TEST `implementations/python/tests/test_runtime_planner.py` (Runtime Planner Tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/instantiate.py` (Scenario Instantiation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/scenario.py` (Scenario Models)

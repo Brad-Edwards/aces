@@ -18,7 +18,3 @@ The ecosystem shall provide processor conformance profiles, fixtures, and execut
 ## Rationale
 
 Processor portability needs executable conformance evidence just as backend portability does, because processor behavior affects interpretation and experimental outcomes.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#83` (Processor conformance suite & fixture corpus (ASR-518))

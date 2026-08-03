@@ -18,7 +18,3 @@ The ecosystem shall provide portable external contracts and capability declarati
 ## Rationale
 
 Current state: partially implemented. Portable external contracts are necessary so scenario behavior can be implemented and observed without coupling to a single language, processor, or backend.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#59` (API-400: Portable external contracts (umbrella; remaining work))

@@ -17,8 +17,3 @@ Processor and backend manifests shall declare supported participant tool and aff
 ## Rationale
 
 Primary-source refresh shows that participant behavior claims need explicit external declarations of the available tool and affordance surface.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#121` (Participant tool/affordance model & contracts (ACT-619, 620, 622, API-414))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#304` (Participant Tool And Affordance Declarations (API-414))

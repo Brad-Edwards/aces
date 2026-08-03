@@ -21,10 +21,7 @@ Requirement inventory expansion. Experiment data capture requirements are distin
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#88` (Experiment evidence & measures (EXP-707, 708, 709, 715))
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md` (ADR-064 Experiment Evidence and Measure Contract Boundary)
 - DOCUMENTS → SPEC `specs/formal/experiment-core/README.md` (Experiment Core Formal Specification)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (Experiment capture spec contract model source (ExperimentCaptureSpecModel))
 - TESTS → TEST `implementations/python/tests/test_runtime_contracts.py` (Experiment capture spec conformance and rejection tests)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#233` (Experiment Evidence Capture Specification (EXP-707))
 - IMPLEMENTS → GITHUB_ISSUE `88` (Experiment evidence & measures (EXP-707, EXP-708, EXP-709, EXP-715))

@@ -21,7 +21,6 @@ Current state: implemented. Portable live state is required so execution behavio
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#4` (SEM-200: Shared Semantic Integrity)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/runtime-architecture.md` (SDL Runtime Architecture)
 - CONSTRAINS → SPEC `specs/formal/runtime-contracts/README.md` (Runtime Contract Semantics)
 - CONSTRAINS → SPEC `specs/formal/runtime-contracts/workflow-results.md` (Workflow Result Contract)
@@ -33,7 +32,3 @@ Current state: implemented. Portable live state is required so execution behavio
 - TESTS → TEST `implementations/python/tests/test_runtime_manager.py` (Runtime Manager Tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_control_plane.py` (Runtime Control Plane Tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_control_plane_api.py` (Runtime Control Plane API Tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models.py` (Runtime Models)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/manager.py` (Runtime Manager)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/control_plane.py` (Runtime Control Plane)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/control_plane_api.py` (Runtime Control Plane API)

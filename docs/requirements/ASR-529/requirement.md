@@ -13,8 +13,8 @@ updated_at: 2026-05-18T01:59:01.355933Z
 
 ## Statement
 
-WITHDRAWN: This draft was created during assessment triage and should not be implemented. It incorrectly framed ACES maturity as requiring a repo-owned deployed backend proof rather than preserving backend agnosticism through mature pluggable backend handoff contracts.
+WITHDRAWN: This draft was created during assessment triage and should not be implemented. It incorrectly framed RAES maturity as requiring a repo-owned deployed backend proof rather than preserving backend agnosticism through mature pluggable backend handoff contracts.
 
 ## Rationale
 
-Withdrawn immediately after clarification: the deliberate ACES boundary is backend agnosticism. Backends should implement the ACES contracts; ACES should mature the handoff, conformance, and disclosure surfaces without requiring a concrete backend realization in-repo or recreating backend lock-in from deployment-oriented reference DSLs.
+Withdrawn immediately after clarification: the deliberate RAES boundary is backend agnosticism. Backends should implement the RAES contracts; RAES should mature the handoff, conformance, and disclosure surfaces without requiring a concrete backend realization in-repo or recreating backend lock-in from deployment-oriented reference DSLs.

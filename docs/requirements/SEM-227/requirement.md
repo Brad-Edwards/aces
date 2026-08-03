@@ -17,10 +17,4 @@ The ecosystem shall define explicit semantics for wall-clock, simulated, logical
 
 ## Rationale
 
-Broader simulation and runtime research consistently separates time domains and clock authority; portability requires that ACES do the same explicitly.
-
-## Traceability
-
-- DOCUMENTS → DOCUMENTATION `/home/atomik/src/aces-sdl/research/primary/literature/time-and-simulation/misra-virtual-time-and-timeout-in-client-server.pdf` (Virtual Time and Timeout in Client-Server Networks)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#117` (Time semantics & language/runtime surfaces (SEM-227…229, DSL-126…128, RUN-317, RUN-318))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#283` (Clock And Time-Domain Semantics (SEM-227))
+Broader simulation and runtime research consistently separates time domains and clock authority; portability requires that RAES do the same explicitly.

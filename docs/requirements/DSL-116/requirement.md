@@ -17,8 +17,3 @@ The language shall support first-class specification of participant behavior bey
 ## Rationale
 
 Primary-source refresh from OpenRange, Open Trajectory Gym, and OpenThoughts-Agent shows that participant behavior needs an explicit authoring surface rather than being inferred from runtime or benchmark conventions.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#120` (Participant tool/affordance & decision-exposure language surfaces (DSL-116, 117, 118, 125))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#297` (Participant Behavior Specification Surface (DSL-116))

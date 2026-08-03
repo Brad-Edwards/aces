@@ -21,12 +21,8 @@ Current state: identified gap. Authors need to be able to leave concerns open in
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#73` (Author-selectable specificity & constraint surface (DSL-115))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#346` (Test protocol: DSL language-evaluation and adequacy evidence)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/lineage.md` (SDL lineage and prior work)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/precedents.md` (SDL design precedents for participant semantics and language adequacy)
-- DOCUMENTS → PULL_REQUEST `Brad-Edwards/aces#348` (Add participant semantics design)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/explicitness.py` (DSL-115 authoring specificity classifier)
 - IMPLEMENTS → DOCUMENTATION `docs/explain/reference/explicitness-realization-semantics.md` (DSL-115 authoring specificity reference)
 - TESTS → TEST `implementations/python/tests/test_dsl_115_authoring_specificity.py` (DSL-115 authoring specificity regression tests)
 - IMPLEMENTS → GITHUB_ISSUE `73` (Author-selectable specificity & constraint surface (DSL-115))

@@ -18,8 +18,3 @@ The ecosystem shall support first-class analysis outputs over runs and studies, 
 ## Rationale
 
 Requirement inventory expansion. Analysis products need to be modeled explicitly, not treated as informal external reporting.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#106` (Experiment: cross-run comparability & analysis/comparison outputs (EXP-711, 713))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#270` (Analysis And Comparison Outputs (EXP-713))

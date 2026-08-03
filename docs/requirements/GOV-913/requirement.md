@@ -21,10 +21,8 @@ Requirement inventory expansion. Reusable ecosystem assets need explicit trust a
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#115` (Trust & integrity of reusable assets (GOV-913))
 - IMPLEMENTS → SPEC `specs/supply-chain/reusable-asset-trust-integrity.md` (Reusable Asset Trust, Authenticity, and Integrity (normative spec))
 - IMPLEMENTS → SPEC `contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json` (reusable-asset-trust-policy-v1 published schema)
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-071-reusable-asset-trust-and-integrity-policy.md` (ADR-071: Reusable Asset Trust and Integrity Policy)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (ReusableAssetTrustPolicyModel + schema enforcement)
 - TESTS → TEST `implementations/python/tests/test_reusable_asset_trust_policy.py` (Reusable-asset trust policy contract tests)
 - IMPLEMENTS → GITHUB_ISSUE `115` (Trust & integrity of reusable assets (GOV-913))

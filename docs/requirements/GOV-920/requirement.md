@@ -21,13 +21,9 @@ Interoperability requires more than nominal support for a schema. Shared semanti
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (Semantic profile contract model and validation rules)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/semantic_profiles.py` (Semantic profile loader helpers)
 - IMPLEMENTS → SPEC `contracts/profiles/semantic/reference-stack-v1.json` (Reference stack shared semantic profile)
 - IMPLEMENTS → SPEC `contracts/schemas/profiles/semantic-profile-v1.json` (Semantic profile JSON Schema)
 - TESTS → TEST `implementations/python/tests/test_semantic_profiles.py` (Semantic profile validation and reference stack compatibility tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_contracts.py` (Semantic profile schema publication tests)
 - DOCUMENTS → SPEC `specs/concept-authority/semantic-profiles.md` (Shared semantic profiles specification)
 - DOCUMENTS → DOCUMENTATION `docs/explain/reference/shared-concept-model.md` (Shared semantic profile design guidance)
-- DOCUMENTS → ADR `docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md` (ADR-012 semantic profile composition note)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/versions.py` (Semantic profile schema version constant)

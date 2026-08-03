@@ -13,7 +13,7 @@ updated_at: 2026-07-24T16:19:35.368724Z
 
 ## Statement
 
-ACES shall publish backend-neutral contracts that carry clean-state requirements and scoped cleanup obligations from an admitted trial entry into distinct execution attempts, record cleanup outcomes independently from the primary trial outcome, require evidence-bounded clean or reusable-state claims, prevent unsafe retries after non-idempotent effects, declare backend cleanup and verification capability, and default scheduling to serial unless complete isolation evidence admits bounded parallelism. Required cleanup shall not be silently skipped or downgraded, and the contracts shall not create a second scenario lifecycle or imply universal environmental reversal.
+RAES shall publish backend-neutral contracts that carry clean-state requirements and scoped cleanup obligations from an admitted trial entry into distinct execution attempts, record cleanup outcomes independently from the primary trial outcome, require evidence-bounded clean or reusable-state claims, prevent unsafe retries after non-idempotent effects, declare backend cleanup and verification capability, and default scheduling to serial unless complete isolation evidence admits bounded parallelism. Required cleanup shall not be silently skipped or downgraded, and the contracts shall not create a second scenario lifecycle or imply universal environmental reversal.
 
 ## Rationale
 
@@ -22,10 +22,7 @@ SCE-006 schedulers need a portable, falsifiable contract for clean initial state
 ## Traceability
 
 - DOCUMENTS → SPEC `specs/formal/scenario-variation-trial-realization/cleanup-contracts.md` (Portable Clean-State And Cleanup Contracts)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/trial_cleanup.py` (Portable trial cleanup contract models and validators)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_backend_protocols/capability_admission.py` (Cleanup capability admission checks)
 - IMPLEMENTS → SPEC `contracts/schemas/plans/trial-cleanup-plan-v1.json` (Trial cleanup plan v1 schema)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_backend_protocols/capabilities.py` (Backend cleanup capability declaration)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/trial-cleanup-receipt-v1.json` (Trial cleanup receipt v1 schema)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/scheduler-isolation-proof-v1.json` (Scheduler isolation proof v1 schema)
 - IMPLEMENTS → SPEC `specs/formal/scenario-variation-trial-realization/cleanup-contracts.md` (Portable Clean-State And Cleanup Contracts)

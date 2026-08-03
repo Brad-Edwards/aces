@@ -17,17 +17,14 @@ The ecosystem shall treat major architecture and maturity claims as unproven unt
 
 ## Rationale
 
-Agent-assisted development can produce internally coherent code and documentation that still overstates real ecosystem maturity. ACES needs a ruthless credibility gate so claims such as backend agnosticism, independent backend implementability, conformance honesty, backend substitution, provenance separation, and processor artifact portability are evaluated through pre-registered tests and evidence rather than architectural confidence or reference-code self-consistency.
+Agent-assisted development can produce internally coherent code and documentation that still overstates real ecosystem maturity. RAES needs a ruthless credibility gate so claims such as backend agnosticism, independent backend implementability, conformance honesty, backend substitution, provenance separation, and processor artifact portability are evaluated through pre-registered tests and evidence rather than architectural confidence or reference-code self-consistency.
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#346` (Test protocol: DSL language-evaluation and adequacy evidence)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/lineage.md` (SDL lineage and prior work)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/precedents.md` (SDL design precedents for participant semantics and language adequacy)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md` (ADR-021: Falsification-First Claim Evidence Gate)
-- DOCUMENTS → PULL_REQUEST `Brad-Edwards/aces#348` (Add participant semantics design)
 - DOCUMENTS → DOCUMENTATION `docs/decisions/issue-346-dsl-language-evaluation-preflight.md` (Issue 346 DSL evaluation architecture preflight)
-- DOCUMENTS → DOCUMENTATION `docs/index.md` (ACES SDL documentation index entry for DSL evaluation)
 - DOCUMENTS → DOCUMENTATION `docs/research/dsl-language-evaluation/analysis-v1.json` (DSL language-evaluation claim analysis record)
 - DOCUMENTS → DOCUMENTATION `docs/research/dsl-language-evaluation/bundle-manifest.json` (DSL language-evaluation evidence bundle manifest)
 - DOCUMENTS → DOCUMENTATION `docs/research/dsl-language-evaluation/execution-snapshot-v1.json` (DSL language-evaluation execution snapshot)
@@ -51,7 +48,6 @@ Agent-assisted development can produce internally coherent code and documentatio
 - TESTS → TEST `implementations/python/tests/test_formal_semantic_validation.py` (Formal semantic validation automated tests)
 - IMPLEMENTS → GITHUB_ISSUE `168` (Issue #168: Formal semantic validation gate)
 - IMPLEMENTS → SPEC `specs/formal/scenario-satisfiability/README.md` (Governed whole-scenario satisfiability specification)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/satisfiability/_service.py` (Governed scenario satisfiability analysis service)
 - IMPLEMENTS → PROOF `docs/research/formal-semantic-validation/satisfiability-analysis-v1.json` (Whole-scenario satisfiability recorded evidence status)
 - TESTS → TEST `implementations/python/tests/test_scenario_satisfiability.py` (Scenario satisfiability analysis and evidence tests)
 - TESTS → TEST `implementations/python/tests/test_satisfiability_cli.py` (Governed satisfiability CLI tests)

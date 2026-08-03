@@ -18,7 +18,3 @@ The ecosystem shall support explicit experiment safety, scope, stop-condition, a
 ## Rationale
 
 Requirement inventory expansion. Mature experiment systems need declared guardrails that shape what an experiment is permitted to do and when it must be constrained or stopped.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#116` (Experiment safety & guardrail policies (GOV-914))

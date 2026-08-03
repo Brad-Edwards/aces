@@ -17,8 +17,3 @@ The ecosystem shall define explicit semantics for participant reference trajecto
 ## Rationale
 
 Primary-source refresh shows that reference trajectories and demonstrations are distinct from both public scenario definition and live execution history and need explicit semantic treatment.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#124` (Participant trajectory & demonstration model (SEM-221, DSL-119, ACT-621, API-415, EXP-723, 724, 725, AUT-814))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#316` (Participant Reference Trajectory And Demonstration Semantics (SEM-221))

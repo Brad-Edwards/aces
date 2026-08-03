@@ -18,8 +18,3 @@ The ecosystem shall maintain assurance coverage across adversarial, defensive, n
 ## Rationale
 
 Requirement inventory expansion. Assurance should cover the full participant role space rather than only one class of actor.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#96` (Participant replay/causality/history verification & multi-role assurance (ASR-509, 510))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#257` (Multi-Role Participant Assurance Coverage (ASR-510))

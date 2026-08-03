@@ -22,12 +22,6 @@ Requirement inventory expansion. The experiment-core contracts are archival prov
 ## Traceability
 
 - IMPLEMENTS → GITHUB_ISSUE `675` (Issue #675: experiment authoring surface)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/experiment_spec.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/versions.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/server.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/experiment_authoring.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/operations.py`
 - IMPLEMENTS → SPEC `contracts/schemas/experiment-core/experiment-authoring-input-v1.json` (experiment-authoring-input-v1 published schema)
 - TESTS → TEST `implementations/python/tests/test_experiment_authoring.py`
 - TESTS → TEST `implementations/python/tests/test_runtime_contracts.py`

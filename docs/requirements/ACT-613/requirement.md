@@ -18,8 +18,3 @@ The ecosystem shall support participants and autonomous services that can be mod
 ## Rationale
 
 Requirement inventory expansion. Scenarios need to represent participants that can both act and be acted upon.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#80` (Participant model: coordination/delegation, targetable participants & services (ACT-612, 613))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#215` (Targetable Participants And Services (ACT-613))

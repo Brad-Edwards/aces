@@ -21,12 +21,7 @@ Requirement inventory expansion. External knowledge bindings need explicit seman
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#92` (Derived-context, evidence-boundary & external-knowledge semantics (SEM-214, 216, 217))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#249` (Semantics Of External Knowledge Bindings (SEM-217))
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/semantic_binding_effects.py` (SEM-217 external knowledge binding effect classifier)
 - IMPLEMENTS → SPEC `specs/formal/participant-semantics/README.md` (SEM-217 external knowledge binding effect semantics)
 - IMPLEMENTS → DOCUMENTATION `docs/explain/reference/shared-concept-model.md` (SEM-217 shared concept model binding-effect guidance)
 - TESTS → TEST `implementations/python/tests/test_sem_217_knowledge_bindings.py` (SEM-217 external knowledge binding effect tests)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#585` (PR 585: added: define external knowledge bindings)
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#249` (Issue 249: Semantics Of External Knowledge Bindings (SEM-217))
 - DOCUMENTS → DOCUMENTATION `docs/explain/reference/shared-semantic-integrity.md` (Shared semantic integrity SEM-217 coverage row)

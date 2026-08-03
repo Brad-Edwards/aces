@@ -17,8 +17,3 @@ The ecosystem shall maintain conformance fixtures and checks for participant tra
 ## Rationale
 
 Primary-source refresh shows that trajectory artifacts need assurance surfaces of their own rather than relying only on generic evidence or participant-contract validation.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#126` (Participant trajectory & benchmark assurance (ASR-520, 521, 522, 524))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#330` (Participant Trajectory Corpus Conformance (ASR-520))

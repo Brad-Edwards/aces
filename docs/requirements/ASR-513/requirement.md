@@ -21,8 +21,6 @@ Requirement inventory expansion. Stronger experiment and scenario claims may req
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#98` (Executable behavioral, counterfactual/necessity & determinism/stability validation (ASR-512, 513, 514))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#261` (Counterfactual And Necessity Validation (ASR-513))
 - IMPLEMENTS → SPEC `contracts/concept-authority/behavioral-relations-v1.json` (Governed behavioral relation catalog)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_conformance/necessity_validation.py` (Bounded but-for necessity comparator)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_conformance/necessity_evidence.py` (Trusted necessity evidence assembler)

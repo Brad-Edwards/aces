@@ -21,13 +21,8 @@ Requirement inventory expansion. Mature ecosystems need reusable examples and pa
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#86` (Canonical documentation, glossary & reference; examples, templates & pattern libraries (AUT-805, 806))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#227` (Examples, Templates, And Pattern Libraries (AUT-806))
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#404` (feat: add AUT-806 example library)
 - IMPLEMENTS → CODE_FILE `examples/library/catalog.yaml` (AUT-806 example template and pattern library catalog)
 - IMPLEMENTS → POLICY `tools/check_example_library.py` (AUT-806 example library policy checker)
 - TESTS → TEST `implementations/python/tests/test_example_library_policy.py` (AUT-806 example library policy tests)
 - DOCUMENTS → DOCUMENTATION `README.md` (Agentic Cyber Environment System README)
-- DOCUMENTS → DOCUMENTATION `examples/README.md` (ACES Examples)
-- DOCUMENTS → DOCUMENTATION `docs/explain/getting-started.md` (Getting Started With ACES)
 - DOCUMENTS → DOCUMENTATION `docs/explain/reference/canonical-reference-map.md` (Canonical Reference Map)

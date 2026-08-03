@@ -17,4 +17,4 @@ The ecosystem shall provide a repeatable evidence harness for performance and sc
 
 ## Rationale
 
-Evidence gate #174 tests whether scalability and operational-performance claims are bounded by evidence. Existing provenance and observability requirements capture run context, but no requirement explicitly covers a repeatable measurement harness for parser, processor, conformance, control-plane, backend, or deployment-scale claims and prevents backend-specific measurements from being generalized to ACES as a whole.
+Evidence gate #174 tests whether scalability and operational-performance claims are bounded by evidence. Existing provenance and observability requirements capture run context, but no requirement explicitly covers a repeatable measurement harness for parser, processor, conformance, control-plane, backend, or deployment-scale claims and prevents backend-specific measurements from being generalized to RAES as a whole.

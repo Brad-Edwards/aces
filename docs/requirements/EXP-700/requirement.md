@@ -18,7 +18,3 @@ The ecosystem shall provide first-class experiment concepts for tasks, runs, stu
 ## Rationale
 
 Requirement inventory expansion. The ecosystem must model experiments as first-class constructs rather than treating them as incidental byproducts of scenario execution.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#57` (EXP-700: Experiment tasks, runs, studies & analysis (umbrella))

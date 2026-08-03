@@ -20,7 +20,6 @@ Primary-source refresh shows that tool-using participants need shared semantics 
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#119` (Participant tool/affordance & decision-surface semantics; exposure/visibility-boundary semantics (SEM-219, 220, 226))
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-083-participant-tool-decision-surface-and-exposure-semantics.md` (ADR-083 participant tool, decision-surface, and exposure semantics)
 - DOCUMENTS → DOCUMENTATION `docs/decisions/issue-119-sem-219-220-226-participant-decision-surface-preflight.md` (Issue 119 participant decision-surface architecture preflight)
 - DOCUMENTS → DOCUMENTATION `docs/explain/reference/shared-semantic-integrity.md` (Shared semantic integrity mapping for SEM-219/SEM-220/SEM-226)
@@ -36,18 +35,3 @@ Primary-source refresh shows that tool-using participants need shared semantics 
 - IMPLEMENTS → CONFIG `contracts/schemas/sdl/sdl-authoring-input-v1.json` (SDL authoring input schema)
 - IMPLEMENTS → CONFIG `contracts/schemas/sdl/instantiated-scenario-v1.json` (Instantiated scenario schema)
 - IMPLEMENTS → CONFIG `contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json` (Instantiated scenario snapshot schema)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/participant_behavior_specification.py` (Participant tool-affordance authoring model)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_declarations.py` (Participant tool-affordance declaration indexing)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_language_metadata.py` (Participant tool-affordance language metadata)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/_mapping_scopes.py` (Participant tool-affordance mapping scope)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/composition.py` (Participant tool-affordance module composition)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/semantics/participant_behavior.py` (Participant tool-affordance semantic validation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/__init__.py` (Participant tool-affordance validator integration)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/_content_objectives.py` (Participant content-reference validation integration)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/validator/_participant_tool_affordances.py` (Participant tool identity and affordance validation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/compiler/addresses.py` (Canonical tool-affordance runtime addresses)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/compiler/participant_behaviors.py` (Participant tool-affordance compilation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/compiler/pipeline.py` (Tool-affordance compiler pipeline integration)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/__init__.py` (Tool-affordance runtime model exports)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/behavior_resources.py` (Typed tool-affordance runtime resource)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models/runtime_model.py` (Tool-affordance runtime-model ownership and uniqueness)

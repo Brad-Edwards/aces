@@ -21,14 +21,8 @@ Requirement inventory expansion. Agent-facing operation needs explicit guardrail
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#84` (Agent-facing & structured-editing authoring surfaces (AUT-801, 804, 811))
-- IMPLEMENTS → SPEC `specs/agent-guidance/agent-guidance.yaml` (Canonical ACES agent guidance profile)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/agent_guidance.py` (Agent guidance profile loader and audience filter)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/operations.py` (aces_agent_guidance MCP tool and guidance tool family)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/server.py` (MCP server instructions directing agents to guidance)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/agent-guidance.md` (Agent guidance profile user documentation)
 - DOCUMENTS → DOCUMENTATION `docs/explain/getting-started.md` (Getting started guidance for agent tool discovery)
-- DOCUMENTS → DOCUMENTATION `docs/api/sdl.rst` (API documentation for aces_sdl.agent_guidance)
 - TESTS → POLICY `tools/check_agent_guidance.py` (Agent guidance profile structural checker)
 - TESTS → TEST `implementations/python/tests/test_agent_guidance.py` (Agent guidance helper unit tests)
 - TESTS → TEST `implementations/python/tests/test_agent_guidance_policy.py` (Agent guidance policy checker tests)

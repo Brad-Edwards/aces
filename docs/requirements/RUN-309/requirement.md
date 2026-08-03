@@ -18,8 +18,3 @@ The runtime shall support reproducible participant execution context and replaya
 ## Rationale
 
 Requirement inventory expansion. Participant experiments need reproducible execution context when repeatability is claimed.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#95` (Reproducible participant execution context; intervention/handoff/supervisory lifecycle (RUN-309, 310))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#254` (Reproducible Participant Execution Context (RUN-309))

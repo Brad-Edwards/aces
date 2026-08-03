@@ -21,5 +21,3 @@ Independent processors and backends need explicit external declarations for how 
 ## Traceability
 
 - DOCUMENTS → SPEC `https://fmi-standard.org/docs/3.0.2/` (FMI 3.0.2 Specification)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#118` (Time model contracts, conformance & provenance (API-421, ASR-528, EXP-734))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#291` (Time Model And Clock Declaration Contracts (API-421))

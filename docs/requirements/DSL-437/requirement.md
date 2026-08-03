@@ -13,11 +13,11 @@ updated_at: 2026-07-24T14:02:11.974014Z
 
 ## Statement
 
-ACES shall support deterministic benign and environmental simulated participants by composing existing agent identity and green-role semantics, participant behavior and action contracts, observation and evaluation boundaries, and the shared clock, time-domain, lifecycle, and runtime execution model, with explicit controls preventing non-evaluated participants from exercising score, objective, or receipt authority.
+RAES shall support deterministic benign and environmental simulated participants by composing existing agent identity and green-role semantics, participant behavior and action contracts, observation and evaluation boundaries, and the shared clock, time-domain, lifecycle, and runtime execution model, with explicit controls preventing non-evaluated participants from exercising score, objective, or receipt authority.
 
 ## Rationale
 
-Ordinary user and automation activity improves range realism, but benign simulated users remain participants. Determinism is a reproducibility property, not a separate actor ontology, and live scheduling cannot define a private time model outside ACES's joint time and runtime architecture.
+Ordinary user and automation activity improves range realism, but benign simulated users remain participants. Determinism is a reproducibility property, not a separate actor ontology, and live scheduling cannot define a private time model outside RAES's joint time and runtime architecture.
 
 ## Traceability
 

@@ -21,15 +21,9 @@ Current state: implemented. Processor manifests now publish a processor-specific
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/capabilities.py` (ProcessorFeature enum and ProcessorManifest dataclass)
 - IMPLEMENTS → CODE_FILE `tools/generate_contract_schemas.py` (Schema generation routing for processor manifest)
 - TESTS → TEST `implementations/python/tests/test_processor_manifest.py` (Processor manifest unit tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_contracts.py` (Contract schema bundle and closed-world tests)
 - DOCUMENTS → DOCUMENTATION `contracts/schemas/README.md` (Published Contract Schemas Overview)
 - DOCUMENTS → DOCUMENTATION `docs/explain/sdl/runtime-architecture.md` (SDL Runtime Architecture)
 - CONSTRAINS → SPEC `contracts/schemas/processor-manifest/processor-manifest-v2.json` (Processor Manifest Schema v2)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (Shared Apparatus Contract Models)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/manifest.py` (Reference Processor Manifest Declarations)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_cli/processor.py` (Processor Manifest CLI)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/manifest_authority.py` (Processor manifest authority sets and validators)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/versions.py` (Published contract version identifiers)

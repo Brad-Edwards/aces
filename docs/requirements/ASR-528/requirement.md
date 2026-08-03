@@ -17,9 +17,3 @@ The ecosystem shall provide conformance mechanisms that verify temporal semantic
 ## Rationale
 
 Once time is a first-class portability concern, assurance has to check both semantic consistency and honest disclosure of realized time behavior.
-
-## Traceability
-
-- DOCUMENTS → DOCUMENTATION `/home/atomik/src/aces-sdl/research/primary/literature/time-and-simulation/taylor-sudra-hoffman-2003-time-management-cots-distributed-simulation.pdf` (Time management issues in COTS distributed simulation: a case study)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#118` (Time model contracts, conformance & provenance (API-421, ASR-528, EXP-734))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#292` (Time Semantics And Clock Disclosure Conformance (ASR-528))

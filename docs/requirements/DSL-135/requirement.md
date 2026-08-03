@@ -21,7 +21,5 @@ APTL SCN-010 misp-suricata-sync (#349) is a bare-container periodic sync loop, a
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/runtime_scheduled_job.py` (runtime_scheduled_job.py)
 - TESTS → TEST `implementations/python/tests/test_runtime_scheduled_job.py` (test_runtime_scheduled_job.py)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-047-scheduled-job-runtime-inventory.md` (ADR-047 Scheduled Job Runtime Inventory)
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#458` (PR #458)

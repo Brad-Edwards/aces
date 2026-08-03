@@ -13,7 +13,7 @@ updated_at: 2026-08-02T14:51:08.532882Z
 
 ## Statement
 
-The ecosystem shall define revisioned participant-neutral boundary information-flow semantics with independent confidentiality and integrity coordinates, conservative provenance-preserving propagation across observations, retained memory, proposals, transformations, action arguments, control handoffs, participant crossings, outputs, and sinks; it shall keep authentication, authorization, admission, approval, declassification, integrity endorsement, redaction, and transformation distinct, and require fail-closed exact-cut mediation immediately before every ACES-controlled external effect or disclosure, including cross-participant and cross-episode flows.
+The ecosystem shall define revisioned participant-neutral boundary information-flow semantics with independent confidentiality and integrity coordinates, conservative provenance-preserving propagation across observations, retained memory, proposals, transformations, action arguments, control handoffs, participant crossings, outputs, and sinks; it shall keep authentication, authorization, admission, approval, declassification, integrity endorsement, redaction, and transformation distinct, and require fail-closed exact-cut mediation immediately before every RAES-controlled external effect or disclosure, including cross-participant and cross-episode flows.
 
 ## Rationale
 

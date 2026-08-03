@@ -17,8 +17,3 @@ The ecosystem shall support explicit participant tool and affordance profiles, i
 ## Rationale
 
 Primary-source refresh shows that participant behavior cannot be expressed or compared honestly unless the available tool and affordance surface is explicit.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#121` (Participant tool/affordance model & contracts (ACT-619, 620, 622, API-414))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#301` (Participant Tool And Affordance Profiles (ACT-619))

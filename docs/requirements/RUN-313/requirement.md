@@ -21,7 +21,4 @@ Portable semantics and contracts need at least one concrete processor implementa
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#75` (Reference processor & backend implementations (RUN-313, RUN-314, RUN-315))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#196` (Reference Processor Implementation (RUN-313))
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/reference.py` (Reference processor assembly (ReferenceProcessor / run_reference_processor))
 - TESTS → TEST `implementations/python/tests/test_reference_processor.py` (Reference processor end-to-end + manifest-evidence tests)

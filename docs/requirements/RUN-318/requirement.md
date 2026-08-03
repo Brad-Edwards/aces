@@ -17,8 +17,3 @@ The runtime shall support portable time advancement, pacing, synchronization, ti
 ## Rationale
 
 Cross-domain references show that time progression lifecycle behavior is central to replayability and honest cross-realization comparison.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#117` (Time semantics & language/runtime surfaces (SEM-227…229, DSL-126…128, RUN-317, RUN-318))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#290` (Time Advancement And Synchronization Lifecycle (RUN-318))

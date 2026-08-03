@@ -17,8 +17,3 @@ The ecosystem shall maintain conformance fixtures and checks for participant epi
 ## Rationale
 
 Primary-source refresh shows that episode lifecycle claims need executable conformance evidence, not just prose descriptions.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#123` (Participant episode/reset & budget contracts, runtime accounting & conformance (API-417, 418, RUN-312, ASR-523, EXP-728))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#314` (Participant Episode And Reset Conformance (ASR-523))

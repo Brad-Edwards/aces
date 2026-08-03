@@ -34,5 +34,3 @@ Requirement inventory expansion. Realistic scenarios require first-class specifi
 - TESTS → TEST `implementations/python/tests/test_dsl_437_snapshot_durability_conformance.py` (Autonomous participant durability and conformance coverage)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/participant_autonomous_execution.py` (Autonomous participant runtime compilation)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/semantics/participant_behavior/__init__.py` (Autonomous participant semantic validation)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#79` (Participant model: dynamic knowledge, baseline behavior profiles (ACT-604, 605))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#213` (Declarative Baseline Behavior Profiles (ACT-605))

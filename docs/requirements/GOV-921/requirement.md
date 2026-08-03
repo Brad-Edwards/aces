@@ -21,13 +21,9 @@ Primary-source review shows that interoperable ecosystems repeatedly depend on s
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (Reference model catalog contract and semantic validation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/reference_models.py` (Reference model catalog loader helpers)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/versions.py` (Reference model schema version constant)
 - IMPLEMENTS → SPEC `contracts/concept-authority/reference-models-v1.json` (Shared reference model catalog)
 - IMPLEMENTS → SPEC `contracts/schemas/concept-authority/reference-models-v1.json` (Reference model catalog JSON Schema)
 - TESTS → TEST `implementations/python/tests/test_reference_models.py` (Reference model catalog validation tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_contracts.py` (Reference model schema publication tests)
 - DOCUMENTS → SPEC `specs/concept-authority/reference-models.md` (Shared reference models specification)
 - DOCUMENTS → DOCUMENTATION `docs/explain/reference/shared-concept-model.md` (Shared reference model design guidance)
-- DOCUMENTS → ADR `docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md` (ADR-012 reusable structure authority note)

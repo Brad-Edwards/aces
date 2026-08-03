@@ -18,9 +18,3 @@ The ecosystem shall define explicit semantics for ordering, causality, simultane
 ## Rationale
 
 Distributed simulation and temporal assertion systems repeatedly show that causality and temporal ordering need stronger semantics than raw timestamps alone provide.
-
-## Traceability
-
-- DOCUMENTS → DOCUMENTATION `/home/atomik/src/aces-sdl/research/primary/literature/time-and-simulation/taylor-sudra-hoffman-2003-time-management-cots-distributed-simulation.pdf` (Time management issues in COTS distributed simulation: a case study)
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#117` (Time semantics & language/runtime surfaces (SEM-227…229, DSL-126…128, RUN-317, RUN-318))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#285` (Temporal Ordering, Causality, And Window Semantics (SEM-229))

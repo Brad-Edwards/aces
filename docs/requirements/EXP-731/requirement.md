@@ -20,8 +20,5 @@ Different experiments may need to add or tighten evidence requirements without c
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#128` (Operational apparatus observability; observation-augmentation disclosure contracts; observability-plane/augmentation conformance; evidence-requirement refinement & realized-evidence provenance (RUN-316, API-419, ASR-525, EXP-731, 732))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#341` (Evidence Requirement Refinement And Extension (EXP-731))
 - IMPLEMENTS → GITHUB_ISSUE `128` (Issue #128 - Observability evidence conformance implementation)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_conformance/conformance.py` (Run-refinement diagnostics require authored and evidence references for realized evidence refinements)
 - TESTS → TEST `implementations/python/tests/test_observability_evidence_conformance.py` (Tests verify capture-window and measurement-channel refinements preserve authored and evidence references)

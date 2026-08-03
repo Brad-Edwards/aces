@@ -18,8 +18,3 @@ The ecosystem shall support first-class treatment, factor, condition, and contro
 ## Rationale
 
 Requirement inventory expansion. Designed variation is a distinct experiment concern and should not be left implicit inside ad hoc run metadata.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#108` (Experiment: controlled randomness/seed preservation & treatment/controlled-variation design (EXP-718, 719))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#275` (Treatment And Controlled Variation Design (EXP-719))

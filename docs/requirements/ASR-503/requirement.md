@@ -32,6 +32,3 @@ Current state: implemented. Normative semantic artifacts are required so high-ri
 - CONSTRAINS → SPEC `specs/formal/runtime-contracts/workflow-results.md` (Workflow Result Contract)
 - CONSTRAINS → SPEC `specs/formal/runtime-contracts/evaluator-results.md` (Evaluator Result Contract)
 - TESTS → TEST `implementations/python/tests/test_fm2_semantics.py` (FM2 Semantic Tests)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/semantics/workflow.py` (Workflow Semantics)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/semantics/objectives.py` (Objective Semantics)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/semantics/planner.py` (Planner Semantics)

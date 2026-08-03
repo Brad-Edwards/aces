@@ -21,8 +21,6 @@ Requirement inventory expansion. Deprecation and removal need explicit lifecycle
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#90` (Versioning, deprecation & migration governance (GOV-901, 902, 903))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#241` (Deprecation And Lifecycle Rules (GOV-902))
 - IMPLEMENTS → ADR `docs/decisions/adrs/adr-075-ecosystem-versioning-deprecation-and-migration-governance.md` (ADR-075 Ecosystem Versioning, Deprecation, and Migration Governance)
 - IMPLEMENTS → SPEC `specs/evolution/versioning-deprecation-and-migration.md` (Versioning, Deprecation, and Migration Specification)
 - IMPLEMENTS → GITHUB_ISSUE `90` (Issue #90: Versioning, deprecation & migration governance)

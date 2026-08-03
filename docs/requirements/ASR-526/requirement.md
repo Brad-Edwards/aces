@@ -18,8 +18,3 @@ The ecosystem shall provide machine-readable and human-readable conformance and 
 ## Rationale
 
 People validating their own processors or backends need more than a binary pass/fail outcome. Honest portability requires reports that show what level was achieved, what was not supported, where support was partial or constrained, and what validation basis underlies the claim.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#82` (Participant assurance: semantic artifacts, conformance corpus, validation corpus, reporting (ASR-506, 507, 508, 526))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#222` (Conformance And Support Reporting (ASR-526))

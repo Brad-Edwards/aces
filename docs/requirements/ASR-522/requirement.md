@@ -17,8 +17,3 @@ The ecosystem shall provide assurance mechanisms that verify declared trajectory
 ## Rationale
 
 Primary-source refresh shows that training and evaluation claims depend on trustworthy split, source, and lineage handling for participant corpora.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#126` (Participant trajectory & benchmark assurance (ASR-520, 521, 522, 524))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#332` (Trajectory Split, Source, And Lineage Integrity (ASR-522))

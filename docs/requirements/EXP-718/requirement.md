@@ -21,14 +21,6 @@ Requirement inventory expansion. Repeatability and honest comparison require sto
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#108` (Experiment: controlled randomness/seed preservation & treatment/controlled-variation design (EXP-718, 719))
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/random_stream.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/random_stream_engine.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/random_stream_profiles.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/experiment_run_stochastic.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/experiment_apparatus.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/experiment_run.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts/experiment_analysis.py`
 - IMPLEMENTS → SPEC `contracts/schemas/profiles/random-stream-profile-v1.json`
 - IMPLEMENTS → SPEC `contracts/schemas/profiles/random-stream-vector-v1.json`
 - IMPLEMENTS → CONFIG `contracts/profiles/random-stream/blake3-xof-v1.json`
@@ -39,4 +31,3 @@ Requirement inventory expansion. Repeatability and honest comparison require sto
 - TESTS → TEST `implementations/python/tests/test_random_stream_run_integration.py`
 - TESTS → TEST `implementations/python/tests/test_random_stream_study_integration.py`
 - TESTS → TEST `implementations/python/tests/test_random_stream_determinism.py`
-- IMPLEMENTS → GITHUB_ISSUE `Brad-Edwards/aces#274` (Controlled Randomness And Seed Preservation (EXP-718))

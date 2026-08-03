@@ -29,4 +29,3 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 - CONSTRAINS → ADR `docs/decisions/adrs/adr-001-scenario-description-language.md` (ADR-001: preserve OCR scoring pipeline in the SDL surface)
 - CONSTRAINS → SPEC `contracts/schemas/sdl/sdl-authoring-input-v1.json` (SDL authoring schema for metrics, evaluations, TLOs, and goals)
 - CONSTRAINS → SPEC `contracts/schemas/sdl/instantiated-scenario-v1.json` (Instantiated SDL schema carrying normalized assessment-model constructs)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_sdl/conditions.py` (Condition model for boolean gate definitions used by the assessment pipeline)

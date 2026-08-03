@@ -22,11 +22,6 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 ## Traceability
 
 - IMPLEMENTS → GITHUB_ISSUE `8` (API-404: Secure, Durable, And Idempotent Control-Plane Semantics)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/control_plane.py` (RuntimeControlPlane — async-style control plane with idempotent submission and audit)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/control_plane_api.py` (HTTP/JSON control-plane adapter with auth middleware and audit injection)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/control_plane_security.py` (Control-plane security model — roles, identities, bearer tokens, RBAC)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/control_plane_store.py` (Durable control-plane storage — AuditEvent, OperationRecord, LocalControlPlaneStore)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_processor/models.py` (Runtime models — OperationReceipt, OperationStatus, OperationState lifecycle)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/operation-receipt-v1.json` (Operation receipt JSON Schema — submission acknowledgment contract)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/operation-status-v1.json` (Operation status JSON Schema — durable operation state contract)
 - TESTS → TEST `implementations/python/tests/test_runtime_control_plane.py` (Core control-plane unit tests)

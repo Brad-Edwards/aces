@@ -13,11 +13,11 @@ updated_at: 2026-07-30T14:48:41.795604Z
 
 ## Statement
 
-APTL shall schedule trials from an admitted experiment plan over the existing ACES single-scenario execution path. Scheduling shall default to serial execution and support explicitly configured bounded parallelism only when independent range instances, host capacity, ports, storage, and control-plane locks can be proven isolated. Every trial shall receive a clean or declared reusable initial state, deterministic ordering and identity, bounded timeouts, and verified cleanup. The scheduler shall not implement a second scenario lifecycle or a private comparison/scoring engine.
+APTL shall schedule trials from an admitted experiment plan over the existing RAES single-scenario execution path. Scheduling shall default to serial execution and support explicitly configured bounded parallelism only when independent range instances, host capacity, ports, storage, and control-plane locks can be proven isolated. Every trial shall receive a clean or declared reusable initial state, deterministic ordering and identity, bounded timeouts, and verified cleanup. The scheduler shall not implement a second scenario lifecycle or a private comparison/scoring engine.
 
 ## Rationale
 
-Batch execution is the apparatus mechanism that turns an ACES run allocation into executions. Isolation and clean-state guarantees are more important than throughput because cross-trial contamination invalidates experimental evidence.
+Batch execution is the apparatus mechanism that turns an RAES run allocation into executions. Isolation and clean-state guarantees are more important than throughput because cross-trial contamination invalidates experimental evidence.
 
 ## Traceability
 

@@ -20,12 +20,6 @@ Current state: identified gap. Participant implementations should not be allowed
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#129` (Participant implementation identity/capability/compatibility manifest, exposure conformance & implementation/exposure provenance (API-420, ASR-527, EXP-733))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#344` (Participant Implementation Manifest And Exposure Conformance (ASR-527))
-- IMPLEMENTS → PULL_REQUEST `Brad-Edwards/aces#433` (Implement participant implementation manifest contracts)
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#129` (Participant implementation manifest, exposure conformance, and provenance)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_conformance/conformance.py` (Participant implementation contract conformance validators)
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_contracts/contracts.py` (Participant implementation exposure and compatibility contract models)
 - TESTS → TEST `implementations/python/tests/test_participant_implementation_manifest.py` (Participant implementation conformance and invalid-fixture tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_conformance.py` (Runtime conformance registration tests)
 - DOCUMENTS → ADR `ADR-041` (Participant Implementation Manifest and Provenance Surface)

@@ -21,7 +21,6 @@ Narrowed to the RAES semantic transformation kernel; env-packs and Hub own pack 
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#102` (Safe refactoring/transformation; catalog, search & discovery surfaces (AUT-810, 812))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/composition/__init__.py` (AUT-810 composition and reference preservation)
 - DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#265` (Safe deterministic RAES artifact transformations (AUT-810))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/transformations.py` (AUT-810 public artifact-transformation API)

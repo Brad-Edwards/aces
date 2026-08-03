@@ -18,8 +18,3 @@ The ecosystem shall support experiment metadata and annotations for task, run, a
 ## Rationale
 
 Requirement inventory expansion. Experiments need first-class metadata for discovery and structured comparison.
-
-## Traceability
-
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#107` (Experiment: archive/preservation, metadata/annotation, evidence integrity & chain of custody (EXP-714, 716, 717))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#272` (Experiment Metadata And Annotation (EXP-716))

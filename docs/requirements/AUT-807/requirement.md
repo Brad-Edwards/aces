@@ -21,20 +21,9 @@ Requirement inventory expansion. Agent and tool usability requires machine-reada
 
 ## Traceability
 
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/__init__.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/__main__.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/server.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/__init__.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/authoring.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/inspection.py`
-- IMPLEMENTS → CODE_FILE `implementations/python/packages/aces_mcp/tools/reference.py`
 - TESTS → TEST `implementations/python/tests/test_mcp_server.py`
 - IMPLEMENTS → GITHUB_ISSUE `397` (Cross-agent asset inventory capture skill)
-- IMPLEMENTS → DOCUMENTATION `.claude/skills/aces-asset-inventory-capture/SKILL.md` (ACES asset inventory capture skill)
 - TESTS → TEST `implementations/python/tests/test_agent_inventory_skill.py` (Agent inventory skill structural gate)
-- IMPLEMENTS → DOCUMENTATION `.codex-skills/aces-asset-inventory-capture/SKILL.md` (ACES asset inventory capture Codex skill)
 - IMPLEMENTS → GITHUB_ISSUE `445` (Add gap-remediation implement overlay skill)
 - IMPLEMENTS → CONFIG `.codex` (Codex repo skill discovery rules)
-- IMPLEMENTS → DOCUMENTATION `.claude/skills/aces-gap-remediation-implement/SKILL.md` (ACES gap remediation Claude skill)
-- IMPLEMENTS → DOCUMENTATION `.codex-skills/aces-gap-remediation-implement/SKILL.md` (ACES gap remediation Codex skill)
 - IMPLEMENTS → PULL_REQUEST `477` (docs: register gap remediation overlay)

@@ -21,6 +21,4 @@ Requirement inventory expansion. Evidence capture is not sufficient on its own w
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#107` (Experiment: archive/preservation, metadata/annotation, evidence integrity & chain of custody (EXP-714, 716, 717))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#273` (Evidence Integrity And Chain Of Custody (EXP-717))
 - DOCUMENTS → GITHUB_ISSUE `347` (Issue #347 — Multi-Organizational Authority And Governance Contracts)

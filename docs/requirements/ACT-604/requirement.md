@@ -21,8 +21,6 @@ Requirement inventory expansion. Rich participant behavior requires portable sem
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `aces-framework/aces-sdl#79` (Participant model: dynamic knowledge, baseline behavior profiles (ACT-604, 605))
-- DOCUMENTS → GITHUB_ISSUE `Brad-Edwards/aces#212` (Dynamic Knowledge And Environment-State Semantics (ACT-604))
 - IMPLEMENTS → SPEC `contracts/schemas/participant-runtime/participant-information-state-record-v1.json` (ACT-604 portable participant information-state record schema)
 - IMPLEMENTS → SPEC `contracts/schemas/profiles/participant-information-reconstruction-profile-v1.json` (ACT-604 governed information-state reconstruction profile schema)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/contracts/participant_information_state.py` (ACT-604 participant information-state contract and contextual validation)
