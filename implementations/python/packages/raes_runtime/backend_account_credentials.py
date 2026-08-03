@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import fields, replace
+from typing import cast
 
 from raes_contracts.account_credentials import (
     account_placement_has_credential_bindings,
@@ -113,7 +114,7 @@ def _closed_plan_entry(snapshot: RuntimeSnapshot, operation: ProvisionOp) -> Sna
     payload = deepcopy(operation.payload)
     if operation.resource_type == "account-placement":
         payload = value_free_account_placement_payload(operation.payload)
-    return replace(entry, payload=payload)
+    return cast(SnapshotEntry, replace(entry, payload=payload))
 
 
 def _closed_plan_entries(

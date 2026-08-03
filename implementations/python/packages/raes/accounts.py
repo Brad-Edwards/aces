@@ -222,15 +222,15 @@ def _primary_binding_issue(
     unresolved: bool,
     primary_bindings: list[AccountCredentialBinding],
 ) -> str | None:
+    issue: str | None = None
     if not unresolved and len(primary_bindings) != 1:
-        return "credential bindings must contain exactly one primary credential binding"
-    if len(primary_bindings) != 1:
-        return None
-    account_method = _concrete_vocabulary_value(account.auth_method)
-    primary_method = _concrete_vocabulary_value(primary_bindings[0].auth_method)
-    if account_method is not None and primary_method is not None and account_method != primary_method:
-        return "primary credential binding authentication method must match account auth_method posture"
-    return None
+        issue = "credential bindings must contain exactly one primary credential binding"
+    elif len(primary_bindings) == 1:
+        account_method = _concrete_vocabulary_value(account.auth_method)
+        primary_method = _concrete_vocabulary_value(primary_bindings[0].auth_method)
+        if account_method is not None and primary_method is not None and account_method != primary_method:
+            issue = "primary credential binding authentication method must match account auth_method posture"
+    return issue
 
 
 def account_credential_binding_issues(account: Account) -> tuple[str, ...]:
