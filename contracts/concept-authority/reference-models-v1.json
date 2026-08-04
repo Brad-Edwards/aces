@@ -47,6 +47,7 @@
         "node",
         "groups",
         "auth_method",
+        "credential_bindings",
         "domain_ref",
         "disabled"
       ]

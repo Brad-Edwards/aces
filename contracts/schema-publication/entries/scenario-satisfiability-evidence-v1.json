@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "2e256d45f798fe3d0cf2625b6fb47a07fd61515f49872c9a3b3b02f9cd2ebeb0",
+  "content_hash": "5d3013b1dfea0653b50ba660a5005fb700b60f148594aea661efa71f1b44dfae",
   "last_change": {
-    "summary": "Added the governed target-node CPU architecture field to the satisfiability node model for issue #674.",
-    "content_hash": "2e256d45f798fe3d0cf2625b6fb47a07fd61515f49872c9a3b3b02f9cd2ebeb0"
+    "summary": "Propagated concrete typed account credential bindings through the canonical instantiated witness embedded by satisfiability evidence for issue #673 and DSL-439.",
+    "content_hash": "5d3013b1dfea0653b50ba660a5005fb700b60f148594aea661efa71f1b44dfae"
   }
 }

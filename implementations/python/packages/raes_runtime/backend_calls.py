@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
@@ -17,6 +17,11 @@ from raes_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry
 from raes_processor.models import CompiledRealizationRequirement
 from raes_processor.planner import realization_disclosure, sanitize_realization_snapshot
 
+from .backend_account_credentials import (
+    plan_arguments_have_account_credentials,
+    sanitize_account_credential_result,
+    value_free_backend_diagnostics,
+)
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
 from .participant_result_contracts import (
@@ -55,6 +60,8 @@ def _call_backend_diagnostics(
             invalid_message = _diagnostics_values_violation(diagnostics, address)
             if invalid_message is not None:
                 diagnostics = [_backend_contract_invalid(address, invalid_message)]
+    if plan_arguments_have_account_credentials(args):
+        diagnostics = value_free_backend_diagnostics(diagnostics)
     return diagnostics
 
 
@@ -67,6 +74,10 @@ def _call_backend_apply(
     information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> ApplyResult:
     realization_context = realization or _RealizationApplyContext()
+    if realization_context.plan is None:
+        submitted_plan = next((arg for arg in args if isinstance(arg, ProvisioningPlan)), None)
+        if submitted_plan is not None:
+            realization_context = replace(realization_context, plan=submitted_plan)
     baseline_snapshot = deepcopy(snapshot)
     backend_snapshot = deepcopy(snapshot)
     backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
@@ -174,22 +185,34 @@ def _sanitize_backend_realization(
     realization_requirements: tuple[CompiledRealizationRequirement, ...],
     realization_plan: ProvisioningPlan | None,
 ) -> ApplyResult:
-    if not realization_requirements or realization_plan is None:
-        return result
-    try:
-        safe_snapshot = sanitize_realization_snapshot(
-            realization_requirements,
-            result.snapshot,
-        )
-    except (TypeError, ValueError):
-        return _failed_apply_result(
-            baseline_snapshot,
-            _backend_contract_invalid(
-                address,
-                "Backend returned an invalid realization concern observation.",
-            ),
-        )
-    return _with_snapshot(result, safe_snapshot)
+    sanitized = result
+    if realization_requirements and realization_plan is not None:
+        try:
+            safe_snapshot = sanitize_realization_snapshot(
+                realization_requirements,
+                result.snapshot,
+            )
+        except (TypeError, ValueError):
+            return _failed_apply_result(
+                baseline_snapshot,
+                _backend_contract_invalid(
+                    address,
+                    "Backend returned an invalid realization concern observation.",
+                ),
+            )
+        sanitized = _with_snapshot(result, safe_snapshot)
+    if realization_plan is not None:
+        try:
+            sanitized = sanitize_account_credential_result(sanitized, realization_plan, baseline_snapshot)
+        except ValueError:
+            return _failed_apply_result(
+                baseline_snapshot,
+                _backend_contract_invalid(
+                    address,
+                    "Backend returned credential material outside its canonical material node.",
+                ),
+            )
+    return sanitized
 
 
 def _with_snapshot(

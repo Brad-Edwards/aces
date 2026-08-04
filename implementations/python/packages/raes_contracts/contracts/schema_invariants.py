@@ -246,6 +246,9 @@ _INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
 _INSTANTIATED_SNAPSHOT_CONTRACT_ID = "instantiated-scenario-snapshot-v1"
 
 
+_SATISFIABILITY_EVIDENCE_CONTRACT_ID = "scenario-satisfiability-evidence-v1"
+
+
 _SDL_AUTHORING_CONTRACT_ID = "sdl-authoring-input-v1"
 
 

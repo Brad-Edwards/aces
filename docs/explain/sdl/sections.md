@@ -1616,6 +1616,19 @@ accounts:
     node: web-server
     password_strength: weak
     auth_method: password               # password, key, certificate
+    credential_bindings:
+      - credential_id: primary-login
+        purpose: primary_authentication
+        auth_method: password
+        material:
+          classification: secret_fixture
+          value: deliberately-weak-fixture
+      - credential_id: operator-bootstrap
+        purpose: administrative_authentication
+        auth_method: certificate
+        material:
+          classification: operator_secret
+          reference_id: operator-secret.web-bootstrap
 ```
 
 `username` and `node` are required. `node` must reference a VM node, not a switch/network node.
@@ -1626,6 +1639,13 @@ identity-authority inventory. A top-level account may intentionally mirror one
 of those subjects when the scenario needs a provisioned or participant starting
 credential, but that is a second authored resource rather than the directory
 model itself.
+
+Credential bindings are nested under their owning account. Fixture literals
+are deliberate authoritative scenario content; operator secrets are represented
+only by safe logical references. Generic plans, snapshots, diagnostics, and
+participant views are value-free unless an explicit governed participant view
+authorizes disclosure of one exact fixture binding. See the normative
+[account credential binding specification](../../../specs/sdl/account-credential-bindings.md).
 
 ---
 

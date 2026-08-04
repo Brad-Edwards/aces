@@ -54,7 +54,7 @@ machinery is not retained as an empty compatibility field. "References" is
 | `content` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [initial service state](initial-service-state.md) |
 | `generated_artifacts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [stateful resources](stateful-resources.md) |
 | `persistent_volumes` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [stateful resources](stateful-resources.md) |
-| `accounts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `accounts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [account credential bindings](account-credential-bindings.md) |
 | `identity_domains` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [authored domain topology](authored-domain-topology.md) |
 | `identity_forests` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) |
 | `identity_facades` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) |

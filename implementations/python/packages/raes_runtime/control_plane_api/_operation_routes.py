@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from raes_contracts.contracts import (
     EvaluationPlanModel,
@@ -59,6 +60,18 @@ def _install_request_guards(
             reason=f"internal-error:{type(exc).__name__}",
         )
         return JSONResponse(status_code=500, content={"detail": "internal server error"})
+
+    @app.exception_handler(RequestValidationError)
+    async def _redacted_request_validation_errors(request: Request, exc: RequestValidationError) -> JSONResponse:
+        del exc
+        control_plane.record_audit(
+            action=request.method,
+            identity="anonymous",
+            allowed=False,
+            target=str(request.url.path),
+            reason="request-validation-failed",
+        )
+        return JSONResponse(status_code=422, content={"detail": "request validation failed"})
 
 
 def _register_operation_routes(
