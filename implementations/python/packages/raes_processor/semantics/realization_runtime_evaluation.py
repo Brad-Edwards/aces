@@ -97,36 +97,60 @@ def _evaluate_declared_realization(
         return None, None
     corroboration_diagnostic = _corroboration_diagnostic(requirement, returned_snapshot, manifest)
     if corroboration_diagnostic is not None:
-        result = (corroboration_diagnostic, None)
+        return corroboration_diagnostic, None
+    declared_projection = _project_declared_realization(requirement, declared_value)
+    diagnostic, realized_projection = _observed_projection(requirement, realized_value)
+    if diagnostic is not None:
+        result = (diagnostic, None)
     else:
-        try:
-            declared_projection = project_realization_concern(
-                requirement.requirement_kind,
-                declared_value,
-            )
-        except (TypeError, ValueError):
-            declared_projection = _MISSING_CONCERN_VALUE
-        diagnostic, realized_projection = _observed_projection(requirement, realized_value)
-        if diagnostic is not None:
-            result = (diagnostic, None)
+        result = _projected_declared_realization_result(
+            requirement,
+            declared_projection,
+            realized_projection,
+            realized_value,
+            manifest,
+        )
+    return result
+
+
+def _project_declared_realization(
+    requirement: CompiledRealizationRequirement,
+    declared_value: object,
+) -> object:
+    try:
+        projection = project_realization_concern(
+            requirement.requirement_kind,
+            declared_value,
+        )
+    except (TypeError, ValueError):
+        projection = _MISSING_CONCERN_VALUE
+    return projection
+
+
+def _projected_declared_realization_result(
+    requirement: CompiledRealizationRequirement,
+    declared_projection: object,
+    realized_projection: object,
+    realized_value: object,
+    manifest: BackendManifest | None,
+) -> tuple[Diagnostic | None, RealizationProvenanceEntry | None]:
+    process_limit_diagnostic, honoured = _process_limit_realization_result(
+        requirement,
+        declared_projection,
+        realized_projection,
+        manifest,
+    )
+    if process_limit_diagnostic is not None:
+        result = (process_limit_diagnostic, None)
+    else:
+        if honoured is None:
+            honoured = realized_projection == declared_projection
+        if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
+            result = (_silent_approximation_diagnostic(requirement), None)
+        elif realized_value is not _MISSING_CONCERN_VALUE:
+            result = (None, _realization_provenance_entry(requirement, honoured))
         else:
-            process_limit_diagnostic, honoured = _process_limit_realization_result(
-                requirement,
-                declared_projection,
-                realized_projection,
-                manifest,
-            )
-            if process_limit_diagnostic is not None:
-                result = (process_limit_diagnostic, None)
-            else:
-                if honoured is None:
-                    honoured = realized_projection == declared_projection
-                if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
-                    result = (_silent_approximation_diagnostic(requirement), None)
-                elif realized_value is not _MISSING_CONCERN_VALUE:
-                    result = (None, _realization_provenance_entry(requirement, honoured))
-                else:
-                    result = (None, None)
+            result = (None, None)
     return result
 
 
