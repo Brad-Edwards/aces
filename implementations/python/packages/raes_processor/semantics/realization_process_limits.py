@@ -69,7 +69,7 @@ def process_resource_limit_support_diagnostic(
         if _posture_supported(declaration, explicitness) and _observation_supported(declaration, requirement)
     ]
     if not compatible:
-        return Diagnostic(
+        diagnostic = Diagnostic(
             code="realization.unsupported-process-resource-limits",
             domain=requirement.domain,
             address=requirement.address,
@@ -79,8 +79,8 @@ def process_resource_limit_support_diagnostic(
             ),
             severity=Severity.ERROR,
         )
-    if explicitness is ExplicitnessClass.OPEN:
-        return (
+    elif explicitness is ExplicitnessClass.OPEN:
+        diagnostic = (
             None
             if any(
                 bound_process_resource_limit_capabilities(declaration, realization_envelope)
@@ -88,15 +88,17 @@ def process_resource_limit_support_diagnostic(
             )
             else _domain_diagnostic(requirement)
         )
-    if any(
+    elif any(
         _demands_admitted(
             requirement,
             bound_process_resource_limit_capabilities(declaration, realization_envelope),
         )
         for declaration in compatible
     ):
-        return None
-    return _domain_diagnostic(requirement)
+        diagnostic = None
+    else:
+        diagnostic = _domain_diagnostic(requirement)
+    return diagnostic
 
 
 def bound_process_resource_limit_capabilities(

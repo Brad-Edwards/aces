@@ -15,6 +15,7 @@ from typing import Any, ClassVar
 from pydantic import ConfigDict, Field, ValidationError
 
 from ._base import VARIABLE_TOKEN_RE, extract_variable_name
+from ._capability_constraints import capture_capability_constraints
 from ._errors import SDLInstantiationError, SDLValidationError
 from ._identifiers import QualifiedName
 from ._mapping_scopes import HASHMAP_SECTIONS
@@ -185,76 +186,6 @@ def _substitute_value(
     return VARIABLE_TOKEN_RE.sub(replace_token, value)
 
 
-def _json_pointer_segment(value: str) -> str:
-    return value.replace("~", "~0").replace("/", "~1")
-
-
-def _finite_domain_constraint(
-    *,
-    field_pointer: str,
-    value: object,
-    variables: Mapping[str, Variable],
-) -> CapabilityConstraint | None:
-    variable_ref = extract_variable_name(value) if isinstance(value, str) else None
-    variable = variables.get(variable_ref) if variable_ref is not None else None
-    if variable is None or not variable.allowed_values:
-        return None
-    return CapabilityConstraint(
-        field_pointer=field_pointer,
-        parameter=(variable_ref,),
-        allowed_values=tuple(variable.allowed_values),
-    )
-
-
-def _capture_capability_constraints(
-    scenario: Scenario | ExpandedScenario,
-) -> tuple[CapabilityConstraint, ...]:
-    """Retain the finite domains needed by pre-realization capability checks."""
-
-    constraints: list[CapabilityConstraint] = []
-    for node_name, node in scenario.nodes.items():
-        os_constraint = _finite_domain_constraint(
-            field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/os",
-            value=node.os,
-            variables=scenario.variables,
-        )
-        if os_constraint is not None:
-            constraints.append(os_constraint)
-        architecture_constraint = _finite_domain_constraint(
-            field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/architecture",
-            value=node.architecture,
-            variables=scenario.variables,
-        )
-        if architecture_constraint is not None:
-            constraints.append(architecture_constraint)
-        runtime = node.runtime
-        policy = runtime.operational_policy if runtime is not None else None
-        resource_limits = policy.resource_limits if policy is not None else None
-        process_limits = resource_limits.process_limits if resource_limits is not None else ()
-        for index, process_limit in enumerate(process_limits):
-            pointer = (
-                f"/nodes/{_json_pointer_segment(node_name)}/runtime/operational_policy/"
-                f"resource_limits/process_limits/{index}"
-            )
-            for leaf in ("soft", "hard"):
-                limit_constraint = _finite_domain_constraint(
-                    field_pointer=f"{pointer}/{leaf}",
-                    value=getattr(process_limit, leaf),
-                    variables=scenario.variables,
-                )
-                if limit_constraint is not None:
-                    constraints.append(limit_constraint)
-    for node_name, infrastructure in scenario.infrastructure.items():
-        constraint = _finite_domain_constraint(
-            field_pointer=f"/infrastructure/{_json_pointer_segment(node_name)}/count",
-            value=infrastructure.count,
-            variables=scenario.variables,
-        )
-        if constraint is not None:
-            constraints.append(constraint)
-    return tuple(constraints)
-
-
 def _portable_explicitness_record(record: ExplicitnessRecord) -> ExplicitnessProvenanceRecord:
     return ExplicitnessProvenanceRecord(
         model_path=record.path,
@@ -342,7 +273,7 @@ def _bind_scenario_content(
 
     local_constraints = tuple(
         constraint
-        for constraint in _capture_capability_constraints(raw_scenario)
+        for constraint in capture_capability_constraints(raw_scenario)
         if not constraint.parameter or constraint.parameter[0] not in preserved
     )
     raw_payload = raw_scenario.model_dump(mode="python", by_alias=True)

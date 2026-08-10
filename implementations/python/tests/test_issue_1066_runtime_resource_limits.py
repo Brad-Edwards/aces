@@ -266,8 +266,10 @@ def test_portable_limit_model_rejects_invalid_or_native_values(value: dict[str, 
 
 
 def test_process_limit_identities_are_unique_and_match_declared_processes() -> None:
+    duplicate_limit = _exact_limit()
+    duplicate_limits = [duplicate_limit, copy.deepcopy(duplicate_limit)]
     with pytest.raises(ValidationError, match="Duplicate runtime process resource limit"):
-        RuntimeResourceLimits(process_limits=[_exact_limit(), copy.deepcopy(_exact_limit())])
+        RuntimeResourceLimits(process_limits=duplicate_limits)
 
     source = _scenario(
         """
@@ -301,8 +303,9 @@ def test_redacted_command_selector_requires_a_lossless_stable_identity() -> None
         {"command": ["/private/two"], "command_redacted": True},
         {"command_redacted": True},
     ):
+        limit = {**_exact_limit(), "subject": subject}
         with pytest.raises(ValidationError, match="redacted command|stable projected selector"):
-            RuntimeProcessResourceLimit.model_validate({**_exact_limit(), "subject": subject})
+            RuntimeProcessResourceLimit.model_validate(limit)
 
 
 def test_compiler_preserves_exact_empty_and_constrained_process_limit_posture() -> None:

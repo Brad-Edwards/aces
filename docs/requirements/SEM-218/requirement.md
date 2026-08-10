@@ -75,6 +75,7 @@ Current state: identified gap. Honest portability requires normative semantics f
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/explicitness.py` (SEM-218 exact, constrained, and open explicitness classifier)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/scenario.py` (Scenario explicitness metadata surface for downstream consumers)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/instantiate.py` (Instantiation path preserving authored explicitness through variable substitution)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/_capability_constraints.py` (Finite-domain realization constraints retained during instantiation)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/models/runtime_model.py` (RuntimeModel realization requirement metadata field)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/runtime_state.py` (SEM-218 realization provenance ledger on runtime snapshots)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/realization_designation.py` (SEM-218 scoped realization designation cascade and canonical scope resolution)

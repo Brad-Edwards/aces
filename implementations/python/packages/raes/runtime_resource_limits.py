@@ -81,6 +81,24 @@ def _subject_has_variable(subject: RuntimeProcessIdentity) -> bool:
     return any(isinstance(value, str) and contains_variable_token(value) for value in values)
 
 
+def _validate_process_limit_subject(subject: RuntimeProcessIdentity) -> None:
+    if _subject_has_variable(subject):
+        raise ValueError("runtime process resource limit variables are permitted only in soft and hard values")
+    if subject.command_redacted is True and subject.command:
+        raise ValueError("runtime process resource limit redacted command must be omitted from the selector")
+    if subject.command_redacted is True and not _subject_has_stable_projected_selector(subject):
+        raise ValueError("runtime process resource limit redacted command requires a stable projected selector")
+    if not _subject_has_structural_selector(subject):
+        raise ValueError("runtime process resource limit subject requires a structural selector")
+
+
+def _validate_process_limit_values(soft: RuntimeProcessLimitValue, hard: RuntimeProcessLimitValue) -> None:
+    if isinstance(soft, int) and isinstance(hard, int) and soft > hard:
+        raise ValueError("runtime process resource limit soft value must not exceed hard value")
+    if soft == "unlimited" and hard != "unlimited":
+        raise ValueError("runtime process resource limit unlimited soft value requires unlimited hard value")
+
+
 class RuntimeProcessResourceLimit(SDLModel):
     """One portable soft/hard process limit for a selected process or subtree."""
 
@@ -98,20 +116,10 @@ class RuntimeProcessResourceLimit(SDLModel):
 
     @model_validator(mode="after")
     def validate_limit(self) -> RuntimeProcessResourceLimit:
-        if _subject_has_variable(self.subject):
-            raise ValueError("runtime process resource limit variables are permitted only in soft and hard values")
-        if self.subject.command_redacted is True and self.subject.command:
-            raise ValueError("runtime process resource limit redacted command must be omitted from the selector")
-        if self.subject.command_redacted is True and not _subject_has_stable_projected_selector(self.subject):
-            raise ValueError("runtime process resource limit redacted command requires a stable projected selector")
-        if not _subject_has_structural_selector(self.subject):
-            raise ValueError("runtime process resource limit subject requires a structural selector")
+        _validate_process_limit_subject(self.subject)
         if contains_variable_token(self.description):
             raise ValueError("runtime process resource limit variables are permitted only in soft and hard values")
-        if isinstance(self.soft, int) and isinstance(self.hard, int) and self.soft > self.hard:
-            raise ValueError("runtime process resource limit soft value must not exceed hard value")
-        if self.soft == "unlimited" and self.hard != "unlimited":
-            raise ValueError("runtime process resource limit unlimited soft value requires unlimited hard value")
+        _validate_process_limit_values(self.soft, self.hard)
         return self
 
 
@@ -140,12 +148,14 @@ def process_resource_limit_subject_projection(
 
 def _selector_field_is_active(field_name: str, value: object) -> bool:
     if field_name in {"pid", "parent_pid"}:
-        return value is not None
-    if field_name == "role":
-        return value != RuntimeProcessRole.OTHER.value
-    if field_name == "command_redacted":
-        return value is True
-    return bool(value)
+        active = value is not None
+    elif field_name == "role":
+        active = value != RuntimeProcessRole.OTHER.value
+    elif field_name == "command_redacted":
+        active = value is True
+    else:
+        active = bool(value)
+    return active
 
 
 def process_resource_limit_subject_matches(
