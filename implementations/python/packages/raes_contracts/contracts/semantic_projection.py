@@ -27,6 +27,7 @@ from .semantic_projection_profile_registry import (
 )
 
 _REPORT_VALIDATOR = "raes_contracts.contracts.SemanticProjectionReportModel.model_validate"
+_WITNESS_FRAME_JOIN_ERROR = "projection witness must join the exact frame subject, producer, and profile"
 _PREDICATE_IDS = Literal["declared", "admitted", "observed", "verified"]
 
 
@@ -323,13 +324,13 @@ def _validate_witness_frame_join(
         frame.subject_scope.lifecycle_phase,
     )
     if actual_subject != expected_subject:
-        raise ValueError("projection witness must join the exact frame subject, producer, and profile")
+        raise ValueError(_WITNESS_FRAME_JOIN_ERROR)
     if subject.artifact_digest not in frame.subject_scope.artifact_digests:
-        raise ValueError("projection witness must join the exact frame subject, producer, and profile")
+        raise ValueError(_WITNESS_FRAME_JOIN_ERROR)
     actual_owner = (witness.producer_contract_id, witness.predicate_profile_digest)
     expected_owner = (frame.predicate_profile.producer_contract_id, frame.predicate_profile.profile_digest)
     if actual_owner != expected_owner:
-        raise ValueError("projection witness must join the exact frame subject, producer, and profile")
+        raise ValueError(_WITNESS_FRAME_JOIN_ERROR)
 
 
 def _validate_report_rows(

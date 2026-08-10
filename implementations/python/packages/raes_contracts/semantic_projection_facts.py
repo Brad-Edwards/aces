@@ -28,6 +28,7 @@ from .contracts.semantic_projection import (
 from .contracts.validation_disclosure import ValidationBasisDisclosureDocumentModel
 
 _FactOutcome = Literal["satisfied", "not-satisfied", "unknown", "unsupported"]
+_OWNER_ARTIFACT_ERROR = "projection fact lacks its authoritative owner artifact"
 
 
 @dataclass(frozen=True, slots=True)
@@ -404,7 +405,7 @@ def _revalidate_declared(
 ) -> _SemanticProjectionFact:
     del frame, evidence_resolver
     if not isinstance(fact.owner_artifact, ExternalConceptSubjectModel):
-        raise ValueError("projection fact lacks its authoritative owner artifact")
+        raise ValueError(_OWNER_ARTIFACT_ERROR)
     return adapt_declared_semantic_projection_fact(fact.owner_artifact)
 
 
@@ -415,7 +416,7 @@ def _revalidate_admitted(
 ) -> _SemanticProjectionFact:
     del frame, evidence_resolver
     if not isinstance(fact.owner_artifact, ValidationBasisDisclosureDocumentModel):
-        raise ValueError("projection fact lacks its authoritative owner artifact")
+        raise ValueError(_OWNER_ARTIFACT_ERROR)
     return adapt_admitted_semantic_projection_fact(fact.subject, fact.owner_artifact)
 
 
@@ -425,7 +426,7 @@ def _revalidate_observed(
     evidence_resolver: SemanticProjectionEvidenceResolver | None,
 ) -> _SemanticProjectionFact:
     if not isinstance(fact.owner_artifact, PropositionTruthResultModel):
-        raise ValueError("projection fact lacks its authoritative owner artifact")
+        raise ValueError(_OWNER_ARTIFACT_ERROR)
     boundary, resolver = _require_evidence_context(frame, evidence_resolver)
     return adapt_observed_semantic_projection_fact(
         fact.subject,
@@ -441,7 +442,7 @@ def _revalidate_verified(
     evidence_resolver: SemanticProjectionEvidenceResolver | None,
 ) -> _SemanticProjectionFact:
     if not isinstance(fact.owner_artifact, ArtifactTransformationReportModel):
-        raise ValueError("projection fact lacks its authoritative owner artifact")
+        raise ValueError(_OWNER_ARTIFACT_ERROR)
     boundary, resolver = _require_evidence_context(frame, evidence_resolver)
     return adapt_verified_semantic_projection_fact(
         fact.subject,
@@ -469,7 +470,7 @@ def _revalidate_semantic_projection_fact(
 
     validator = _FACT_REVALIDATORS.get(fact.predicate_id)
     if validator is None:
-        raise ValueError("projection fact lacks its authoritative owner artifact")
+        raise ValueError(_OWNER_ARTIFACT_ERROR)
     expected = validator(frame, fact, evidence_resolver)
     if expected != fact:
         raise ValueError("projection fact does not match the fixed owner adapter output")

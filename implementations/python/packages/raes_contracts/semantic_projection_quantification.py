@@ -15,6 +15,12 @@ from .contracts.semantic_projection import (
 )
 from .semantic_projection_facts import _SemanticProjectionFact
 
+_QUANTIFIED_REASON_CODES = {
+    SemanticProjectionClassification.WITNESS: (),
+    SemanticProjectionClassification.GAP: ("decisive-native-negative",),
+    SemanticProjectionClassification.UNKNOWN: ("native-result-undecidable",),
+}
+
 
 def quantified_projection_row(
     concept_id: str,
@@ -114,11 +120,7 @@ def _projection_witnesses(
 def _projection_reason_codes(
     classification: SemanticProjectionClassification,
 ) -> tuple[str, ...]:
-    if classification == SemanticProjectionClassification.GAP:
-        return ("decisive-native-negative",)
-    if classification == SemanticProjectionClassification.WITNESS:
-        return ()
-    return ("native-result-undecidable",)
+    return _QUANTIFIED_REASON_CODES[classification]
 
 
 def _subject_key(subject: ExternalConceptSubjectModel) -> tuple[str, str, str, str, str]:
