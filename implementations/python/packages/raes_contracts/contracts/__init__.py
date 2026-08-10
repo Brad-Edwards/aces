@@ -1,7 +1,6 @@
-"""Schema-first external contract models for RAES artifact boundaries."""
-# This module is an intentional re-export facade governed by PUBLIC_EXPORTS.
-# ruff: noqa: F401, F403
+"""Schema-first re-export facade for RAES artifact-boundary contracts."""
 
+# ruff: noqa: F401, F403
 from ..artifact_requirements import (
     ArtifactAcquisitionTimingModel,
     ArtifactAvailabilityContext,
@@ -452,6 +451,7 @@ from .semantic_profiles import (
     SemanticProfileModel,
     SemanticProfilePhaseModel,
 )
+from .semantic_projection import *
 from .trial_analysis import (
     AdmittedTrialPlanReconciliation,
     reconcile_admitted_trial_plan,

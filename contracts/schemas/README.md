@@ -173,6 +173,34 @@ task/run/study contracts embed it as an optional `validation_basis_disclosures`
 list. It does not execute gates, does not replace the ASR-511 catalog, and
 does not add an admission, endpoint, or persistence surface.
 
+## Semantic Projection Reports
+
+The `semantic-projection-report-v1` schema publishes scheme-neutral,
+evidence-bounded reports over `external-concept-bindings/v1`. Each report
+embeds a complete canonical-digest-bound frame: exact scheme revision and
+source digest, explicit concept inclusion set, native subject scope, one
+governed predicate profile and producer, perspective, configuration/state
+coordinates, quantifier, evidence/freshness boundary, binding-set digest, and
+transformation versions.
+
+Rows form an exact partition of the pinned scheme snapshot into witnesses,
+gaps, unknowns, ambiguous concepts, and excluded concepts. A gap requires a
+complete finite native scope and a decisive negative. Positive rows retain
+digest-stable native witnesses and evidence. Binding resolution, confidence,
+approximation, loss, limitations, and review remain visible and independent.
+
+Summaries expose exact integer counts and a predicate- and frame-qualified
+fraction such as `declared:7/12@sha256:<frame-digest>`. They do not expose a
+bare coverage percentage, quality score, maturity level, or environment
+capability. Participant-relative generation additionally requires complete
+deny-first authorization for every contributing source digest; the report
+itself is not an ACL or delivery record.
+
+The normative schema lives at
+`contracts/schemas/concept-authority/semantic-projection-report-v1.json`; the
+semantic boundary is specified in
+`specs/concept-authority/semantic-projection-reports.md`.
+
 The `scientific-completeness-taxonomy-v1` and
 `scientific-completeness-assessment-v1` schemas keep stable intended-use
 profiles separate from time-varying delivery evidence. Their normative

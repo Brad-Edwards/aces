@@ -45,6 +45,7 @@ from raes_contracts.contracts import (
     ProvisioningPlanModel,
     RuntimeFactBindingPlaneModel,
     RuntimeSnapshotEnvelopeModel,
+    SemanticProjectionReportModel,
     ValidationBasisDisclosureDocumentModel,
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
@@ -116,6 +117,7 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
     "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,
+    "semantic-projection-report-v1": SemanticProjectionReportModel.model_validate,
     "fipa-communicative-acts-source-v1": FipaCommunicativeActsSourceModel.model_validate,
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_validate,
     "experiment-authoring-input-v1": ExperimentSpecModel.model_validate,
@@ -137,6 +139,7 @@ _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset(
     {
         "associated-artifact-manifest-v1",
         "external-concept-bindings-v1",
+        "semantic-projection-report-v1",
         "participant-information-state-record-v1",
         "participant-flow-control-relation-v1",
     }

@@ -48,6 +48,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "external-concept-bindings-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
+    if name == "semantic-projection-report-v1":
+        return schemas_dir / "concept-authority" / f"{name}.json"
     if name in {
         "attack-enterprise-tactics-source-v1",
         "atlas-tactics-source-v1",
