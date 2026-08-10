@@ -494,6 +494,7 @@ def test_declared_configuration_coordinate_must_match_the_exact_subject_scope() 
     forged = frame.model_copy(
         update={"configuration": frame.configuration.model_copy(update={"coordinate_digest": _DIGEST_D})}
     )
+    fact = adapt_declared_semantic_projection_fact(subject)
 
     with pytest.raises(ValueError, match="configuration coordinate.*exact native subject scope"):
         project_semantic_concepts(
@@ -501,7 +502,7 @@ def test_declared_configuration_coordinate_must_match_the_exact_subject_scope() 
             document=document,
             subjects=(subject,),
             scheme_snapshot=snapshot,
-            native_facts=(adapt_declared_semantic_projection_fact(subject),),
+            native_facts=(fact,),
         )
 
 
@@ -582,6 +583,7 @@ def test_projection_rejects_thresholds_above_the_exact_finite_population() -> No
             )
         }
     )
+    fact = adapt_declared_semantic_projection_fact(subject)
 
     with pytest.raises(ValueError, match="threshold.*population"):
         project_semantic_concepts(
@@ -589,7 +591,7 @@ def test_projection_rejects_thresholds_above_the_exact_finite_population() -> No
             document=document,
             subjects=(subject,),
             scheme_snapshot=snapshot,
-            native_facts=(adapt_declared_semantic_projection_fact(subject),),
+            native_facts=(fact,),
         )
 
 
@@ -674,12 +676,13 @@ def test_verified_adapter_rejects_evidence_free_claims_even_after_model_bypass()
             )
         }
     )
+    boundary = _evidence_boundary()
 
     with pytest.raises(ValueError, match="predicate-specific verifier"):
         adapt_verified_semantic_projection_fact(
             subject,
             report,
-            evidence_boundary=_evidence_boundary(),
+            evidence_boundary=boundary,
             predicate_profile=profile,
             evidence_resolver=resolver,
         )
@@ -714,11 +717,12 @@ def test_governed_profiles_and_owner_adapters_reject_substitution() -> None:
         profile=verified_profile,
         evidence_digest=canonical_json_digest(evidence.model_dump(mode="json")),
     ).model_copy(update={"operation_profile": "canonicalize-portable-contract/v1"})
+    boundary = _evidence_boundary()
     with pytest.raises(ValueError, match="predicate-specific verifier"):
         adapt_verified_semantic_projection_fact(
             unrelated_subject,
             generic,
-            evidence_boundary=_evidence_boundary(),
+            evidence_boundary=boundary,
             predicate_profile=verified_profile,
             evidence_resolver=resolver,
         )
@@ -766,15 +770,16 @@ def test_observed_fact_is_bound_to_its_exact_evidence_policy() -> None:
             evidence_resolver=resolver,
         )
 
+    mismatched_frame = _frame(
+        document,
+        snapshot,
+        predicate_id="observed",
+        evidence_boundary_id="different-boundary",
+        observed_results=(truth,),
+    )
     with pytest.raises(ValueError, match="fixed owner adapter output"):
         project_semantic_concepts(
-            _frame(
-                document,
-                snapshot,
-                predicate_id="observed",
-                evidence_boundary_id="different-boundary",
-                observed_results=(truth,),
-            ),
+            mismatched_frame,
             document=document,
             subjects=(subject,),
             scheme_snapshot=snapshot,
@@ -989,9 +994,10 @@ def test_negative_projection_fixtures_reject_the_targeted_invalid_shape(filename
         / "invalid"
         / filename
     )
+    payload = _load_json(fixture)
 
     with pytest.raises(ValidationError):
-        model_type.model_validate(_load_json(fixture))
+        model_type.model_validate(payload)
 
 
 def test_report_is_published_and_registered_with_canonical_conformance() -> None:

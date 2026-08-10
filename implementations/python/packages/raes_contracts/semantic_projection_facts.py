@@ -202,27 +202,9 @@ def adapt_observed_semantic_projection_fact(
 ) -> _SemanticProjectionFact:
     """Adapt one incumbent observed truth result and its resolved evidence digests."""
 
-    if result.evaluation_basis != PropositionEvaluationBasis.OBSERVED_STATE:
-        raise ValueError("observed projection facts require an observed-state proposition result")
-    temporal = result.temporal_context
-    if temporal is None or (
-        temporal.boundary_ref,
-        temporal.time_domain,
-        temporal.clock_authority,
-    ) != (
-        evidence_boundary.evaluation_cut_ref,
-        evidence_boundary.time_domain,
-        evidence_boundary.clock_authority,
-    ):
-        raise ValueError("observed evidence temporal context must match the exact projection boundary")
+    _validate_observed_basis(result, evidence_boundary)
     digest = canonical_json_digest(result.model_dump(mode="json"))
-    if (
-        subject.owning_contract_id != "proposition-truth-result-v1"
-        or subject.subject_kind != "proposition-truth-result"
-        or subject.canonical_ref != result.result_id
-        or subject.artifact_digest != digest
-    ):
-        raise ValueError("observed projection subject must identify the exact proposition truth result")
+    _validate_observed_subject(subject, result, digest)
     outcome = {
         PropositionTruthOutcome.TRUE: "satisfied",
         PropositionTruthOutcome.FALSE: "not-satisfied",
@@ -232,16 +214,7 @@ def adapt_observed_semantic_projection_fact(
     evidence_records, resolved_digests = _resolve_evidence_records(
         tuple(result.evidence_refs), evidence_boundary, evidence_resolver
     )
-    if result.probe_binding is not None and not any(
-        source.ref_digest == result.probe_binding.artifact_digest
-        for record in evidence_records
-        for source in record.source_refs
-    ):
-        raise ValueError("observed evidence provenance must join the exact owner probe artifact")
-    if outcome in {"satisfied", "not-satisfied"} and not resolved_digests:
-        raise ValueError("decided observed projection facts require digest-stable evidence")
-    if resolved_digests != tuple(sorted(set(resolved_digests))):
-        raise ValueError("observed projection evidence digests must be sorted and unique")
+    _validate_observed_evidence(result, outcome, evidence_records, resolved_digests)
     return _SemanticProjectionFact(
         predicate_id="observed",
         producer_contract_id="proposition-truth-result-v1",
@@ -255,6 +228,58 @@ def adapt_observed_semantic_projection_fact(
         owner_artifact=result,
         owner_evidence=evidence_records,
     )
+
+
+def _validate_observed_basis(
+    result: PropositionTruthResultModel,
+    evidence_boundary: SemanticProjectionEvidenceBoundaryModel,
+) -> None:
+    if result.evaluation_basis != PropositionEvaluationBasis.OBSERVED_STATE:
+        raise ValueError("observed projection facts require an observed-state proposition result")
+    temporal = result.temporal_context
+    if temporal is None:
+        raise ValueError("observed evidence temporal context must match the exact projection boundary")
+    actual = (
+        temporal.boundary_ref,
+        temporal.time_domain,
+        temporal.clock_authority,
+    )
+    expected = (
+        evidence_boundary.evaluation_cut_ref,
+        evidence_boundary.time_domain,
+        evidence_boundary.clock_authority,
+    )
+    if actual != expected:
+        raise ValueError("observed evidence temporal context must match the exact projection boundary")
+
+
+def _validate_observed_subject(
+    subject: ExternalConceptSubjectModel,
+    result: PropositionTruthResultModel,
+    digest: str,
+) -> None:
+    actual = (subject.owning_contract_id, subject.subject_kind, subject.canonical_ref, subject.artifact_digest)
+    expected = ("proposition-truth-result-v1", "proposition-truth-result", result.result_id, digest)
+    if actual != expected:
+        raise ValueError("observed projection subject must identify the exact proposition truth result")
+
+
+def _validate_observed_evidence(
+    result: PropositionTruthResultModel,
+    outcome: _FactOutcome,
+    evidence_records: tuple[ExperimentEvidenceRecordModel, ...],
+    resolved_digests: tuple[str, ...],
+) -> None:
+    if result.probe_binding is not None and not any(
+        source.ref_digest == result.probe_binding.artifact_digest
+        for record in evidence_records
+        for source in record.source_refs
+    ):
+        raise ValueError("observed evidence provenance must join the exact owner probe artifact")
+    if outcome in {"satisfied", "not-satisfied"} and not resolved_digests:
+        raise ValueError("decided observed projection facts require digest-stable evidence")
+    if resolved_digests != tuple(sorted(set(resolved_digests))):
+        raise ValueError("observed projection evidence digests must be sorted and unique")
 
 
 def adapt_verified_semantic_projection_fact(
@@ -311,26 +336,128 @@ def _resolve_evidence_records(
     records = []
     digests = []
     for evidence_ref in refs:
-        try:
-            record = resolver(evidence_ref=evidence_ref, evidence_boundary=boundary)
-        except Exception as exc:
-            raise ValueError("semantic projection evidence authority resolution failed") from exc
-        if record is None:
-            raise ValueError("semantic projection evidence ref did not resolve authoritatively")
-        digest = canonical_json_digest(record.model_dump(mode="json"))
-        if digest_addressed:
-            if digest != evidence_ref:
-                raise ValueError("verified evidence digest does not match its authoritative artifact")
-        elif record.evidence_record_id != evidence_ref:
-            raise ValueError("evidence resolver returned a different owner evidence record")
-        if record.capture_window_ref != boundary.evaluation_cut_ref or record.redaction_state == "withheld":
-            raise ValueError("evidence artifact is not admissible at the exact boundary and cut")
+        record, digest = _resolve_evidence_record(
+            evidence_ref,
+            boundary,
+            resolver,
+            digest_addressed=digest_addressed,
+        )
         records.append(record)
         digests.append(digest)
     ordered = tuple(sorted(zip(digests, records, strict=True), key=lambda item: item[0]))
     if len({digest for digest, _ in ordered}) != len(ordered):
         raise ValueError("semantic projection evidence artifacts must be unique")
     return tuple(record for _, record in ordered), tuple(digest for digest, _ in ordered)
+
+
+def _resolve_evidence_record(
+    evidence_ref: str,
+    boundary: SemanticProjectionEvidenceBoundaryModel,
+    resolver: SemanticProjectionEvidenceResolver,
+    *,
+    digest_addressed: bool,
+) -> tuple[ExperimentEvidenceRecordModel, str]:
+    try:
+        record = resolver(evidence_ref=evidence_ref, evidence_boundary=boundary)
+    except Exception as exc:
+        raise ValueError("semantic projection evidence authority resolution failed") from exc
+    if record is None:
+        raise ValueError("semantic projection evidence ref did not resolve authoritatively")
+    digest = canonical_json_digest(record.model_dump(mode="json"))
+    _validate_evidence_record_identity(record, digest, evidence_ref, digest_addressed=digest_addressed)
+    actual_boundary = (record.capture_window_ref, record.redaction_state == "withheld")
+    expected_boundary = (boundary.evaluation_cut_ref, False)
+    if actual_boundary != expected_boundary:
+        raise ValueError("evidence artifact is not admissible at the exact boundary and cut")
+    return record, digest
+
+
+def _validate_evidence_record_identity(
+    record: ExperimentEvidenceRecordModel,
+    digest: str,
+    evidence_ref: str,
+    *,
+    digest_addressed: bool,
+) -> None:
+    actual_ref = digest if digest_addressed else record.evidence_record_id
+    if actual_ref != evidence_ref:
+        label = "verified evidence digest" if digest_addressed else "evidence record id"
+        raise ValueError(f"{label} does not match its authoritative artifact")
+
+
+def _require_evidence_context(
+    frame: SemanticProjectionFrameModel,
+    evidence_resolver: SemanticProjectionEvidenceResolver | None,
+) -> tuple[SemanticProjectionEvidenceBoundaryModel, SemanticProjectionEvidenceResolver]:
+    boundary = frame.evidence_boundary
+    if not isinstance(boundary, SemanticProjectionEvidenceBoundaryModel):
+        raise ValueError("projection predicate requires one applicable evidence boundary")
+    if evidence_resolver is None:
+        raise ValueError("projection predicate requires a trusted evidence authority resolver")
+    return boundary, evidence_resolver
+
+
+def _revalidate_declared(
+    frame: SemanticProjectionFrameModel,
+    fact: _SemanticProjectionFact,
+    evidence_resolver: SemanticProjectionEvidenceResolver | None,
+) -> _SemanticProjectionFact:
+    del frame, evidence_resolver
+    if not isinstance(fact.owner_artifact, ExternalConceptSubjectModel):
+        raise ValueError("projection fact lacks its authoritative owner artifact")
+    return adapt_declared_semantic_projection_fact(fact.owner_artifact)
+
+
+def _revalidate_admitted(
+    frame: SemanticProjectionFrameModel,
+    fact: _SemanticProjectionFact,
+    evidence_resolver: SemanticProjectionEvidenceResolver | None,
+) -> _SemanticProjectionFact:
+    del frame, evidence_resolver
+    if not isinstance(fact.owner_artifact, ValidationBasisDisclosureDocumentModel):
+        raise ValueError("projection fact lacks its authoritative owner artifact")
+    return adapt_admitted_semantic_projection_fact(fact.subject, fact.owner_artifact)
+
+
+def _revalidate_observed(
+    frame: SemanticProjectionFrameModel,
+    fact: _SemanticProjectionFact,
+    evidence_resolver: SemanticProjectionEvidenceResolver | None,
+) -> _SemanticProjectionFact:
+    if not isinstance(fact.owner_artifact, PropositionTruthResultModel):
+        raise ValueError("projection fact lacks its authoritative owner artifact")
+    boundary, resolver = _require_evidence_context(frame, evidence_resolver)
+    return adapt_observed_semantic_projection_fact(
+        fact.subject,
+        fact.owner_artifact,
+        evidence_boundary=boundary,
+        evidence_resolver=resolver,
+    )
+
+
+def _revalidate_verified(
+    frame: SemanticProjectionFrameModel,
+    fact: _SemanticProjectionFact,
+    evidence_resolver: SemanticProjectionEvidenceResolver | None,
+) -> _SemanticProjectionFact:
+    if not isinstance(fact.owner_artifact, ArtifactTransformationReportModel):
+        raise ValueError("projection fact lacks its authoritative owner artifact")
+    boundary, resolver = _require_evidence_context(frame, evidence_resolver)
+    return adapt_verified_semantic_projection_fact(
+        fact.subject,
+        fact.owner_artifact,
+        evidence_boundary=boundary,
+        predicate_profile=frame.predicate_profile,
+        evidence_resolver=resolver,
+    )
+
+
+_FACT_REVALIDATORS = {
+    "declared": _revalidate_declared,
+    "admitted": _revalidate_admitted,
+    "observed": _revalidate_observed,
+    "verified": _revalidate_verified,
+}
 
 
 def _revalidate_semantic_projection_fact(
@@ -340,37 +467,10 @@ def _revalidate_semantic_projection_fact(
 ) -> None:
     """Re-run the fixed owner adapter so raw private facts cannot bypass trust joins."""
 
-    if fact.predicate_id == "declared" and isinstance(fact.owner_artifact, ExternalConceptSubjectModel):
-        expected = adapt_declared_semantic_projection_fact(fact.owner_artifact)
-    elif fact.predicate_id == "admitted" and isinstance(fact.owner_artifact, ValidationBasisDisclosureDocumentModel):
-        expected = adapt_admitted_semantic_projection_fact(fact.subject, fact.owner_artifact)
-    elif fact.predicate_id == "observed" and isinstance(fact.owner_artifact, PropositionTruthResultModel):
-        boundary = frame.evidence_boundary
-        if not isinstance(boundary, SemanticProjectionEvidenceBoundaryModel):
-            raise ValueError("observed projection requires one applicable evidence boundary")
-        if evidence_resolver is None:
-            raise ValueError("observed projection requires a trusted evidence authority resolver")
-        expected = adapt_observed_semantic_projection_fact(
-            fact.subject,
-            fact.owner_artifact,
-            evidence_boundary=boundary,
-            evidence_resolver=evidence_resolver,
-        )
-    elif fact.predicate_id == "verified" and isinstance(fact.owner_artifact, ArtifactTransformationReportModel):
-        boundary = frame.evidence_boundary
-        if not isinstance(boundary, SemanticProjectionEvidenceBoundaryModel):
-            raise ValueError("verified projection requires one applicable evidence boundary")
-        if evidence_resolver is None:
-            raise ValueError("verified projection requires a trusted evidence authority resolver")
-        expected = adapt_verified_semantic_projection_fact(
-            fact.subject,
-            fact.owner_artifact,
-            evidence_boundary=boundary,
-            predicate_profile=frame.predicate_profile,
-            evidence_resolver=evidence_resolver,
-        )
-    else:
+    validator = _FACT_REVALIDATORS.get(fact.predicate_id)
+    if validator is None:
         raise ValueError("projection fact lacks its authoritative owner artifact")
+    expected = validator(frame, fact, evidence_resolver)
     if expected != fact:
         raise ValueError("projection fact does not match the fixed owner adapter output")
 

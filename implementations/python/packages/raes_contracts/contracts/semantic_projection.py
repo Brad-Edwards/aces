@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from enum import Enum
 from typing import Literal
 
@@ -18,6 +19,12 @@ from .external_concept_bindings import (
     ExternalConceptSubjectModel,
 )
 from .schema_invariants import _add_raes_invariant
+from .semantic_projection_profile_registry import (
+    PROFILE_ADAPTERS,
+    PROFILE_AXES,
+    PROFILE_PRODUCERS,
+    binding_posture,
+)
 
 _REPORT_VALIDATOR = "raes_contracts.contracts.SemanticProjectionReportModel.model_validate"
 _PREDICATE_IDS = Literal["declared", "admitted", "observed", "verified"]
@@ -81,46 +88,20 @@ class SemanticProjectionPredicateProfileModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_profile_binding(self) -> SemanticProjectionPredicateProfileModel:
-        posture = (
-            "approximate-lossy"
-            if self.allow_approximate_bindings and self.allow_lossy_bindings
-            else "approximate"
-            if self.allow_approximate_bindings
-            else "lossy"
-            if self.allow_lossy_bindings
-            else "strict"
-        )
+        posture = binding_posture(self.allow_approximate_bindings, self.allow_lossy_bindings)
         expected_profile_id = f"semantic-projection-{self.predicate_id}-{posture}/v1"
-        expected_adapters = {
-            "declared": "declared-owner-adapter",
-            "admitted": "admitted-owner-adapter",
-            "observed": "observed-owner-adapter",
-            "verified": "verified-owner-adapter",
-        }
-        expected_producers = {
-            "declared": "sdl-authoring-input-v1",
-            "admitted": "validation-basis-disclosure-v1",
-            "observed": "proposition-truth-result-v1",
-            "verified": "artifact-transformation-report-v1",
-        }
-        expected_axes = {
-            "declared": ("applicable", "not-applicable", "forbidden"),
-            "admitted": ("not-applicable", "not-applicable", "forbidden"),
-            "observed": ("not-applicable", "applicable", "forbidden"),
-            "verified": ("not-applicable", "not-applicable", "applicable"),
-        }
-        if self.profile_id != expected_profile_id or self.profile_version != "1":
+        if (self.profile_id, self.profile_version) != (expected_profile_id, "1"):
             raise ValueError("predicate profile id and version must match the closed native predicate")
-        if self.adapter_id != expected_adapters[self.predicate_id] or self.adapter_version != "1":
+        if (self.adapter_id, self.adapter_version) != (PROFILE_ADAPTERS[self.predicate_id], "1"):
             raise ValueError("predicate profile must select the fixed trusted owner adapter")
-        if self.producer_contract_id != expected_producers[self.predicate_id]:
+        if self.producer_contract_id != PROFILE_PRODUCERS[self.predicate_id]:
             raise ValueError("predicate profile must select the native predicate's owning contract")
         expected_adapter_digest = canonical_json_digest(
             {"adapter_id": self.adapter_id, "adapter_version": self.adapter_version}
         )
         if self.adapter_digest != expected_adapter_digest:
             raise ValueError("predicate profile adapter digest must identify the fixed trusted implementation")
-        if (self.configuration_axis, self.state_axis, self.transformations_axis) != expected_axes[self.predicate_id]:
+        if (self.configuration_axis, self.state_axis, self.transformations_axis) != PROFILE_AXES[self.predicate_id]:
             raise ValueError("predicate profile context axes must match the governed native authority")
         if self.profile_digest != canonical_semantic_projection_predicate_profile_digest(self):
             raise ValueError("predicate profile digest does not match the complete profile")
@@ -330,6 +311,41 @@ class SemanticProjectionSummaryModel(ContractModel):
     qualified_fraction: NonEmptyString
 
 
+def _validate_witness_frame_join(
+    frame: SemanticProjectionFrameModel,
+    witness: SemanticProjectionWitnessModel,
+) -> None:
+    subject = witness.subject
+    actual_subject = (subject.subject_kind, subject.owning_contract_id, subject.lifecycle_phase)
+    expected_subject = (
+        frame.subject_scope.subject_kind,
+        frame.subject_scope.owning_contract_id,
+        frame.subject_scope.lifecycle_phase,
+    )
+    if actual_subject != expected_subject:
+        raise ValueError("projection witness must join the exact frame subject, producer, and profile")
+    if subject.artifact_digest not in frame.subject_scope.artifact_digests:
+        raise ValueError("projection witness must join the exact frame subject, producer, and profile")
+    actual_owner = (witness.producer_contract_id, witness.predicate_profile_digest)
+    expected_owner = (frame.predicate_profile.producer_contract_id, frame.predicate_profile.profile_digest)
+    if actual_owner != expected_owner:
+        raise ValueError("projection witness must join the exact frame subject, producer, and profile")
+
+
+def _validate_report_rows(
+    frame: SemanticProjectionFrameModel,
+    rows: tuple[SemanticProjectionRowModel, ...],
+) -> tuple[Counter[SemanticProjectionClassification], set[str]]:
+    included = set(frame.scheme.included_concept_ids)
+    for row in rows:
+        is_excluded = row.classification == SemanticProjectionClassification.EXCLUDED
+        if (row.concept_id in included) == is_excluded:
+            raise ValueError("included concepts cannot be excluded and outside concepts must be excluded")
+        for witness in row.witnesses:
+            _validate_witness_frame_join(frame, witness)
+    return Counter(row.classification for row in rows), included
+
+
 class SemanticProjectionReportModel(ContractModel):
     schema_version: Literal[SEMANTIC_PROJECTION_REPORT_SCHEMA_VERSION] = SEMANTIC_PROJECTION_REPORT_SCHEMA_VERSION
     frame: SemanticProjectionFrameModel
@@ -343,28 +359,15 @@ class SemanticProjectionReportModel(ContractModel):
         expected_digest = canonical_semantic_projection_frame_digest(self.frame)
         if self.frame_digest != expected_digest or self.summary.frame_digest != expected_digest:
             raise ValueError("semantic projection frame digest does not match the complete embedded frame")
-        if self.summary.predicate_id != self.frame.predicate_profile.predicate_id:
-            raise ValueError("projection summary predicate must match the exact frame predicate")
-        if self.summary.predicate_profile_digest != self.frame.predicate_profile.profile_digest:
-            raise ValueError("projection summary profile digest must match the frame profile")
+        actual_profile = (self.summary.predicate_id, self.summary.predicate_profile_digest)
+        expected_profile = (
+            self.frame.predicate_profile.predicate_id,
+            self.frame.predicate_profile.profile_digest,
+        )
+        if actual_profile != expected_profile:
+            raise ValueError("projection summary predicate and profile must match the exact frame")
         _require_sorted_unique(tuple(row.concept_id for row in self.rows), "projection rows", non_empty=True)
-        counts = {classification: 0 for classification in SemanticProjectionClassification}
-        included = set(self.frame.scheme.included_concept_ids)
-        for row in self.rows:
-            counts[row.classification] += 1
-            if (row.concept_id in included) == (row.classification == SemanticProjectionClassification.EXCLUDED):
-                raise ValueError("included concepts cannot be excluded and outside concepts must be excluded")
-            for witness in row.witnesses:
-                subject = witness.subject
-                if (
-                    subject.subject_kind != self.frame.subject_scope.subject_kind
-                    or subject.owning_contract_id != self.frame.subject_scope.owning_contract_id
-                    or subject.lifecycle_phase != self.frame.subject_scope.lifecycle_phase
-                    or subject.artifact_digest not in self.frame.subject_scope.artifact_digests
-                    or witness.producer_contract_id != self.frame.predicate_profile.producer_contract_id
-                    or witness.predicate_profile_digest != self.frame.predicate_profile.profile_digest
-                ):
-                    raise ValueError("projection witness must join the exact frame subject, producer, and profile")
+        counts, included = _validate_report_rows(self.frame, self.rows)
         included_total = sum(
             counts[item]
             for item in SemanticProjectionClassification
@@ -388,7 +391,10 @@ class SemanticProjectionReportModel(ContractModel):
         )
         if expected != actual or included_total != len(included):
             raise ValueError("projection summary counts must exactly reconcile with the row partition")
-        fraction = f"{self.summary.predicate_id}:{self.summary.witness_count}/{self.summary.included_denominator}@{expected_digest}"
+        fraction = (
+            f"{self.summary.predicate_id}:{self.summary.witness_count}/"
+            f"{self.summary.included_denominator}@{expected_digest}"
+        )
         if self.summary.qualified_fraction != fraction:
             raise ValueError("qualified fraction must name the exact predicate, denominator, and frame digest")
         return self
@@ -403,14 +409,16 @@ class SemanticProjectionReportModel(ContractModel):
         _add_raes_invariant(
             schema,
             "semantic-projection-exact-frame-partition",
-            "The complete digest-bound frame selects one native predicate and every explicitly included concept appears in exactly one structural report partition.",
+            "The complete digest-bound frame selects one native predicate and every explicitly included "
+            "concept appears in exactly one structural report partition.",
             validator=_REPORT_VALIDATOR,
             inputs=[{"contract_id": "semantic-projection-report-v1", "instance_path": "#"}],
         )
         _add_raes_invariant(
             schema,
             "semantic-projection-evidence-bounded-witnesses",
-            "Only witness rows carry digest-stable native results whose subject, producer, and profile join the embedded frame; contextual evidence admission is validated with referenced authority artifacts.",
+            "Only witness rows carry digest-stable native results whose subject, producer, and profile join "
+            "the embedded frame; contextual evidence admission is validated with referenced authority artifacts.",
             validator=_REPORT_VALIDATOR,
             inputs=[{"contract_id": "semantic-projection-report-v1", "instance_path": "#"}],
         )
@@ -435,28 +443,14 @@ def governed_semantic_projection_predicate_profile(
 ) -> SemanticProjectionPredicateProfileModel:
     """Resolve one member of the closed repository-governed predicate-profile registry."""
 
-    posture = (
-        "approximate-lossy"
-        if allow_approximate_bindings and allow_lossy_bindings
-        else "approximate"
-        if allow_approximate_bindings
-        else "lossy"
-        if allow_lossy_bindings
-        else "strict"
-    )
-    producers = {
-        "declared": "sdl-authoring-input-v1",
-        "admitted": "validation-basis-disclosure-v1",
-        "observed": "proposition-truth-result-v1",
-        "verified": "artifact-transformation-report-v1",
-    }
+    posture = binding_posture(allow_approximate_bindings, allow_lossy_bindings)
     adapter_id = f"{predicate_id}-owner-adapter"
     payload = {
         "predicate_id": predicate_id,
         "profile_id": f"semantic-projection-{predicate_id}-{posture}/v1",
         "profile_version": "1",
         "profile_digest": "sha256:" + "0" * 64,
-        "producer_contract_id": producers[predicate_id],
+        "producer_contract_id": PROFILE_PRODUCERS[predicate_id],
         "adapter_id": adapter_id,
         "adapter_version": "1",
         "adapter_digest": canonical_json_digest({"adapter_id": adapter_id, "adapter_version": "1"}),
