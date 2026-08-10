@@ -74,6 +74,12 @@ from .runtime_network import (
     RuntimeNetworkRealization,
     RuntimePublishedPort,
 )
+from .runtime_resource_limits import (
+    RuntimeProcessLimitResource,
+    RuntimeProcessLimitScope,
+    RuntimeProcessResourceLimit,
+    reject_duplicate_process_resource_limits,
+)
 from .runtime_service_units import (
     ServiceManagerKind,
     ServiceManagerUnit,
@@ -133,6 +139,9 @@ __all__ = [
     "RuntimePackage",
     "RuntimeProcessCapabilityOverride",
     "RuntimeProcessIdentity",
+    "RuntimeProcessLimitResource",
+    "RuntimeProcessLimitScope",
+    "RuntimeProcessResourceLimit",
     "RuntimeProcessRole",
     "RuntimePublishedPort",
     "RuntimeResourceLimits",
@@ -249,13 +258,13 @@ class RuntimeEnvironmentVariable(SDLModel):
 
 
 class RuntimeResourceLimits(SDLModel):
-    """Required runtime/cgroup resource limits for a node."""
+    """Required capacity and process-resource policy for a runtime node."""
 
     memory: int | str | None = None
     memory_swap: int | str | None = None
     cpu: float | str | None = None
     pids: int | str | None = None
-    open_files: int | str | None = None
+    process_limits: list[RuntimeProcessResourceLimit] = Field(default_factory=list)
     description: str = ""
 
     @field_validator("memory", "memory_swap", mode="before")
@@ -268,10 +277,15 @@ class RuntimeResourceLimits(SDLModel):
     def parse_cpu_limit(cls, v: float | str | None) -> float | str | None:
         return parse_float_or_var(v, minimum=0, field_name="cpu") if v is not None else v
 
-    @field_validator("pids", "open_files", mode="before")
+    @field_validator("pids", mode="before")
     @classmethod
     def parse_count_limit(cls, v: int | str | None, info: ValidationInfo) -> int | str | None:
         return parse_int_or_var(v, minimum=1, field_name=info.field_name) if v is not None else v
+
+    @model_validator(mode="after")
+    def validate_process_limits(self) -> "RuntimeResourceLimits":
+        reject_duplicate_process_resource_limits(self.process_limits)
+        return self
 
 
 class RuntimeOperationalPolicy(SDLModel):

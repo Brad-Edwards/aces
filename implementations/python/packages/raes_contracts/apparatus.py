@@ -5,7 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from .vocabulary import ObservationStrength, RealizationSupportMode, RealizationVerificationScope
+from .vocabulary import (
+    ObservationStrength,
+    ProcessResourceLimitKind,
+    ProcessResourceLimitScope,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 
 if TYPE_CHECKING:
     from .artifact_requirements import ArtifactMechanismCapability
@@ -64,6 +70,43 @@ class RealizationObservationCapability:
 
 
 @dataclass(frozen=True)
+class ProcessResourceLimitCapability:
+    """Typed apparatus domain for one portable process-resource term."""
+
+    resource: ProcessResourceLimitKind
+    scopes: frozenset[ProcessResourceLimitScope]
+    minimum: int = 0
+    maximum: int | None = None
+    supports_unlimited: bool = False
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "resource", ProcessResourceLimitKind(self.resource))
+        object.__setattr__(
+            self,
+            "scopes",
+            frozenset(ProcessResourceLimitScope(scope) for scope in self.scopes),
+        )
+        if not self.scopes:
+            raise ValueError("process resource limit capability requires at least one scope")
+        if isinstance(self.minimum, bool) or self.minimum < 0:
+            raise ValueError("process resource limit capability minimum must be a non-negative integer")
+        if self.maximum is not None and (isinstance(self.maximum, bool) or self.maximum < self.minimum):
+            raise ValueError("process resource limit capability maximum must not be less than minimum")
+
+    def admits(self, value: int | str) -> bool:
+        """Return whether one finite/unlimited value belongs to the domain."""
+
+        if value == "unlimited":
+            return self.supports_unlimited
+        return (
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and value >= self.minimum
+            and (self.maximum is None or value <= self.maximum)
+        )
+
+
+@dataclass(frozen=True)
 class RealizationSupportDeclaration:
     """Declared realization-support and disclosure surface for one concern domain."""
 
@@ -73,6 +116,7 @@ class RealizationSupportDeclaration:
     supported_exact_requirement_kinds: frozenset[str] = frozenset()
     disclosure_kinds: frozenset[str] = frozenset()
     observation_capabilities: dict[str, RealizationObservationCapability] = field(default_factory=dict)
+    process_resource_limits: tuple[ProcessResourceLimitCapability, ...] = ()
     artifact_mechanisms: tuple[ArtifactMechanismCapability, ...] = ()
     constraints: dict[str, str] = field(default_factory=dict)
 
@@ -92,6 +136,13 @@ class RealizationSupportDeclaration:
             for capability in self.observation_capabilities.values()
         ):
             raise TypeError("observation_capabilities values must be RealizationObservationCapability")
+        if any(
+            not isinstance(capability, ProcessResourceLimitCapability) for capability in self.process_resource_limits
+        ):
+            raise TypeError("process_resource_limits values must be ProcessResourceLimitCapability")
+        resource_keys = [capability.resource for capability in self.process_resource_limits]
+        if len(resource_keys) != len(set(resource_keys)):
+            raise ValueError("process_resource_limits must not contain duplicate resource terms")
         if not self.disclosure_kinds:
             raise ValueError("RealizationSupportDeclaration.disclosure_kinds must not be empty")
         if not (self.supported_constraint_kinds or self.supported_exact_requirement_kinds):

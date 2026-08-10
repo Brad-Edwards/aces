@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "8a2207d3c51411c7b8c54a6e73beca5e664e72c53bc3ebfaeefb35b957d50571",
+  "content_hash": "e39589c32a8905cd2e2a32fc03c9ad59e25c17705384987fa2f471b86e6b6692",
   "last_change": {
-    "summary": "Propagated concrete typed account credential bindings into the canonical instantiated snapshot contract for issue #673 and DSL-439.",
-    "content_hash": "8a2207d3c51411c7b8c54a6e73beca5e664e72c53bc3ebfaeefb35b957d50571"
+    "summary": "Propagated concrete structured portable process-resource limits into the canonical instantiated snapshot contract for issue #1066 and removed the superseded scalar open_files authority.",
+    "content_hash": "e39589c32a8905cd2e2a32fc03c9ad59e25c17705384987fa2f471b86e6b6692"
   }
 }

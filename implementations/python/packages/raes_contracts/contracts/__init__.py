@@ -1,7 +1,6 @@
 """Schema-first external contract models for RAES artifact boundaries."""
-# This module is an intentional re-export facade governed by PUBLIC_EXPORTS.
-# ruff: noqa: F401, F403
 
+# ruff: noqa: F401, F403
 from ..artifact_requirements import (
     ArtifactAcquisitionTimingModel,
     ArtifactAvailabilityContext,
@@ -115,6 +114,7 @@ from .capabilities import (
     EvaluatorCapabilitiesModel,
     OrchestratorCapabilitiesModel,
     ProcessorCompatibilityModel,
+    ProcessResourceLimitCapabilityModel,
     ProvisionerCapabilitiesModel,
     RealizationObservationCapabilityModel,
     RealizationSupportDeclarationModel,

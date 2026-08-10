@@ -75,6 +75,10 @@ def _compile_capability_constraints(
     compiled: list[CompiledCapabilityConstraint] = []
     for constraint in scenario.instantiation_provenance.capability_constraints:
         parts = constraint.field_pointer.split("/")
+        if len(parts) != 4:
+            # Nested process-limit domains are owned by the SEM-218 compiled
+            # realization requirement, keyed by semantic record identity.
+            continue
         section_name, encoded_name, field_name = parts[1:]
         node_name = encoded_name.replace("~1", "/").replace("~0", "~")
         node = scenario.nodes[node_name]

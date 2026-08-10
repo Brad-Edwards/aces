@@ -71,6 +71,7 @@
         "runtime-snapshot-v1"
       ],
       "observation_capabilities": {},
+      "process_resource_limits": [],
       "artifact_mechanisms": [],
       "constraints": {}
     }

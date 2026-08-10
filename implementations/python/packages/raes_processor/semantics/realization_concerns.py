@@ -5,13 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
-from raes_contracts.vocabulary import RealizationVerificationScope
+from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 
 from .realization_concern_observations import (
     validate_capability_policy_observation,
     validate_environment_observation,
     validate_forwarding_agents_observation,
     validate_mounts_observation,
+    validate_process_resource_limits_observation,
     validate_published_ports_observation,
     validate_service_listeners_observation,
 )
@@ -20,6 +21,7 @@ from .realization_concern_projections import (
     project_environment,
     project_forwarding_agents,
     project_mounts,
+    project_process_resource_limits,
     project_published_ports,
     project_service_listeners,
     sanitize_mount_observation,
@@ -38,6 +40,7 @@ class RealizationConcernDescriptor:
     sanitizer: Callable[[object, bool], object] | None = None
     observed_validator: Callable[[object], None] | None = None
     verification_scope: Callable[[object], RealizationVerificationScope] | None = None
+    observation_strength: ObservationStrength | None = None
     non_stateful_mounts_only: bool = False
 
     @property
@@ -70,6 +73,11 @@ class RealizationConcernDescriptor:
         """Return the authored inventory scope that must be corroborated."""
 
         return self.verification_scope(value) if self.verification_scope is not None else None
+
+    def required_observation_strength(self) -> ObservationStrength | None:
+        """Return the minimum independent evidence strength for this concern."""
+
+        return self.observation_strength
 
 
 @dataclass(frozen=True)
@@ -155,6 +163,23 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("spec", "node", "runtime", "linux_capabilities"),
         projector=project_capability_policy,
         observed_validator=validate_capability_policy_observation,
+    ),
+    RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("runtime", "operational_policy", "resource_limits", "process_limits"),
+        concern_kind="process-resource-limits",
+        payload_path=(
+            "spec",
+            "node",
+            "runtime",
+            "operational_policy",
+            "resource_limits",
+            "process_limits",
+        ),
+        projector=project_process_resource_limits,
+        observed_validator=validate_process_resource_limits_observation,
+        verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
     ),
     RealizationConcernDescriptor(
         section="nodes",
