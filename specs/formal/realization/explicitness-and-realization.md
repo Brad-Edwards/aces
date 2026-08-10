@@ -212,12 +212,57 @@ manifest declaration. Missing, malformed, under-scoped, or unsupported
 corroboration is a `runtime.backend-contract-invalid` failure before snapshot
 persistence.
 
-The initial qualified concern is `forwarding-agents`. Its scopes are `presence`
-(identity, placement, and implementation inventory) and `configuration`
-(authored child/configuration projection). The existing `ObservationStrength`
-values remain the source axis; they do not prove forwarding behavior. Delivery,
-transform, reload, health, and failure claims belong to governed proposition,
-probe, truth, and evidence contracts.
+The qualified concerns include `forwarding-agents` and
+`process-resource-limits`. Forwarding-agent scopes are `presence` (identity,
+placement, and implementation inventory) and `configuration` (authored
+child/configuration projection). Process-resource limits require
+`configuration` scope and `guest-observed` strength because desired-payload,
+container-runtime, or hypervisor configuration does not prove the effective
+limit inside the workload. The existing `ObservationStrength` values remain
+the source axis; they do not prove forwarding behavior, process readiness, or
+resource sufficiency. Delivery, transform, reload, health, and failure claims
+belong to governed proposition, probe, truth, and evidence contracts.
+
+### Portable process-resource-limit concern
+
+The registered `process-resource-limits` concern is the complete
+`nodes.<node>.runtime.operational_policy.resource_limits.process_limits`
+collection. Each record MUST contain a governed resource term, explicit soft
+and hard values, a structural `RuntimeProcessIdentity` selector, and a
+`process` or `subtree` scope. The initial governed resources are
+`open_file_descriptors` and `locked_memory_bytes`. A value MUST be a
+non-negative integer, `unlimited`, or a whole-field variable reference.
+Concrete finite values MUST satisfy `soft <= hard`; unlimited soft requires
+unlimited hard. Duplicate `(resource, normalized subject, scope)` identities
+MUST be rejected. The normalized subject contract MUST be shared by structural
+validation, declared-process matching, duplicate identity, canonical
+projection, and runtime comparison. Every active selector field MUST match one
+declared `runtime.processes` record. When `command_redacted` is true, command
+content MUST be absent and another stable projected selector MUST be present;
+an implementation MUST NOT erase supplied command content from semantic
+identity.
+
+Exact comparison MUST compare the canonical complete collection, independent
+of record order. Omitted, substituted, and excess records are mismatches. A
+constrained variable MUST retain its finite `allowed-values` domain through
+instantiation and compilation, keyed by semantic record identity plus the
+soft/hard leaf, and the realized value MUST be a member. Open realization MUST
+have author designation permission as required by I3 and a typed apparatus
+domain; a backend support-mode claim alone MUST NOT create a limit.
+
+The backend declaration's `process_resource_limits` entries are the typed
+apparatus authority for supported resource terms, scopes, finite bounds, and
+the `unlimited` sentinel. They MUST be used for exact, constrained, and open
+admission instead of a native option name or free-form `constraints` entry.
+The selected realization-envelope configuration MUST repeat an admitted entry
+exactly. Planning and runtime evaluation MUST use only capabilities present in
+both the compatible global declaration and that selected material
+configuration; an unbound or divergent global claim MUST NOT authorize a
+realization.
+A backend lacking compatible materialization and effective inside-workload
+readback MUST reject the demand before mutation. A missing, weak,
+out-of-domain, or mismatched result MUST fail through the existing runtime
+backend-contract diagnostic and MUST NOT replace the baseline snapshot.
 
 **I3 — Openness is explicit.** A backend MAY realize an underspecified
 concern only at a point where the owning SDL schema or semantic rule
@@ -349,7 +394,9 @@ realization status, are:
   `raes_processor.planner.plan`. Exact registered inventory concerns with a
   required verification scope also fail with
   `realization.under-observed-exact-requirement` when the manifest capability
-  is absent or weaker.
+  is absent or weaker. Process-resource-limit requirements also fail with
+  `realization.unsupported-process-resource-limits` when no declaration admits
+  their typed resource, scope, value domain, and guest observation demand.
 - **Error-envelope gate** — unsupported exact requirements and
   forbidden approximations MUST be surfaced through stable validation
   errors or structured diagnostics (I1, I2). *Enforced today*; the
@@ -497,6 +544,14 @@ invariant I1–I5 is enforced by named code.
   exact concern against the author declaration and rejects a silent
   approximation with a `runtime.backend-contract-invalid` diagnostic before the
   backend snapshot is accepted.
+- I1–I4 portable process-resource-limit gate —
+  `raes.runtime_resource_limits`,
+  `raes_processor.compiler.realization_requirements`, and
+  `raes_processor.semantics.realization` preserve semantic identities and
+  finite leaf domains, admit only typed apparatus resource/scope/value claims,
+  and require configuration-scope guest observation; runtime evaluation in
+  `realization_runtime_evaluation` checks complete-set equality or constrained
+  domain membership before accepting the snapshot.
 - I5 runtime provenance — the `realization_provenance` ledger
   (`RealizationProvenanceEntry` in
   `implementations/python/packages/raes_contracts/runtime_state.py`, published as
@@ -537,6 +592,11 @@ invariant I1–I5 is enforced by named code.
   namespace isolation, canonical-pointer rejection, open-support planning,
   fine-envelope subsumption, governing-scope disclosure, authenticated
   persistence delivery, and schema/model differential coverage.
+- `implementations/python/tests/test_issue_1066_runtime_resource_limits.py` —
+  portable model validation, semantic selector cross-references, exact /
+  constrained / open compilation and apparatus admission, effective
+  observation, complete-set runtime comparison, baseline retention,
+  canonical ordering, and command redaction.
 
 ## Non-Goals
 

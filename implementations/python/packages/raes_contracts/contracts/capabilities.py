@@ -10,6 +10,8 @@ from ..artifact_requirements import ArtifactMechanismCapability
 from ..vocabulary import (
     GeneratedArtifactKind,
     ObservationStrength,
+    ProcessResourceLimitKind,
+    ProcessResourceLimitScope,
     RealizationSupportMode,
     RealizationVerificationScope,
     WorkflowFeature,
@@ -312,6 +314,24 @@ class RealizationObservationCapabilityModel(ContractModel):
         return self
 
 
+class ProcessResourceLimitCapabilityModel(ContractModel):
+    """Published typed apparatus domain for portable process limits."""
+
+    resource: ProcessResourceLimitKind
+    scopes: list[ProcessResourceLimitScope] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    minimum: int = Field(default=0, ge=0)
+    maximum: int | None = Field(default=None, ge=0)
+    supports_unlimited: bool = False
+
+    @model_validator(mode="after")
+    def _validate_domain(self) -> ProcessResourceLimitCapabilityModel:
+        if len(self.scopes) != len(set(self.scopes)):
+            raise ValueError("process resource limit capability scopes must not contain duplicates")
+        if self.maximum is not None and self.maximum < self.minimum:
+            raise ValueError("process resource limit capability maximum must not be less than minimum")
+        return self
+
+
 class RealizationSupportDeclarationModel(ContractModel):
     domain: NonEmptyString
     support_mode: RealizationSupportMode
@@ -319,6 +339,7 @@ class RealizationSupportDeclarationModel(ContractModel):
     supported_exact_requirement_kinds: list[NonEmptyString] = Field(default_factory=list)
     disclosure_kinds: list[NonEmptyString] = Field(min_length=1)
     observation_capabilities: dict[NonEmptyString, RealizationObservationCapabilityModel] = Field(default_factory=dict)
+    process_resource_limits: list[ProcessResourceLimitCapabilityModel] = Field(default_factory=list)
     artifact_mechanisms: list[ArtifactMechanismCapability] = Field(default_factory=list)
     constraints: dict[str, str] = Field(default_factory=dict)
 
@@ -331,6 +352,9 @@ class RealizationSupportDeclarationModel(ContractModel):
             )
         if self.support_mode == RealizationSupportMode.EXACT_ONLY and self.supported_constraint_kinds:
             raise ValueError("exact-only realization support must not declare supported_constraint_kinds")
+        resources = [capability.resource for capability in self.process_resource_limits]
+        if len(resources) != len(set(resources)):
+            raise ValueError("process_resource_limits must not contain duplicate resource terms")
         identities = [
             (
                 capability.mechanism.mechanism,

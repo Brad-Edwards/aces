@@ -8620,6 +8620,24 @@
       "title": "PresencePredicate",
       "type": "object"
     },
+    "ProcessResourceLimitKind": {
+      "description": "Portable process-resource terms governed by the runtime contract.",
+      "enum": [
+        "open_file_descriptors",
+        "locked_memory_bytes"
+      ],
+      "title": "ProcessResourceLimitKind",
+      "type": "string"
+    },
+    "ProcessResourceLimitScope": {
+      "description": "Process inheritance scope for a portable resource limit.",
+      "enum": [
+        "process",
+        "subtree"
+      ],
+      "title": "ProcessResourceLimitScope",
+      "type": "string"
+    },
     "Proposition": {
       "additionalProperties": false,
       "description": "A side-effect-free claim over a finite set of stable SDL subjects.",
@@ -18557,6 +18575,77 @@
       "title": "RuntimeProcessIdentity",
       "type": "object"
     },
+    "RuntimeProcessResourceLimit": {
+      "additionalProperties": false,
+      "description": "One portable soft/hard process limit for a selected process or subtree.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "hard": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "const": "unlimited",
+              "type": "string"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-raes-variable-reference": true
+            }
+          ],
+          "title": "Hard"
+        },
+        "resource": {
+          "$ref": "#/$defs/ProcessResourceLimitKind"
+        },
+        "scope": {
+          "$ref": "#/$defs/ProcessResourceLimitScope",
+          "default": "process"
+        },
+        "soft": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "const": "unlimited",
+              "type": "string"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-raes-variable-reference": true
+            }
+          ],
+          "title": "Soft"
+        },
+        "subject": {
+          "$ref": "#/$defs/RuntimeProcessIdentity"
+        }
+      },
+      "required": [
+        "resource",
+        "soft",
+        "hard",
+        "subject"
+      ],
+      "title": "RuntimeProcessResourceLimit",
+      "type": "object"
+    },
     "RuntimeProcessRole": {
       "description": "Observed role of a process in a runtime process set.",
       "enum": [
@@ -18672,7 +18761,7 @@
     },
     "RuntimeResourceLimits": {
       "additionalProperties": false,
-      "description": "Required runtime/cgroup resource limits for a node.",
+      "description": "Required capacity and process-resource policy for a runtime node.",
       "properties": {
         "cpu": {
           "anyOf": [
@@ -18724,21 +18813,6 @@
           "default": null,
           "title": "Memory Swap"
         },
-        "open_files": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Open Files"
-        },
         "pids": {
           "anyOf": [
             {
@@ -18753,6 +18827,13 @@
           ],
           "default": null,
           "title": "Pids"
+        },
+        "process_limits": {
+          "items": {
+            "$ref": "#/$defs/RuntimeProcessResourceLimit"
+          },
+          "title": "Process Limits",
+          "type": "array"
         }
       },
       "title": "RuntimeResourceLimits",

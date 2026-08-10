@@ -1741,6 +1741,72 @@
       "title": "ParticipantRuntimeCapabilitiesModel",
       "type": "object"
     },
+    "ProcessResourceLimitCapabilityModel": {
+      "additionalProperties": false,
+      "description": "Published typed apparatus domain for portable process limits.",
+      "properties": {
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "resource": {
+          "$ref": "#/$defs/ProcessResourceLimitKind"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/ProcessResourceLimitScope"
+          },
+          "minItems": 1,
+          "title": "Scopes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_unlimited": {
+          "default": false,
+          "title": "Supports Unlimited",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "resource",
+        "scopes"
+      ],
+      "title": "ProcessResourceLimitCapabilityModel",
+      "type": "object"
+    },
+    "ProcessResourceLimitKind": {
+      "description": "Portable process-resource terms governed by the runtime contract.",
+      "enum": [
+        "open_file_descriptors",
+        "locked_memory_bytes"
+      ],
+      "title": "ProcessResourceLimitKind",
+      "type": "string"
+    },
+    "ProcessResourceLimitScope": {
+      "description": "Process inheritance scope for a portable resource limit.",
+      "enum": [
+        "process",
+        "subtree"
+      ],
+      "title": "ProcessResourceLimitScope",
+      "type": "string"
+    },
     "ProvisionerCapabilitiesModel": {
       "additionalProperties": false,
       "allOf": [
@@ -2106,6 +2172,13 @@
           },
           "title": "Observation Capabilities",
           "type": "object"
+        },
+        "process_resource_limits": {
+          "items": {
+            "$ref": "#/$defs/ProcessResourceLimitCapabilityModel"
+          },
+          "title": "Process Resource Limits",
+          "type": "array"
         },
         "support_mode": {
           "$ref": "#/$defs/RealizationSupportMode"

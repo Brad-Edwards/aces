@@ -227,6 +227,23 @@ def _capture_capability_constraints(
         )
         if architecture_constraint is not None:
             constraints.append(architecture_constraint)
+        runtime = node.runtime
+        policy = runtime.operational_policy if runtime is not None else None
+        resource_limits = policy.resource_limits if policy is not None else None
+        process_limits = resource_limits.process_limits if resource_limits is not None else ()
+        for index, process_limit in enumerate(process_limits):
+            pointer = (
+                f"/nodes/{_json_pointer_segment(node_name)}/runtime/operational_policy/"
+                f"resource_limits/process_limits/{index}"
+            )
+            for leaf in ("soft", "hard"):
+                limit_constraint = _finite_domain_constraint(
+                    field_pointer=f"{pointer}/{leaf}",
+                    value=getattr(process_limit, leaf),
+                    variables=scenario.variables,
+                )
+                if limit_constraint is not None:
+                    constraints.append(limit_constraint)
     for node_name, infrastructure in scenario.infrastructure.items():
         constraint = _finite_domain_constraint(
             field_pointer=f"/infrastructure/{_json_pointer_segment(node_name)}/count",

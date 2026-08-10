@@ -22,11 +22,25 @@ from raes.realization_designation import (
 )
 from raes_backend_libvirt.manifest import create_libvirt_manifest
 from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    ProcessResourceLimitCapability,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
-from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
+from raes_contracts.realization_envelope import (
+    BackendRealizationEnvelopeModel,
+    realization_envelope_digest,
+    realizer_configuration_digest,
+)
 from raes_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
-from raes_contracts.vocabulary import Closure, RealizationSupportMode
+from raes_contracts.vocabulary import (
+    Closure,
+    ObservationStrength,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import plan
 from raes_processor.semantics.realization import realization_disclosure
@@ -38,6 +52,7 @@ _OPEN_NODE_REALIZATION_SUFFIXES = {
     "runtime.environment",
     "runtime.mounts",
     "runtime.linux_capabilities",
+    "runtime.operational_policy.resource_limits.process_limits",
     "runtime.network.published_ports",
     "runtime.forwarding_agents",
     "runtime.service_listeners",
@@ -66,10 +81,17 @@ def _scenario(realization: str = "", *, web_os: str = ""):
 
 
 def _manifest(mode: RealizationSupportMode) -> BackendManifest:
+    capability = ProcessResourceLimitCapability(
+        resource="open_file_descriptors",
+        scopes=frozenset({"process", "subtree"}),
+        supports_unlimited=True,
+    )
+    envelope = create_libvirt_manifest().realization_envelope
+    assert envelope is not None
     return BackendManifest(
         name="designation-test",
         version="1.0.0",
-        supported_contract_versions=frozenset({"backend-manifest-v2"}),
+        supported_contract_versions=frozenset({"backend-manifest-v2", "realization-envelope-v1"}),
         compatible_processors=frozenset({"raes-reference-processor"}),
         realization_support=(
             RealizationSupportDeclaration(
@@ -78,6 +100,13 @@ def _manifest(mode: RealizationSupportMode) -> BackendManifest:
                 supported_constraint_kinds=frozenset({"os-family", "node-type"}),
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset({"runtime-snapshot-v1"}),
+                observation_capabilities={
+                    "process-resource-limits": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.CONFIGURATION,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                },
+                process_resource_limits=(capability,),
             ),
         ),
         concept_bindings=(ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),),
@@ -86,6 +115,7 @@ def _manifest(mode: RealizationSupportMode) -> BackendManifest:
             supported_node_types=frozenset({"vm"}),
             supported_os_families=frozenset({"linux"}),
         ),
+        realization_envelope=_envelope_with_process_limit_capability(envelope, capability),
     )
 
 
@@ -93,10 +123,35 @@ def _requirement(model, field_path: str):
     return next(requirement for requirement in model.realization_requirements if requirement.field_path == field_path)
 
 
+def _envelope_with_process_limit_capability(
+    envelope: BackendRealizationEnvelopeModel,
+    capability: ProcessResourceLimitCapability,
+) -> BackendRealizationEnvelopeModel:
+    payload = envelope.model_dump(mode="json")
+    payload["configuration"]["process_resource_limits"] = [
+        {
+            "resource": capability.resource.value,
+            "scopes": sorted(scope.value for scope in capability.scopes),
+            "minimum": capability.minimum,
+            "maximum": capability.maximum,
+            "supports_unlimited": capability.supports_unlimited,
+        }
+    ]
+    payload["configuration"]["configuration_digest"] = realizer_configuration_digest(payload["configuration"])
+    payload["digest"] = realization_envelope_digest(payload)
+    return BackendRealizationEnvelopeModel.model_validate(payload)
+
+
 def _open_manifest_with_envelope(*, path: str, value: str) -> BackendManifest:
     manifest = create_libvirt_manifest()
     assert manifest.realization_envelope is not None
-    payload = manifest.realization_envelope.model_dump(mode="json")
+    capability = ProcessResourceLimitCapability(
+        resource="open_file_descriptors",
+        scopes=frozenset({"process", "subtree"}),
+        supports_unlimited=True,
+    )
+    envelope = _envelope_with_process_limit_capability(manifest.realization_envelope, capability)
+    payload = envelope.model_dump(mode="json")
     payload["expression"]["domains"] = {"fixed": {"kind": "exact", "value": value}}
     payload["expression"]["bindings"] = [{"path": path, "scope": "field", "posture": "exact", "domain": "fixed"}]
     payload["digest"] = realization_envelope_digest(payload)
@@ -104,6 +159,14 @@ def _open_manifest_with_envelope(*, path: str, value: str) -> BackendManifest:
     support = replace(
         manifest.realization_support[0],
         support_mode=RealizationSupportMode.OPEN_REALIZATION,
+        observation_capabilities={
+            **manifest.realization_support[0].observation_capabilities,
+            "process-resource-limits": RealizationObservationCapability(
+                verification_scope=RealizationVerificationScope.CONFIGURATION,
+                observation_strength=ObservationStrength.GUEST_OBSERVED,
+            ),
+        },
+        process_resource_limits=(capability,),
     )
     return replace(manifest, realization_support=(support,), realization_envelope=envelope)
 
