@@ -224,6 +224,7 @@ PUBLIC_EXPORTS = [
     "ObservationCapabilitiesModel",
     "OrchestrationPlanModel",
     "OrchestratorCapabilitiesModel",
+    "ProcessResourceLimitCapabilityModel",
     "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",
     "PARTICIPANT_BOUNDARY_FLOW_POLICY_V1_SCHEMA_VERSION",
     "PARTICIPANT_FLOW_CONTROL_RELATION_V1_SCHEMA_VERSION",

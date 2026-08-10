@@ -114,6 +114,7 @@ from .capabilities import (
     EvaluatorCapabilitiesModel,
     OrchestratorCapabilitiesModel,
     ProcessorCompatibilityModel,
+    ProcessResourceLimitCapabilityModel,
     ProvisionerCapabilitiesModel,
     RealizationObservationCapabilityModel,
     RealizationSupportDeclarationModel,

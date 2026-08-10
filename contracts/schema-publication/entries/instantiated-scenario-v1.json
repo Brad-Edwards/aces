@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "98fa6c880ec8c7c73488a82a599cb184ad9796040dd097bab80df227e2d58125",
+  "content_hash": "df5b9a814ba23fe16c35f5499b30ee533ef0236a8f93549f4fd868c700003635",
   "last_change": {
-    "summary": "Propagated concrete typed account credential bindings into the instantiated scenario model for issue #673 and DSL-439.",
-    "content_hash": "98fa6c880ec8c7c73488a82a599cb184ad9796040dd097bab80df227e2d58125"
+    "summary": "Propagated concrete structured portable process-resource limits into the instantiated scenario model for issue #1066 and removed the superseded scalar open_files authority.",
+    "content_hash": "df5b9a814ba23fe16c35f5499b30ee533ef0236a8f93549f4fd868c700003635"
   }
 }

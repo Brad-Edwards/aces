@@ -99,7 +99,8 @@ The implementation must pass every layer it touches:
   controlled vocabulary terms must resolve through existing authority helpers.
 - planner/backend boundary gate: backend support checks must compare the
   compiled requirement against backend manifest `realization_support` instead
-  of local string conventions.
+  of local string conventions. Process-resource demands additionally compare
+  against the declaration's typed resource/scope/value domains.
 - error-envelope gate: unsupported exact requirements and forbidden
   approximations must be reported with stable validation errors or structured
   diagnostics; do not leak raw backend exceptions or private payloads.
@@ -131,6 +132,41 @@ Explicit root delegation reaches planning through the injected
 `apparatus_realization_default` resolver. Its current fallback is closed; a
 future typed apparatus-default contract can supply a different choice without
 changing SDL cascade rules or backend implementations.
+
+## Portable Process-Resource Limits
+
+The `process-resource-limits` concern applies SEM-218 to the complete
+`Node.runtime.operational_policy.resource_limits.process_limits` collection.
+Its semantic identity is `(resource, normalized subject, scope)`; descriptions
+and native backend spellings are excluded. Exact comparison is set-exact, so a
+missing, substituted, or excess record fails. A constrained soft/hard variable
+retains its finite `allowed-values` domain through instantiation and compilation
+and the realized leaf must belong to that domain.
+
+The normalized subject is also the inventory-matching contract: every active
+name, pid, parent, role, user, group, command, redaction, and working-directory
+selector must match one declared `runtime.processes` record. A redacted command
+is omitted and requires another stable projected selector; raw command content
+cannot be supplied and then erased from semantic identity.
+
+Support is declared through typed `process_resource_limits` entries on the
+existing `RealizationSupportDeclaration`, not through the free-form
+`constraints` map. Each entry bounds one portable resource by process/subtree
+scope, minimum/maximum finite values, and whether `unlimited` is supported.
+Exact and constrained planning checks every compiled demand against that
+domain. Open planning additionally requires authored open permission,
+`OPEN_REALIZATION`, and a non-empty typed apparatus domain. The selected
+realization-envelope configuration must repeat the exact typed domain from the
+compatible global declaration. Planning and runtime evaluation use only that
+intersection, preventing capability advertised for one backend mode from
+authorizing another mode.
+
+Every accepted result requires a `process-resource-limits` observation
+capability and a matching value-free runtime observation with configuration
+scope and `guest-observed` strength. This represents effective inside-workload
+readback. Desired-payload echo, runtime inspect output, VM allocation, cgroup
+capacity, or datastore `memory_locked` state is insufficient. Backends without
+both materialization and effective readback remain honestly unsupported.
 
 ## Scoped Default Cascade
 

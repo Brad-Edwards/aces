@@ -169,13 +169,23 @@ class CapabilityConstraint(FrozenPhaseModel):
         if not self.field_pointer.startswith("/") or _JSON_POINTER_RE.fullmatch(self.field_pointer) is None:
             raise ValueError("field_pointer must be a non-root RFC 6901 JSON Pointer")
         parts = self.field_pointer.split("/")
-        if len(parts) != 4 or (parts[1], parts[3]) not in {
+        ordinary_pointer = len(parts) == 4 and (parts[1], parts[3]) in {
             ("nodes", "os"),
             ("nodes", "architecture"),
             ("infrastructure", "count"),
-        }:
+        }
+        process_limit_pointer = (
+            len(parts) == 9
+            and parts[1] == "nodes"
+            and parts[3:7] == ["runtime", "operational_policy", "resource_limits", "process_limits"]
+            and parts[7].isdigit()
+            and parts[8] in {"soft", "hard"}
+        )
+        if not ordinary_pointer and not process_limit_pointer:
             raise ValueError(
-                "field_pointer must address /nodes/<id>/os, /nodes/<id>/architecture, or /infrastructure/<id>/count"
+                "field_pointer must address /nodes/<id>/os, /nodes/<id>/architecture, "
+                "/infrastructure/<id>/count, or "
+                "/nodes/<id>/runtime/operational_policy/resource_limits/process_limits/<index>/(soft|hard)"
             )
         declaration = parts[2].replace("~1", "/").replace("~0", "~")
         QualifiedName.parse(declaration)

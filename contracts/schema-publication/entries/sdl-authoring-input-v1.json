@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "c4b6899e9e503064775ab6ac60a76afb0d990e53e0335a03aa38ad6592091267",
+  "content_hash": "bfa5f234107e53a793331905e9da9476a3ebd00fdca4621f2226523fdddd68b4",
   "last_change": {
-    "summary": "Added typed account credential bindings with governed purpose and method vocabularies and a closed secret_fixture/operator_secret material union for issue #673 and DSL-439.",
-    "content_hash": "c4b6899e9e503064775ab6ac60a76afb0d990e53e0335a03aa38ad6592091267"
+    "summary": "Added structured portable process-resource limits with soft/hard values, structural process selectors, and process/subtree scope for issue #1066; removed the superseded scalar open_files authority.",
+    "content_hash": "bfa5f234107e53a793331905e9da9476a3ebd00fdca4621f2226523fdddd68b4"
   }
 }

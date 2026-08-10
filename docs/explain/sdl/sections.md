@@ -168,6 +168,20 @@ nodes:
           memory: 512 MiB
           cpu: 0.5
           pids: 128
+          process_limits:
+            - resource: open_file_descriptors
+              soft: 4096
+              hard: 8192
+              subject:
+                name: gunicorn
+                role: worker
+              scope: subtree
+            - resource: locked_memory_bytes
+              soft: 0
+              hard: unlimited
+              subject:
+                name: shufflebackend
+              scope: process
       container:
         entrypoint: [/entrypoint.sh]
         command: [gunicorn, app:app]
@@ -761,8 +775,23 @@ execution identity; `environment` records observed runtime environment
 variables with provenance and value classification, where redacted and
 operator-secret values omit raw data and `secret_fixture` is the explicit
 exercise-fixture disclosure; `linux_capabilities` records container/Linux
-capability policy; `operational_policy` records restart policy and observed
-resource limits; `container` records observed host/container configuration and
+capability policy; `operational_policy` records restart policy and required
+resource policy. Its `memory`, `memory_swap`, `cpu`, and `pids` fields govern
+node/container capacity. Its `process_limits` collection separately governs
+portable soft/hard process limits: `open_file_descriptors` counts descriptors
+and `locked_memory_bytes` counts bytes; each value is a non-negative integer,
+`unlimited`, or a whole-field variable. Every record selects a declared
+`runtime.processes` identity and states whether the limit applies only to that
+process or to its subtree. All populated selector fields must match the same
+declared process. A redacted command must be omitted and paired with another
+stable selector such as name, role, user, or working directory; command content
+cannot be authored and then discarded from identity. Native names such as
+`nofile`/`memlock`, Docker
+`ulimits`, systemd directives, and raw `/proc` data are backend dialect or
+evidence, not SDL. An authored empty collection requires exact absence, while
+omission creates no closed requirement unless a `realization` designation
+explicitly opens or constrains the concern. `container` records observed
+host/container configuration and
 namespace/security facts, including `seccomp_profile` (the portable seccomp
 posture — `default`, `unconfined`, a named profile, or a profile path) and
 `security_opt` (the bounded list of backend-native engine security options

@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "5d3013b1dfea0653b50ba660a5005fb700b60f148594aea661efa71f1b44dfae",
+  "content_hash": "1f0a43de5f3f3dc0494b6d14ef8491bb80ce2be6f72dec5392b0c5d65b9b0607",
   "last_change": {
-    "summary": "Propagated concrete typed account credential bindings through the canonical instantiated witness embedded by satisfiability evidence for issue #673 and DSL-439.",
-    "content_hash": "5d3013b1dfea0653b50ba660a5005fb700b60f148594aea661efa71f1b44dfae"
+    "summary": "Propagated concrete structured portable process-resource limits through the canonical instantiated witness embedded by satisfiability evidence for issue #1066 and removed the superseded scalar open_files authority.",
+    "content_hash": "1f0a43de5f3f3dc0494b6d14ef8491bb80ce2be6f72dec5392b0c5d65b9b0607"
   }
 }

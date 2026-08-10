@@ -200,6 +200,7 @@ class _ValidatorCore:
         self._verify_runtime_service_listeners()
         self._verify_runtime_application()
         self._verify_runtime_capability_overrides()
+        self._verify_runtime_process_resource_limits()
         self._verify_runtime_database_services()
         self._verify_runtime_dns_services()
         self._verify_runtime_ssh_servers()

@@ -32,6 +32,7 @@ from raes_contracts.realization_envelope import (
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from raes_contracts.vocabulary import (
     Closure,
+    ObservationStrength,
     RealizationSupportMode,
     RealizationVerificationScope,
     verification_scope_satisfies,
@@ -48,6 +49,11 @@ from .realization_concerns import (
     registered_realization_concerns,
     resolve_realization_concern,
 )
+from .realization_process_limits import (
+    ProcessResourceLimitDemand,
+    RealizationValueConstraint,
+    process_resource_limit_support_diagnostic,
+)
 from .realization_runtime_evaluation import evaluate_registered_realization
 from .realization_snapshot_sanitization import (
     sanitize_realization_snapshot,
@@ -59,6 +65,8 @@ __all__ = [
     "REALIZATION_DOMAIN",
     "ApparatusRealizationDefaultResolver",
     "CompiledRealizationRequirement",
+    "ProcessResourceLimitDemand",
+    "RealizationValueConstraint",
     "artifact_requirement_diagnostics",
     "materialize_realization_requirements",
     "project_realization_concern",
@@ -103,6 +111,9 @@ class CompiledRealizationRequirement:
     delegated: bool = False
     artifact_requirement: ArtifactRequirement | None = None
     verification_scope: RealizationVerificationScope | None = None
+    required_observation_strength: ObservationStrength | None = None
+    value_constraints: tuple[RealizationValueConstraint, ...] = ()
+    process_resource_limits: tuple[ProcessResourceLimitDemand, ...] = ()
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address)
@@ -113,6 +124,15 @@ class CompiledRealizationRequirement:
             RealizationVerificationScope,
         ):
             raise TypeError("verification_scope must be RealizationVerificationScope")
+        if self.required_observation_strength is not None and not isinstance(
+            self.required_observation_strength,
+            ObservationStrength,
+        ):
+            raise TypeError("required_observation_strength must be ObservationStrength")
+        if self.requirement_kind != "process-resource-limits" and (
+            self.value_constraints or self.process_resource_limits
+        ):
+            raise ValueError("process-limit realization metadata requires process-resource-limits")
         if self.artifact_requirement is not None:
             if self.requirement_kind != "source-artifact":
                 raise ValueError("artifact_requirement requires requirement_kind='source-artifact'")
@@ -212,7 +232,14 @@ def _realization_support_diagnostic(
     declarations = [
         declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
     ]
-    if explicitness is ExplicitnessClass.OPEN:
+    if requirement.requirement_kind == "process-resource-limits":
+        diagnostic = process_resource_limit_support_diagnostic(
+            requirement,
+            declarations,
+            explicitness,
+            manifest.realization_envelope,
+        )
+    elif explicitness is ExplicitnessClass.OPEN:
         diagnostic = _open_support_diagnostic(requirement, declarations)
     elif explicitness is ExplicitnessClass.EXACT:
         diagnostic = _exact_support_diagnostic(requirement, declarations)

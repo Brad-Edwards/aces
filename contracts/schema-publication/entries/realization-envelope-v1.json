@@ -2,9 +2,9 @@
   "contract_id": "realization-envelope-v1",
   "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "dbce12f46023384e10b86b62a6d6b5238ccf1b38dbf0be70704cb6d688cca31d",
+  "content_hash": "e2ed2f29ca31b1cfe71298989943d6bbf3078b34d696466d3d0e8dcc383ac7d9",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "dbce12f46023384e10b86b62a6d6b5238ccf1b38dbf0be70704cb6d688cca31d"
+    "summary": "Bound typed process-resource-limit capability domains to the selected material backend configuration for issue #1066.",
+    "content_hash": "e2ed2f29ca31b1cfe71298989943d6bbf3078b34d696466d3d0e8dcc383ac7d9"
   }
 }
