@@ -52,6 +52,12 @@ subject to a concept in an arbitrary versioned scheme are governed by
 complement native manifest `ConceptBinding` entries without changing their
 scope or authority.
 
+[Semantic Projection Reports](./semantic-projection-reports.md) define the
+separate reporting surface that groups governed native predicate results by
+those external concepts. The projection frame preserves native authority,
+explicit denominators, evidence boundaries, ambiguity, and information-flow
+controls; it never turns an external classification into runtime truth.
+
 [Autonomous Behavior Vocabulary Bindings](./autonomous-behavior-vocabularies.md)
 apply that portable surface to exact participant behavior specifications using
 pinned ActivityStreams and FIPA sources. The external identifiers remain
