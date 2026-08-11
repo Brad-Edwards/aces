@@ -218,3 +218,17 @@ list. Candidate ids are not converted into dictionary keys: zero matches are
 unknown, one match resolves, and multiple matches are ambiguous. An adapter
 does not add branches to the portable authored contract or fetch an authority
 at admission time.
+
+## Semantic Projection Reports
+
+`semantic-projection-report/v1` derives evidence-bounded concept views from
+this contract without widening binding authority. It reruns the exact offline
+admission path, uses an explicit pinned-snapshot inclusion set as its sole
+denominator, and preserves binding resolution, approximation, loss,
+limitations, and review as independent facts.
+
+The reporting contract is specified in
+[Semantic Projection Reports](./semantic-projection-reports.md). A report
+selects one governed native predicate and may classify a concept as a witness,
+gap, unknown, ambiguous, or excluded only within its complete digest-bound
+frame. A binding never supplies native predicate truth by itself.
