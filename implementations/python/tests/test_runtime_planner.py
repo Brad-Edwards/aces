@@ -1219,7 +1219,7 @@ nodes:
             )
         assert "/nodes/vm/os" in str(exc.value)
 
-    def test_variable_backed_os_without_allowed_values_uses_instantiated_default(self):
+    def test_variable_backed_os_without_allowed_values_fails_closed_at_portable_authority(self):
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
@@ -1248,7 +1248,8 @@ nodes:
 
         assert "provisioner.os-family-validation-deferred" not in codes
         assert "provisioner.unsupported-os-family" not in codes
-        assert execution_plan.is_valid
+        assert "realization.authority-bound-unavailable" in codes
+        assert not execution_plan.is_valid
 
     def test_variable_backed_os_with_undeclared_variable_fails_instantiation(self):
         manifest = _limited_backend_manifest(

@@ -14,6 +14,7 @@ from raes_contracts.contracts import (
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
+from raes_contracts.plan_projection import provisioning_plan_model
 from raes_contracts.runtime_state import (
     ExplicitnessClass,
     ExplicitnessProvenance,
@@ -36,6 +37,10 @@ from starlette.testclient import TestClient
 
 def _scenario(yaml_str: str):
     return parse_sdl(textwrap.dedent(yaml_str))
+
+
+def _provisioning_payload(plan_value: object) -> dict[str, object]:
+    return provisioning_plan_model(plan_value).model_dump(mode="json", exclude_none=True)
 
 
 def _admit_workflow_prerequisites(control_plane: RuntimeControlPlane, execution_plan: object) -> None:
@@ -355,7 +360,7 @@ def test_control_plane_api_rejects_unauthenticated_mutations():
     with TestClient(app) as client:
         response = client.post(
             "/operations/provisioning",
-            json={"operations": [], "diagnostics": []},
+            json={"operations": [], "diagnostics": [], "realization_authority": []},
         )
 
     assert response.status_code == 401
@@ -377,12 +382,12 @@ def test_control_plane_api_supports_idempotent_retries():
     with TestClient(app) as client:
         first = client.post(
             "/operations/provisioning",
-            json={"operations": [], "diagnostics": []},
+            json={"operations": [], "diagnostics": [], "realization_authority": []},
             headers=headers,
         )
         second = client.post(
             "/operations/provisioning",
-            json={"operations": [], "diagnostics": []},
+            json={"operations": [], "diagnostics": [], "realization_authority": []},
             headers=headers,
         )
 
@@ -403,7 +408,11 @@ nodes:
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     store = LocalControlPlaneStore(tmp_path / "cp-store")
-    control_plane = RuntimeControlPlane(target, store=store)
+    control_plane = RuntimeControlPlane(
+        target,
+        store=store,
+        trusted_provisioning_plans=(execution_plan.provisioning,),
+    )
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),
@@ -416,26 +425,52 @@ nodes:
     with TestClient(app) as client:
         receipt = client.post(
             "/operations/provisioning",
-            json={
-                "operations": [
-                    {
-                        "action": op.action.value,
-                        "address": op.address,
-                        "resource_type": op.resource_type,
-                        "payload": op.payload,
-                        "ordering_dependencies": list(op.ordering_dependencies),
-                        "refresh_dependencies": list(op.refresh_dependencies),
-                    }
-                    for op in execution_plan.provisioning.operations
-                ],
-                "diagnostics": [],
-            },
+            json=_provisioning_payload(execution_plan.provisioning),
             headers=headers,
         ).json()
 
     restarted = RuntimeControlPlane(target, store=store)
     assert restarted.get_operation(receipt["operation_id"]) is not None
     assert restarted.get_snapshot().snapshot.entries
+
+
+def test_backend_principal_cannot_rewrite_registered_realization_authority() -> None:
+    scenario = _scenario("""
+name: authority-integrity
+realization:
+  default: closed
+nodes:
+  vm:
+    type: vm
+    resources: {ram: 1 gib, cpu: 1}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(
+        target,
+        trusted_provisioning_plans=(execution_plan.provisioning,),
+    )
+    app = create_control_plane_app(control_plane, security=_test_security(target.name))
+    payload = _provisioning_payload(execution_plan.provisioning)
+    closed_entry = next(
+        entry for entry in payload["realization_authority"] if entry["requirement_kind"] == "runtime-environment"
+    )
+    closed_entry["mode"] = "open"
+    closed_entry["source"] = "authored-scope"
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            json=payload,
+            headers={
+                "x-raes-client-verified": "true",
+                "x-raes-client-identity": "backend-service",
+            },
+        )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "provisioning plan is not planner-authorized"}
+    assert control_plane.snapshot.entries == {}
 
 
 def test_authenticated_snapshot_preserves_realization_governing_scope_from_store(tmp_path: Path):

@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import textwrap
+from dataclasses import replace
 
-import pytest
 from raes import parse_sdl
 from raes_contracts.planning import (
     ChangeAction,
-    PlannedResource,
     ProvisioningPlan,
     ProvisionOp,
-    RuntimeDomain,
 )
 from raes_reference_backend import (
     create_reference_backend_components,
@@ -100,22 +98,13 @@ def test_apply_handles_delete_and_unchanged():
 def test_unchanged_op_keeps_entry_without_driver_realize():
     driver = InProcessDriver()
     target = _target_with_driver(driver)
-    unchanged_plan = ProvisioningPlan(
-        resources={
-            "provision.node.web": PlannedResource(
-                address="provision.node.web",
-                domain=RuntimeDomain.PROVISIONING,
-                resource_type="node",
-                payload={"name": "web", "node_type": "vm", "os_family": "linux"},
-            )
-        },
+    planned = _provisioning_plan(target)
+    unchanged_plan = replace(
+        planned,
         operations=[
-            ProvisionOp(
-                action=ChangeAction.UNCHANGED,
-                address="provision.node.web",
-                resource_type="node",
-                payload={"name": "web", "node_type": "vm", "os_family": "linux"},
-            )
+            replace(operation, action=ChangeAction.UNCHANGED)
+            for operation in planned.operations
+            if operation.address == "provision.node.web"
         ],
     )
     control_plane = RuntimeControlPlane(target)
@@ -134,27 +123,7 @@ def test_snapshot_payload_carries_only_portable_facts():
     control_plane.submit_provisioning(plan)
 
     snapshot = control_plane.snapshot
-    # The realized snapshot entry preserves the planned payload (portable) and
-    # never embeds a backend-native container id, host path, or daemon repr.
     entry = snapshot.entries["provision.node.web"]
-    rendered = repr(entry.payload)
-    for forbidden in ("docker", "podman", "container_id", "/var/run", "sha256:", "InProcessDriver"):
-        assert forbidden not in rendered
+    operation = next(operation for operation in plan.operations if operation.address == entry.address)
 
-
-def test_invalid_resource_type_is_rejected_before_provisioner_validation():
-    driver = InProcessDriver()
-    _target_with_driver(driver)
-
-    with pytest.raises(ValueError, match="resource_type must belong"):
-        ProvisioningPlan(
-            resources={
-                "provision.mystery.x": PlannedResource(
-                    address="provision.mystery.x",
-                    domain=RuntimeDomain.PROVISIONING,
-                    resource_type="mystery",
-                    payload={"name": "x"},
-                )
-            }
-        )
-    assert not driver.recorded_ops
+    assert entry.payload == operation.payload

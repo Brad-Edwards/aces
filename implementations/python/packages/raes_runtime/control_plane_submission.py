@@ -28,7 +28,11 @@ from raes_contracts.planning import (
     require_plan_operation_identity,
 )
 from raes_contracts.runtime_state import RuntimeSnapshot
-from raes_processor.planner import account_credential_spec_is_valid, generated_artifact_payload_diagnostic
+from raes_processor.planner import (
+    account_credential_spec_is_valid,
+    generated_artifact_payload_diagnostic,
+    realization_authority_diagnostics,
+)
 
 _STATEFUL_ADMISSION_BY_RESOURCE_TYPE = {
     "generated-artifact": (
@@ -67,6 +71,9 @@ def _provisioning_submission_diagnostics(
 ) -> list[Diagnostic]:
     if manifest is None:
         raise ValueError("provisioning submission admission requires a backend manifest")
+    authority_diagnostics = realization_authority_diagnostics(plan, manifest)
+    if authority_diagnostics:
+        return authority_diagnostics[:1]
     diagnostic = _account_credential_submission_diagnostic(plan, manifest) or _stateful_submission_diagnostic(
         plan, manifest
     )

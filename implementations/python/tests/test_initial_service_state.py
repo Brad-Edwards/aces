@@ -26,6 +26,21 @@ from raes_runtime.registry import RuntimeTarget
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+def _direct_provisioning_plan(model, manifest: BackendManifest, operation: ProvisionOp) -> ProvisioningPlan:
+    """Retain planner-resolved authority while exercising a direct operation."""
+
+    planned = plan(model, manifest).provisioning
+    return replace(
+        planned,
+        resources={},
+        operations=[operation],
+        diagnostics=[],
+        realization_authority=tuple(
+            authority for authority in planned.realization_authority if authority.address == operation.address
+        ),
+    )
+
+
 def _scenario(*replacements: tuple[str, str]):
     source = """
 name: initial-service-state
@@ -323,6 +338,13 @@ def test_search_index_schema_profile_requires_separate_exact_realization_support
     )
 
     assert "realization.unsupported-exact-requirement" in {diagnostic.code for diagnostic in unsupported.diagnostics}
+    authority = next(
+        entry
+        for entry in unsupported.provisioning.realization_authority
+        if entry.requirement_kind == "service-search-index-schema-materialization"
+    )
+    assert authority.mode.value == "exact"
+    assert authority.payload_pointer == "/service_materialization"
 
 
 def test_direct_plan_submission_rejects_tampered_search_index_schema_digest() -> None:
@@ -353,7 +375,7 @@ def test_direct_plan_submission_rejects_tampered_search_index_schema_digest() ->
         participant_runtime=base_target.participant_runtime,
     )
 
-    result = RuntimeControlPlane(target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+    result = RuntimeControlPlane(target).submit_provisioning(_direct_provisioning_plan(model, manifest, operation))
 
     assert [diagnostic.code for diagnostic in result.diagnostics] == [
         "provisioner.service-materialization-contract-invalid"
@@ -387,7 +409,10 @@ def test_direct_plan_submission_rejects_falsey_malformed_search_index_content(
         payload=changed_payload,
     )
 
-    result = RuntimeControlPlane(create_stub_target()).submit_provisioning(ProvisioningPlan(operations=[operation]))
+    target = create_stub_target()
+    result = RuntimeControlPlane(target).submit_provisioning(
+        _direct_provisioning_plan(model, target.manifest, operation)
+    )
 
     assert [diagnostic.code for diagnostic in result.diagnostics] == [
         "provisioner.service-materialization-contract-invalid"
@@ -417,7 +442,7 @@ def test_direct_plan_submission_requires_search_index_schema_readback() -> None:
         participant_runtime=base_target.participant_runtime,
     )
 
-    result = RuntimeControlPlane(target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+    result = RuntimeControlPlane(target).submit_provisioning(_direct_provisioning_plan(model, manifest, operation))
 
     assert [diagnostic.code for diagnostic in result.diagnostics] == [
         "provisioner.service-materialization-readback-unsupported"
@@ -444,7 +469,7 @@ def test_direct_plan_submission_requires_search_index_schema_exact_support() -> 
         participant_runtime=base_target.participant_runtime,
     )
 
-    result = RuntimeControlPlane(target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+    result = RuntimeControlPlane(target).submit_provisioning(_direct_provisioning_plan(model, manifest, operation))
 
     assert [diagnostic.code for diagnostic in result.diagnostics] == ["realization.unsupported-exact-requirement"]
 
@@ -483,6 +508,14 @@ def test_service_materialization_compiles_through_content_placement() -> None:
         requirement.requirement_kind == "service-content-materialization" and requirement.address == placement.address
         for requirement in model.realization_requirements
     )
+    provisioning = plan(model, _manifest_with_profile()).provisioning
+    authority = next(
+        entry
+        for entry in provisioning.realization_authority
+        if entry.requirement_kind == "service-content-materialization"
+    )
+    assert authority.address == placement.address
+    assert authority.mode.value == "exact"
 
 
 def test_backend_profile_support_is_separate_from_content_type_support() -> None:
@@ -499,6 +532,7 @@ def test_backend_profile_support_is_separate_from_content_type_support() -> None
 
 
 def test_direct_plan_submission_repeats_profile_and_readback_admission() -> None:
+    model = compile_scenario_runtime_model(_scenario())
     operation = ProvisionOp(
         action=ChangeAction.CREATE,
         address="provision.content.messages",
@@ -526,7 +560,9 @@ def test_direct_plan_submission_repeats_profile_and_readback_admission() -> None
         },
     )
     base_target = create_stub_target()
-    unsupported = RuntimeControlPlane(base_target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+    unsupported = RuntimeControlPlane(base_target).submit_provisioning(
+        _direct_provisioning_plan(model, base_target.manifest, operation)
+    )
     assert [diagnostic.code for diagnostic in unsupported.diagnostics] == [
         "provisioner.unsupported-service-materialization-profile"
     ]
@@ -540,7 +576,9 @@ def test_direct_plan_submission_repeats_profile_and_readback_admission() -> None
         evaluator=base_target.evaluator,
         participant_runtime=base_target.participant_runtime,
     )
-    missing_readback = RuntimeControlPlane(target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+    missing_readback = RuntimeControlPlane(target).submit_provisioning(
+        _direct_provisioning_plan(model, manifest, operation)
+    )
     assert [diagnostic.code for diagnostic in missing_readback.diagnostics] == [
         "provisioner.service-materialization-readback-unsupported"
     ]

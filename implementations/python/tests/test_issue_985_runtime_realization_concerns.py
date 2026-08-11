@@ -154,7 +154,7 @@ def test_constrained_runtime_dimension_requires_its_manifest_concern_kind() -> N
             ),
         ),
     )
-    accepted = plan(model, supported_manifest)
+    bounded_only_by_private_runtime_values = plan(model, supported_manifest)
 
     assert requirement.explicitness is ExplicitnessClass.CONSTRAINED
     assert any(
@@ -162,7 +162,14 @@ def test_constrained_runtime_dimension_requires_its_manifest_concern_kind() -> N
         and "runtime-environment" in diagnostic.message
         for diagnostic in rejected.diagnostics
     )
-    assert not any(diagnostic.code.startswith("realization.") for diagnostic in accepted.diagnostics)
+    supported_codes = {diagnostic.code for diagnostic in bounded_only_by_private_runtime_values.diagnostics}
+    assert "realization.unsupported-constraint-requirement" not in supported_codes
+    assert "realization.authority-bound-unavailable" in supported_codes
+    assert not any(
+        entry.requirement_kind == "runtime-environment"
+        for entry in bounded_only_by_private_runtime_values.provisioning.realization_authority
+    )
+    assert not bounded_only_by_private_runtime_values.is_valid
 
 
 def test_nested_open_designation_lowers_an_omitted_runtime_dimension() -> None:

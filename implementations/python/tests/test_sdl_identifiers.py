@@ -537,6 +537,8 @@ def test_published_plan_contracts_reject_endpoint_identity_incoherence(
             }
         ]
     }
+    if model is ProvisioningPlanModel:
+        payload["realization_authority"] = []
     with pytest.raises(ValidationError, match="must belong to its runtime domain"):
         model.model_validate(payload)
     with pytest.raises(jsonschema.ValidationError):
@@ -843,7 +845,7 @@ def test_published_plan_rejects_duplicate_operation_addresses() -> None:
     }
 
     with pytest.raises(ValidationError, match="operation addresses"):
-        ProvisioningPlanModel(operations=[operation, operation])
+        ProvisioningPlanModel(operations=[operation, operation], realization_authority=[])
 
 
 def test_provider_name_is_bounded_and_collision_resistant_for_full_address() -> None:

@@ -6,8 +6,7 @@ strings remain opaque; matching is exact membership plus support compatibility.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from raes.artifact_requirements import ArtifactRequirement
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
@@ -42,6 +41,14 @@ from .artifact_realization import (
     artifact_requirement_diagnostics,
     evaluate_artifact_realization,
 )
+from .realization_apparatus_defaults import (
+    ApparatusRealizationDecisions,
+    ApparatusRealizationDefaultResolver,
+    effective_realization_explicitness,
+    materialize_realization_requirements,
+    resolve_apparatus_realization_defaults,
+)
+from .realization_authority_contract import CompiledRealizationAuthority
 from .realization_concerns import (
     CONCERN_PAYLOAD_PATH,
     project_realization_concern,
@@ -64,7 +71,9 @@ __all__ = [
     "EXACT_REQUIREMENT_KIND",
     "REALIZATION_DOMAIN",
     "ApparatusRealizationDefaultResolver",
+    "ApparatusRealizationDecisions",
     "CompiledRealizationRequirement",
+    "CompiledRealizationAuthority",
     "ProcessResourceLimitDemand",
     "RealizationValueConstraint",
     "artifact_requirement_diagnostics",
@@ -73,6 +82,7 @@ __all__ = [
     "realization_disclosure",
     "realization_envelope_diagnostics",
     "realization_support_diagnostics",
+    "resolve_apparatus_realization_defaults",
     "registered_realization_concern_descriptors",
     "registered_realization_concerns",
     "resolve_realization_concern",
@@ -140,54 +150,6 @@ class CompiledRealizationRequirement:
                 raise ValueError("compiled artifact requirement explicitness must match its source contract")
 
 
-ApparatusRealizationDefaultResolver = Callable[
-    [CompiledRealizationRequirement, BackendManifest],
-    Closure,
-]
-
-
-def _closed_apparatus_default(
-    _requirement: CompiledRealizationRequirement,
-    _manifest: BackendManifest,
-) -> Closure:
-    return Closure.CLOSED_WORLD
-
-
-def _effective_explicitness(
-    requirement: CompiledRealizationRequirement,
-    manifest: BackendManifest,
-    apparatus_default: ApparatusRealizationDefaultResolver | None,
-) -> ExplicitnessClass | None:
-    if not requirement.delegated:
-        return requirement.explicitness
-    resolver = apparatus_default or _closed_apparatus_default
-    closure = resolver(requirement, manifest)
-    return ExplicitnessClass.OPEN if closure is Closure.OPEN_WORLD else None
-
-
-def materialize_realization_requirements(
-    requirements: tuple[CompiledRealizationRequirement, ...],
-    manifest: BackendManifest,
-    *,
-    apparatus_default: ApparatusRealizationDefaultResolver | None = None,
-) -> tuple[CompiledRealizationRequirement, ...]:
-    """Resolve selected-apparatus delegation into the execution carrier."""
-
-    materialized: list[CompiledRealizationRequirement] = []
-    for requirement in requirements:
-        if requirement.delegated:
-            if _effective_explicitness(requirement, manifest, apparatus_default) is not ExplicitnessClass.OPEN:
-                # A closed default carries no realizable demand into execution.
-                continue
-            requirement = replace(
-                requirement,
-                explicitness=ExplicitnessClass.OPEN,
-                delegated=False,
-            )
-        materialized.append(requirement)
-    return tuple(materialized)
-
-
 def realization_support_diagnostics(
     requirements: tuple[CompiledRealizationRequirement, ...],
     manifest: BackendManifest,
@@ -228,7 +190,7 @@ def _realization_support_diagnostic(
     manifest: BackendManifest,
     apparatus_default: ApparatusRealizationDefaultResolver | None,
 ) -> Diagnostic | None:
-    explicitness = _effective_explicitness(requirement, manifest, apparatus_default)
+    explicitness = effective_realization_explicitness(requirement, manifest, apparatus_default)
     declarations = [
         declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
     ]
@@ -342,7 +304,7 @@ def realization_envelope_diagnostics(
     open_paths = tuple(
         requirement.field_path
         for requirement in requirements
-        if _effective_explicitness(requirement, manifest, apparatus_default) is ExplicitnessClass.OPEN
+        if effective_realization_explicitness(requirement, manifest, apparatus_default) is ExplicitnessClass.OPEN
     )
     if not open_paths:
         return []

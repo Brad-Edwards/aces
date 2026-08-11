@@ -12,10 +12,16 @@ from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.contracts.time_model import validate_time_runtime_transition
 from raes_contracts.diagnostics import Diagnostic
-from raes_contracts.planning import ProvisioningPlan
+from raes_contracts.planning import ProvisioningPlan, RealizationAuthorityMode
 from raes_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry, RuntimeSnapshot
 from raes_processor.models import CompiledRealizationRequirement
-from raes_processor.planner import realization_disclosure, sanitize_realization_snapshot
+from raes_processor.planner import (
+    realization_authority_diagnostics,
+    realization_authority_disclosure,
+    realization_disclosure,
+    sanitize_plan_realization_snapshot,
+    sanitize_realization_snapshot,
+)
 
 from .backend_account_credentials import (
     plan_arguments_have_account_credentials,
@@ -79,6 +85,31 @@ def _call_backend_apply(
         if submitted_plan is not None:
             realization_context = replace(realization_context, plan=submitted_plan)
     baseline_snapshot = deepcopy(snapshot)
+    if realization_context.plan is not None:
+        authority_diagnostics = realization_authority_diagnostics(
+            realization_context.plan,
+            realization_context.manifest,
+        )
+        if (
+            not authority_diagnostics
+            and realization_context.manifest is None
+            and any(
+                entry.mode is not RealizationAuthorityMode.CLOSED
+                for entry in realization_context.plan.realization_authority
+            )
+        ):
+            authority_diagnostics = [
+                _backend_contract_invalid(
+                    address,
+                    "Resolved realization authority requires the selected backend manifest.",
+                )
+            ]
+        if authority_diagnostics:
+            return ApplyResult(
+                success=False,
+                snapshot=baseline_snapshot,
+                diagnostics=authority_diagnostics,
+            )
     backend_snapshot = deepcopy(snapshot)
     backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
     try:
@@ -129,15 +160,24 @@ def _finalize_backend_apply(
             information_state_context_resolver=information_state_context_resolver,
         )
         realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
-        if not contract_diagnostics and realization.requirements and realization.plan is not None:
-            # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
-            contract_diagnostics, realization_provenance = realization_disclosure(
-                realization.requirements,
+        if not contract_diagnostics and realization.plan is not None:
+            # The backend-facing plan is the authority for registered concerns.
+            contract_diagnostics, realization_provenance = realization_authority_disclosure(
                 realization.plan,
                 result.snapshot,
                 manifest=realization.manifest,
-                artifact_availability=realization.artifact_availability,
             )
+            supplemental = _supplemental_realization_requirements(realization)
+            if not contract_diagnostics and supplemental:
+                supplemental_diagnostics, supplemental_provenance = realization_disclosure(
+                    supplemental,
+                    realization.plan,
+                    result.snapshot,
+                    manifest=realization.manifest,
+                    artifact_availability=realization.artifact_availability,
+                )
+                contract_diagnostics.extend(supplemental_diagnostics)
+                realization_provenance = (*realization_provenance, *supplemental_provenance)
         if contract_diagnostics:
             finalized = ApplyResult(
                 success=False,
@@ -186,11 +226,12 @@ def _sanitize_backend_realization(
     realization_plan: ProvisioningPlan | None,
 ) -> ApplyResult:
     sanitized = result
-    if realization_requirements and realization_plan is not None:
+    if realization_plan is not None and (realization_plan.realization_authority or realization_requirements):
         try:
-            safe_snapshot = sanitize_realization_snapshot(
-                realization_requirements,
-                result.snapshot,
+            safe_snapshot = (
+                sanitize_plan_realization_snapshot(realization_plan, result.snapshot)
+                if realization_plan.realization_authority
+                else sanitize_realization_snapshot(realization_requirements, result.snapshot)
             )
         except (TypeError, ValueError):
             return _failed_apply_result(
@@ -213,6 +254,23 @@ def _sanitize_backend_realization(
                 ),
             )
     return sanitized
+
+
+def _supplemental_realization_requirements(
+    realization: _RealizationApplyContext,
+) -> tuple[CompiledRealizationRequirement, ...]:
+    """Keep non-registry contracts while the plan owns registry concerns."""
+
+    if realization.plan is None or not realization.plan.realization_authority:
+        return realization.requirements
+    plan_identities = {
+        (entry.address, entry.field_path, entry.requirement_kind) for entry in realization.plan.realization_authority
+    }
+    return tuple(
+        requirement
+        for requirement in realization.requirements
+        if (requirement.address, requirement.field_path, requirement.requirement_kind) not in plan_identities
+    )
 
 
 def _with_snapshot(

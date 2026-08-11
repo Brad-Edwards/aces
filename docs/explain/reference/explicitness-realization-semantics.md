@@ -45,6 +45,20 @@ engineering risk is concept conflation: treating "not specified yet",
   requirements should surface through existing `SDLValidationError`,
   `SDLInstantiationError`, or `raes_processor.models.Diagnostic` paths,
   depending on the phase where support is known.
+- Carry one complete, resolved, value-free authority collection on every
+  backend-facing provisioning plan. It includes closed omissions and preserves
+  governing scope plus resolution source; it does not expose authoring
+  designation tables or duplicate exact operation values.
+- Treat the plan collection as the runtime authority for registered concerns.
+  Direct-manager and control-plane execution both recompute registry
+  completeness, bind the selected envelope identity, enforce capability as a
+  narrowing constraint, reject closed excess state, and derive safe persistence
+  plus provenance from that same collection.
+- Treat HTTP callers as relays, not planners. Register the exact
+  planner-produced provisioning plan through the in-process control-plane
+  boundary before HTTP submission; the adapter resolves its canonical digest
+  from that trusted registry, so a BACKEND or OPERATOR credential cannot widen
+  modes or bounds by rewriting the request body.
 
 ## Canonical Incumbents
 
@@ -70,7 +84,8 @@ Build on these existing surfaces before adding anything new:
 - authority helpers: `manifest_authority`, `controlled_vocabularies`,
   `semantic_profiles`, `reference_models`, and the concept-authority catalogs
 - runtime diagnostics and envelopes: `raes_processor.models.Diagnostic`,
-  runtime plan/result/snapshot models, and published control-plane contracts
+  `raes_contracts.planning.ResolvedRealizationAuthority`, runtime
+  plan/result/snapshot models, and published control-plane contracts
 - workflow gates: `.ground-control.yaml`, `.gc/plan-rules.md`,
   `tools/check_repo_policy.py`, `tools/check_requirement_governance.py`,
   `tools/check_json_artifacts.py`, `tools/check_generated_schemas.py`, and
@@ -101,12 +116,19 @@ The implementation must pass every layer it touches:
   compiled requirement against backend manifest `realization_support` instead
   of local string conventions. Process-resource demands additionally compare
   against the declaration's typed resource/scope/value domains.
+- provisioning-handoff gate: every applicable registered concern on a
+  non-delete operation must have exactly one canonical authority entry. Closed
+  concerns need no backend support but forbid added scenario state; non-closed
+  concerns require matching support and the selected envelope identity.
 - error-envelope gate: unsupported exact requirements and forbidden
   approximations must be reported with stable validation errors or structured
   diagnostics; do not leak raw backend exceptions or private payloads.
 - control-plane gate: any runtime-facing realization result must pass existing
   request-size, authentication, authorization, audit, idempotency, and published
-  response-model validation.
+  response-model validation. An operation-bearing provisioning request must
+  also match an exact planner-produced plan registered outside the HTTP relay
+  surface; request authentication and idempotency fingerprints are not planner
+  attestation.
 - persistence and observation gate: realized choices may be recorded only in
   portable snapshot/result/provenance envelopes. Do not persist secrets,
   bearer tokens, credentials, backend-native objects, or unredacted tracebacks.

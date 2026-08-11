@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import textwrap
+from dataclasses import replace
 
 import pytest
 from raes import (
@@ -26,6 +27,7 @@ from raes import (
     instantiate_scenario,
     parse_sdl,
 )
+from raes_backend_libvirt.envelopes import load_libvirt_realization_envelope
 from raes_backend_stubs.stubs import create_stub_target
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import (
@@ -36,6 +38,7 @@ from raes_processor.models import (
 )
 from raes_processor.planner import plan as plan_execution
 from raes_runtime.manager import RuntimeManager
+from raes_runtime.registry import RuntimeTarget
 
 NODE_NAME = "vm1"
 EXPECTED_NODE_ADDRESS = f"provision.node.{NODE_NAME}"
@@ -43,6 +46,25 @@ EXPECTED_WORKFLOW_ADDRESS = "orchestration.workflow.response"
 DRIFT_DIAGNOSTIC_CODE = "runtime.plan-snapshot-mismatch"
 PARAM_OS_KIND = "linux"
 PARAM_CPU_COUNT = 2
+
+
+def _enveloped_stub_target() -> RuntimeTarget:
+    base = create_stub_target()
+    envelope = load_libvirt_realization_envelope("generic")
+    manifest = replace(
+        base.manifest,
+        supported_contract_versions=base.manifest.supported_contract_versions | frozenset({"realization-envelope-v1"}),
+        realization_envelope=envelope,
+    )
+    return RuntimeTarget(
+        name=base.name,
+        manifest=manifest,
+        provisioner=base.provisioner,
+        orchestrator=base.orchestrator,
+        evaluator=base.evaluator,
+        participant_runtime=base.participant_runtime,
+        time_runtime=base.time_runtime,
+    )
 
 
 def _raw_scenario():
@@ -70,6 +92,7 @@ def _raw_scenario():
               os_kind:
                 type: string
                 default: linux
+                allowed_values: [linux]
               cpu_count:
                 type: integer
                 default: 1
@@ -196,7 +219,7 @@ class TestRun300Lifecycle:
         )
 
         # ----- Stage 3: Planning -------------------------------------
-        target = create_stub_target()
+        target = _enveloped_stub_target()
         empty_snapshot = RuntimeSnapshot()
         execution_plan = plan_execution(
             model,
@@ -350,7 +373,7 @@ class TestRun300Lifecycle:
             parameters={"os_kind": PARAM_OS_KIND, "cpu_count": PARAM_CPU_COUNT},
         )
         model = compile_runtime_model(instantiated)
-        target = create_stub_target()
+        target = _enveloped_stub_target()
         empty_snapshot = RuntimeSnapshot()
         stale_plan = plan_execution(
             model,

@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 import pytest
+from raes import parse_sdl
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_backend_protocols.capabilities import BackendManifest
+from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.planner import plan as build_plan
 from raes_processor.semantics.realization import (
     CompiledRealizationRequirement,
     project_realization_concern,
@@ -43,6 +50,49 @@ def _plan(value: object) -> ProvisioningPlan:
                 payload=_payload(value),
             )
         ]
+    )
+
+
+def _authoritative_environment_plan() -> tuple[ProvisioningPlan, BackendManifest]:
+    target = create_stub_target()
+    execution = build_plan(
+        compile_runtime_model(
+            parse_sdl(
+                """
+name: issue-985-authoritative-runtime-observation
+nodes:
+  worker:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    runtime:
+      environment:
+        - name: MODE
+          value: production
+          value_classification: plain
+          provenance: runtime
+          source: ""
+"""
+            )
+        ),
+        target.manifest,
+    )
+    return execution.provisioning, target.manifest
+
+
+def _authoritative_snapshot(plan: ProvisioningPlan, value: object) -> RuntimeSnapshot:
+    operation = plan.operations[0]
+    payload = deepcopy(operation.payload)
+    payload["spec"]["node"]["runtime"]["environment"] = value
+    return RuntimeSnapshot(
+        entries={
+            _ADDRESS: SnapshotEntry(
+                address=_ADDRESS,
+                domain=RuntimeDomain.PROVISIONING,
+                resource_type="node",
+                payload=payload,
+            )
+        }
     )
 
 
@@ -174,13 +224,12 @@ def test_backend_boundary_persists_only_the_safe_projection() -> None:
             "description": "backend annotation must not persist",
         }
     ]
-    requirement = _requirement(ExplicitnessClass.EXACT)
-    plan = _plan(observed)
+    plan, manifest = _authoritative_environment_plan()
 
     def backend() -> ApplyResult:
         return ApplyResult(
             success=True,
-            snapshot=_snapshot(observed),
+            snapshot=_authoritative_snapshot(plan, observed),
             changed_addresses=[_ADDRESS],
         )
 
@@ -188,7 +237,7 @@ def test_backend_boundary_persists_only_the_safe_projection() -> None:
         backend,
         address="runtime.provision.node.worker",
         snapshot=RuntimeSnapshot(),
-        realization=_RealizationApplyContext(requirements=(requirement,), plan=plan),
+        realization=_RealizationApplyContext(plan=plan, manifest=manifest),
     )
 
     assert result.success is True
@@ -210,12 +259,12 @@ def test_backend_boundary_rejects_unknown_observation_fields() -> None:
         }
     ]
     observed = [{**declared[0], "backend_extra": "do-not-persist"}]
-    requirement = _requirement(ExplicitnessClass.CONSTRAINED)
+    plan, manifest = _authoritative_environment_plan()
 
     def backend() -> ApplyResult:
         return ApplyResult(
             success=True,
-            snapshot=_snapshot(observed),
+            snapshot=_authoritative_snapshot(plan, observed),
             changed_addresses=[_ADDRESS],
         )
 
@@ -224,7 +273,7 @@ def test_backend_boundary_rejects_unknown_observation_fields() -> None:
         backend,
         address="runtime.provision.node.worker",
         snapshot=baseline,
-        realization=_RealizationApplyContext(requirements=(requirement,), plan=_plan(declared)),
+        realization=_RealizationApplyContext(plan=plan, manifest=manifest),
     )
 
     assert result.success is False

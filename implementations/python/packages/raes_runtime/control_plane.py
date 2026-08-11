@@ -8,13 +8,14 @@ async control plane so non-Python runtimes can evolve behind the same API.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from threading import RLock
 from uuid import uuid4
 
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.manifest_authority import PARTICIPANT_RUNTIME_POLICY_FEATURES
+from raes_contracts.plan_projection import provisioning_plan_digest
 from raes_contracts.planning import (
     EvaluationPlan,
     OrchestrationPlan,
@@ -111,6 +112,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         crossing_policy_resolver: ParticipantCrossingPolicyResolver | None = None,
         information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
         enforce_final_sink_flow_control: bool = True,
+        trusted_provisioning_plans: Iterable[ProvisioningPlan] = (),
     ) -> None:
         _require_crossing_policy_configuration(target, crossing_policy_resolver)
         _require_final_sink_flow_control_configuration(crossing_policy_resolver, enforce_final_sink_flow_control)
@@ -123,6 +125,10 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         self._crossing_policy_resolver = crossing_policy_resolver
         self._information_state_context_resolver = information_state_context_resolver
         self._participant_control_lock = RLock()
+        self._trusted_provisioning_plan_lock = RLock()
+        self._trusted_provisioning_plan_digests = {
+            provisioning_plan_digest(plan) for plan in trusted_provisioning_plans
+        }
         require_participant_information_state_snapshot(
             self._snapshot,
             information_state_context_resolver,
@@ -154,6 +160,26 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             operation_records=operation_records,
             audit_events=audit_events,
         )
+
+    def register_planner_produced_provisioning_plan(self, plan: ProvisioningPlan) -> str:
+        """Trust one exact planner artifact for later HTTP relay submission.
+
+        This method is an in-process authority boundary and is deliberately not
+        exposed by the HTTP control plane. Relay principals can submit a
+        registered artifact, but cannot mint or widen its realization policy.
+        """
+
+        digest = provisioning_plan_digest(plan)
+        with self._trusted_provisioning_plan_lock:
+            self._trusted_provisioning_plan_digests.add(digest)
+        return digest
+
+    def is_planner_authorized_provisioning_plan(self, plan: ProvisioningPlan) -> bool:
+        """Return whether the exact published plan was registered in-process."""
+
+        digest = provisioning_plan_digest(plan)
+        with self._trusted_provisioning_plan_lock:
+            return digest in self._trusted_provisioning_plan_digests
 
     def submit_provisioning(
         self,
