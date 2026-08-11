@@ -46,7 +46,7 @@ from .provisioning import (
     _compile_templates,
     _metadata_specs,
 )
-from .realization_requirements import _compile_realization_requirements
+from .realization_requirements import _compile_realization
 from .stateful_resources import _compile_generated_artifacts, _compile_persistent_volumes
 from .time_model import compile_time_model
 from .workflows import _compile_workflows
@@ -129,6 +129,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     stories = _compile_stories(scenario, diagnostics)
     objectives = _compile_objectives(scenario, assertions, diagnostics)
     workflows = _compile_workflows(scenario, assertions, diagnostics)
+    realization_requirements, realization_authority = _compile_realization(scenario, domain_analysis)
 
     return RuntimeModel(
         scenario_name=scenario.name,
@@ -167,6 +168,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         workflows=workflows,
         objectives=objectives,
         diagnostics=diagnostics,
-        realization_requirements=_compile_realization_requirements(scenario, domain_analysis),
+        realization_requirements=realization_requirements,
+        realization_authority=realization_authority,
         realization_instance=scenario,
     )

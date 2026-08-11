@@ -2,9 +2,9 @@
   "contract_id": "provisioning-plan-v1",
   "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
   "stability": "draft",
-  "content_hash": "1bdc518fe38af9ea2d94f06793a103a660475a51cded7e7506c4760137279933",
+  "content_hash": "98c2fec4467c763bacebd2ee8efd8603d6188aea907bf4b364601dae86831d38",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "1bdc518fe38af9ea2d94f06793a103a660475a51cded7e7506c4760137279933"
+    "summary": "Added mandatory resolved realization authority to the backend-facing provisioning plan for issue #1067.",
+    "content_hash": "98c2fec4467c763bacebd2ee8efd8603d6188aea907bf4b364601dae86831d38"
   }
 }

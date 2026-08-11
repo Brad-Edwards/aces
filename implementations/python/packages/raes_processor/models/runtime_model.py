@@ -12,7 +12,7 @@ from raes_contracts.evaluation import EvaluationExecutionContract, EvaluationRes
 from raes_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
 from raes_contracts.runtime_state import RuntimeSnapshot
 
-from raes_processor.semantics.realization import CompiledRealizationRequirement
+from raes_processor.semantics.realization import CompiledRealizationAuthority, CompiledRealizationRequirement
 
 from .behavior_resources import (
     EventRuntime,
@@ -141,6 +141,10 @@ class RuntimeModel:
     # its preserved explicitness class. Model-side metadata; it never enters the backend-facing
     # `resource_payload()` envelope. Consumed by the planner realization gate.
     realization_requirements: tuple[CompiledRealizationRequirement, ...] = ()
+    # Complete SEM-218 posture projection, including closed omissions and the
+    # source of unresolved apparatus delegation. Planning resolves it into the
+    # portable ProvisioningPlan authority collection.
+    realization_authority: tuple[CompiledRealizationAuthority, ...] = ()
     realization_instance: InstantiatedScenario | None = None
 
     def __post_init__(self) -> None:

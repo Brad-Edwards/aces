@@ -278,6 +278,38 @@ def realization_concern_descriptor(
     return _DESCRIPTOR_BY_KIND.get(concern_kind)
 
 
+def realization_concern_descriptors() -> tuple[RealizationConcernDescriptor, ...]:
+    """Return the canonical unbound concern inventory in declaration order."""
+
+    return _REALIZATION_CONCERNS
+
+
+def processor_derived_provisioning_concern_kinds(
+    resource_type: object,
+    payload: object,
+) -> tuple[str, ...]:
+    """Return exact provisioning concerns derived from a typed resource."""
+
+    if not isinstance(resource_type, str) or not isinstance(payload, Mapping):
+        return ()
+    concerns: list[str] = []
+    if payload.get("domain_topology") is not None:
+        concerns.append("domain-topology")
+    if resource_type == "generated-artifact":
+        concerns.append("generated-artifact")
+    elif resource_type == "persistent-volume":
+        concerns.append("persistent-volume")
+    elif resource_type == "content-placement":
+        binding = payload.get("service_materialization")
+        if isinstance(binding, Mapping):
+            concerns.append(
+                "service-search-index-schema-materialization"
+                if binding.get("interface_profile") == "service-search-index-schema"
+                else "service-content-materialization"
+            )
+    return tuple(concerns)
+
+
 def project_realization_concern(
     concern_kind: str,
     value: object,
@@ -295,7 +327,9 @@ __all__ = [
     "RealizationConcernDescriptor",
     "RegisteredRealizationConcern",
     "project_realization_concern",
+    "processor_derived_provisioning_concern_kinds",
     "realization_concern_descriptor",
+    "realization_concern_descriptors",
     "registered_realization_concern_descriptors",
     "registered_realization_concerns",
     "resolve_realization_concern",

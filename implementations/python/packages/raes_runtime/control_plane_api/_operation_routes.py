@@ -92,9 +92,19 @@ def _register_operation_submission_routes(
         plan: ProvisioningPlanModel,
         identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
+        submitted_plan = _provisioning_plan(plan)
+        if submitted_plan.operations and not control_plane.is_planner_authorized_provisioning_plan(submitted_plan):
+            control_plane.record_audit(
+                action="submit_provisioning",
+                identity=identity.identity,
+                allowed=False,
+                target=str(request.url.path),
+                reason="planner-authorization-mismatch",
+            )
+            raise HTTPException(status_code=403, detail="provisioning plan is not planner-authorized")
         try:
             receipt = control_plane.submit_provisioning(
-                _provisioning_plan(plan),
+                submitted_plan,
                 idempotency_key=request.headers.get("idempotency-key", ""),
                 request_fingerprint=_request_fingerprint(
                     request,

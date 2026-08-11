@@ -116,6 +116,13 @@ def test_stateful_resources_parse_compile_and_plan_in_dependency_order():
         "generated_artifacts.indexer-certs"
     )
     assert requirements["provision.persistent-volume.indexer-data"].explicitness.value == "exact"
+    authority = {
+        entry.address: entry
+        for entry in execution.provisioning.realization_authority
+        if entry.requirement_kind in {"generated-artifact", "persistent-volume"}
+    }
+    assert authority.keys() == requirements.keys()
+    assert all(entry.mode.value == "exact" and entry.payload_pointer == "/spec" for entry in authority.values())
 
 
 def test_ssh_artifact_output_selection_survives_compile_and_plan():

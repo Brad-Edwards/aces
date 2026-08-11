@@ -652,7 +652,7 @@ def test_shared_plan_analysis_rejects_member_without_controller_ordering() -> No
         else operation
         for operation in provisioning.operations
     ]
-    direct_plan = ProvisioningPlan(operations=operations)
+    direct_plan = replace(provisioning, operations=operations)
 
     diagnostics = domain_topology_plan_diagnostics(direct_plan)
 
@@ -674,7 +674,7 @@ def test_shared_plan_analysis_rejects_account_binding_that_disagrees_with_node()
         payload = deepcopy(operation.payload)
         payload["domain_topology"]["domain_id"] = "other"
         operations.append(replace(operation, payload=payload))
-    direct_plan = ProvisioningPlan(operations=operations)
+    direct_plan = replace(provisioning, operations=operations)
 
     diagnostics = domain_topology_plan_diagnostics(direct_plan)
 
@@ -694,7 +694,7 @@ def test_control_plane_rejects_incoherent_domain_topology_before_backend_validat
         else operation
         for operation in provisioning.operations
     ]
-    direct_plan = ProvisioningPlan(operations=operations)
+    direct_plan = replace(provisioning, operations=operations)
     control_plane = RuntimeControlPlane(create_stub_target())
 
     receipt = control_plane.submit_provisioning(direct_plan)
@@ -723,6 +723,10 @@ def test_domain_topology_is_an_exact_realization_requirement_for_every_carrier()
     }
     assert all(requirement.explicitness.value == "exact" for requirement in requirements)
     assert all(requirement.provenance.value == "processor-derived" for requirement in requirements)
+    provisioning = plan(model, _manifest_with_domain_profiles("active_directory")).provisioning
+    authority = [entry for entry in provisioning.realization_authority if entry.requirement_kind == "domain-topology"]
+    assert {entry.address for entry in authority} == {requirement.address for requirement in requirements}
+    assert all(entry.mode.value == "exact" and entry.payload_pointer == "/domain_topology" for entry in authority)
 
 
 def test_domain_topology_readback_rejects_silent_approximation() -> None:

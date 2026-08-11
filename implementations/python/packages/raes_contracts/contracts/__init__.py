@@ -364,9 +364,11 @@ from .realization_plans import (
     OrchestrationPlanModel,
     PlanOperationModel,
     ProvisioningPlanModel,
+    RealizationAuthorityBoundModel,
     RealizationEnvelopeIdentityModel,
     RealizationObservationDisclosureModel,
     RealizationProvenanceEntryModel,
+    ResolvedRealizationAuthorityModel,
     RuntimeSnapshotEnvelopeModel,
     SnapshotEntryModel,
 )

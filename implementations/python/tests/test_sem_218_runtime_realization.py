@@ -23,6 +23,7 @@ from dataclasses import replace
 
 from raes import parse_sdl
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_backend_libvirt.envelopes import load_libvirt_realization_envelope
 from raes_backend_stubs.stubs import StubProvisioner, create_stub_target
 from raes_contracts.runtime_state import (
     ApplyResult,
@@ -61,9 +62,15 @@ def _plan_exact(manager: RuntimeManager):
 
 def _target_with_provisioner(provisioner) -> RuntimeTarget:
     base = create_stub_target()
+    envelope = load_libvirt_realization_envelope("generic")
+    manifest = replace(
+        base.manifest,
+        supported_contract_versions=base.manifest.supported_contract_versions | frozenset({"realization-envelope-v1"}),
+        realization_envelope=envelope,
+    )
     return RuntimeTarget(
         name=base.name,
-        manifest=base.manifest,
+        manifest=manifest,
         provisioner=provisioner,
         orchestrator=base.orchestrator,
         evaluator=base.evaluator,
@@ -182,7 +189,7 @@ def test_honest_apply_records_realization_provenance():
 def test_honoured_parameter_substitution_records_processor_derived_provenance():
     """I5: an honoured substituted value retains its processor-derived origin."""
 
-    manager = RuntimeManager(create_stub_target())
+    manager = RuntimeManager(_target_with_provisioner(create_stub_target().provisioner))
     plan = manager.plan(parse_sdl(textwrap.dedent(_PARAMETERIZED_SCENARIO)))
 
     result = manager.apply(plan)
