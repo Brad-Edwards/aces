@@ -1,9 +1,7 @@
 """Realization-requirement compilation (SEM-218)."""
 
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from raes.identifiers import QualifiedName
 from raes.nodes import NodeType
-from raes.realization_designation import resolve_realization_designation
 from raes.runtime_resource_limits import (
     RuntimeProcessResourceLimit,
     process_resource_limit_identity_digest,
@@ -37,6 +35,7 @@ from .addresses import (
     _node_address,
     _persistent_volume_address,
 )
+from .realization_authority_posture import designated_registered_posture, explicit_registered_posture
 
 
 def _append_source_artifact_requirement(
@@ -307,38 +306,15 @@ def _compiled_registered_realization(
         )
     if record is not None and not descriptor.includes_authored_value(authored_value):
         return None, None
-    if record is not None:
-        explicitness = record.classification
-        provenance = record.provenance
-        governing_scope = f"#{field_pointer}"
-        delegated = False
-        mode = RealizationAuthorityMode(explicitness.value)
-        source = (
-            RealizationResolutionSource.PROCESSOR_DERIVED
-            if provenance is ExplicitnessProvenance.PROCESSOR_DERIVED
-            else RealizationResolutionSource.AUTHORED_LEAF
-        )
-    else:
-        resolution = resolve_realization_designation(
-            scenario.instantiation_provenance.realization_designations,
+    posture = (
+        explicit_registered_posture(record, field_pointer)
+        if record is not None
+        else designated_registered_posture(
+            scenario,
             field_pointer=field_pointer,
-            owner_namespace=QualifiedName.parse(declaration_name).parts[:-1],
+            declaration_name=declaration_name,
         )
-        closed = resolution.closure is not None and resolution.closure.value == "closed-world"
-        explicitness = (
-            ExplicitnessClass.OPEN
-            if resolution.closure is not None and resolution.closure.value == "open-world"
-            else None
-        )
-        provenance = ExplicitnessProvenance.AUTHOR_DECLARED
-        governing_scope = resolution.governing_scope
-        delegated = resolution.delegated
-        mode = RealizationAuthorityMode.CLOSED if closed else RealizationAuthorityMode.OPEN
-        source = {
-            "scope": RealizationResolutionSource.AUTHORED_SCOPE,
-            "apparatus-default": RealizationResolutionSource.APPARATUS_DEFAULT,
-            "legacy-default": RealizationResolutionSource.LEGACY_DEFAULT,
-        }[resolution.source]
+    )
     address = _realization_requirement_address(
         scenario,
         section_name=section_name,
@@ -350,25 +326,25 @@ def _compiled_registered_realization(
         domain=REALIZATION_DOMAIN,
         requirement_kind=descriptor.concern_kind,
         payload_path=descriptor.payload_path,
-        mode=mode,
-        source=source,
-        provenance=provenance,
-        governing_scope=governing_scope,
-        delegated=delegated,
+        mode=posture.mode,
+        source=posture.source,
+        provenance=posture.provenance,
+        governing_scope=posture.governing_scope,
+        delegated=posture.delegated,
         verification_scope=descriptor.required_verification_scope(authored_value),
         required_observation_strength=descriptor.required_observation_strength(),
     )
-    if explicitness is None and not delegated:
+    if posture.explicitness is None and not posture.delegated:
         return None, authority
     requirement = CompiledRealizationRequirement(
         field_path=registered.field_path,
         address=address,
         domain=REALIZATION_DOMAIN,
         requirement_kind=descriptor.concern_kind,
-        explicitness=explicitness,
-        provenance=provenance,
-        governing_scope=governing_scope,
-        delegated=delegated,
+        explicitness=posture.explicitness,
+        provenance=posture.provenance,
+        governing_scope=posture.governing_scope,
+        delegated=posture.delegated,
         verification_scope=descriptor.required_verification_scope(authored_value),
         required_observation_strength=descriptor.required_observation_strength(),
         value_constraints=value_constraints,

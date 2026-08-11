@@ -4,19 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from copy import deepcopy
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
-from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
-from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.contracts.time_model import validate_time_runtime_transition
 from raes_contracts.diagnostics import Diagnostic
-from raes_contracts.planning import ProvisioningPlan, RealizationAuthorityMode
+from raes_contracts.planning import ProvisioningPlan
 from raes_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry, RuntimeSnapshot
 from raes_processor.models import CompiledRealizationRequirement
 from raes_processor.planner import (
-    realization_authority_diagnostics,
     realization_authority_disclosure,
     realization_disclosure,
     sanitize_plan_realization_snapshot,
@@ -28,6 +25,7 @@ from .backend_account_credentials import (
     sanitize_account_credential_result,
     value_free_backend_diagnostics,
 )
+from .backend_realization_authority import _apply_authority_diagnostics, _RealizationApplyContext
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
 from .participant_result_contracts import (
@@ -38,14 +36,6 @@ from .proposition_truth_contracts import proposition_truth_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
-
-
-@dataclass(frozen=True)
-class _RealizationApplyContext:
-    requirements: tuple[CompiledRealizationRequirement, ...] = ()
-    plan: ProvisioningPlan | None = None
-    manifest: BackendManifest | None = None
-    artifact_availability: ArtifactAvailabilityContext | None = None
 
 
 def _call_backend_diagnostics(
@@ -85,49 +75,34 @@ def _call_backend_apply(
         if submitted_plan is not None:
             realization_context = replace(realization_context, plan=submitted_plan)
     baseline_snapshot = deepcopy(snapshot)
-    if realization_context.plan is not None:
-        authority_diagnostics = realization_authority_diagnostics(
-            realization_context.plan,
-            realization_context.manifest,
+    authority_diagnostics = _apply_authority_diagnostics(realization_context, address)
+    if authority_diagnostics:
+        finalized = ApplyResult(
+            success=False,
+            snapshot=baseline_snapshot,
+            diagnostics=authority_diagnostics,
         )
-        if (
-            not authority_diagnostics
-            and realization_context.manifest is None
-            and any(
-                entry.mode is not RealizationAuthorityMode.CLOSED
-                for entry in realization_context.plan.realization_authority
+    else:
+        backend_snapshot = deepcopy(snapshot)
+        backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
+        try:
+            result = method(*backend_args)
+        except (TypeError, ValueError):
+            finalized = _failed_apply_result(
+                baseline_snapshot,
+                _backend_contract_invalid(address, "Backend could not construct a valid apply result."),
             )
-        ):
-            authority_diagnostics = [
-                _backend_contract_invalid(
-                    address,
-                    "Resolved realization authority requires the selected backend manifest.",
-                )
-            ]
-        if authority_diagnostics:
-            return ApplyResult(
-                success=False,
-                snapshot=baseline_snapshot,
-                diagnostics=authority_diagnostics,
+        except Exception as exc:
+            finalized = _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
+        else:
+            finalized = _finalize_backend_apply(
+                result,
+                address=address,
+                baseline_snapshot=baseline_snapshot,
+                realization=realization_context,
+                information_state_context_resolver=information_state_context_resolver,
             )
-    backend_snapshot = deepcopy(snapshot)
-    backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
-    try:
-        result = method(*backend_args)
-    except (TypeError, ValueError):
-        return _failed_apply_result(
-            baseline_snapshot,
-            _backend_contract_invalid(address, "Backend could not construct a valid apply result."),
-        )
-    except Exception as exc:
-        return _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
-    return _finalize_backend_apply(
-        result,
-        address=address,
-        baseline_snapshot=baseline_snapshot,
-        realization=realization_context,
-        information_state_context_resolver=information_state_context_resolver,
-    )
+    return finalized
 
 
 def _finalize_backend_apply(
@@ -154,30 +129,12 @@ def _finalize_backend_apply(
         )
     else:
         assert isinstance(result, ApplyResult)
-        contract_diagnostics = _backend_snapshot_contract_diagnostics(
+        contract_diagnostics, realization_provenance = _post_apply_contract_result(
             result,
             baseline_snapshot,
+            realization,
             information_state_context_resolver=information_state_context_resolver,
         )
-        realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
-        if not contract_diagnostics and realization.plan is not None:
-            # The backend-facing plan is the authority for registered concerns.
-            contract_diagnostics, realization_provenance = realization_authority_disclosure(
-                realization.plan,
-                result.snapshot,
-                manifest=realization.manifest,
-            )
-            supplemental = _supplemental_realization_requirements(realization)
-            if not contract_diagnostics and supplemental:
-                supplemental_diagnostics, supplemental_provenance = realization_disclosure(
-                    supplemental,
-                    realization.plan,
-                    result.snapshot,
-                    manifest=realization.manifest,
-                    artifact_availability=realization.artifact_availability,
-                )
-                contract_diagnostics.extend(supplemental_diagnostics)
-                realization_provenance = (*realization_provenance, *supplemental_provenance)
         if contract_diagnostics:
             finalized = ApplyResult(
                 success=False,
@@ -195,6 +152,39 @@ def _finalize_backend_apply(
             if realization_provenance and finalized.success:
                 finalized = _with_realization_provenance(finalized, realization_provenance)
     return finalized
+
+
+def _post_apply_contract_result(
+    result: ApplyResult,
+    baseline_snapshot: RuntimeSnapshot,
+    realization: _RealizationApplyContext,
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
+) -> tuple[list[Diagnostic], tuple[RealizationProvenanceEntry, ...]]:
+    diagnostics = _backend_snapshot_contract_diagnostics(
+        result,
+        baseline_snapshot,
+        information_state_context_resolver=information_state_context_resolver,
+    )
+    provenance: tuple[RealizationProvenanceEntry, ...] = ()
+    if not diagnostics and realization.plan is not None:
+        diagnostics, provenance = realization_authority_disclosure(
+            realization.plan,
+            result.snapshot,
+            manifest=realization.manifest,
+        )
+        supplemental = _supplemental_realization_requirements(realization)
+        if not diagnostics and supplemental:
+            supplemental_diagnostics, supplemental_provenance = realization_disclosure(
+                supplemental,
+                realization.plan,
+                result.snapshot,
+                manifest=realization.manifest,
+                artifact_availability=realization.artifact_availability,
+            )
+            diagnostics.extend(supplemental_diagnostics)
+            provenance = (*provenance, *supplemental_provenance)
+    return diagnostics, provenance
 
 
 def _backend_snapshot_contract_diagnostics(

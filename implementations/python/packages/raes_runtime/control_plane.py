@@ -8,7 +8,7 @@ async control plane so non-Python runtimes can evolve behind the same API.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from threading import RLock
 from uuid import uuid4
 
@@ -112,7 +112,6 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         crossing_policy_resolver: ParticipantCrossingPolicyResolver | None = None,
         information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
         enforce_final_sink_flow_control: bool = True,
-        trusted_provisioning_plans: Iterable[ProvisioningPlan] = (),
     ) -> None:
         _require_crossing_policy_configuration(target, crossing_policy_resolver)
         _require_final_sink_flow_control_configuration(crossing_policy_resolver, enforce_final_sink_flow_control)
@@ -126,9 +125,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         self._information_state_context_resolver = information_state_context_resolver
         self._participant_control_lock = RLock()
         self._trusted_provisioning_plan_lock = RLock()
-        self._trusted_provisioning_plan_digests = {
-            provisioning_plan_digest(plan) for plan in trusted_provisioning_plans
-        }
+        self._trusted_provisioning_plan_digests: set[str] = set()
         require_participant_information_state_snapshot(
             self._snapshot,
             information_state_context_resolver,

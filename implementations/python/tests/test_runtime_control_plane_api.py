@@ -408,11 +408,8 @@ nodes:
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     store = LocalControlPlaneStore(tmp_path / "cp-store")
-    control_plane = RuntimeControlPlane(
-        target,
-        store=store,
-        trusted_provisioning_plans=(execution_plan.provisioning,),
-    )
+    control_plane = RuntimeControlPlane(target, store=store)
+    control_plane.register_planner_produced_provisioning_plan(execution_plan.provisioning)
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),
@@ -446,10 +443,8 @@ nodes:
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
-    control_plane = RuntimeControlPlane(
-        target,
-        trusted_provisioning_plans=(execution_plan.provisioning,),
-    )
+    control_plane = RuntimeControlPlane(target)
+    control_plane.register_planner_produced_provisioning_plan(execution_plan.provisioning)
     app = create_control_plane_app(control_plane, security=_test_security(target.name))
     payload = _provisioning_payload(execution_plan.provisioning)
     closed_entry = next(

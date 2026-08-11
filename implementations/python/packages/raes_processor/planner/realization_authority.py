@@ -65,12 +65,7 @@ def _applicable_descriptor(operation: object, descriptor: object) -> bool:
     return descriptor.includes_authored_value(authored_value)
 
 
-def realization_authority_diagnostics(
-    plan: ProvisioningPlan,
-    manifest: BackendManifest | None = None,
-) -> list[Diagnostic]:
-    """Recompute registry-derived authority completeness from plan operations."""
-
+def _expected_realization_authority(plan: ProvisioningPlan) -> dict[tuple[str, str], str]:
     expected: dict[tuple[str, str], str] = {}
     for operation in plan.operations:
         if operation.action is ChangeAction.DELETE:
@@ -83,70 +78,108 @@ def realization_authority_diagnostics(
             operation.payload,
         ):
             expected[(operation.address, concern_kind)] = _payload_pointer(CONCERN_PAYLOAD_PATH[concern_kind])
-    actual = {(entry.address, entry.requirement_kind) for entry in plan.realization_authority}
-    missing = sorted(set(expected) - set(actual))
-    if missing:
-        address, kind = missing[0]
-        return [
-            Diagnostic(
-                code="realization.authority-incomplete",
-                domain="runtime-realization",
-                address=address,
-                message=f"Provisioning plan is missing resolved authority for '{kind}'.",
-            )
-        ]
-    excess = sorted(set(actual) - set(expected))
-    if excess:
-        address, kind = excess[0]
-        return [
-            Diagnostic(
-                code="realization.authority-excess",
-                domain="runtime-realization",
-                address=address,
-                message=f"Provisioning plan carries authority for inapplicable concern '{kind}'.",
-            )
-        ]
+    return expected
+
+
+def _authority_payload_pointer_diagnostic(
+    plan: ProvisioningPlan,
+    expected: dict[tuple[str, str], str],
+) -> Diagnostic | None:
+    diagnostic = None
     for identity, pointer in expected.items():
         entry = planned_realization_authority(plan, *identity)
         if entry is None:
             raise AssertionError("realization authority identity disappeared after completeness validation")
         if entry.payload_pointer != pointer:
-            return [
-                Diagnostic(
-                    code="realization.authority-payload-pointer-invalid",
-                    domain=entry.domain,
-                    address=entry.address,
-                    message=f"Provisioning plan authority uses a non-canonical payload pointer for '{entry.requirement_kind}'.",
-                )
-            ]
-    selection_diagnostics = planned_realization_selection_diagnostics(plan)
-    if selection_diagnostics:
-        return selection_diagnostics[:1]
-    if manifest is not None:
-        target_envelope = manifest.realization_envelope.identity if manifest.realization_envelope is not None else None
-        requires_envelope = any(
-            entry.mode in {RealizationAuthorityMode.OPEN, RealizationAuthorityMode.CONSTRAINED}
-            for entry in plan.realization_authority
+            diagnostic = Diagnostic(
+                code="realization.authority-payload-pointer-invalid",
+                domain=entry.domain,
+                address=entry.address,
+                message=(
+                    f"Provisioning plan authority uses a non-canonical payload pointer for '{entry.requirement_kind}'."
+                ),
+            )
+            break
+    return diagnostic
+
+
+def _authority_inventory_diagnostic(
+    plan: ProvisioningPlan,
+    expected: dict[tuple[str, str], str],
+) -> Diagnostic | None:
+    actual = {(entry.address, entry.requirement_kind) for entry in plan.realization_authority}
+    missing = sorted(set(expected) - actual)
+    excess = sorted(actual - set(expected))
+    diagnostic = None
+    if missing:
+        address, kind = missing[0]
+        diagnostic = Diagnostic(
+            code="realization.authority-incomplete",
+            domain="runtime-realization",
+            address=address,
+            message=f"Provisioning plan is missing resolved authority for '{kind}'.",
         )
-        if requires_envelope and (
-            plan.realization_envelope is None or target_envelope is None or plan.realization_envelope != target_envelope
-        ):
-            return [
-                Diagnostic(
-                    code="realization.authority-envelope-mismatch",
-                    domain="runtime-realization",
-                    address="runtime.realization-envelope",
-                    message="Provisioning plan authority was not admitted against the selected realization envelope.",
-                )
-            ]
+    elif excess:
+        address, kind = excess[0]
+        diagnostic = Diagnostic(
+            code="realization.authority-excess",
+            domain="runtime-realization",
+            address=address,
+            message=f"Provisioning plan carries authority for inapplicable concern '{kind}'.",
+        )
+    else:
+        diagnostic = _authority_payload_pointer_diagnostic(plan, expected)
+    return diagnostic
+
+
+def _requires_realization_envelope(plan: ProvisioningPlan) -> bool:
+    return any(
+        entry.mode in {RealizationAuthorityMode.OPEN, RealizationAuthorityMode.CONSTRAINED}
+        for entry in plan.realization_authority
+    )
+
+
+def _manifest_authority_diagnostic(
+    plan: ProvisioningPlan,
+    manifest: BackendManifest,
+) -> Diagnostic | None:
+    target_envelope = manifest.realization_envelope.identity if manifest.realization_envelope is not None else None
+    envelope_mismatch = _requires_realization_envelope(plan) and (
+        plan.realization_envelope is None or target_envelope is None or plan.realization_envelope != target_envelope
+    )
+    diagnostic = None
+    if envelope_mismatch:
+        diagnostic = Diagnostic(
+            code="realization.authority-envelope-mismatch",
+            domain="runtime-realization",
+            address="runtime.realization-envelope",
+            message="Provisioning plan authority was not admitted against the selected realization envelope.",
+        )
+    else:
         try:
             requirements = _compiled_runtime_views(plan)
         except (TypeError, ValueError):
-            return [_invalid_runtime_view_diagnostic(plan)]
-        support_diagnostics = realization_support_diagnostics(requirements, manifest)
-        if support_diagnostics:
-            return support_diagnostics[:1]
-    return []
+            diagnostic = _invalid_runtime_view_diagnostic(plan)
+        else:
+            support_diagnostics = realization_support_diagnostics(requirements, manifest)
+            diagnostic = support_diagnostics[0] if support_diagnostics else None
+    return diagnostic
+
+
+def realization_authority_diagnostics(
+    plan: ProvisioningPlan,
+    manifest: BackendManifest | None = None,
+) -> list[Diagnostic]:
+    """Recompute registry-derived authority completeness from plan operations."""
+
+    expected = _expected_realization_authority(plan)
+    diagnostic = _authority_inventory_diagnostic(plan, expected)
+    if diagnostic is None:
+        selection_diagnostics = planned_realization_selection_diagnostics(plan)
+        diagnostic = selection_diagnostics[0] if selection_diagnostics else None
+    if diagnostic is None and manifest is not None:
+        diagnostic = _manifest_authority_diagnostic(plan, manifest)
+    return [diagnostic] if diagnostic is not None else []
 
 
 def _explicitness(mode: RealizationAuthorityMode) -> ExplicitnessClass:
@@ -317,18 +350,43 @@ def _constraint_diagnostic(
     realized = (
         _pointer_value(snapshot_entry.payload, authority.payload_pointer) if snapshot_entry is not None else _MISSING
     )
-    if realized is _MISSING:
-        return None
-    try:
-        projection = project_realization_concern(authority.requirement_kind, realized, observed=True)
-    except (TypeError, ValueError):
-        return _runtime_authority_diagnostic(authority)
-    if any(
-        (value := _bound_value(projection, bound)) is _MISSING or not scalar_in_domain(value, bound.domain)
-        for bound in authority.bounds
-    ):
-        return _runtime_authority_diagnostic(authority)
-    return None
+    diagnostic = None
+    if realized is not _MISSING:
+        try:
+            projection = project_realization_concern(authority.requirement_kind, realized, observed=True)
+        except (TypeError, ValueError):
+            diagnostic = _runtime_authority_diagnostic(authority)
+        else:
+            outside_bounds = any(
+                (value := _bound_value(projection, bound)) is _MISSING or not scalar_in_domain(value, bound.domain)
+                for bound in authority.bounds
+            )
+            diagnostic = _runtime_authority_diagnostic(authority) if outside_bounds else None
+    return diagnostic
+
+
+def _evaluate_authority_disclosure(
+    authority: ResolvedRealizationAuthority,
+    runtime_views: dict[tuple[str, str], CompiledRealizationRequirement],
+    declared_ops: dict[str, object],
+    returned_snapshot: RuntimeSnapshot,
+    manifest: BackendManifest | None,
+) -> tuple[Diagnostic | None, RealizationProvenanceEntry | None]:
+    entry = None
+    if authority.mode is RealizationAuthorityMode.CLOSED:
+        diagnostic = _closed_materialization_diagnostic(authority, declared_ops, returned_snapshot)
+    else:
+        requirement = runtime_views[(authority.address, authority.requirement_kind)]
+        diagnostic, entry = evaluate_registered_realization(
+            requirement,
+            declared_ops,
+            returned_snapshot,
+            manifest=manifest,
+        )
+        if diagnostic is None and authority.mode is RealizationAuthorityMode.CONSTRAINED:
+            diagnostic = _constraint_diagnostic(authority, returned_snapshot)
+            entry = None if diagnostic is not None else entry
+    return diagnostic, entry
 
 
 def realization_authority_disclosure(
@@ -354,22 +412,13 @@ def realization_authority_disclosure(
     diagnostics: list[Diagnostic] = []
     provenance: list[RealizationProvenanceEntry] = []
     for authority in declared_plan.realization_authority:
-        if authority.mode is RealizationAuthorityMode.CLOSED:
-            diagnostic = _closed_materialization_diagnostic(authority, declared_ops, returned_snapshot)
-            entry = None
-        else:
-            entry = None
-            requirement = runtime_views[(authority.address, authority.requirement_kind)]
-            diagnostic, entry = evaluate_registered_realization(
-                requirement,
-                declared_ops,
-                returned_snapshot,
-                manifest=manifest,
-            )
-            if diagnostic is None and authority.mode is RealizationAuthorityMode.CONSTRAINED:
-                diagnostic = _constraint_diagnostic(authority, returned_snapshot)
-                if diagnostic is not None:
-                    entry = None
+        diagnostic, entry = _evaluate_authority_disclosure(
+            authority,
+            runtime_views,
+            declared_ops,
+            returned_snapshot,
+            manifest,
+        )
         if diagnostic is not None:
             diagnostics.append(diagnostic)
         if entry is not None:

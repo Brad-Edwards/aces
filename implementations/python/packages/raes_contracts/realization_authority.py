@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import suppress
 from typing import cast
 
 from .bounded_domains import scalar_in_domain
@@ -33,20 +34,26 @@ def _planned_pointer_value(value: object, pointer: str) -> object:
     return current
 
 
-def _process_resource_limit_identity_digest(value: object) -> str | None:
-    """Derive the portable process-limit identity from its projected record."""
+def _process_resource_limit_identity_payload(value: object) -> JsonValue | None:
+    payload: JsonValue | None = None
+    if isinstance(value, Mapping):
+        resource = value.get("resource", _MISSING_REALIZATION_SELECTION)
+        subject = value.get("subject", _MISSING_REALIZATION_SELECTION)
+        scope = value.get("scope", _MISSING_REALIZATION_SELECTION)
+        if (
+            resource is not _MISSING_REALIZATION_SELECTION
+            and scope is not _MISSING_REALIZATION_SELECTION
+            and isinstance(subject, Mapping)
+        ):
+            payload = _process_resource_limit_identity_mapping(resource, subject, scope)
+    return payload
 
-    if not isinstance(value, Mapping):
-        return None
-    resource = value.get("resource", _MISSING_REALIZATION_SELECTION)
-    subject = value.get("subject", _MISSING_REALIZATION_SELECTION)
-    scope = value.get("scope", _MISSING_REALIZATION_SELECTION)
-    if (
-        resource is _MISSING_REALIZATION_SELECTION
-        or scope is _MISSING_REALIZATION_SELECTION
-        or not isinstance(subject, Mapping)
-    ):
-        return None
+
+def _process_resource_limit_identity_mapping(
+    resource: object,
+    subject: Mapping[object, object],
+    scope: object,
+) -> JsonValue | None:
     subject_keys = (
         "name",
         "pid",
@@ -58,21 +65,28 @@ def _process_resource_limit_identity_digest(value: object) -> str | None:
         "group",
         "working_directory",
     )
-    if any(key not in subject for key in subject_keys):
-        return None
-    try:
-        return canonical_json_digest(
-            cast(
-                JsonValue,
-                {
-                    "resource": resource,
-                    "subject": {key: subject[key] for key in subject_keys},
-                    "scope": scope,
-                },
-            )
+    payload = None
+    if all(key in subject for key in subject_keys):
+        payload = cast(
+            JsonValue,
+            {
+                "resource": resource,
+                "subject": {key: subject[key] for key in subject_keys},
+                "scope": scope,
+            },
         )
-    except (TypeError, ValueError):
-        return None
+    return payload
+
+
+def _process_resource_limit_identity_digest(value: object) -> str | None:
+    """Derive the portable process-limit identity from its projected record."""
+
+    payload = _process_resource_limit_identity_payload(value)
+    digest = None
+    if payload is not None:
+        with suppress(TypeError, ValueError):
+            digest = canonical_json_digest(payload)
+    return digest
 
 
 def _planned_bound_value(
@@ -103,27 +117,42 @@ def planned_realization_selection_diagnostics(plan: ProvisioningPlan) -> list[Di
     operations = {
         operation.address: operation for operation in plan.operations if operation.action is not ChangeAction.DELETE
     }
+    diagnostic = None
     for candidate in plan.realization_authority:
-        authority = planned_realization_authority(
-            plan,
-            candidate.address,
-            candidate.requirement_kind,
-        )
-        operation = operations.get(candidate.address)
-        if authority is None or operation is None:
-            continue
-        selected = _planned_pointer_value(operation.payload, authority.payload_pointer)
-        if selected is _MISSING_REALIZATION_SELECTION:
-            continue
-        if authority.mode is RealizationAuthorityMode.CLOSED and selected not in (None, "", [], {}):
-            return [_invalid_realization_selection(authority)]
-        if authority.mode is not RealizationAuthorityMode.CONSTRAINED:
-            continue
-        for bound in authority.bounds:
-            value = _planned_bound_value(selected, authority, bound)
-            if value is _MISSING_REALIZATION_SELECTION or not scalar_in_domain(value, bound.domain):
-                return [_invalid_realization_selection(authority)]
-    return []
+        diagnostic = _planned_authority_selection_diagnostic(plan, candidate, operations)
+        if diagnostic is not None:
+            break
+    return [diagnostic] if diagnostic is not None else []
+
+
+def _planned_authority_selection_diagnostic(
+    plan: ProvisioningPlan,
+    candidate: ResolvedRealizationAuthority,
+    operations: Mapping[str, object],
+) -> Diagnostic | None:
+    authority = planned_realization_authority(plan, candidate.address, candidate.requirement_kind)
+    operation = operations.get(candidate.address)
+    selected = (
+        _planned_pointer_value(getattr(operation, "payload", None), authority.payload_pointer)
+        if authority is not None and operation is not None
+        else _MISSING_REALIZATION_SELECTION
+    )
+    invalid = authority is not None and _planned_selection_is_invalid(selected, authority)
+    return _invalid_realization_selection(authority) if invalid and authority is not None else None
+
+
+def _planned_selection_is_invalid(selected: object, authority: ResolvedRealizationAuthority) -> bool:
+    invalid = False
+    if selected is not _MISSING_REALIZATION_SELECTION:
+        if authority.mode is RealizationAuthorityMode.CLOSED:
+            invalid = selected not in (None, "", [], {})
+        elif authority.mode is RealizationAuthorityMode.CONSTRAINED:
+            invalid = any(
+                (value := _planned_bound_value(selected, authority, bound)) is _MISSING_REALIZATION_SELECTION
+                or not scalar_in_domain(value, bound.domain)
+                for bound in authority.bounds
+            )
+    return invalid
 
 
 def _invalid_realization_selection(authority: ResolvedRealizationAuthority) -> Diagnostic:

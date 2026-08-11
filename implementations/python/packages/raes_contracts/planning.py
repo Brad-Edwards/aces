@@ -121,6 +121,26 @@ class RealizationAuthorityBound:
             raise ValueError("authority bound identity_digest must be a sha256 digest")
 
 
+def _require_authority_bounds(
+    mode: RealizationAuthorityMode,
+    bounds: tuple[RealizationAuthorityBound, ...],
+) -> None:
+    if mode is RealizationAuthorityMode.CONSTRAINED and not bounds:
+        raise ValueError("constrained realization authority requires typed bounds")
+    if mode is not RealizationAuthorityMode.CONSTRAINED and bounds:
+        raise ValueError("only constrained realization authority may carry typed bounds")
+
+
+def _require_authority_source(mode: RealizationAuthorityMode, source: RealizationResolutionSource) -> None:
+    if source is RealizationResolutionSource.LEGACY_DEFAULT and mode is not RealizationAuthorityMode.CLOSED:
+        raise ValueError("legacy realization default must resolve closed")
+    if source is RealizationResolutionSource.APPARATUS_DEFAULT and mode not in {
+        RealizationAuthorityMode.CLOSED,
+        RealizationAuthorityMode.OPEN,
+    }:
+        raise ValueError("apparatus realization default must resolve open or closed")
+
+
 @dataclass(frozen=True)
 class ResolvedRealizationAuthority:
     """Portable, value-safe author boundary for one planned concern."""
@@ -147,20 +167,8 @@ class ResolvedRealizationAuthority:
             field_name="resolved realization authority payload_pointer",
             allow_root=False,
         )
-        if self.mode is RealizationAuthorityMode.CONSTRAINED and not self.bounds:
-            raise ValueError("constrained realization authority requires typed bounds")
-        if self.mode is not RealizationAuthorityMode.CONSTRAINED and self.bounds:
-            raise ValueError("only constrained realization authority may carry typed bounds")
-        if (
-            self.source is RealizationResolutionSource.LEGACY_DEFAULT
-            and self.mode is not RealizationAuthorityMode.CLOSED
-        ):
-            raise ValueError("legacy realization default must resolve closed")
-        if self.source is RealizationResolutionSource.APPARATUS_DEFAULT and self.mode not in {
-            RealizationAuthorityMode.CLOSED,
-            RealizationAuthorityMode.OPEN,
-        }:
-            raise ValueError("apparatus realization default must resolve open or closed")
+        _require_authority_bounds(self.mode, self.bounds)
+        _require_authority_source(self.mode, self.source)
 
 
 def planned_realization_authority(

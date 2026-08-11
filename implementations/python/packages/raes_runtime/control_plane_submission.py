@@ -71,27 +71,26 @@ def _provisioning_submission_diagnostics(
 ) -> list[Diagnostic]:
     if manifest is None:
         raise ValueError("provisioning submission admission requires a backend manifest")
-    authority_diagnostics = realization_authority_diagnostics(plan, manifest)
-    if authority_diagnostics:
-        return authority_diagnostics[:1]
-    diagnostic = _account_credential_submission_diagnostic(plan, manifest) or _stateful_submission_diagnostic(
-        plan, manifest
-    )
-    if diagnostic is not None:
-        return [diagnostic]
-    service_diagnostics = service_materialization_plan_diagnostics(
-        plan,
-        manifest.provisioner,
-        manifest.realization_envelope,
-        manifest.realization_support,
-    )
-    if service_diagnostics:
-        return service_diagnostics[:1]
-    return domain_topology_plan_diagnostics(
-        plan,
-        snapshot=snapshot,
-        supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
-    )[:1]
+    diagnostics = realization_authority_diagnostics(plan, manifest)
+    if not diagnostics:
+        diagnostic = _account_credential_submission_diagnostic(plan, manifest) or _stateful_submission_diagnostic(
+            plan, manifest
+        )
+        diagnostics = [diagnostic] if diagnostic is not None else []
+    if not diagnostics:
+        diagnostics = service_materialization_plan_diagnostics(
+            plan,
+            manifest.provisioner,
+            manifest.realization_envelope,
+            manifest.realization_support,
+        )
+    if not diagnostics:
+        diagnostics = domain_topology_plan_diagnostics(
+            plan,
+            snapshot=snapshot,
+            supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
+        )
+    return diagnostics[:1]
 
 
 def _account_credential_submission_diagnostic(
