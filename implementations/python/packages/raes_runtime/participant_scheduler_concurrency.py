@@ -138,48 +138,25 @@ def _reserve_concurrent_actions(
     )
 
 
-def _release_concurrent_reservations(
+def _restore_pre_batch_snapshot(
     run: SchedulerRunState,
-    contexts: tuple[_DueActionContext, ...],
-    policy_address: str,
+    pre_batch: RuntimeSnapshot,
 ) -> None:
-    """Undo ``_reserve_concurrent_actions`` when the batch never produced results.
+    """Undo ``_reserve_concurrent_actions`` when the batch produced no results.
 
     Reservations are taken before the backend batch call, and only
     ``_commit_concurrent_result`` clears a participant's ``in_flight``. Abandoning
-    the batch without releasing them would leave participants permanently
-    in-flight and the service non-quiescent, so no later occurrence can be
-    admitted for them.
+    the batch without undoing them would leave participants in-flight and the
+    service non-quiescent with nothing to complete them.
 
-    The reservation is reverted rather than settled as a failed action. Without
-    per-action results there is no basis for the rest of a failed-action
-    transition (``next_tick``, ``next_action_index``, lifecycle), and recording a
-    failure while leaving those untouched would let the same occurrence be
-    serviced again at the same tick. Reverting restores the pre-batch state
-    exactly, so the returned failure snapshot reports the diagnostic without
-    inventing a half-applied occurrence.
+    The pre-batch snapshot is reinstated wholesale rather than adjusted field by
+    field. Without per-action results there is no basis for a failed-action
+    transition (``next_tick``, ``next_action_index``, lifecycle), and arithmetic
+    on the counters has to agree with pre-existing in-flight work that
+    ``_due_contexts`` does not exclude. Reinstating is exact for both.
     """
 
-    states = dict(run.working.participant_autonomous_execution_states)
-    for context in contexts:
-        payload = states.get(context.key)
-        if payload is None:
-            continue
-        state = ParticipantAutonomousExecutionStateModel.model_validate(payload)
-        # Exactly the one reservation this batch added is withdrawn. Clearing the
-        # aggregate instead would erase in-flight work a previous batch is still
-        # accounting for, since `_due_contexts` does not require `in_flight == 0`.
-        states[context.key] = state.model_copy(
-            update={
-                "in_flight": state.in_flight - 1,
-                "attempted_actions": state.attempted_actions - 1,
-            }
-        ).model_dump(mode="json")
-    run.working = run.working.with_entries(
-        dict(run.working.entries),
-        participant_autonomous_execution_states=states,
-    )
-    _finish_concurrent_service_state(run, policy_address)
+    run.working = pre_batch
 
 
 def _finish_concurrent_service_state(
@@ -392,6 +369,7 @@ def _execute_concurrent_batch(batch: _ConcurrentBatch) -> None:
         _bound_action_request(context, batch.run.working, state)
         for context, state in zip(selected_contexts, selected_states, strict=True)
     )
+    pre_batch = batch.run.working
     _reserve_concurrent_actions(batch.run, selected_contexts)
     base = batch.run.working
     # The batch method is backend-supplied. A raising or miscounting backend is a
@@ -401,7 +379,7 @@ def _execute_concurrent_batch(batch: _ConcurrentBatch) -> None:
         results = batch_method(requests, base, len(requests))
         result_count = len(results)
     except Exception as exc:  # noqa: BLE001 - backend trust boundary
-        _release_concurrent_reservations(batch.run, selected_contexts, batch.policy.address)
+        _restore_pre_batch_snapshot(batch.run, pre_batch)
         _set_concurrent_failure(
             batch.run,
             Diagnostic(
@@ -417,7 +395,7 @@ def _execute_concurrent_batch(batch: _ConcurrentBatch) -> None:
         )
         return
     if result_count != len(requests):
-        _release_concurrent_reservations(batch.run, selected_contexts, batch.policy.address)
+        _restore_pre_batch_snapshot(batch.run, pre_batch)
         _set_concurrent_failure(
             batch.run,
             Diagnostic(

@@ -54,7 +54,7 @@ def _execution_state(
     )
 
 
-def _service_state() -> ParticipantExecutionServiceStateModel:
+def _service_state(*, in_flight: int = 0) -> ParticipantExecutionServiceStateModel:
     digest = "sha256:" + "0" * 64
     return ParticipantExecutionServiceStateModel(
         execution_scope_ref="participant.execution-scope.green",
@@ -67,14 +67,14 @@ def _service_state() -> ParticipantExecutionServiceStateModel:
         readiness="ready",
         accepting_new_work=True,
         draining=False,
-        quiescent=True,
+        quiescent=in_flight == 0,
         resources_released=False,
         policy_digest=digest,
         binding_digest=digest,
         time_declaration_digest=digest,
         capacity=2,
         reserved=0,
-        in_flight=0,
+        in_flight=in_flight,
         last_transition_ref=f"operation:{_POLICY_ADDRESS}:start:generation-1",
         evidence_refs=("evidence.green-login.native-action",),
     )
@@ -92,7 +92,7 @@ def _batch(participant_runtime: object, *, in_flight: int = 0) -> SimpleNamespac
             _state_key(address): state.model_dump(mode="json")
             for address, state in zip(_PARTICIPANTS, states, strict=True)
         },
-        participant_execution_services={_POLICY_ADDRESS: _service_state().model_dump(mode="json")},
+        participant_execution_services={_POLICY_ADDRESS: _service_state(in_flight=in_flight).model_dump(mode="json")},
     )
     run = SchedulerRunState(working=snapshot, diagnostics=[], changed=[])
     contexts = [
@@ -122,21 +122,15 @@ def _stub_request_binding(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _assert_reservations_released(run: SchedulerRunState, before: RuntimeSnapshot) -> None:
-    service = ParticipantExecutionServiceStateModel.model_validate(
-        run.working.participant_execution_services[_POLICY_ADDRESS]
-    )
-    assert (service.in_flight, service.reserved, service.quiescent) == (0, 0, True)
-    for address in _PARTICIPANTS:
-        state = ParticipantAutonomousExecutionStateModel.model_validate(
-            run.working.participant_autonomous_execution_states[_state_key(address)]
-        )
-        assert state.in_flight == 0
-        assert state.attempted_actions == state.succeeded_actions + state.failed_actions + state.in_flight
-    # Reverting to the pre-batch state is the point: a partly-applied occurrence
-    # (a recorded failure whose next_tick/next_action_index never advanced) could
-    # be serviced again at the same tick.
-    assert run.working.participant_autonomous_execution_states == before.participant_autonomous_execution_states
-    assert run.working.participant_execution_services == before.participant_execution_services
+    """The failure snapshot must equal the pre-batch snapshot exactly.
+
+    A partly-applied occurrence (a recorded failure whose next_tick and
+    next_action_index never advanced) could be serviced again at the same tick,
+    and adjusting counters by hand has to stay consistent with in-flight work
+    from an earlier batch.
+    """
+
+    assert run.working == before
 
 
 def test_miscounted_backend_batch_is_reported_and_releases_reservations():
@@ -202,4 +196,9 @@ def test_rollback_withdraws_only_this_batch_reservation():
         )
         assert (state.in_flight, state.attempted_actions) == (1, 1)
         assert state.attempted_actions == state.succeeded_actions + state.failed_actions + state.in_flight
-    assert batch.run.working.participant_autonomous_execution_states == before.participant_autonomous_execution_states
+    # Service readback must not claim zero in-flight while earlier work is live.
+    service = ParticipantExecutionServiceStateModel.model_validate(
+        batch.run.working.participant_execution_services[_POLICY_ADDRESS]
+    )
+    assert (service.in_flight, service.quiescent) == (1, False)
+    assert batch.run.working == before
