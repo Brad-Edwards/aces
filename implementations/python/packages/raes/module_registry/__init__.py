@@ -21,7 +21,6 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 from urllib.error import URLError
 from urllib.request import Request, urlopen
-from uuid import uuid4
 
 # The submodule imports below retain the package's documented domain re-exports
 # plus the private ``_sha256_digest`` / ``_signable_payload`` /
@@ -76,6 +75,7 @@ from ._extraction import (
 from ._filesystem import (
     _install_version_directory,
     _iter_version_directories,
+    _new_digest_version_name,
     _new_version_stage,
     _prepare_versioned_slot,
     _prune_version_directories,
@@ -358,7 +358,7 @@ def _commit_extracted_stage(
     )
     if staged_validation is None:
         raise SDLParseError("Staged OCI module cache entry failed validation")
-    version_name = f"{extraction.content_digest.removeprefix('sha256:')}-{uuid4().hex}"
+    version_name = _new_digest_version_name(extraction.content_digest)
     installed = _install_version_directory(
         staged=staging,
         versions=versions,

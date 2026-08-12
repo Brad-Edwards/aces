@@ -111,6 +111,10 @@ without first removing the previous pointer. Existing readers retain paths into
 the old version. Startup repair removes abandoned stages and restores a missing
 or invalid pointer only from a fully validated immutable version. Publication
 never mutates or moves the version currently addressed by the pointer.
+Version names use a bounded digest lookup prefix plus a nonce so internal path
+growth remains portable on Windows; the full digest is still verified from the
+domain's trusted manifest or expected OCI bytes and is not truncated as an
+integrity claim.
 
 All fallible bounded-retention pruning occurs before pointer replacement while
 retaining both the selected version and the previously selected version. Pointer

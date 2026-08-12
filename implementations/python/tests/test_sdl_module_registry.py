@@ -1179,33 +1179,34 @@ def test_version_fsync_failures_and_unsafe_tree_nodes_fail_closed(
     module_registry_filesystem._fsync_directory(tmp_path, error_message="sync failed")
 
     monkeypatch.undo()
-    real_open = module_registry_filesystem.os.open
+    if module_registry_filesystem._DIRECTORY_FSYNC_SUPPORTED:
+        real_open = module_registry_filesystem.os.open
 
-    def fail_directory_open(path, *args, **kwargs):
-        if Path(path) == tmp_path:
-            raise OSError("SECRET-DIRECTORY-OPEN")
-        return real_open(path, *args, **kwargs)
+        def fail_directory_open(path, *args, **kwargs):
+            if Path(path) == tmp_path:
+                raise OSError("SECRET-DIRECTORY-OPEN")
+            return real_open(path, *args, **kwargs)
 
-    monkeypatch.setattr(module_registry_filesystem.os, "open", fail_directory_open)
-    with pytest.raises(SDLParseError, match="sync failed"):
+        monkeypatch.setattr(module_registry_filesystem.os, "open", fail_directory_open)
+        with pytest.raises(SDLParseError, match="sync failed"):
+            module_registry_filesystem._fsync_directory(tmp_path, error_message="sync failed")
+
+        monkeypatch.undo()
+        monkeypatch.setattr(
+            module_registry_filesystem.os,
+            "fsync",
+            lambda descriptor: (_ for _ in ()).throw(OSError("SECRET-FSYNC")),
+        )
+        with pytest.raises(SDLParseError, match="sync failed"):
+            module_registry_filesystem._fsync_directory(tmp_path, error_message="sync failed")
+
+        monkeypatch.undo()
+        monkeypatch.setattr(
+            module_registry_filesystem.os,
+            "fsync",
+            lambda descriptor: (_ for _ in ()).throw(OSError(module_registry_filesystem.errno.EINVAL, "unsupported")),
+        )
         module_registry_filesystem._fsync_directory(tmp_path, error_message="sync failed")
-
-    monkeypatch.undo()
-    monkeypatch.setattr(
-        module_registry_filesystem.os,
-        "fsync",
-        lambda descriptor: (_ for _ in ()).throw(OSError("SECRET-FSYNC")),
-    )
-    with pytest.raises(SDLParseError, match="sync failed"):
-        module_registry_filesystem._fsync_directory(tmp_path, error_message="sync failed")
-
-    monkeypatch.undo()
-    monkeypatch.setattr(
-        module_registry_filesystem.os,
-        "fsync",
-        lambda descriptor: (_ for _ in ()).throw(OSError(module_registry_filesystem.errno.EINVAL, "unsupported")),
-    )
-    module_registry_filesystem._fsync_directory(tmp_path, error_message="sync failed")
 
     monkeypatch.undo()
     outside = tmp_path / "outside"
@@ -1273,6 +1274,17 @@ def test_tree_fsync_uses_platform_compatible_file_access(
     assert len(opened_flags) == 1
     assert next(iter(opened_flags.values())) & (os.O_WRONLY | os.O_RDWR) == access_mode
     assert len(synced) == 1
+
+
+def test_generated_version_names_bound_internal_path_growth() -> None:
+    digest = "sha256:" + "a" * 64
+
+    version_name = module_registry_filesystem._new_digest_version_name(digest)
+
+    assert module_registry_filesystem._version_digest_prefix(digest) == "a" * 20
+    assert version_name.startswith("a" * 20 + "-")
+    assert len(version_name) == 41
+    assert module_registry_filesystem._valid_version_name(version_name)
 
 
 def test_version_install_cleans_stage_when_tree_sync_rejects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -1910,12 +1922,14 @@ def test_oci_bundle_inventory_is_streamed_with_filtered_modes_and_implicit_direc
             root_file="nested/module.yaml",
         )
 
+    directory_mode = 0o777 if os.name == "nt" else 0o700
+    file_mode = 0o666 if os.name == "nt" else 0o711
     assert manifest["entries"] == [
-        {"mode": 0o700, "path": ".", "type": "directory"},
-        {"mode": 0o700, "path": "nested", "type": "directory"},
+        {"mode": directory_mode, "path": ".", "type": "directory"},
+        {"mode": directory_mode, "path": "nested", "type": "directory"},
         {
             "digest": f"sha256:{module_registry._sha256_digest(payload)}",
-            "mode": 0o711,
+            "mode": file_mode,
             "path": "nested/module.yaml",
             "size": len(payload),
             "type": "file",
@@ -1991,6 +2005,7 @@ def test_oci_directory_mode_normalization_wraps_platform_errors(
     def fail_chmod(*args, **kwargs):
         raise OSError("injected mode failure")
 
+    monkeypatch.setattr(module_registry_extraction.os, "name", "posix")
     monkeypatch.setattr(module_registry_extraction.os, "chmod", fail_chmod)
     with pytest.raises(SDLParseError, match="Unable to normalize"):
         module_registry_extraction._normalize_extracted_directory_modes(
@@ -2056,7 +2071,8 @@ def test_oci_bundle_inventory_defensive_stream_failures(monkeypatch: pytest.Monk
         content_digest="sha256:" + "0" * 64,
         root_file="module.yaml",
     )
-    assert manifest["entries"] == [{"mode": 0o700, "path": ".", "type": "directory"}]
+    directory_mode = 0o777 if os.name == "nt" else 0o700
+    assert manifest["entries"] == [{"mode": directory_mode, "path": ".", "type": "directory"}]
 
     file_member = tarfile.TarInfo(name="entry")
     file_member.size = 1
@@ -2656,7 +2672,10 @@ def test_oci_cache_hit_revalidates_complete_extracted_tree(tmp_path: Path, tampe
     if tamper == "content":
         child.write_bytes(b"name: modified\n")
     elif tamper == "mode":
-        os.chmod(child, (child.stat().st_mode & 0o777) ^ 0o100)
+        if os.name == "nt":
+            os.chmod(child, stat.S_IREAD)
+        else:
+            os.chmod(child, stat.S_IMODE(child.stat().st_mode) ^ 0o100)
     elif tamper == "type":
         child.unlink()
         child.mkdir()
@@ -2707,6 +2726,8 @@ def test_oci_cache_rejects_tree_and_manifest_forged_together(tmp_path: Path, for
     if forgery == "content":
         root.write_bytes(b"name: forged\n")
     else:
+        if os.name == "nt":
+            pytest.skip("Windows does not expose mutable directory permission bits")
         directory = forged_version / "nested"
         directory.chmod(stat.S_IMODE(directory.stat().st_mode) ^ 0o020)
     forged_manifest = module_registry._cache_tree_manifest(
@@ -2728,7 +2749,10 @@ def test_oci_cache_rejects_tree_and_manifest_forged_together(tmp_path: Path, for
     assert repaired.read_bytes() == authentic_root
 
 
-@pytest.mark.parametrize("corruption", ["malformed", "shape", "noncanonical", "tree-digest", "entry-mode"])
+@pytest.mark.parametrize(
+    "corruption",
+    ["malformed", "deep", "integer", "shape", "noncanonical", "tree-digest", "entry-mode"],
+)
 def test_oci_cache_rebuilds_for_invalid_completion_manifest(tmp_path: Path, corruption: str):
     bundle = _cache_graph_bundle()
     root = module_registry._extract_bundle_to_cache(
@@ -2741,6 +2765,10 @@ def test_oci_cache_rebuilds_for_invalid_completion_manifest(tmp_path: Path, corr
     manifest = json.loads(completion.read_text(encoding="utf-8"))
     if corruption == "malformed":
         completion.write_bytes(b"{")
+    elif corruption == "deep":
+        completion.write_bytes(b'{"entries":' + b"[" * 10_000 + b"]" * 10_000 + b"}")
+    elif corruption == "integer":
+        completion.write_bytes(b'{"integer":' + b"9" * 10_000 + b"}")
     elif corruption == "shape":
         completion.write_bytes(module_registry._canonical_json_bytes({"schema": "wrong"}))
     elif corruption == "noncanonical":

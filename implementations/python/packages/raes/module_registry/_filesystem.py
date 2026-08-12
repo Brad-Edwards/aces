@@ -11,6 +11,7 @@ import stat
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
+from uuid import uuid4
 
 from .._errors import SDLParseError
 
@@ -21,10 +22,29 @@ _VERSIONS_DIRECTORY_NAME = "versions"
 _MAX_POINTER_BYTES = 256
 _MAX_RETAINED_VERSIONS = 8
 _VERSION_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}\Z")
+_VERSION_DIGEST_PREFIX_HEX = 20
+_VERSION_NONCE_HEX = 20
 _DIRECTORY_FSYNC_SUPPORTED = os.name != "nt"
 # Windows implements os.fsync with MSVCRT _commit, which rejects a read-only
 # descriptor. Transaction stages are writable; POSIX retains its read-only open.
 _REGULAR_FILE_FSYNC_ACCESS_MODE = os.O_RDWR if os.name == "nt" else os.O_RDONLY
+
+
+def _version_digest_prefix(digest: str) -> str:
+    """Return the bounded content prefix used to find immutable versions."""
+
+    return digest.removeprefix("sha256:")[:_VERSION_DIGEST_PREFIX_HEX]
+
+
+def _new_digest_version_name(digest: str) -> str:
+    """Return a version lookup discriminator with bounded path growth.
+
+    The full digest remains authoritative in each domain's validated contents;
+    this prefix and nonce only name an immutable filesystem version.
+    """
+
+    nonce = uuid4().hex[:_VERSION_NONCE_HEX]
+    return f"{_version_digest_prefix(digest)}-{nonce}"
 
 
 def _remove_path(path: Path) -> None:

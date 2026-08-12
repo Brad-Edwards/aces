@@ -279,8 +279,13 @@ def _expected_manifest_projection(expected_manifest: object) -> tuple[dict[str, 
 
 def _read_trusted_cache_manifest(version: Path) -> dict[str, Any]:
     raw = _read_cache_manifest_bytes(version / _CACHE_TREE_MANIFEST_NAME)
-    manifest = _require_cache_manifest(json.loads(raw.decode("utf-8")))
-    _require_cache_integrity(raw == _canonical_json_bytes(manifest))
+    try:
+        decoded = json.loads(raw.decode("utf-8"))
+        manifest = _require_cache_manifest(decoded)
+        canonical = _canonical_json_bytes(manifest)
+    except (RecursionError, ValueError) as exc:
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
+    _require_cache_integrity(raw == canonical)
     return manifest
 
 

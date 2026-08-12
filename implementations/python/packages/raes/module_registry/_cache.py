@@ -22,6 +22,7 @@ from ._filesystem import (
     _read_version_pointer,
     _require_directory,
     _same_file_identity,
+    _version_digest_prefix,
     _write_version_pointer,
 )
 
@@ -284,7 +285,7 @@ def _recover_cache_root(
     candidates: list[Path] = []
     if current is not None:
         candidates.append(versions / current)
-    digest_prefix = expected_content_digest.removeprefix("sha256:") + "-"
+    digest_prefix = _version_digest_prefix(expected_content_digest)
     for version in _iter_version_directories(
         versions,
         error_message="Unable to inspect OCI module cache versions",

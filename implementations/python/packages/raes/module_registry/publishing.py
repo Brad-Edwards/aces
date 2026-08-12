@@ -12,7 +12,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
@@ -30,11 +29,13 @@ from ._digests import _SHA256_PREFIX, _descriptor_digest
 from ._filesystem import (
     _install_version_directory,
     _iter_version_directories,
+    _new_digest_version_name,
     _new_version_stage,
     _prepare_versioned_slot,
     _prune_version_directories,
     _read_version_pointer,
     _remove_path,
+    _version_digest_prefix,
     _write_version_pointer,
 )
 from .models import _scenario_module_descriptor
@@ -253,7 +254,7 @@ def _layout_candidates(
     current: str | None,
 ) -> list[Path]:
     candidates = [] if current is None else [versions / current]
-    digest_prefix = publication.manifest_digest.removeprefix(_SHA256_PREFIX) + "-"
+    digest_prefix = _version_digest_prefix(publication.manifest_digest)
     for version in _iter_version_directories(
         versions,
         error_message="Unable to inspect OCI layout versions",
@@ -313,7 +314,7 @@ def _commit_layout_stage(
     versions: Path,
     prior_version: str | None,
 ) -> Path:
-    version_name = f"{publication.manifest_digest.removeprefix(_SHA256_PREFIX)}-{uuid4().hex}"
+    version_name = _new_digest_version_name(publication.manifest_digest)
     installed = _install_version_directory(
         staged=staging,
         versions=versions,
