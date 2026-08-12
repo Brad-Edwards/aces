@@ -5,11 +5,18 @@ from __future__ import annotations
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import Protocol
 
 from .._errors import SDLParseError
 from ._cache_integrity import _CACHE_TREE_MANIFEST_NAME
 
 _HTTP_TIMEOUT_SECONDS = 30
+
+
+class _DataFilterTarFile(Protocol):
+    """Python 3.11.4+ tar extraction surface with the security filter backport."""
+
+    def extractall(self, path: Path, members: list[tarfile.TarInfo], *, filter: str) -> None: ...
 
 
 @dataclass(frozen=True)

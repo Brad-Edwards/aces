@@ -18,7 +18,7 @@ import time
 import zlib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 from uuid import uuid4
@@ -69,6 +69,7 @@ from ._constants import (
 from ._digests import _sha256_digest
 from ._extraction import (
     _HTTP_TIMEOUT_SECONDS,
+    _DataFilterTarFile,
     _OCIResourceLimits,
     _safe_tar_members_with_limits,
     _validate_tar_member_shape,
@@ -345,7 +346,7 @@ def _extract_to_stage(
     staging: Path,
 ) -> None:
     try:
-        tar.extractall(staging, members=safe_members, filter="data")
+        cast(_DataFilterTarFile, tar).extractall(staging, members=safe_members, filter="data")
     except TypeError as exc:
         raise SDLParseError("Safe OCI tar extraction requires Python 3.11.4 or newer") from exc
     staged_root = staging.joinpath(*extraction.root_relative.parts)
