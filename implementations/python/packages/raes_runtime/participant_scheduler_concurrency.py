@@ -166,10 +166,13 @@ def _release_concurrent_reservations(
         if payload is None:
             continue
         state = ParticipantAutonomousExecutionStateModel.model_validate(payload)
+        # Exactly the one reservation this batch added is withdrawn. Clearing the
+        # aggregate instead would erase in-flight work a previous batch is still
+        # accounting for, since `_due_contexts` does not require `in_flight == 0`.
         states[context.key] = state.model_copy(
             update={
-                "in_flight": 0,
-                "attempted_actions": state.attempted_actions - state.in_flight,
+                "in_flight": state.in_flight - 1,
+                "attempted_actions": state.attempted_actions - 1,
             }
         ).model_dump(mode="json")
     run.working = run.working.with_entries(
