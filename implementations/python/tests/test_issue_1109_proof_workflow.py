@@ -16,5 +16,4 @@ def test_canonical_workflow_installs_the_offline_proof_runtime() -> None:
     assert "command -v fc-list" in proof_runtime
     assert "bubblewrap fontconfig" in proof_runtime
     assert "test -d /etc/fonts" in proof_runtime
-    assert "test -d /usr/share/fontconfig" in proof_runtime
     assert "test -d /usr/share/fonts" in proof_runtime

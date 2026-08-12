@@ -43,7 +43,6 @@ jobs:
             sudo apt-get install --no-install-recommends -y bubblewrap fontconfig
           fi
           test -d /etc/fonts
-          test -d /usr/share/fontconfig
           test -d /usr/share/fonts
       - name: Acquire pinned Isabelle distribution
         run: uv run --project implementations/python --frozen python -m tools.isabelle_tool acquire

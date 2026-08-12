@@ -56,7 +56,6 @@ ISABELLE_SYSTEM_RUNTIME_PATHS = (
 )
 ISABELLE_REQUIRED_FONTCONFIG_PATHS = (
     Path("/etc/fonts"),
-    Path("/usr/share/fontconfig"),
     Path("/usr/share/fonts"),
 )
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024

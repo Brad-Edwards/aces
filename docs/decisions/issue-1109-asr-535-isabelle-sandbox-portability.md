@@ -12,9 +12,11 @@ kernel replay stopped before loading the fixed session with `Fontconfig head is
 null, check your fonts or fonts configuration`.
 
 The sandbox already exposes `/etc/fonts` and `/usr/share/fonts`, but creates an
-otherwise empty `/usr/share`. Ubuntu's `/etc/fonts/conf.d` entries resolve into
-`/usr/share/fontconfig`, so the fixed runtime allowlist omits data required by
-the pinned prover. A minimal Ubuntu image can also omit the fontconfig runtime
+otherwise empty `/usr/share`. On Ubuntu releases where `/etc/fonts/conf.d`
+entries resolve into `/usr/share/fontconfig`, the fixed runtime allowlist omits
+data required by the pinned prover. Ubuntu 22.04 instead keeps that configuration
+under `/etc/fonts`, so `/usr/share/fontconfig` is a distribution-specific,
+optional path. A minimal Ubuntu image can also omit the fontconfig runtime
 entirely because the canonical workflow installs only bubblewrap. The result is
 host-image-dependent proof admission even though theorem sources and the prover
 archive are unchanged.
@@ -22,8 +24,9 @@ archive are unchanged.
 ## Decision
 
 Install bubblewrap and fontconfig as explicit canonical-runner prerequisites,
-require the fixed fontconfig directories before sandbox entry, and add
-`/usr/share/fontconfig` to the fixed, read-only system-runtime allowlist.
+require the cross-release `/etc/fonts` and `/usr/share/fonts` directories before
+sandbox entry, and add the optional `/usr/share/fontconfig` directory to the
+fixed, read-only system-runtime allowlist when the host provides it.
 Do not bind the host root, user home, repository workspace, network, ambient
 environment, or any mutable proof input. Existing paths remain conditional so
 minimal distributions without that directory keep the same command shape.

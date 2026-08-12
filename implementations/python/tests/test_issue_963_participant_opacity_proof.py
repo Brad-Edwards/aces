@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from urllib.error import URLError
 
 import pytest
+import tools.isabelle_tool as isabelle_tool
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes_contracts.behavioral_relation_profiles import (
@@ -24,8 +25,6 @@ from raes_contracts.behavioral_relations import (
     load_behavioral_relation_catalog,
     load_behavioral_relation_catalog_revision,
 )
-
-import tools.isabelle_tool as isabelle_tool
 from tools.check_participant_opacity_proof import (
     ProofEvidenceError,
     load_proof_manifest,
@@ -134,6 +133,7 @@ def test_proof_sandbox_allowlists_fontconfig_symlink_targets() -> None:
     assert Path("/usr/share/fontconfig") in ISABELLE_SYSTEM_RUNTIME_PATHS
     assert Path("/usr/share/fonts") in ISABELLE_SYSTEM_RUNTIME_PATHS
     assert set(ISABELLE_REQUIRED_FONTCONFIG_PATHS) <= set(ISABELLE_SYSTEM_RUNTIME_PATHS)
+    assert Path("/usr/share/fontconfig") not in ISABELLE_REQUIRED_FONTCONFIG_PATHS
 
 
 def test_proof_runtime_requires_complete_fontconfig_data(tmp_path: Path) -> None:
