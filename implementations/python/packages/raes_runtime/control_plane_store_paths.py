@@ -32,6 +32,13 @@ def _store_path_is_reparse_point(metadata: os.stat_result) -> bool:
     return bool(attributes & reparse_flag)
 
 
+def _require_safe_link_count(metadata: os.stat_result, path: Path, *, kind: str) -> None:
+    link_count = getattr(metadata, "st_nlink", 1)
+    unsafe = (kind == _DATABASE_FILE_KIND and link_count != 1) or (kind == "SQLite sidecar" and link_count > 1)
+    if unsafe:
+        raise RuntimeError(f"local control-plane {kind} must not have hard links: {path}")
+
+
 def _require_safe_store_path_metadata(
     metadata: os.stat_result,
     path: Path,
@@ -46,11 +53,7 @@ def _require_safe_store_path_metadata(
     get_effective_uid = getattr(os, "geteuid", None)
     if callable(get_effective_uid) and metadata.st_uid != get_effective_uid():
         raise RuntimeError(f"local control-plane {kind} must be owned by the current user: {path}")
-    link_count = getattr(metadata, "st_nlink", 1)
-    if kind == _DATABASE_FILE_KIND and link_count != 1:
-        raise RuntimeError(f"local control-plane {kind} must not have hard links: {path}")
-    if kind == "SQLite sidecar" and link_count > 1:
-        raise RuntimeError(f"local control-plane {kind} must not have hard links: {path}")
+    _require_safe_link_count(metadata, path, kind=kind)
 
 
 def _secure_store_directory(path: Path) -> None:
