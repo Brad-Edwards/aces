@@ -257,16 +257,20 @@ def test_naive_reconciliation_clock_is_rejected():
 
 def test_explicit_naive_reconciliation_clock_is_rejected_before_state_mutation() -> None:
     history: dict[str, list[dict[str, object]]] = {}
+    snapshot = RuntimeSnapshot()
+    entry = _workflow_entry()
+    workflow_states = {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")}
+    reconciliation_clock = datetime(2000, 1, 1, 0, 0, 1)
 
     with pytest.raises(ValueError, match=INVALID_RECONCILIATION_CLOCK):
         workflow_timeout_update(
-            RuntimeSnapshot(),
+            snapshot,
             _WORKFLOW_ADDRESS,
-            _workflow_entry(),
-            {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")},
+            entry,
+            workflow_states,
             history,
             "2000-01-01T00:00:01Z",
-            reconciliation_clock=datetime(2000, 1, 1, 0, 0, 1),
+            reconciliation_clock=reconciliation_clock,
         )
 
     assert history == {}
@@ -274,12 +278,18 @@ def test_explicit_naive_reconciliation_clock_is_rejected_before_state_mutation()
 
 @pytest.mark.parametrize("persisted", [[], {"workflow_status": "running"}])
 def test_malformed_persisted_workflow_state_fails_closed(persisted: object) -> None:
+    snapshot = RuntimeSnapshot()
+    entry = _workflow_entry()
+    workflow_states: dict[str, dict[str, object]] = {
+        _WORKFLOW_ADDRESS: persisted,  # type: ignore[dict-item]
+    }
+
     with pytest.raises(ValueError, match=INVALID_WORKFLOW_STATE):
         workflow_timeout_update(
-            RuntimeSnapshot(),
+            snapshot,
             _WORKFLOW_ADDRESS,
-            _workflow_entry(),
-            {_WORKFLOW_ADDRESS: persisted},  # type: ignore[dict-item]
+            entry,
+            workflow_states,
             {},
             "2000-01-01T00:00:01Z",
         )
@@ -313,12 +323,15 @@ def test_persisted_workflow_timeout_shape_is_validated(
             is None
         )
     else:
+        snapshot = RuntimeSnapshot()
+        workflow_states = {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")}
+
         with pytest.raises(ValueError, match=expected_error):
             workflow_timeout_update(
-                RuntimeSnapshot(),
+                snapshot,
                 _WORKFLOW_ADDRESS,
                 entry,
-                {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")},
+                workflow_states,
                 {},
                 "2000-01-01T00:00:01Z",
             )
@@ -406,13 +419,14 @@ def test_invalid_state_timestamp_cannot_trigger_timeout_compensation():
     ]
     history = {_WORKFLOW_ADDRESS: list(original_history)}
     snapshot = RuntimeSnapshot(entries={_WORKFLOW_ADDRESS: entry})
+    workflow_states = {_WORKFLOW_ADDRESS: _running_result("2100-01-01T00:00:00Z")}
 
     with pytest.raises(ValueError, match=NON_MONOTONIC_WORKFLOW_CLOCK):
         workflow_timeout_update(
             snapshot,
             _WORKFLOW_ADDRESS,
             entry,
-            {_WORKFLOW_ADDRESS: _running_result("2100-01-01T00:00:00Z")},
+            workflow_states,
             history,
             "2000-01-01T00:00:00Z",
         )
