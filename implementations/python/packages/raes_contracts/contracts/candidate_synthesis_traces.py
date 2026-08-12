@@ -64,7 +64,7 @@ def validate_resolved_contributions(
 ) -> None:
     if any(ref_id not in owners[kind] for kind, ref_id in contributions):
         raise ValueError("construct contribution reference does not resolve against its owning collection")
-    if not required <= contributions:
+    if required.difference(contributions):
         raise ValueError("construct trace omits required assertion, assumption, or decision provenance")
     if not any(kind == SynthesisContributionKind.INFERRED_STRUCTURE for kind, _ in contributions):
         raise ValueError("construct trace requires at least one resolved transformation rule")
