@@ -296,6 +296,7 @@ def _activity_action_is_due(
             state.lifecycle_state == "running",
             state.next_tick == context.current_tick,
             state.attempted_actions < context.policy.max_action_attempts,
+            state.in_flight == 0,
             run.failure is None,
         )
     )
@@ -396,6 +397,7 @@ def _legacy_action_is_due(
             state.lifecycle_state == "running",
             state.next_tick == context.current_tick,
             state.attempted_actions < context.policy.max_action_attempts,
+            state.in_flight == 0,
             run.failure is None,
         )
     )
