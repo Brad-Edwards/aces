@@ -30,3 +30,7 @@ Current state: implemented. Planning needs normative semantics so lifecycle deci
 - TESTS → TEST `implementations/python/tests/test_semantics_planner.py` (Planner Semantic Tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_planner.py` (Runtime Planner Tests)
 - TESTS → TEST `implementations/python/tests/test_fm2_semantics.py` (FM2 Semantic Tests)
+- DOCUMENTS → GITHUB_ISSUE `1103` (Bounded dependency-cycle detection)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1103-bounded-dependency-cycle-detection-preflight.md` (Iterative graph-traversal decision and compatibility boundary)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/semantics/planner.py` (Iterative strongly-connected dependency analysis)
+- TESTS → TEST `implementations/python/tests/test_semantics_planner.py` (Cycle-oracle, long-chain, and deterministic-order regressions)
