@@ -36,21 +36,22 @@ from ._archive import _expected_cache_tree_manifest
 from ._cache import (
     _CACHE_THREAD_LOCKS,
     _CACHE_THREAD_LOCKS_GUARD,
-    _CACHE_TREE_SCHEMA,
-    _DECOMPRESSION_CHUNK_BYTES,
     _SPOOL_MEMORY_BYTES,
     _acquire_file_lock,
     _bounded_gzip_tar_stream,
     _cache_entry_lock,
+    _open_cache_lock,
+    _recover_cache_root,
+    _release_file_lock,
+)
+from ._cache_integrity import (
+    _CACHE_TREE_SCHEMA,
+    _DECOMPRESSION_CHUNK_BYTES,
     _cache_tree_entries,
     _cache_tree_manifest,
     _canonical_json_bytes,
     _hash_cache_file,
-    _open_cache_lock,
     _read_cache_manifest_bytes,
-    _recover_cache_root,
-    _release_file_lock,
-    _same_file_identity,
     _trusted_entry_projection,
     _validated_cache_root,
     _write_cache_tree_manifest,
@@ -81,6 +82,7 @@ from ._filesystem import (
     _read_version_pointer,
     _remove_path,
     _require_directory,
+    _same_file_identity,
     _write_version_pointer,
 )
 from ._verified_sources import _cache_source_result, _VerifiedSourceBundle

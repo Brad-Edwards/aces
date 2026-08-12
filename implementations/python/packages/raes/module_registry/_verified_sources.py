@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from .._errors import SDLParseError
 from .._source_profile import SDLSourceParseOptions
 from ..scenario import ImportDecl
-from ._cache import _same_file_identity
+from ._filesystem import _same_file_identity
 
 if TYPE_CHECKING:
     from ..parser import SDLSourceDocument

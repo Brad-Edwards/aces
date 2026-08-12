@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from .._errors import SDLParseError
-from ._cache import _CACHE_TREE_MANIFEST_NAME
+from ._cache_integrity import _CACHE_TREE_MANIFEST_NAME
 
 _HTTP_TIMEOUT_SECONDS = 30
 

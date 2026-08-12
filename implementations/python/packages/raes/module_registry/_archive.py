@@ -8,7 +8,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from .._errors import SDLParseError
-from ._cache import _CACHE_TREE_SCHEMA, _DECOMPRESSION_CHUNK_BYTES, _canonical_json_bytes
+from ._cache_integrity import _CACHE_TREE_SCHEMA, _DECOMPRESSION_CHUNK_BYTES, _canonical_json_bytes
 
 if TYPE_CHECKING:
     from . import _OCIResourceLimits
