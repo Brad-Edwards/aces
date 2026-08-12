@@ -320,22 +320,6 @@ def _annotation_expressions(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tup
     return tuple(annotations)
 
 
-def _has_dynamic_eager_evaluation(node: ast.expr) -> bool:
-    dynamic_nodes = (
-        ast.Await,
-        ast.Call,
-        ast.DictComp,
-        ast.GeneratorExp,
-        ast.Lambda,
-        ast.ListComp,
-        ast.NamedExpr,
-        ast.SetComp,
-        ast.Yield,
-        ast.YieldFrom,
-    )
-    return any(isinstance(candidate, dynamic_nodes) for candidate in ast.walk(node))
-
-
 def _postpones_annotations(tree: ast.Module) -> bool:
     return any(
         isinstance(statement, ast.ImportFrom)
@@ -357,9 +341,7 @@ def _protocol_declaration_lines(
     )
     runtime_expressions = list(unsafe_defaults)
     if not annotations_postponed:
-        runtime_expressions.extend(
-            annotation for annotation in _annotation_expressions(node) if _has_dynamic_eager_evaluation(annotation)
-        )
+        runtime_expressions.extend(_annotation_expressions(node))
     for expression in runtime_expressions:
         lines.difference_update(range(expression.lineno, (expression.end_lineno or expression.lineno) + 1))
     return lines
@@ -396,8 +378,6 @@ def _dynamic_symbol_rebinding(node: ast.AST, symbol: str) -> bool:
         isinstance(node, ast.Subscript)
         and isinstance(node.ctx, (ast.Store, ast.Del))
         and _namespace_mapping_call(node.value)
-        and isinstance(node.slice, ast.Constant)
-        and node.slice.value == symbol
     ):
         return True
     if not isinstance(node, ast.Call):
@@ -412,13 +392,16 @@ def _dynamic_symbol_rebinding(node: ast.AST, symbol: str) -> bool:
         return True
     if not isinstance(node.func, ast.Attribute) or not _namespace_mapping_call(node.func.value):
         return False
-    if node.func.attr not in {"__setitem__", "pop", "setdefault", "update"}:
-        return False
-    return any(
-        isinstance(candidate, ast.Constant) and candidate.value == symbol
-        for argument in node.args
-        for candidate in ast.walk(argument)
-    ) or any(keyword.arg == symbol for keyword in node.keywords)
+    return node.func.attr in {
+        "__delitem__",
+        "__ior__",
+        "__setitem__",
+        "clear",
+        "pop",
+        "popitem",
+        "setdefault",
+        "update",
+    }
 
 
 def _rebinds_imported_symbol(node: ast.AST, symbol: str) -> bool:

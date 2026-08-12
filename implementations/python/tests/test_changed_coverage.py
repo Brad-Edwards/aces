@@ -742,7 +742,8 @@ def test_changed_coverage_allows_only_structural_default_exclusions(tmp_path: Pa
     source = tmp_path / path
     source.parent.mkdir(parents=True)
     source.write_text(
-        """from typing import TYPE_CHECKING, Protocol
+        """from __future__ import annotations
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from demo import Model
@@ -760,7 +761,7 @@ class Concrete:
 """,
         encoding="utf-8",
     )
-    changed_lines = {3, 4, 7, 8, 9, 10, 11, 12, 13, 15}
+    changed_lines = {4, 5, 8, 9, 10, 11, 12, 13, 14, 16}
     records = {
         path: {
             "executed_lines": [],
@@ -774,7 +775,7 @@ class Concrete:
         {path: changed_lines},
         records,
         repo_root=tmp_path,
-    ) == [f"{path}:15: changed line is excluded from coverage"]
+    ) == [f"{path}:16: changed line is excluded from coverage"]
 
 
 def test_changed_coverage_rejects_untrusted_type_checking_and_recognizes_generic_protocols(tmp_path: Path) -> None:
@@ -782,7 +783,9 @@ def test_changed_coverage_rejects_untrusted_type_checking_and_recognizes_generic
     source = tmp_path / path
     source.parent.mkdir(parents=True)
     source.write_text(
-        """import typing
+        """from __future__ import annotations
+
+import typing
 from typing import Protocol
 
 if typing.TYPE_CHECKING:
@@ -805,7 +808,7 @@ class Generated(factory()):
 """,
         encoding="utf-8",
     )
-    structural_lines = {4, 5, 8, 9, 10, 11, 17}
+    structural_lines = {6, 7, 10, 11, 12, 13, 19}
 
     assert coverage_policy.changed_coverage_failures(
         {path: structural_lines},
@@ -819,10 +822,10 @@ class Generated(factory()):
         },
         repo_root=tmp_path,
     ) == [
-        f"{path}:4: changed line is excluded from coverage",
-        f"{path}:5: changed line is excluded from coverage",
-        f"{path}:8: changed line is excluded from coverage",
-        f"{path}:17: changed line is excluded from coverage",
+        f"{path}:6: changed line is excluded from coverage",
+        f"{path}:7: changed line is excluded from coverage",
+        f"{path}:10: changed line is excluded from coverage",
+        f"{path}:19: changed line is excluded from coverage",
     ]
 
 
@@ -836,6 +839,8 @@ class Generated(factory()):
         "from typing import TYPE_CHECKING\nmodule.TYPE_CHECKING = runtime_flag\n",
         'from typing import TYPE_CHECKING\nglobals()["TYPE_CHECKING"] = True\n',
         "from typing import TYPE_CHECKING\nglobals().update(TYPE_CHECKING=True)\n",
+        "from typing import TYPE_CHECKING\nglobals().update(dict(TYPE_CHECKING=True))\n",
+        "from typing import TYPE_CHECKING\nglobals().update(**{'TYPE_CHECKING': True})\n",
         'from typing import TYPE_CHECKING\nsetattr(module, "TYPE_CHECKING", True)\n',
     ],
 )
@@ -892,6 +897,8 @@ def test_changed_coverage_allows_read_only_globals_lookup_of_type_checking(tmp_p
         "from other_module import Protocol\n",
         "from typing import Protocol as Protocol\n",
         'from typing import Protocol\nglobals()["Protocol"] = runtime_base\n',
+        "from typing import Protocol\nglobals().update(dict(Protocol=runtime_base))\n",
+        "from typing import Protocol\nglobals().update(**{'Protocol': runtime_base})\n",
     ],
 )
 def test_changed_coverage_rejects_spoofed_or_rebound_protocol(tmp_path: Path, prelude: str) -> None:
@@ -973,6 +980,34 @@ class Store(Protocol):
     ]
 
 
+def test_changed_coverage_rejects_every_eager_protocol_annotation_span(tmp_path: Path) -> None:
+    path = "tools/eager_protocol_annotations.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """from typing import Protocol
+
+class Store(Protocol):
+    def load(
+        self,
+        key: runtime_types.Key,
+        value: runtime_types["Value"],
+    ) -> Left | Right: ...
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {6, 7, 8}},
+        {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4, 5, 6, 7, 8]}},
+        repo_root=tmp_path,
+    ) == [
+        f"{path}:6: changed line is excluded from coverage",
+        f"{path}:7: changed line is excluded from coverage",
+        f"{path}:8: changed line is excluded from coverage",
+    ]
+
+
 def test_changed_coverage_allows_postponed_protocol_annotation_expression(tmp_path: Path) -> None:
     path = "tools/postponed_protocol_annotation.py"
     source = tmp_path / path
@@ -1029,7 +1064,8 @@ def test_changed_coverage_allows_literal_protocol_default_declaration(tmp_path: 
     source = tmp_path / path
     source.parent.mkdir()
     source.write_text(
-        """from typing import Protocol
+        """from __future__ import annotations
+from typing import Protocol
 
 class Reader(Protocol):
     def read(self, size: int = ...) -> bytes: ...
@@ -1039,8 +1075,8 @@ class Reader(Protocol):
 
     assert (
         coverage_policy.changed_coverage_failures(
-            {path: {4}},
-            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4]}},
+            {path: {5}},
+            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [4, 5]}},
             repo_root=tmp_path,
         )
         == []
@@ -1052,7 +1088,8 @@ def test_changed_coverage_allows_protocol_class_docstring(tmp_path: Path) -> Non
     source = tmp_path / path
     source.parent.mkdir()
     source.write_text(
-        """from typing import Protocol
+        """from __future__ import annotations
+from typing import Protocol
 
 class Reader(Protocol):
     \"\"\"Read bytes.\"\"\"
@@ -1064,8 +1101,8 @@ class Reader(Protocol):
 
     assert (
         coverage_policy.changed_coverage_failures(
-            {path: {6}},
-            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4, 6]}},
+            {path: {7}},
+            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [4, 5, 7]}},
             repo_root=tmp_path,
         )
         == []
