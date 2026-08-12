@@ -98,6 +98,37 @@ def test_workflow_inside_its_deadline_is_left_running():
     assert _reconcile("2000-01-01T00:00:00Z", "2000-01-01T00:00:00Z") is None
 
 
+def test_workflow_without_a_persisted_result_is_not_timed_out() -> None:
+    assert (
+        workflow_timeout_update(
+            RuntimeSnapshot(),
+            _WORKFLOW_ADDRESS,
+            _workflow_entry(),
+            {},
+            {},
+            "2000-01-01T00:00:01Z",
+        )
+        is None
+    )
+
+
+def test_workflow_without_a_declared_timeout_is_not_timed_out() -> None:
+    entry = _workflow_entry()
+    object.__setattr__(entry, "payload", {"execution_contract": {}})
+
+    assert (
+        workflow_timeout_update(
+            RuntimeSnapshot(),
+            _WORKFLOW_ADDRESS,
+            entry,
+            {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")},
+            {},
+            "2000-01-01T00:00:01Z",
+        )
+        is None
+    )
+
+
 def test_workflow_at_its_exact_deadline_is_timed_out():
     update = _reconcile("2000-01-01T00:00:00Z", "2000-01-01T00:00:01Z")
 
