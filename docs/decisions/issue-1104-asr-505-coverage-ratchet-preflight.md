@@ -41,10 +41,12 @@ rationale. An inline coverage pragma is rejected whenever its semantic
 statement owns changed code, even when the pragma's physical line is unchanged.
 Coverage.py's structural `TYPE_CHECKING` and `Protocol` exclusions are accepted
 only for canonical, unshadowed imports from `typing`; runtime-evaluated defaults,
-class bases, and class/function decorators remain coverage obligations. Dynamic
-namespace-mapping mutations invalidate that trust. Every annotation expression
-span is an obligation when Python evaluates annotations eagerly; the same syntax
-remains structural when `from __future__ import annotations` postpones it.
+class bases, and class/function decorators remain coverage obligations. Unsafe
+namespace access, escaped namespace factories, dynamic execution or attribute
+mutation, and wildcard imports invalidate that trust. Every annotation
+expression span is an obligation when Python evaluates annotations eagerly; the
+same syntax remains structural when `from __future__ import annotations`
+postpones it.
 
 ## Diff And Branch Semantics
 
@@ -78,4 +80,6 @@ relocation/deletion, acquired-cache isolation, branch-data absence, and invalid
 base revisions. Canonical verification must produce distinct, non-empty unit
 and integration data files before combining them, publish XML and JSON, enforce
 the aggregate ratchet, and run the changed-code gate with the same base SHA used
-by repository policy.
+by repository policy. Both report commands receive canonical absolute output
+paths under `implementations/python`, so Coverage.py configuration cannot
+redirect either report away from the artifact paths uploaded by CI.

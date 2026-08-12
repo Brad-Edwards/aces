@@ -54,6 +54,7 @@ PUBLIC_DOCS_EXAMPLE_TESTS = (
 RUFF_CONFIG = PROJECT_ROOT / "pyproject.toml"
 OSV_LOCKFILE_PATH = PROJECT_ROOT / "uv.lock"
 OSV_REPORT_PATH = PROJECT_ROOT / "osv-scanner-report.json"
+COVERAGE_XML_PATH = PROJECT_ROOT / "coverage.xml"
 COVERAGE_JSON_PATH = PROJECT_ROOT / "coverage.json"
 COVERAGE_CONFIG_PATH = PROJECT_ROOT / "pyproject.toml"
 COVERAGE_RATCHET_PATH = REPO_ROOT / "tools" / "coverage_ratchet.json"
@@ -879,7 +880,17 @@ def _write_and_check_coverage(
     coverage_env: dict[str, str],
     base_rev: str | None = None,
 ) -> None:
-    _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
+    _run(
+        session,
+        "uv",
+        "run",
+        "--frozen",
+        "coverage",
+        "xml",
+        "-o",
+        str(COVERAGE_XML_PATH),
+        env=coverage_env,
+    )
     _run(
         session,
         "uv",

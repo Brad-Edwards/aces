@@ -36,6 +36,12 @@ _COVERAGE_OMIT = frozenset(
 )
 _COVERAGE_EXCLUDE_ALSO = ("def " + "_default_runner",)
 _FORBIDDEN_RUN_OPTIONS = frozenset({"include", "plugins", "source_dirs", "source_pkgs"})
+_NAMESPACE_FACTORIES = frozenset({"globals", "locals", "vars"})
+_NAMESPACE_MAPPING_ATTRIBUTES = frozenset({"__dict__", "__globals__", "f_globals", "f_locals"})
+_READ_ONLY_NAMESPACE_METHODS = frozenset({"__contains__", "__getitem__", "copy", "get", "items", "keys", "values"})
+_UNSAFE_DYNAMIC_BUILTINS = frozenset({"delattr", "eval", "exec", "getattr", "setattr"})
+_UNSAFE_BUILTINS_EXPORTS = _NAMESPACE_FACTORIES | _UNSAFE_DYNAMIC_BUILTINS
+_UNSAFE_ATTRIBUTE_NAMES = _NAMESPACE_MAPPING_ATTRIBUTES | _UNSAFE_BUILTINS_EXPORTS
 _FORBIDDEN_REPORT_OPTIONS = frozenset(
     {
         "exclude_lines",
@@ -367,41 +373,62 @@ def _namespace_mapping_call(node: ast.AST) -> bool:
     return (
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
-        and node.func.id in {"globals", "locals", "vars"}
+        and node.func.id in _NAMESPACE_FACTORIES
         and not node.args
         and not node.keywords
     )
 
 
-def _dynamic_symbol_rebinding(node: ast.AST, symbol: str) -> bool:
-    if (
-        isinstance(node, ast.Subscript)
-        and isinstance(node.ctx, (ast.Store, ast.Del))
-        and _namespace_mapping_call(node.value)
-    ):
+def _parent_nodes(tree: ast.Module) -> dict[ast.AST, ast.AST]:
+    return {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+
+
+def _safe_namespace_read(node: ast.Call, parents: Mapping[ast.AST, ast.AST]) -> bool:
+    parent = parents.get(node)
+    if isinstance(parent, ast.Subscript) and parent.value is node and isinstance(parent.ctx, ast.Load):
         return True
-    if not isinstance(node, ast.Call):
-        return False
     if (
-        isinstance(node.func, ast.Name)
-        and node.func.id in {"setattr", "delattr"}
-        and len(node.args) >= 2
-        and isinstance(node.args[1], ast.Constant)
-        and node.args[1].value == symbol
+        not isinstance(parent, ast.Attribute)
+        or parent.value is not node
+        or parent.attr not in _READ_ONLY_NAMESPACE_METHODS
     ):
-        return True
-    if not isinstance(node.func, ast.Attribute) or not _namespace_mapping_call(node.func.value):
         return False
-    return node.func.attr in {
-        "__delitem__",
-        "__ior__",
-        "__setitem__",
-        "clear",
-        "pop",
-        "popitem",
-        "setdefault",
-        "update",
-    }
+    invocation = parents.get(parent)
+    return isinstance(invocation, ast.Call) and invocation.func is parent
+
+
+def _direct_namespace_factory_reference(node: ast.Name, parents: Mapping[ast.AST, ast.AST]) -> bool:
+    parent = parents.get(node)
+    return not isinstance(parent, ast.Call) or parent.func is not node
+
+
+def _unsafe_namespace_access(tree: ast.Module) -> bool:
+    parents = _parent_nodes(tree)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if any(alias.name == "*" for alias in node.names):
+                return True
+            if node.module == "builtins" and any(alias.name in _UNSAFE_BUILTINS_EXPORTS for alias in node.names):
+                return True
+        if isinstance(node, ast.Attribute) and node.attr in _UNSAFE_ATTRIBUTE_NAMES:
+            return True
+        if isinstance(node, ast.Name) and node.id == "__builtins__":
+            return True
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in _UNSAFE_DYNAMIC_BUILTINS:
+            return True
+        if isinstance(node, ast.Name) and node.id in _NAMESPACE_FACTORIES:
+            if _direct_namespace_factory_reference(node, parents):
+                return True
+        if not isinstance(node, ast.Call):
+            continue
+        callable_name = node.func.id if isinstance(node.func, ast.Name) else None
+        if callable_name in _UNSAFE_DYNAMIC_BUILTINS:
+            return True
+        if callable_name == "vars" and (node.args or node.keywords):
+            return True
+        if _namespace_mapping_call(node) and not _safe_namespace_read(node, parents):
+            return True
+    return False
 
 
 def _rebinds_imported_symbol(node: ast.AST, symbol: str) -> bool:
@@ -422,11 +449,12 @@ def _rebinds_imported_symbol(node: ast.AST, symbol: str) -> bool:
         and node.name == symbol
         or isinstance(node, ast.MatchMapping)
         and node.rest == symbol
-        or _dynamic_symbol_rebinding(node, symbol)
     )
 
 
 def _trusted_typing_import_lines(tree: ast.Module, symbol: str) -> tuple[int, ...]:
+    if _unsafe_namespace_access(tree):
+        return ()
     canonical_aliases: set[int] = set()
     import_lines: list[int] = []
     for statement in tree.body:

@@ -144,6 +144,7 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
     assert [command[4] for command, _options in coverage_commands] == ["xml", "json", "report"]
+    assert coverage_commands[0][0][5:] == ("-o", str(noxfile.COVERAGE_XML_PATH))
     assert coverage_commands[1][0][5:] == ("-o", str(noxfile.COVERAGE_JSON_PATH))
     assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
@@ -317,6 +318,7 @@ def test_parallel_coverage_is_combined_before_reporting(
     ]
     assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "json", "report"]
     assert coverage_commands[0][0][5:] == ("--keep", str(tmp_path))
+    assert coverage_commands[1][0][5:] == ("-o", str(noxfile.COVERAGE_XML_PATH))
     assert coverage_commands[2][0][5:] == ("-o", str(noxfile.COVERAGE_JSON_PATH))
     assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(
@@ -392,6 +394,65 @@ def test_parallel_coverage_policy_script_resolves_from_real_project_cwd(
 
     assert invocations == [(noxfile.PROJECT_ROOT, noxfile.REPO_ROOT / "tools" / "check_changed_coverage.py")]
     assert invocations[0][1].is_file()
+
+
+def test_coverage_report_paths_are_canonical_and_absolute(monkeypatch: pytest.MonkeyPatch) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    config = tomllib.loads(noxfile.COVERAGE_CONFIG_PATH.read_text(encoding="utf-8"))
+
+    assert noxfile.COVERAGE_XML_PATH == noxfile.PROJECT_ROOT / "coverage.xml"
+    assert noxfile.COVERAGE_JSON_PATH == noxfile.PROJECT_ROOT / "coverage.json"
+    assert noxfile.COVERAGE_XML_PATH.is_absolute()
+    assert noxfile.COVERAGE_JSON_PATH.is_absolute()
+    assert config["tool"]["coverage"]["xml"]["output"] == noxfile.COVERAGE_XML_PATH.name
+
+
+def test_nox_xml_command_overrides_configured_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    canonical_output = tmp_path / "canonical" / "coverage.xml"
+    coverage_file = tmp_path / ".coverage"
+    monkeypatch.setattr(noxfile, "COVERAGE_XML_PATH", canonical_output)
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.commands: list[tuple[tuple[str, ...], dict[str, Any]]] = []
+
+        def run(self, *args: str, **kwargs: Any) -> None:
+            self.commands.append((args, kwargs))
+
+    session = FakeSession()
+    coverage_env = {"COVERAGE_FILE": str(coverage_file)}
+    noxfile._write_and_check_coverage(session, coverage_env=coverage_env)
+    xml_command = next(command for command, _options in session.commands if command[4:5] == ("xml",))
+
+    (tmp_path / "pyproject.toml").write_text(
+        f"[tool.coverage.xml]\noutput = {json.dumps(os.devnull)}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "covered.py").write_text("covered = True\n", encoding="utf-8")
+    process_env = os.environ | coverage_env
+    subprocess.run(
+        [sys.executable, "-m", "coverage", "run", "covered.py"],
+        cwd=tmp_path,
+        env=process_env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        [sys.executable, "-m", "coverage", *xml_command[4:]],
+        cwd=tmp_path,
+        env=process_env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert canonical_output.is_file()
+    assert canonical_output.read_text(encoding="utf-8").startswith("<?xml")
 
 
 def test_coverage_base_revision_defaults_and_validates_values(monkeypatch: pytest.MonkeyPatch) -> None:

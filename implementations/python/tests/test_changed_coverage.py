@@ -905,25 +905,170 @@ def test_changed_coverage_rejects_spoofed_or_rebound_protocol(tmp_path: Path, pr
     path = "tools/spoofed_protocol.py"
     source = tmp_path / path
     source.parent.mkdir()
-    source.write_text(f"{prelude}class Hidden(Protocol):\n    def runtime(self) -> None: ...\n", encoding="utf-8")
-    class_line = len(prelude.splitlines()) + 1
-    method_line = class_line + 1
+    source.write_text(f"{prelude}class Hidden(Protocol):\n    def runtime(self): ...\n", encoding="utf-8")
+    method_line = len(prelude.splitlines()) + 2
 
     assert coverage_policy.changed_coverage_failures(
-        {path: {class_line, method_line}},
+        {path: {method_line}},
         {
             path: {
                 "executed_lines": [],
                 "missing_lines": [],
-                "excluded_lines": [class_line, method_line],
+                "excluded_lines": [method_line],
                 "missing_branches": [],
             }
         },
         repo_root=tmp_path,
-    ) == [
-        f"{path}:{class_line}: changed line is excluded from coverage",
-        f"{path}:{method_line}: changed line is excluded from coverage",
-    ]
+    ) == [f"{path}:{method_line}: changed line is excluded from coverage"]
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        pytest.param('ns = globals()\nns["$SYMBOL"] = $VALUE', id="mapping-alias"),
+        pytest.param('ns = locals()\nns["$SYMBOL"] = $VALUE', id="locals-mapping-alias"),
+        pytest.param('ns = vars()\nns["$SYMBOL"] = $VALUE', id="vars-mapping-alias"),
+        pytest.param('namespace = globals\nnamespace()["$SYMBOL"] = $VALUE', id="factory-alias"),
+        pytest.param('exec("$SYMBOL = $VALUE")', id="exec"),
+        pytest.param('exec("$SYMBOL = $VALUE", globals())', id="exec-namespace"),
+        pytest.param('run = exec\nrun("$SYMBOL = $VALUE")', id="exec-alias"),
+        pytest.param(
+            'run = eval\nrun("globals().__setitem__(\\"$SYMBOL\\", $VALUE)")',
+            id="eval-alias",
+        ),
+        pytest.param(
+            'import sys\nvars(sys.modules[__name__])["$SYMBOL"] = $VALUE',
+            id="module-vars",
+        ),
+        pytest.param(
+            'import sys\nsys.modules[__name__].__dict__["$SYMBOL"] = $VALUE',
+            id="module-dict",
+        ),
+        pytest.param(
+            'import sys\ngetattr(sys.modules[__name__], "__dict__")["$SYMBOL"] = $VALUE',
+            id="module-dict-getattr",
+        ),
+        pytest.param("dict.update(globals(), $SYMBOL=$VALUE)", id="dict-update-descriptor"),
+        pytest.param(
+            'dict.__setitem__(globals(), "$SYMBOL", $VALUE)',
+            id="dict-setitem-descriptor",
+        ),
+        pytest.param('mutate(globals(), "$SYMBOL", $VALUE)', id="unknown-mutator"),
+        pytest.param("globals().__init__($SYMBOL=$VALUE)", id="mapping-init"),
+        pytest.param(
+            'import builtins, sys\nbuiltins.setattr(sys.modules[__name__], "$SYMBOL", $VALUE)',
+            id="builtins-setattr",
+        ),
+        pytest.param(
+            'from builtins import setattr as assign\nimport sys\nassign(sys.modules[__name__], "$SYMBOL", $VALUE)',
+            id="imported-setattr",
+        ),
+        pytest.param(
+            'import sys\nassign = setattr\nassign(sys.modules[__name__], "$SYMBOL", $VALUE)',
+            id="setattr-alias",
+        ),
+        pytest.param(
+            'import sys\nremove = delattr\nremove(sys.modules[__name__], "$SYMBOL")',
+            id="delattr-alias",
+        ),
+        pytest.param("reader = globals().get", id="read-method-escape"),
+        pytest.param("from runtime_symbols import *", id="star-import"),
+        pytest.param(
+            'from builtins import globals as ns\nns()["$SYMBOL"] = $VALUE',
+            id="imported-builtins-globals",
+        ),
+        pytest.param(
+            'import builtins\nbuiltins.globals()["$SYMBOL"] = $VALUE',
+            id="attribute-builtins-globals",
+        ),
+        pytest.param(
+            'import builtins\ngetattr(builtins, "globals")()["$SYMBOL"] = $VALUE',
+            id="getattr-builtins-globals",
+        ),
+        pytest.param(
+            'import builtins\nbuiltins.getattr(builtins, "globals")()["$SYMBOL"] = $VALUE',
+            id="attribute-getattr-builtins-globals",
+        ),
+        pytest.param(
+            "from builtins import getattr as lookup\nimport builtins\n"
+            'lookup(builtins, "globals")()["$SYMBOL"] = $VALUE',
+            id="imported-getattr-builtins-globals",
+        ),
+        pytest.param(
+            'import builtins\nlookup = getattr\nlookup(builtins, "globals")()["$SYMBOL"] = $VALUE',
+            id="aliased-getattr-builtins-globals",
+        ),
+        pytest.param(
+            'from builtins import vars as ns\nns()["$SYMBOL"] = $VALUE',
+            id="imported-builtins-vars",
+        ),
+        pytest.param('__builtins__["exec"]("$SYMBOL = $VALUE")', id="builtins-mapping-exec"),
+        pytest.param(
+            'import inspect\ninspect.currentframe().f_globals["$SYMBOL"] = $VALUE',
+            id="inspect-frame-globals",
+        ),
+        pytest.param(
+            'import sys\nsys._getframe().f_globals["$SYMBOL"] = $VALUE',
+            id="sys-frame-globals",
+        ),
+        pytest.param(
+            'import sys\nsys._getframe().f_locals["$SYMBOL"] = $VALUE',
+            id="sys-frame-locals",
+        ),
+    ],
+)
+@pytest.mark.parametrize(("symbol", "value"), [("TYPE_CHECKING", "True"), ("Protocol", "runtime_base")])
+def test_structural_typing_rejects_namespace_escape_and_dynamic_rebinding(
+    tmp_path: Path,
+    mutation: str,
+    symbol: str,
+    value: str,
+) -> None:
+    path = f"tools/unsafe_{symbol.lower()}.py"
+    rendered_mutation = mutation.replace("$SYMBOL", symbol).replace("$VALUE", value)
+    prelude = f"from typing import {symbol}\n{rendered_mutation}\n"
+    if symbol == "TYPE_CHECKING":
+        construct = "if TYPE_CHECKING:\n    hidden_runtime = 1\n"
+    else:
+        construct = "class Hidden(Protocol):\n    def runtime(self): ...\n"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(f"{prelude}{construct}", encoding="utf-8")
+    first_line = len(prelude.splitlines()) + 1
+    changed_lines = {first_line, first_line + 1} if symbol == "TYPE_CHECKING" else {first_line + 1}
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: changed_lines},
+        {
+            path: {
+                "executed_lines": [],
+                "missing_lines": [],
+                "excluded_lines": sorted(changed_lines),
+                "missing_branches": [],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [f"{path}:{line}: changed line is excluded from coverage" for line in sorted(changed_lines)]
+
+
+def test_changed_coverage_allows_proven_read_only_namespace_access_for_protocol(tmp_path: Path) -> None:
+    path = "tools/read_protocol_namespace.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        'from typing import Protocol\nglobals().get("unrelated")\nglobals()["__name__"]\n'
+        "class Reader(Protocol):\n    def read(self): ...\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {5}},
+            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [5]}},
+            repo_root=tmp_path,
+        )
+        == []
+    )
 
 
 def test_changed_coverage_rejects_runtime_protocol_default_expression(tmp_path: Path) -> None:
