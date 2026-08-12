@@ -314,11 +314,13 @@ def test_verified_graph_rejects_invalid_or_missing_imports(
 ) -> None:
     root = tmp_path / "module.yaml"
     root.write_bytes(payload)
+    expected_manifest = _manifest(tmp_path, ["module.yaml"])
+    root_relative = PurePosixPath("module.yaml")
     with pytest.raises(SDLParseError, match=message):
         verified_sources._read_verified_source_bundle(
             cache_root=tmp_path,
-            expected_manifest=_manifest(tmp_path, ["module.yaml"]),
-            root_relative=PurePosixPath("module.yaml"),
+            expected_manifest=expected_manifest,
+            root_relative=root_relative,
             source_options=DEFAULT_SOURCE_PARSE_OPTIONS,
         )
 
@@ -365,11 +367,12 @@ def test_ordinary_local_resolution_preserves_missing_and_unsigned_policy_errors(
         encoding="utf-8",
     )
     local = module_registry.ImportDecl(source="local:module.yaml", namespace="local")
+    reject_unsigned = module_registry.TrustPolicy(allow_unsigned_local_sources=False)
     with pytest.raises(SDLParseError, match="unsigned local sources are not allowed"):
         module_registry.resolve_import(
             local,
             base_dir=tmp_path,
-            trust_policy=module_registry.TrustPolicy(allow_unsigned_local_sources=False),
+            trust_policy=reject_unsigned,
         )
 
 
@@ -395,6 +398,9 @@ def test_oci_resolution_requires_verified_source_documents(
     )
     monkeypatch.setattr(module_registry_resolution, "_fetch_oci_bundle", lambda **_kwargs: b"bundle")
     monkeypatch.setattr(module_registry, "_extract_bundle_to_cache", lambda **_kwargs: tmp_path / "module.yaml")
+    trust_policy = module_registry.TrustPolicy(
+        registries={"registry.example": module_registry.RegistryTrustPolicy(require_signatures=False)}
+    )
 
     with pytest.raises(SDLParseError, match="did not return verified source documents"):
         module_registry_resolution._resolve_oci_import(
@@ -402,8 +408,6 @@ def test_oci_resolution_requires_verified_source_documents(
             source,
             base_dir=tmp_path,
             lockfile=None,
-            trust_policy=module_registry.TrustPolicy(
-                registries={"registry.example": module_registry.RegistryTrustPolicy(require_signatures=False)}
-            ),
+            trust_policy=trust_policy,
             source_options=DEFAULT_SOURCE_PARSE_OPTIONS,
         )

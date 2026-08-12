@@ -580,8 +580,9 @@ def test_bundle_collector_rejects_invalid_roots_cycles_and_escape(tmp_path: Path
         module_registry_publishing._collect_local_bundle_files(tmp_path)
     with pytest.raises(SDLParseError, match="canonical publishing root"):
         module_registry_publishing._collect_local_bundle_files(root, bundle_root=tmp_path / "other")
+    seen = {root.resolve()}
     with pytest.raises(SDLParseError, match="Import cycle"):
-        module_registry_publishing._collect_local_bundle_files(root, seen={root.resolve()})
+        module_registry_publishing._collect_local_bundle_files(root, seen=seen)
 
     _write(tmp_path / "outside.yaml", "name: outside\nmodule: {id: acme/outside, version: 1.0.0}")
     nested = _write(
@@ -594,8 +595,9 @@ def test_bundle_collector_rejects_invalid_roots_cycles_and_escape(tmp_path: Path
             namespace: outside
         """,
     )
+    bundle_root = nested.parent.resolve()
     with pytest.raises(SDLParseError, match="escapes base directory"):
-        module_registry_publishing._collect_local_bundle_files(nested, bundle_root=nested.parent.resolve())
+        module_registry_publishing._collect_local_bundle_files(nested, bundle_root=bundle_root)
 
 
 def test_relative_and_symlink_publish_roots_have_one_canonical_identity(
@@ -1523,9 +1525,10 @@ def test_oci_registry_transport_errors_are_stable(monkeypatch: pytest.MonkeyPatc
         raise URLError("SECRET-TRANSPORT-DETAIL")
 
     monkeypatch.setattr(module_registry, "urlopen", fail_urlopen)
+    request = getattr(module_registry, request_name)
 
     with pytest.raises(SDLParseError) as exc_info:
-        getattr(module_registry, request_name)("https://registry.example/v2/acme/resource")
+        request("https://registry.example/v2/acme/resource")
 
     assert "SECRET-TRANSPORT-DETAIL" not in str(exc_info.value)
 
@@ -1788,12 +1791,14 @@ def test_oci_bundle_strips_dangerous_mode_bits(tmp_path: Path):
 def test_oci_bundle_rejects_noncanonical_cross_platform_member_paths(tmp_path: Path, member_name: str):
     member = tarfile.TarInfo(name=member_name)
     member.size = 0
+    destination = tmp_path / "cache"
+    resolved_destination = destination.resolve()
 
     with pytest.raises(SDLParseError, match="Path traversal detected"):
         module_registry._validate_tar_member_shape(
             member,
-            dest=tmp_path / "cache",
-            resolved_dest=(tmp_path / "cache").resolve(),
+            dest=destination,
+            resolved_dest=resolved_destination,
             seen_paths=set(),
             limits=module_registry._OCI_LIMITS,
         )
@@ -1802,12 +1807,14 @@ def test_oci_bundle_rejects_noncanonical_cross_platform_member_paths(tmp_path: P
 def test_oci_bundle_member_must_remain_below_validated_destination(tmp_path: Path):
     member = tarfile.TarInfo(name="module.yaml")
     member.size = 0
+    destination = tmp_path / "cache"
+    resolved_destination = (tmp_path / "different-cache").resolve()
 
     with pytest.raises(SDLParseError, match="Path traversal detected"):
         module_registry._validate_tar_member_shape(
             member,
-            dest=tmp_path / "cache",
-            resolved_dest=(tmp_path / "different-cache").resolve(),
+            dest=destination,
+            resolved_dest=resolved_destination,
             seen_paths=set(),
             limits=module_registry._OCI_LIMITS,
         )
@@ -1857,10 +1864,13 @@ def test_oci_bundle_inventory_rejects_file_directory_conflicts(
     tmp_path: Path,
     members: list[tuple[str, bytes]],
 ):
+    bundle_bytes = _gzip_tar(members).getvalue()
+    member_identity = repr(members).encode()
+    manifest_digest = "conflict-" + module_registry._sha256_digest(member_identity)
     with pytest.raises(SDLParseError, match="conflicting file and directory paths"):
         module_registry._extract_bundle_to_cache(
-            bundle_bytes=_gzip_tar(members).getvalue(),
-            manifest_digest="conflict-" + module_registry._sha256_digest(repr(members).encode()),
+            bundle_bytes=bundle_bytes,
+            manifest_digest=manifest_digest,
             root_file="parent/module.yaml",
             base_dir=tmp_path,
         )
@@ -1873,9 +1883,10 @@ def test_oci_bundle_inventory_rejects_file_at_tree_root(tmp_path: Path):
         member.size = 0
         archive.addfile(member, io.BytesIO())
 
+    bundle_bytes = bundle.getvalue()
     with pytest.raises(SDLParseError, match="cannot replace the cache tree root"):
         module_registry._extract_bundle_to_cache(
-            bundle_bytes=bundle.getvalue(),
+            bundle_bytes=bundle_bytes,
             manifest_digest="root-file",
             root_file="module.yaml",
             base_dir=tmp_path,
@@ -1903,24 +1914,27 @@ def test_oci_bundle_inventory_defensive_stream_failures(monkeypatch: pytest.Monk
 
     file_member = tarfile.TarInfo(name="entry")
     file_member.size = 1
+    missing_payload_tar = StubTar(None)
     with pytest.raises(SDLParseError, match="Unable to read"):
         module_registry._expected_cache_tree_manifest(
-            tar=StubTar(None),
+            tar=missing_payload_tar,
             members=[file_member],
             content_digest="sha256:" + "0" * 64,
             root_file="entry",
         )
+    oversized_payload_tar = StubTar(b"xx")
     with pytest.raises(SDLParseError, match="exceeds its declared size"):
         module_registry._expected_cache_tree_manifest(
-            tar=StubTar(b"xx"),
+            tar=oversized_payload_tar,
             members=[file_member],
             content_digest="sha256:" + "0" * 64,
             root_file="entry",
         )
     file_member.size = 2
+    short_payload_tar = StubTar(b"x")
     with pytest.raises(SDLParseError, match="shorter than its declared size"):
         module_registry._expected_cache_tree_manifest(
-            tar=StubTar(b"x"),
+            tar=short_payload_tar,
             members=[file_member],
             content_digest="sha256:" + "0" * 64,
             root_file="entry",
@@ -1929,9 +1943,10 @@ def test_oci_bundle_inventory_defensive_stream_failures(monkeypatch: pytest.Monk
     file_member.size = 0
     directory_member = tarfile.TarInfo(name="entry")
     directory_member.type = tarfile.DIRTYPE
+    conflicting_entry_tar = StubTar(b"")
     with pytest.raises(SDLParseError, match="conflicting file and directory paths"):
         module_registry._expected_cache_tree_manifest(
-            tar=StubTar(b""),
+            tar=conflicting_entry_tar,
             members=[file_member, directory_member],
             content_digest="sha256:" + "0" * 64,
             root_file="entry",
@@ -1939,17 +1954,19 @@ def test_oci_bundle_inventory_defensive_stream_failures(monkeypatch: pytest.Monk
 
     limits = module_registry._OCI_LIMITS
     monkeypatch.setattr(module_registry, "_OCI_LIMITS", dataclasses.replace(limits, max_bundle_members=0))
+    entry_limit_tar = StubTar(b"")
     with pytest.raises(SDLParseError, match="tree entry limit"):
         module_registry._expected_cache_tree_manifest(
-            tar=StubTar(b""),
+            tar=entry_limit_tar,
             members=[file_member],
             content_digest="sha256:" + "0" * 64,
             root_file="entry",
         )
     monkeypatch.setattr(module_registry, "_OCI_LIMITS", dataclasses.replace(limits, max_metadata_bytes=1))
+    metadata_limit_tar = StubTar(None)
     with pytest.raises(SDLParseError, match="metadata limit"):
         module_registry._expected_cache_tree_manifest(
-            tar=StubTar(None),
+            tar=metadata_limit_tar,
             members=[],
             content_digest="sha256:" + "0" * 64,
             root_file="entry",
@@ -1998,10 +2015,11 @@ def test_oci_bundle_without_data_filter_fails_closed(tmp_path: Path, monkeypatch
         member.size = len(payload)
         tar.addfile(member, io.BytesIO(payload))
     bundle_buffer.seek(0)
+    bundle_bytes = bundle_buffer.getvalue()
 
     with pytest.raises(SDLParseError, match="Python 3.11.4 or newer"):
         module_registry._extract_bundle_to_cache(
-            bundle_bytes=bundle_buffer.getvalue(),
+            bundle_bytes=bundle_bytes,
             manifest_digest="cafef00d",
             root_file="module.yaml",
             base_dir=tmp_path,
@@ -2062,10 +2080,11 @@ def test_oci_bundle_rechecks_declared_root_after_extraction(
     monkeypatch: pytest.MonkeyPatch,
 ):
     monkeypatch.setattr(tarfile.TarFile, "extractall", lambda *args, **kwargs: None)
+    bundle_bytes = _cache_test_bundle(b"name: absent\n")
 
     with pytest.raises(SDLParseError, match="missing declared root file"):
         module_registry._extract_bundle_to_cache(
-            bundle_bytes=_cache_test_bundle(b"name: absent\n"),
+            bundle_bytes=bundle_bytes,
             manifest_digest="missing-after-extraction",
             root_file="module.yaml",
             base_dir=tmp_path,
@@ -2378,12 +2397,13 @@ def test_oci_cache_invalid_archive_leaves_no_partial_entry(tmp_path: Path):
         bad.size = len(bad_payload)
         archive.addfile(bad, io.BytesIO(bad_payload))
     bundle = buffer.getvalue()
+    content_digest = f"sha256:{module_registry._sha256_digest(bundle)}"
 
     with pytest.raises(SDLParseError, match="Path traversal"):
         module_registry._extract_bundle_to_cache(
             bundle_bytes=bundle,
             manifest_digest="partial",
-            content_digest=f"sha256:{module_registry._sha256_digest(bundle)}",
+            content_digest=content_digest,
             root_file="module.yaml",
             base_dir=tmp_path,
         )
@@ -2434,11 +2454,12 @@ def test_oci_cache_repairs_unreadable_tree_manifest(tmp_path: Path):
 
 def test_oci_cache_rejects_invalid_gzip_without_partial_entry(tmp_path: Path):
     payload = b"not a gzip tar"
+    content_digest = f"sha256:{module_registry._sha256_digest(payload)}"
     with pytest.raises(SDLParseError, match="not a valid gzip-compressed tar archive"):
         module_registry._extract_bundle_to_cache(
             bundle_bytes=payload,
             manifest_digest="invalid-archive",
-            content_digest=f"sha256:{module_registry._sha256_digest(payload)}",
+            content_digest=content_digest,
             root_file="module.yaml",
             base_dir=tmp_path,
         )
@@ -2958,8 +2979,9 @@ def test_oci_cache_file_hash_detects_fstat_read_and_size_races(tmp_path: Path, m
         raise OSError("SECRET-FDOPEN-DETAIL")
 
     monkeypatch.setattr(module_registry.os, "fdopen", fail_fdopen)
+    expected = path.lstat()
     with pytest.raises(SDLParseError, match="integrity validation"):
-        module_registry._hash_cache_file(path, path.lstat())
+        module_registry._hash_cache_file(path, expected)
 
 
 def test_oci_cache_file_hash_detects_growth_after_fstat(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -3098,10 +3120,11 @@ def test_oci_cache_staging_validation_failure_cleans_stage(tmp_path: Path, monke
 def test_oci_cache_creation_failure_is_stable(tmp_path: Path):
     occupied = tmp_path / "occupied"
     occupied.write_text("not a directory\n", encoding="utf-8")
+    bundle = _cache_test_bundle(b"name: blocked\n")
 
     with pytest.raises(SDLParseError, match="Unable to create the OCI module cache"):
         module_registry._extract_bundle_to_cache(
-            bundle_bytes=_cache_test_bundle(b"name: blocked\n"),
+            bundle_bytes=bundle,
             manifest_digest="blocked",
             root_file="module.yaml",
             base_dir=occupied,
@@ -3181,9 +3204,10 @@ def test_oci_cache_rejects_linked_cache_root_without_writing_target(tmp_path: Pa
     except OSError:
         pytest.skip("symlink creation is unavailable")
 
+    bundle = _cache_test_bundle(b"name: blocked\n")
     with pytest.raises(SDLParseError, match="Unable to create the OCI module cache"):
         module_registry._extract_bundle_to_cache(
-            bundle_bytes=_cache_test_bundle(b"name: blocked\n"),
+            bundle_bytes=bundle,
             manifest_digest="linked-root",
             root_file="module.yaml",
             base_dir=tmp_path,
@@ -3202,9 +3226,10 @@ def test_oci_cache_rejects_linked_real_lock_parent_without_writing_target(tmp_pa
     except OSError:
         pytest.skip("symlink creation is unavailable")
 
+    bundle = _cache_test_bundle(b"name: blocked\n")
     with pytest.raises(SDLParseError, match="Unable to open the OCI module cache lock"):
         module_registry._extract_bundle_to_cache(
-            bundle_bytes=_cache_test_bundle(b"name: blocked\n"),
+            bundle_bytes=bundle,
             manifest_digest="linked-lock-parent",
             root_file="module.yaml",
             base_dir=tmp_path,
@@ -3503,9 +3528,9 @@ infrastructure: {vm: 1}
     scenario = parse_sdl_file(root)
 
     assert set(scenario.nodes) == {"remote.child.vm"}
-    assert tampered_roots and (tampered_roots[0] / "nested" / "child.yaml").read_text(encoding="utf-8") == (
-        "name: replaced-child\n"
-    )
+    assert tampered_roots
+    tampered_child = tampered_roots[0] / "nested" / "child.yaml"
+    assert tampered_child.read_text(encoding="utf-8") == "name: replaced-child\n"
     provenance = {entry.namespace: entry for entry in scenario.expansion_provenance.imports}
     assert provenance[("remote",)].content_digest == content_digest
     assert provenance[("remote",)].manifest_digest == manifest_digest
