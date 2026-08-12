@@ -951,8 +951,12 @@ def test_init_script_quotes_valid_interface_addressing():
 def test_init_script_rejects_hostile_interface_fields_before_scripting(interface, match):
     # A field that is not the shape it claims to be aborts script generation, so
     # no attacker-controlled shell can reach the root-run guest init script.
+    # The domain is built outside the block so the generator is the only call
+    # inside it that can raise.
+    domain = domain_with_interface(**interface)
+
     with pytest.raises(ValueError, match=match):
-        _init_script(domain_with_interface(**interface))
+        _init_script(domain)
 
 
 def test_init_script_skips_a_malformed_interface_entry_and_renders_the_rest():

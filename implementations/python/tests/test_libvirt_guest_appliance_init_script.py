@@ -31,8 +31,10 @@ def test_guest_init_script_quotes_valid_interface_addressing():
 
 @pytest.mark.parametrize(("interface", "match"), HOSTILE_INTERFACE_CASES)
 def test_guest_init_script_rejects_hostile_interface_fields(interface, match):
+    domain = domain_with_interface(**interface)
+
     with pytest.raises(ValueError, match=match):
-        _init_script(domain_with_interface(**interface))
+        _init_script(domain)
 
 
 def test_guest_init_script_quotes_the_hostname():
