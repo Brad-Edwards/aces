@@ -9,6 +9,14 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from libvirt_interface_fixtures import (
+    HOSTILE_INTERFACE_CASES,
+    QUOTED_ADDRESS_COMMAND,
+    QUOTED_MAC_ARM,
+    VALID_INTERFACE,
+    domain_with_interface,
+    domain_with_malformed_entry,
+)
 from paths import EXAMPLES_DIR
 from raes import parse_sdl
 from raes_backend_libvirt import create_libvirt_target
@@ -926,58 +934,32 @@ def test_busybox_initramfs_builder_writes_gzip_cpio(tmp_path):
     assert b"httpd -p" not in gzip.decompress(target.read_bytes())
 
 
-_VALID_INTERFACE = {"mac": "52:54:00:00:00:01", "ip": "192.0.2.10", "cidr_prefix": 24}
-
-
-def _domain_with_interface(**interface: object) -> dict[str, object]:
-    return {"name": "webapp", "interfaces": [interface]}
-
-
 def test_init_script_accepts_a_decimal_string_cidr_prefix():
-    script = _init_script(_domain_with_interface(**{**_VALID_INTERFACE, "cidr_prefix": "24"}))
+    script = _init_script(domain_with_interface(**{**VALID_INTERFACE, "cidr_prefix": "24"}))
 
-    assert "ip addr add '192.0.2.10/24' dev \"$iface\"" in script
+    assert QUOTED_ADDRESS_COMMAND in script
 
 
 def test_init_script_quotes_valid_interface_addressing():
-    script = _init_script(_domain_with_interface(**_VALID_INTERFACE))
+    script = _init_script(domain_with_interface(**VALID_INTERFACE))
 
-    assert "    '52:54:00:00:00:01')" in script
-    assert "ip addr add '192.0.2.10/24' dev \"$iface\"" in script
+    assert QUOTED_MAC_ARM in script
+    assert QUOTED_ADDRESS_COMMAND in script
 
 
-@pytest.mark.parametrize(
-    ("interface", "match"),
-    (
-        (
-            {**_VALID_INTERFACE, "mac": "aa:bb:cc:dd:ee:ff) ; rm -rf /outside #"},
-            "mac is not a MAC",
-        ),
-        ({**_VALID_INTERFACE, "ip": "192.0.2.10$(touch /pwned)"}, "ip is not an IP"),
-        ({**_VALID_INTERFACE, "ip": "`reboot`"}, "ip is not an IP"),
-        ({**_VALID_INTERFACE, "cidr_prefix": "24; rm -rf /"}, "cidr_prefix is not an integer"),
-        ({**_VALID_INTERFACE, "cidr_prefix": 33}, "cidr_prefix is out of range"),
-        # Non-string ip, and values `int()` would mishandle: a bool, and a
-        # superscript that `str.isdigit` accepts but `int` refuses.
-        ({**_VALID_INTERFACE, "ip": 3221225994}, "ip is not an IP"),
-        ({**_VALID_INTERFACE, "ip": None}, "ip is not an IP"),
-        ({**_VALID_INTERFACE, "cidr_prefix": True}, "cidr_prefix is not an integer"),
-        ({**_VALID_INTERFACE, "cidr_prefix": "\u00b2"}, "cidr_prefix is not an integer"),
-        ({**_VALID_INTERFACE, "cidr_prefix": 24.5}, "cidr_prefix is not an integer"),
-    ),
-)
+@pytest.mark.parametrize(("interface", "match"), HOSTILE_INTERFACE_CASES)
 def test_init_script_rejects_hostile_interface_fields_before_scripting(interface, match):
     # A field that is not the shape it claims to be aborts script generation, so
     # no attacker-controlled shell can reach the root-run guest init script.
     with pytest.raises(ValueError, match=match):
-        _init_script(_domain_with_interface(**interface))
+        _init_script(domain_with_interface(**interface))
 
 
-def test_init_script_skips_malformed_interface_entries():
-    script = _init_script({"name": "webapp", "interfaces": ["not-a-mapping", _VALID_INTERFACE]})
+def test_init_script_skips_a_malformed_interface_entry_and_renders_the_rest():
+    script = _init_script(domain_with_malformed_entry())
 
-    assert "    '52:54:00:00:00:01')" in script
     assert "not-a-mapping" not in script
+    assert QUOTED_MAC_ARM in script
 
 
 def test_cpio_newc_rejects_newline_in_member_path(tmp_path):

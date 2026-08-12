@@ -11,38 +11,28 @@ everywhere.
 from __future__ import annotations
 
 import pytest
+from libvirt_interface_fixtures import (
+    HOSTILE_INTERFACE_CASES,
+    QUOTED_ADDRESS_COMMAND,
+    QUOTED_MAC_ARM,
+    VALID_INTERFACE,
+    domain_with_interface,
+    domain_with_malformed_entry,
+)
 from raes_backend_libvirt.guest_appliance import _init_script
-
-_VALID_INTERFACE = {"mac": "52:54:00:00:00:01", "ip": "192.0.2.10", "cidr_prefix": 24}
-
-
-def _domain_with_interface(**interface: object) -> dict[str, object]:
-    return {"name": "webapp", "interfaces": [interface]}
 
 
 def test_guest_init_script_quotes_valid_interface_addressing():
-    script = _init_script(_domain_with_interface(**_VALID_INTERFACE))
+    script = _init_script(domain_with_interface(**VALID_INTERFACE))
 
-    assert "    '52:54:00:00:00:01')" in script
-    assert "ip addr add '192.0.2.10/24' dev \"$iface\"" in script
+    assert QUOTED_MAC_ARM in script
+    assert QUOTED_ADDRESS_COMMAND in script
 
 
-@pytest.mark.parametrize(
-    ("interface", "match"),
-    (
-        (
-            {**_VALID_INTERFACE, "mac": "aa:bb:cc:dd:ee:ff) ; rm -rf /outside #"},
-            "mac is not a MAC",
-        ),
-        ({**_VALID_INTERFACE, "ip": "192.0.2.10$(touch /pwned)"}, "ip is not an IP"),
-        ({**_VALID_INTERFACE, "ip": "`reboot`"}, "ip is not an IP"),
-        ({**_VALID_INTERFACE, "cidr_prefix": "24; rm -rf /"}, "cidr_prefix is not an integer"),
-        ({**_VALID_INTERFACE, "cidr_prefix": 33}, "cidr_prefix is out of range"),
-    ),
-)
+@pytest.mark.parametrize(("interface", "match"), HOSTILE_INTERFACE_CASES)
 def test_guest_init_script_rejects_hostile_interface_fields(interface, match):
     with pytest.raises(ValueError, match=match):
-        _init_script(_domain_with_interface(**interface))
+        _init_script(domain_with_interface(**interface))
 
 
 def test_guest_init_script_quotes_the_hostname():
@@ -52,7 +42,7 @@ def test_guest_init_script_quotes_the_hostname():
 
 
 def test_guest_init_script_skips_malformed_interface_entries():
-    script = _init_script({"name": "webapp", "interfaces": ["not-a-mapping", _VALID_INTERFACE]})
+    script = _init_script(domain_with_malformed_entry())
 
-    assert "    '52:54:00:00:00:01')" in script
+    assert QUOTED_MAC_ARM in script
     assert "not-a-mapping" not in script
