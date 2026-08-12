@@ -137,7 +137,9 @@ def domain_placements(spec: DomainSpec) -> dict[str, object]:
         {"path": item.path, "content": item.content, "mode": item.permissions}
         for item in (cloud_init.write_files if cloud_init is not None else ())
     ]
-    services = [{"name": service.name, "port": service.port} for service in spec.services]
+    services = [
+        {"name": service.name, "protocol": service.protocol.lower(), "port": service.port} for service in spec.services
+    ]
     return {"accounts": accounts, "content": content, "services": services}
 
 

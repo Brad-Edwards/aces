@@ -13,7 +13,6 @@ from contextlib import suppress
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast
-from urllib.parse import urlsplit
 
 from raes_contracts.diagnostics import Diagnostic
 
@@ -63,9 +62,6 @@ from ..techvault_matrix import (
 from ..techvault_matrix import (
     native_matrix as _native_matrix,
 )
-from ..techvault_matrix import (
-    safe_name as _safe_name,
-)
 from ..techvault_observation import (
     canonical_digest,
     file_digest,
@@ -74,6 +70,7 @@ from ..techvault_observation import (
     substrate_observation,
 )
 from ._define import define_domain, define_domains, define_network, define_networks
+from ._preflight import artifact_preflight_diagnostics, validate_driver_configuration
 
 _CONNECTION_ADDRESS = "runtime.libvirt.connection"
 
@@ -96,8 +93,12 @@ class TechVaultNativeLibvirtDriver:
     last_snapshot: dict[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self._validate_connection_uri()
-        self._validate_appliance_flags()
+        validate_driver_configuration(
+            connection_uri=self.connection_uri,
+            name_prefix=self.name_prefix,
+            define_only=self.define_only,
+            clean_existing=self.clean_existing,
+        )
         self.state_dir = Path(self.state_dir)
         self.kernel_path = Path(self.kernel_path) if self.kernel_path is not None else _default_kernel_path()
         self.connector = self.connector or _default_connector
@@ -105,36 +106,25 @@ class TechVaultNativeLibvirtDriver:
         self._realized: set[str] = set()
         self._artifacts: dict[str, tuple[Path, ...]] = {}
 
-    def _validate_connection_uri(self) -> None:
-        if not self.connection_uri or not self.connection_uri.strip():
-            raise ValueError("TechVaultNativeLibvirtDriver connection_uri must be non-empty.")
-        parsed_uri = urlsplit(self.connection_uri)
-        if parsed_uri.username is not None or parsed_uri.password is not None:
-            raise ValueError("TechVaultNativeLibvirtDriver connection URI must not carry credentials.")
-
-    def _validate_appliance_flags(self) -> None:
-        if not self.name_prefix or not self.name_prefix.strip():
-            raise ValueError("TechVaultNativeLibvirtDriver name_prefix must be non-empty.")
-        if self.define_only:
-            raise ValueError("TechVaultNativeLibvirtDriver define-only mode cannot make realization claims.")
-        if self.clean_existing:
-            raise ValueError("TechVaultNativeLibvirtDriver refuses unsafe prefix-wide cleanup.")
-        safe_prefix = _safe_name(self.name_prefix, fallback="raes-techvault", prefix="")
-        if safe_prefix != self.name_prefix:
-            raise ValueError("TechVaultNativeLibvirtDriver name_prefix must already be libvirt-safe.")
-
     def realize(
         self,
         *,
         networks: tuple[NetworkSpec, ...],
         domains: tuple[DomainSpec, ...],
     ) -> DriverResult:
+        self._begin_operation()
         envelope = load_libvirt_realization_envelope(self.driver_mode)
         spec_diagnostics = self._admission_diagnostics(networks, domains, envelope)
         if spec_diagnostics:
             return DriverResult(diagnostics=tuple(spec_diagnostics))
+        artifact_diagnostics = self._artifact_preflight_diagnostics(domains)
+        if artifact_diagnostics:
+            return DriverResult(diagnostics=tuple(artifact_diagnostics))
         matrix = self._build_matrix(networks, domains)
         self.state_dir.mkdir(parents=True, exist_ok=True)
+        preparation_diagnostics = self._prepare_operation(matrix)
+        if preparation_diagnostics:
+            return DriverResult(diagnostics=tuple(preparation_diagnostics))
         try:
             connection = self._conn()
         except Exception:
@@ -246,6 +236,24 @@ class TechVaultNativeLibvirtDriver:
         domains: tuple[DomainSpec, ...],
     ) -> dict[str, object]:
         return _native_matrix(networks=networks, domains=domains, name_prefix=self.name_prefix)
+
+    def _artifact_preflight_diagnostics(self, domains: tuple[DomainSpec, ...]) -> list[Diagnostic]:
+        return artifact_preflight_diagnostics(
+            domains=domains,
+            kernel_path=self.kernel_path,
+            initramfs_builder=self.initramfs_builder,
+        )
+
+    @staticmethod
+    def _begin_operation() -> None:
+        """Clear operation-scoped subclass evidence before any admission gate."""
+
+    @staticmethod
+    def _prepare_operation(matrix: Mapping[str, object]) -> list[Diagnostic]:
+        """Prepare operation-scoped evidence state before opening libvirt."""
+
+        del matrix
+        return []
 
     # Base extension hooks need no instance state; the guest-certified subclass overrides them.
     @staticmethod
