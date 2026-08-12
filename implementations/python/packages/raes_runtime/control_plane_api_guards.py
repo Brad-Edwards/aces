@@ -1,91 +1,168 @@
-"""HTTP request guards for the runtime control-plane API."""
+"""Bounded ASGI request admission for the runtime control-plane API."""
 
 from __future__ import annotations
 
-from fastapi import Request, Response
+import logging
+from collections.abc import Sequence
+from functools import partial
+
+from anyio import CapacityLimiter, to_thread
 from fastapi.responses import JSONResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from .control_plane import RuntimeControlPlane
 
 _REQUEST_TOO_LARGE_DETAIL = "request too large"
 _INVALID_CONTENT_LENGTH_DETAIL = "invalid content-length"
+_LOGGER = logging.getLogger(__name__)
 
 
-async def request_size_guard_response(
-    control_plane: RuntimeControlPlane,
-    request: Request,
-    *,
-    max_request_bytes: int,
-) -> Response | None:
-    guard_response = _content_length_guard_response(
-        control_plane,
-        request,
-        max_request_bytes=max_request_bytes,
-    )
-    if guard_response is not None:
-        return guard_response
-    return await _body_size_guard_response(
-        control_plane,
-        request,
-        max_request_bytes=max_request_bytes,
-    )
+class RejectionAuditExecutor:
+    """Bound rejected-request audits away from AnyIO's default worker limiter."""
 
+    def __init__(self, control_plane: RuntimeControlPlane, *, max_pending: int) -> None:
+        if max_pending <= 0:
+            raise ValueError("max_pending rejection audits must be positive")
+        self._control_plane = control_plane
+        self._max_pending = max_pending
+        self._pending = 0
+        self._limiter = CapacityLimiter(1)
 
-def _content_length_guard_response(
-    control_plane: RuntimeControlPlane,
-    request: Request,
-    *,
-    max_request_bytes: int,
-) -> JSONResponse | None:
-    response: JSONResponse | None = None
-    content_length = request.headers.get("content-length")
-    if content_length is not None:
+    async def record(
+        self,
+        *,
+        action: str,
+        identity: str,
+        allowed: bool,
+        target: str,
+        reason: str,
+    ) -> bool:
+        if self._pending >= self._max_pending:
+            _LOGGER.warning(
+                "control-plane rejection audit queue is full; dropping audit action=%s target=%s reason=%s",
+                action,
+                target,
+                reason,
+            )
+            return False
+        self._pending += 1
         try:
-            content_length_value = int(content_length)
+            call = partial(
+                self._control_plane.record_audit,
+                action=action,
+                identity=identity,
+                allowed=allowed,
+                target=target,
+                reason=reason,
+            )
+            await to_thread.run_sync(call, limiter=self._limiter)
+        finally:
+            self._pending -= 1
+        return True
+
+
+class RequestSizeLimitMiddleware:
+    """Reject oversized HTTP bodies before FastAPI parses or dispatches them.
+
+    The middleware buffers at most ``max_request_bytes`` bytes, then replays
+    accepted ASGI messages to the application.  A chunk that crosses the limit
+    is rejected before it is copied into the buffer, keeping middleware-owned
+    allocation bounded without relying on Starlette's private ``Request._body``
+    cache.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        control_plane: RuntimeControlPlane,
+        max_request_bytes: int,
+        max_pending_rejection_audits: int = 8,
+    ) -> None:
+        if max_request_bytes <= 0:
+            raise ValueError("max_request_bytes must be positive")
+        self._app = app
+        self._rejection_audits = RejectionAuditExecutor(
+            control_plane,
+            max_pending=max_pending_rejection_audits,
+        )
+        self._max_request_bytes = max_request_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
+
+        try:
+            content_length = _declared_content_length(scope.get("headers", ()))
         except ValueError:
-            response = _invalid_content_length_response(control_plane, request)
-        else:
-            if content_length_value > max_request_bytes:
-                response = _request_too_large_response(control_plane, request)
-    return response
+            await self._reject(scope, receive, send, status_code=400, detail=_INVALID_CONTENT_LENGTH_DETAIL)
+            return
+        if content_length is not None and content_length > self._max_request_bytes:
+            await self._reject(scope, receive, send, status_code=413, detail=_REQUEST_TOO_LARGE_DETAIL)
+            return
+
+        messages: list[Message] = []
+        body = bytearray()
+        while True:
+            message = await receive()
+            messages.append(message)
+            if message["type"] == "http.disconnect":
+                break
+            if message["type"] != "http.request":
+                continue
+            chunk = message.get("body", b"")
+            if len(chunk) > self._max_request_bytes - len(body):
+                await self._reject(scope, receive, send, status_code=413, detail=_REQUEST_TOO_LARGE_DETAIL)
+                return
+            body.extend(chunk)
+            if not message.get("more_body", False):
+                break
+
+        scope.setdefault("state", {})["raw_body"] = bytes(body)
+
+        async def replay_receive() -> Message:
+            if messages:
+                return messages.pop(0)
+            return await receive()
+
+        await self._app(scope, replay_receive, send)
+
+    async def _reject(
+        self,
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+        *,
+        status_code: int,
+        detail: str,
+    ) -> None:
+        try:
+            await self._rejection_audits.record(
+                action=scope.get("method", ""),
+                identity="anonymous",
+                allowed=False,
+                target=scope.get("path", ""),
+                reason=detail,
+            )
+        except Exception:
+            # Admission already failed closed. An unavailable audit store must
+            # neither dispatch the body nor replace the stable rejection.
+            _LOGGER.exception("control-plane rejection audit persistence failed")
+        response = JSONResponse(status_code=status_code, content={"detail": detail})
+        await response(scope, receive, send)
 
 
-async def _body_size_guard_response(
-    control_plane: RuntimeControlPlane,
-    request: Request,
-    *,
-    max_request_bytes: int,
-) -> JSONResponse | None:
-    body = await request.body()
-    if len(body) > max_request_bytes:
-        return _request_too_large_response(control_plane, request)
-    request.state.raw_body = body
-    return None
-
-
-def _request_too_large_response(
-    control_plane: RuntimeControlPlane,
-    request: Request,
-) -> JSONResponse:
-    control_plane.record_audit(
-        action=request.method,
-        identity="anonymous",
-        allowed=False,
-        target=str(request.url.path),
-        reason=_REQUEST_TOO_LARGE_DETAIL,
-    )
-    return JSONResponse(status_code=413, content={"detail": _REQUEST_TOO_LARGE_DETAIL})
-
-
-def _invalid_content_length_response(
-    control_plane: RuntimeControlPlane,
-    request: Request,
-) -> JSONResponse:
-    control_plane.record_audit(
-        action=request.method,
-        identity="anonymous",
-        allowed=False,
-        target=str(request.url.path),
-        reason=_INVALID_CONTENT_LENGTH_DETAIL,
-    )
-    return JSONResponse(status_code=400, content={"detail": _INVALID_CONTENT_LENGTH_DETAIL})
+def _declared_content_length(headers: Sequence[tuple[bytes, bytes]]) -> int | None:
+    values = [value for name, value in headers if name.lower() == b"content-length"]
+    if not values:
+        return None
+    if len(values) != 1:
+        raise ValueError("content-length must appear at most once")
+    try:
+        value = int(values[0].decode("ascii"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise ValueError("content-length must be a non-negative integer") from exc
+    if value < 0:
+        raise ValueError("content-length must be a non-negative integer")
+    return value

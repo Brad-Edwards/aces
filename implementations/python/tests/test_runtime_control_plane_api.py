@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import textwrap
+from collections.abc import Coroutine
 from pathlib import Path
+from threading import Event
+from typing import Any, TypeVar
 
+import httpx
 import pytest
 import raes_runtime.control_plane_store as control_plane_store_module
+from fastapi import HTTPException
 from raes import parse_sdl
 from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.contracts import (
@@ -14,7 +20,8 @@ from raes_contracts.contracts import (
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
-from raes_contracts.plan_projection import provisioning_plan_model
+from raes_contracts.plan_projection import evaluation_plan_model, provisioning_plan_model
+from raes_contracts.planning import ProvisioningPlan
 from raes_contracts.runtime_state import (
     ExplicitnessClass,
     ExplicitnessProvenance,
@@ -26,13 +33,28 @@ from raes_processor.models import OperationReceipt, OperationState, OperationSta
 from raes_processor.planner import plan
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_api import create_control_plane_app
+from raes_runtime.control_plane_api._auth import _ControlPlaneApiAuth
+from raes_runtime.control_plane_api._offload import _control_plane_calls, _ControlPlaneCallExecutor
 from raes_runtime.control_plane_security import (
     ControlPlaneIdentity,
     ControlPlaneRole,
     ControlPlaneSecurityConfig,
 )
 from raes_runtime.control_plane_store import ControlPlaneOperationRecord, LocalControlPlaneStore
+from starlette.requests import Request
 from starlette.testclient import TestClient
+
+_T = TypeVar("_T")
+
+
+def _run(coroutine: Coroutine[Any, Any, _T]) -> _T:
+    """Run one coroutine without replacing or closing pytest's default loop."""
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coroutine)
+    finally:
+        loop.close()
 
 
 def _scenario(yaml_str: str):
@@ -70,9 +92,15 @@ def _participant_operation_record(operation_id: str, participant_address: str) -
     )
 
 
-def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> ControlPlaneSecurityConfig:
+def _test_security(
+    target_name: str,
+    *,
+    max_request_bytes: int = 1_000_000,
+    max_pending_mutations: int = 32,
+) -> ControlPlaneSecurityConfig:
     return ControlPlaneSecurityConfig(
         max_request_bytes=max_request_bytes,
+        max_pending_mutations=max_pending_mutations,
         trust_proxy_identity_headers=True,
         trusted_identities={
             "backend-service": ControlPlaneIdentity(
@@ -103,6 +131,16 @@ def test_control_plane_strict_defaults_ship_without_builtin_principals():
     assert security.trust_proxy_identity_headers is False
     assert security.trusted_identities == {}
     assert security.bearer_tokens == {}
+
+
+def test_control_plane_security_rejects_nonpositive_mutation_queue_bound() -> None:
+    with pytest.raises(ValueError, match="max_pending_mutations must be positive"):
+        ControlPlaneSecurityConfig(max_pending_mutations=0)
+
+
+def test_control_plane_security_rejects_nonpositive_rejection_audit_bound() -> None:
+    with pytest.raises(ValueError, match="max_pending_rejection_audits must be positive"):
+        ControlPlaneSecurityConfig(max_pending_rejection_audits=0)
 
 
 def test_control_plane_api_default_security_does_not_trust_builtin_headers_or_tokens():
@@ -156,6 +194,69 @@ def test_control_plane_api_openapi_documents_explicit_error_responses():
     assert "404" in operation_responses[history_path]["get"]["responses"]
     assert "404" in operation_responses["/participants/{participant_address}/context"]["get"]["responses"]
     assert "/apparatus/operational-summary" in operation_responses
+
+
+def test_control_plane_call_lookup_fails_closed_without_configured_executor() -> None:
+    target = create_stub_target()
+    app = create_control_plane_app(RuntimeControlPlane(target), security=_test_security(target.name))
+    del app.state.control_plane_call_executor
+    request = Request({"type": "http", "app": app})
+
+    with pytest.raises(RuntimeError, match="executor is not configured"):
+        _control_plane_calls(request)
+
+
+def test_control_plane_api_accepts_evaluation_plan() -> None:
+    scenario = _scenario("""
+name: evaluation-route
+nodes:
+  vm:
+    type: compute
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(control_plane, security=_test_security(target.name))
+    headers = {
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/evaluation",
+            json=evaluation_plan_model(execution_plan.evaluation).model_dump(mode="json", exclude_none=True),
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    status = control_plane.get_operation(response.json()["operation_id"])
+    assert status is not None
+    assert status.state is OperationState.SUCCEEDED
+
+
+def test_control_plane_api_redacts_unexpected_route_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(control_plane, security=_test_security(target.name))
+    monkeypatch.setattr(
+        control_plane,
+        "get_snapshot",
+        lambda: (_ for _ in ()).throw(RuntimeError("SECRET-BACKEND-DETAIL")),
+    )
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get(
+            "/snapshot",
+            headers={"authorization": "Bearer test-auditor-token"},
+        )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "internal server error"}
+    assert "SECRET-BACKEND-DETAIL" not in response.text
+    assert control_plane.audit_log()[-1].reason == "internal-error:RuntimeError"
 
 
 def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
@@ -396,6 +497,171 @@ def test_control_plane_api_supports_idempotent_retries():
     assert first.json()["operation_id"] == second.json()["operation_id"]
 
 
+def test_slow_backend_submission_does_not_block_unrelated_http_reads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    entered = Event()
+    release = Event()
+    real_submit = control_plane.submit_provisioning
+
+    def blocking_submit(
+        submitted_plan: ProvisioningPlan,
+        *,
+        base_snapshot: RuntimeSnapshot | None = None,
+        idempotency_key: str = "",
+        request_fingerprint: str = "",
+    ) -> OperationReceipt:
+        entered.set()
+        if not release.wait(timeout=5):
+            raise TimeoutError("test backend was not released")
+        return real_submit(
+            submitted_plan,
+            base_snapshot=base_snapshot,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+        )
+
+    monkeypatch.setattr(control_plane, "submit_provisioning", blocking_submit)
+    headers = {
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
+    }
+
+    async def exercise() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            submission = asyncio.create_task(
+                client.post(
+                    "/operations/provisioning",
+                    json={"operations": [], "diagnostics": [], "realization_authority": []},
+                    headers=headers,
+                )
+            )
+            try:
+                assert await asyncio.to_thread(entered.wait, 2)
+                assert not submission.done()
+                snapshot = await asyncio.wait_for(
+                    client.get("/snapshot", headers=headers),
+                    timeout=1,
+                )
+                assert snapshot.status_code == 200
+            finally:
+                release.set()
+            response = await asyncio.wait_for(submission, timeout=2)
+            assert response.status_code == 200
+
+    _run(exercise())
+
+
+def test_control_plane_rejects_mutation_queue_overload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name, max_pending_mutations=1),
+    )
+    entered = Event()
+    release = Event()
+    real_submit = control_plane.submit_provisioning
+
+    def blocking_submit(
+        submitted_plan: ProvisioningPlan,
+        *,
+        base_snapshot: RuntimeSnapshot | None = None,
+        idempotency_key: str = "",
+        request_fingerprint: str = "",
+    ) -> OperationReceipt:
+        entered.set()
+        if not release.wait(timeout=5):
+            raise TimeoutError("test backend was not released")
+        return real_submit(
+            submitted_plan,
+            base_snapshot=base_snapshot,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+        )
+
+    monkeypatch.setattr(control_plane, "submit_provisioning", blocking_submit)
+    headers = {
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
+    }
+
+    async def exercise() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            first = asyncio.create_task(
+                client.post(
+                    "/operations/provisioning",
+                    json={"operations": [], "diagnostics": [], "realization_authority": []},
+                    headers={**headers, "idempotency-key": "first"},
+                )
+            )
+            try:
+                assert await asyncio.to_thread(entered.wait, 2)
+                overloaded = await asyncio.wait_for(
+                    client.post(
+                        "/operations/provisioning",
+                        json={"operations": [], "diagnostics": [], "realization_authority": []},
+                        headers={**headers, "idempotency-key": "second"},
+                    ),
+                    timeout=1,
+                )
+                assert overloaded.status_code == 503
+                assert overloaded.json() == {"detail": "control-plane mutation queue is full"}
+                assert overloaded.headers["retry-after"] == "1"
+            finally:
+                release.set()
+            assert (await asyncio.wait_for(first, timeout=2)).status_code == 200
+
+    _run(exercise())
+
+
+def test_control_plane_executor_serializes_target_mutations() -> None:
+    executor = _ControlPlaneCallExecutor(max_pending_mutations=2)
+    first_entered = Event()
+    release_first = Event()
+    execution_order: list[str] = []
+
+    def mutation(label: str) -> str:
+        execution_order.append(f"start:{label}")
+        if label == "first":
+            first_entered.set()
+            if not release_first.wait(timeout=5):
+                raise TimeoutError("first mutation was not released")
+        execution_order.append(f"end:{label}")
+        return label
+
+    async def exercise() -> None:
+        first = asyncio.create_task(executor.mutate(mutation, "first"))
+        second: asyncio.Task[str] | None = None
+        try:
+            assert await asyncio.to_thread(first_entered.wait, 2)
+            second = asyncio.create_task(executor.mutate(mutation, "second"))
+            await asyncio.sleep(0.05)
+            assert execution_order == ["start:first"]
+        finally:
+            release_first.set()
+        assert second is not None
+        assert await asyncio.gather(first, second) == ["first", "second"]
+
+    _run(exercise())
+    assert execution_order == ["start:first", "end:first", "start:second", "end:second"]
+
+
+def test_control_plane_executor_rejects_nonpositive_queue_bound() -> None:
+    with pytest.raises(ValueError, match="max_pending_mutations must be positive"):
+        _ControlPlaneCallExecutor(max_pending_mutations=0)
+
+
 def test_control_plane_api_persists_operations_and_snapshot(tmp_path: Path):
     scenario = _scenario("""
 name: workflow
@@ -572,6 +838,176 @@ def test_control_plane_api_rejects_invalid_content_length_header():
     assert response.status_code == 400
     assert response.json() == {"detail": "invalid content-length"}
     assert control_plane.audit_log()[-1].reason == "invalid content-length"
+
+
+def test_control_plane_api_enforces_request_size_limit_without_content_length():
+    """A chunked body (no content-length) must still be rejected with 413."""
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    security = _test_security(target.name, max_request_bytes=32)
+    app = create_control_plane_app(control_plane, security=security)
+    headers = {
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
+        "content-type": "application/json",
+    }
+
+    def _chunked_body():
+        for _ in range(100):
+            yield b"x" * 32
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            content=_chunked_body(),
+            headers=headers,
+        )
+
+    assert response.status_code == 413
+    assert response.json() == {"detail": "request too large"}
+    assert control_plane.audit_log()[-1].reason == "request too large"
+
+
+def test_control_plane_api_rejects_invalid_bearer_token_instead_of_trusting_headers():
+    """An unresolvable bearer token must fail closed, not fall through to header identity."""
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/snapshot",
+            headers={
+                "authorization": "Bearer revoked-token",
+                "x-raes-client-verified": "true",
+                "x-raes-client-identity": "backend-service",
+            },
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "invalid bearer token"}
+    assert control_plane.audit_log()[-1].reason == "invalid bearer token"
+    assert control_plane.audit_log()[-1].allowed is False
+
+
+def test_control_plane_auth_rejects_non_ascii_bearer_token_as_unauthorized():
+    """A non-ASCII token must be reported unauthorized, not crash the comparison.
+
+    Starlette decodes header bytes as latin-1, so a raw request can deliver a
+    non-ASCII token string even though HTTP clients refuse to encode one. A
+    ``str``-based constant-time comparison would raise ``TypeError`` there and
+    surface as a 500 instead of a 401.
+    """
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    auth = _ControlPlaneApiAuth(control_plane, _test_security(target.name))
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/snapshot",
+            "headers": [(b"authorization", "Bearer token-\xf6\xe9".encode("latin-1"))],
+            "query_string": b"",
+        },
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        auth.read_identity(request)
+
+    assert excinfo.value.status_code == 401
+    assert excinfo.value.detail == "invalid bearer token"
+
+
+def test_control_plane_api_rejects_bearer_token_bound_to_another_target():
+    """A bearer token scoped to a different target must not authenticate here.
+
+    The header-identity path already enforces this binding; the bearer path must
+    apply the same check rather than returning the identity unconditionally.
+    """
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    security = ControlPlaneSecurityConfig(
+        trust_proxy_identity_headers=False,
+        bearer_tokens={
+            "other-target-token": ControlPlaneIdentity(
+                identity="operator",
+                roles=frozenset({ControlPlaneRole.OPERATOR}),
+                target_name="some-other-target",
+            ),
+        },
+    )
+    app = create_control_plane_app(control_plane, security=security)
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/snapshot",
+            headers={"authorization": "Bearer other-target-token"},
+        )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "identity is not authorized for this target"}
+
+
+def test_control_plane_security_config_mappings_cannot_be_mutated_after_construction():
+    """``strict_defaults`` must stay fail-closed; frozen=True alone does not stop dict mutation."""
+    security = ControlPlaneSecurityConfig.strict_defaults()
+    intruder = ControlPlaneIdentity(identity="intruder", roles=frozenset({ControlPlaneRole.OPERATOR}))
+
+    with pytest.raises(TypeError):
+        security.bearer_tokens["stolen"] = intruder  # type: ignore[index]
+    with pytest.raises(TypeError):
+        security.trusted_identities["stolen"] = intruder  # type: ignore[index]
+
+    assert security.bearer_tokens == {}
+    assert security.trusted_identities == {}
+
+
+def test_request_size_guard_stops_reading_an_oversized_chunked_body():
+    """The ASGI guard must stop after the first chunk that crosses the cap."""
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name, max_request_bytes=64),
+    )
+    chunk = b"x" * 32
+    total_chunks = 1000
+    delivered = 0
+
+    async def receive() -> dict[str, object]:
+        nonlocal delivered
+        if delivered >= total_chunks:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        delivered += 1
+        return {"type": "http.request", "body": chunk, "more_body": True}
+
+    sent: list[dict[str, object]] = []
+
+    async def send(message: dict[str, object]) -> None:
+        sent.append(message)
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/operations/provisioning",
+        "raw_path": b"/operations/provisioning",
+        "query_string": b"",
+        "root_path": "",
+        "headers": [(b"content-type", b"application/json")],
+        "client": ("127.0.0.1", 1),
+        "server": ("testserver", 80),
+    }
+
+    _run(app(scope, receive, send))
+
+    assert any(message.get("status") == 413 for message in sent)
+    assert delivered <= 3
 
 
 def test_local_control_plane_store_saves_snapshot_with_atomic_replace(

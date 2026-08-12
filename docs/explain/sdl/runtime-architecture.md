@@ -448,6 +448,28 @@ header identity must pass an explicit `ControlPlaneSecurityConfig`, set
 `trust_proxy_identity_headers=True`, and only trust those headers behind an
 authenticated proxy that strips caller-supplied identity headers.
 
+Bearer and verified-proxy authentication share the same target-binding check.
+An explicitly supplied bearer that is unknown, revoked, or scoped to another
+target is rejected; it never falls back to proxy headers. Request admission is
+also bounded before FastAPI parses or dispatches a body: a public ASGI wrapper
+checks a single non-negative `Content-Length`, then consumes and replays at most
+the configured byte limit. This boundary does not rely on framework-private
+request caches and returns a stable `413` before a route can run.
+
+The HTTP adapter offloads synchronous backend and store calls to AnyIO's
+bounded worker pool. An application-scoped async lock serializes target
+mutations without occupying a worker while requests wait; independent reads
+remain responsive while a backend is slow. The pending mutation count is
+bounded by `ControlPlaneSecurityConfig.max_pending_mutations` and overload
+returns `503` plus `Retry-After`. This in-process execution boundary neither
+replaces backend I/O timeouts nor claims durable or distributed job queuing.
+Request-size rejection also offloads audit persistence; an audit-store failure
+cannot admit an invalid body or replace the stable `400`/`413` response. These
+pre-routing audits use a separate one-worker limiter and a bounded pending
+count, so an unauthenticated rejection flood cannot consume the default AnyIO
+workers required by authenticated reads; excess audit records are dropped with
+an operational warning.
+
 ## Current Scope
 
 The current runtime scope includes:
