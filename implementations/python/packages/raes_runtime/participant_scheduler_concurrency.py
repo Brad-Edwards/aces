@@ -402,7 +402,11 @@ def _execute_concurrent_batch(batch: _ConcurrentBatch) -> None:
                 code="runtime.participant-concurrent-batch-failed",
                 domain="participant",
                 address=batch.policy.address,
-                message=f"Backend concurrent participant batch raised: {exc}",
+                # Only the exception type crosses the boundary, matching
+                # `_backend_call_failed`: backend messages can carry host paths,
+                # credentials, or participant data that must not enter a
+                # portable diagnostic.
+                message=(f"Backend concurrent participant batch did not complete ({type(exc).__name__})."),
             ),
         )
         return
