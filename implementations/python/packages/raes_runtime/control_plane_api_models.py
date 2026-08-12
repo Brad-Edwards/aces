@@ -29,6 +29,8 @@ from raes_contracts.planning import (
     OrchestrationPlan,
     ProvisioningPlan,
     ProvisionOp,
+    RealizationAuthorityBound,
+    ResolvedRealizationAuthority,
 )
 from raes_contracts.runtime_state import OperationStatus, RuntimeSnapshotEnvelope
 
@@ -89,6 +91,30 @@ def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
             for op in model.operations
         ],
         diagnostics=[_diagnostic_from_mapping(payload) for payload in model.diagnostics],
+        realization_authority=tuple(
+            ResolvedRealizationAuthority(
+                address=entry.address,
+                field_path=entry.field_path,
+                domain=entry.domain,
+                requirement_kind=entry.requirement_kind,
+                payload_pointer=entry.payload_pointer,
+                mode=entry.mode,
+                source=entry.source,
+                provenance=entry.provenance,
+                governing_scope=entry.governing_scope,
+                bounds=tuple(
+                    RealizationAuthorityBound(
+                        value_pointer=bound.value_pointer,
+                        domain=bound.domain,
+                        identity_digest=bound.identity_digest,
+                    )
+                    for bound in entry.bounds
+                ),
+                verification_scope=entry.verification_scope,
+                required_observation_strength=entry.required_observation_strength,
+            )
+            for entry in model.realization_authority
+        ),
         realization_envelope=model.realization_envelope,
         realization_constraints=tuple(
             PlannedRealizationConstraint(

@@ -27,7 +27,14 @@ from raes_contracts.apparatus import (
     ProcessResourceLimitCapability,
     RealizationObservationCapability,
 )
-from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.planning import (
+    ChangeAction,
+    ProvisioningPlan,
+    ProvisionOp,
+    RealizationAuthorityMode,
+    RuntimeDomain,
+)
+from raes_contracts.realization_authority import planned_realization_selection_diagnostics
 from raes_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
     realization_envelope_digest,
@@ -40,7 +47,7 @@ from raes_contracts.vocabulary import (
     RealizationVerificationScope,
 )
 from raes_processor.compiler import compile_runtime_model
-from raes_processor.planner import plan
+from raes_processor.planner import plan, realization_authority_diagnostics
 from raes_processor.semantics.realization import (
     CompiledRealizationRequirement,
     RealizationValueConstraint,
@@ -364,6 +371,38 @@ nodes:
     assert requirement.value_constraints[0].allowed_values == (16384, 32768, 65536)
 
 
+def test_plan_authority_admits_in_bound_identity_addressed_process_limit() -> None:
+    source = _scenario(
+        """
+        - resource: open_file_descriptors
+          soft: ${soft_limit}
+          hard: 65536
+          subject: {name: search}
+          scope: subtree
+        """,
+        variables="""
+        variables:
+          soft_limit:
+            type: integer
+            default: 32768
+            allowed_values: [16384, 32768, 65536]
+        """,
+    )
+    execution = plan(
+        compile_runtime_model(instantiate_scenario(parse_sdl(source))),
+        _supporting_manifest(),
+    )
+    authority = next(
+        entry
+        for entry in execution.provisioning.realization_authority
+        if entry.requirement_kind == "process-resource-limits"
+    )
+
+    assert authority.mode is RealizationAuthorityMode.CONSTRAINED
+    assert authority.bounds[0].identity_digest is not None
+    assert planned_realization_selection_diagnostics(execution.provisioning) == []
+
+
 def test_backend_admission_requires_typed_domain_and_guest_observation() -> None:
     model = compile_runtime_model(
         parse_sdl(
@@ -402,6 +441,43 @@ def test_backend_admission_requires_typed_domain_and_guest_observation() -> None
     assert any(d.code == "realization.unsupported-process-resource-limits" for d in unsupported.diagnostics)
     assert not any(d.code.startswith("realization.") for d in supported.diagnostics)
     assert any(d.code == "realization.process-resource-limit-domain-mismatch" for d in out_of_domain.diagnostics)
+
+
+def test_plan_authority_readmission_reconstructs_process_limit_capability_dimensions() -> None:
+    model = compile_runtime_model(
+        parse_sdl(
+            _scenario(
+                """
+        - resource: open_file_descriptors
+          soft: 65536
+          hard: 65536
+          subject: {name: search}
+          scope: subtree
+        """
+            )
+        )
+    )
+    admitted = plan(model, _supporting_manifest())
+    incompatible = replace(
+        _supporting_manifest(),
+        realization_support=(
+            replace(
+                _supporting_manifest().realization_support[0],
+                process_resource_limits=(
+                    ProcessResourceLimitCapability(
+                        resource="open_file_descriptors",
+                        scopes=frozenset({"subtree"}),
+                        minimum=1024,
+                        maximum=4096,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    diagnostics = realization_authority_diagnostics(admitted.provisioning, incompatible)
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["realization.process-resource-limit-domain-mismatch"]
 
 
 def test_backend_admission_requires_the_selected_configuration_to_repeat_the_exact_domain() -> None:
@@ -595,14 +671,46 @@ def test_open_backend_choice_requires_typed_apparatus_permission_and_is_disclose
 
 
 def test_backend_boundary_retains_baseline_on_malformed_limit_observation() -> None:
-    declared = [_exact_limit()]
-    requirement = _requirement(ExplicitnessClass.EXACT)
+    manifest = _supporting_manifest()
+    execution = plan(
+        compile_runtime_model(
+            parse_sdl(
+                _scenario(
+                    """
+        - resource: open_file_descriptors
+          soft: 65536
+          hard: 65536
+          subject: {name: search, role: primary}
+          scope: subtree
+        """
+                )
+            )
+        ),
+        manifest,
+    )
 
     def backend() -> ApplyResult:
         malformed = [{**_exact_limit(), "native_name": "nofile"}]
+        operation = execution.provisioning.operations[0]
+        payload = copy.deepcopy(operation.payload)
+        payload["spec"]["node"]["runtime"]["operational_policy"]["resource_limits"]["process_limits"] = malformed
+        observation_snapshot = _snapshot(
+            malformed,
+            observation_strength=ObservationStrength.GUEST_OBSERVED,
+        )
         return ApplyResult(
             success=True,
-            snapshot=_snapshot(malformed, observation_strength=ObservationStrength.GUEST_OBSERVED),
+            snapshot=RuntimeSnapshot(
+                entries={
+                    _ADDRESS: SnapshotEntry(
+                        address=_ADDRESS,
+                        domain=RuntimeDomain.PROVISIONING,
+                        resource_type="node",
+                        payload=payload,
+                    )
+                },
+                realization_observations=observation_snapshot.realization_observations,
+            ),
             changed_addresses=[_ADDRESS],
         )
 
@@ -612,9 +720,8 @@ def test_backend_boundary_retains_baseline_on_malformed_limit_observation() -> N
         address="runtime.provision.node.worker",
         snapshot=baseline,
         realization=_RealizationApplyContext(
-            requirements=(requirement,),
-            plan=_plan(declared),
-            manifest=_supporting_manifest(),
+            plan=execution.provisioning,
+            manifest=manifest,
         ),
     )
 

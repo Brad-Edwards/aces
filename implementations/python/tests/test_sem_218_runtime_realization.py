@@ -187,7 +187,7 @@ def test_honest_apply_records_realization_provenance():
 def test_honoured_parameter_substitution_records_processor_derived_provenance():
     """I5: an honoured substituted value retains its processor-derived origin."""
 
-    manager = RuntimeManager(create_stub_target())
+    manager = RuntimeManager(_target_with_provisioner(create_stub_target().provisioner))
     plan = manager.plan(parse_sdl(textwrap.dedent(_PARAMETERIZED_SCENARIO)))
 
     result = manager.apply(plan)

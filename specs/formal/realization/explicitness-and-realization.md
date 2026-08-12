@@ -60,18 +60,23 @@ is `active`. What is *enforced today* spans authoring through observation:
   preserves authored explicitness metadata across parameter/default
   substitution without promoting substituted concrete values to false
   exact declarations;
-- the typed compiler emission in `compile_runtime_model`, which lowers
-  each authored realization concern into a `CompiledRealizationRequirement`
-  on the `RuntimeModel` preserving its exact / constrained / open class;
+- the typed compiler emission in `compile_runtime_model`, which preserves
+  realizable demand in `CompiledRealizationRequirement` and the complete
+  closed / open / constrained / exact boundary in
+  `CompiledRealizationAuthority` on the `RuntimeModel`;
 - the planner realization-support gate in `raes_processor.planner.plan`,
   which matches each compiled exact / constrained / open requirement against
   the selected backend's `realization_support` and rejects open demand unless
   the selected domain explicitly declares `OPEN_REALIZATION`;
+- the mandatory `ProvisioningPlan.realization_authority` handoff, which
+  resolves delegation against the selected apparatus and publishes a typed,
+  value-free entry for every applicable registered concern, including closed
+  omissions, together with the selected realization-envelope identity;
 - the runtime non-approximation gate on backend adapters in
-  `raes_processor.semantics.realization.realization_disclosure` (invoked from
-  `raes_runtime.backend_calls._call_backend_apply`, the runtime adapter
-  boundary), which compares each realized exact concern against the author
-  declaration and rejects a silent approximation with a
+  `raes_processor.planner.realization_authority_disclosure` (invoked from
+  `raes_runtime.backend_calls._call_backend_apply` for both in-process and
+  control-plane execution), which applies the same plan-owned authority that
+  was admitted before mutation and rejects a silent approximation with a
   `runtime.backend-contract-invalid` diagnostic before the backend snapshot is
   accepted into runtime state;
 - the SEM-218 provenance ledger (`realization_provenance`) on the runtime
@@ -224,6 +229,55 @@ demand requires at least driver-reported readback. A claimed value outside the
 selected envelope or authored domain MUST reject the runtime result. An
 in-process emulator may disclose a governed extension value but does not count
 as an independent native container, virtual-machine, or physical mechanism.
+
+### Resolved backend-facing authority
+
+Every backend-facing provisioning plan MUST contain a
+`realization_authority` collection. The collection MUST be complete for every
+registered realization concern applicable to every non-delete node, network,
+or content-placement operation. A closed omission is therefore an affirmative
+denial entry even though no realized value is present. Delete operations MUST
+NOT retain stale authority.
+
+Each entry MUST carry the canonical resource address, semantic field path,
+realization domain and requirement kind, canonical operation-payload JSON
+Pointer, effective mode, resolution source, provenance, governing scope, and
+any required observation posture. The effective mode is exactly one of
+`closed`, `open`, `constrained`, or `exact`. Explicit root delegation MUST be
+resolved during planning; `apparatus-default` remains its source, not an
+unresolved fifth mode. Omitted legacy designation resolves closed with a
+distinct `legacy-default` source.
+
+Constrained entries MUST contain one or more publication-safe typed bounds;
+other modes MUST NOT contain bounds. Exact values remain in their owning
+operation payload and MUST NOT be duplicated in authority. Credentials,
+environment values, source bodies, backend-native state, and arbitrary
+authoring designation tables MUST NOT enter the authority collection.
+
+Completeness and canonical payload pointers MUST be recomputed from the
+registered concern inventory at execution admission. The selected backend's
+capability and realization envelope only narrow the author boundary: they MUST
+NOT create permission absent from an open or constrained authority entry. A
+plan whose authority was not admitted against the selected envelope identity,
+or whose non-closed mode lacks matching backend support, MUST be rejected
+before backend mutation.
+
+An authenticated transport principal MUST NOT thereby acquire authority to
+mint or rewrite this collection. A remote operation-bearing provisioning plan
+MUST be bound to planner-produced content by a trusted verifier or immutable
+server-side reference before submission admission. The reference control plane
+computes the canonical full-plan digest and resolves it against an in-process
+registry populated from trusted planner objects; a caller-provided digest,
+request fingerprint, or authentication identity alone is insufficient.
+
+Runtime non-approximation, safe observation projection, and provenance MUST
+consume this plan-owned collection. Internal compiler requirements may remain
+as planning inputs and as contracts for non-registered concerns such as source
+artifacts, but MUST NOT replace or override the backend-facing authority for a
+registered concern. A value added at a closed concern is excess scenario state
+and MUST fail without replacing the baseline snapshot. Backend/apparatus-only
+state remains governed by its owning manifest, artifact, observation, audit,
+or metadata contract and MUST NOT be reclassified as scenario provenance.
 
 ### Five invariants
 
@@ -390,18 +444,19 @@ the actual selection separately in the bound runtime observation surface.
 The seven canonical `SEM-200` lifecycle phases interact with the
 invariants as follows. The list is normative for the phase boundary, not
 for the engineering layout of any one phase. The **Status** column
-records what is enforced in the repository today; every phase boundary is
-now enforced by named, tested code.
+records what is enforced in the repository today. The portable provisioning
+handoff is part of the enforced boundary; in-process metadata is not a
+substitute for that published contract.
 
 | Phase | Responsibility | Status |
 | --- | --- | --- |
 | Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | active — closed Pydantic models, the leaf classifier, and the typed scenario/scoped `realization` designation surface carry author intent without conflating it with apparatus capability. |
 | Validation | Apparatus declarations and SDL designation scopes are structurally and semantically validated, including canonical pointers, namespace ownership, and equal-specificity conflicts. | active — contract shape gates and `SemanticValidator` enforce both authorities fail closed. |
 | Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | active — `instantiate_scenario` preserves explicitness plus typed designation provenance and revalidates concrete content. |
-| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. Every compute node emits a separate compute-substrate requirement. | active — `compile_runtime_model` applies leaf precedence and the scoped cascade, carrying open and delegated demand plus its governing scope. |
-| Planning | Matches every compiled requirement against the candidate backend manifest and selected envelope. Structural node-kind support and compute-substrate mechanism constraints remain separate. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | active — the planner rejects unsupported or out-of-envelope demand and never approximates it. |
-| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | active — the runtime non-approximation gate `raes_processor.semantics.realization.realization_disclosure` (invoked from `raes_runtime.backend_calls._call_backend_apply`) compares each realized exact concern against the author declaration and rejects a silent approximation with a `runtime.backend-contract-invalid` diagnostic before the backend snapshot is accepted. |
-| Observation | Realized values land in result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state or plan echo. | active — the runtime snapshot keeps provenance separate from bound, value-bearing compute-substrate observations and rejects missing, weak, unbound, or out-of-domain readback. |
+| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. Every compute node emits a separate compute-substrate requirement. | active — `compile_runtime_model` applies leaf precedence, retains realizable demand, and separately carries complete authority for closed, open, constrained, exact, legacy, and delegated concerns. |
+| Planning | Matches every compiled requirement against the candidate backend manifest and selected envelope. Structural node-kind support, compute-substrate mechanism constraints, and resolved backend authority remain separate. Unsupported demand MUST cause plan rejection before deployment. | active — support and envelope gates intersect author permission, delegation is resolved with its source retained, and the provisioning plan carries both the complete typed authority boundary and author substrate constraints. |
+| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, silently narrow an open realization beyond its declared constraints, or add values at closed concerns. | active — direct-manager and control-plane execution validate plan-owned authority, envelope identity, backend support, typed bounds, and non-approximation before accepting a snapshot; operation-bearing plans are bound to trusted planner content. |
+| Observation | Realized values land in result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state or plan echo. | active — admitted authority drives safe projection and value-free provenance, while bound compute-substrate observations carry the selected value and reject missing, weak, stale, unbound, or out-of-domain readback. |
 
 ## Cross-Cutting Gates
 
@@ -684,9 +739,7 @@ This spec does not:
 
 The semantics above synthesize patterns from established declarative
 languages, scenario / playbook DSLs, and academically-supported cyber
-SDLs. The repository's curated primary-source corpus is at
-`research/research/primary/literature/`. The most directly relevant
-precedents:
+SDLs. The most directly relevant primary-source precedents are linked below:
 
 - **Modelica `fixed` and `start` attributes** (Modelica Language
   Specification): the `fixed = true` annotation on an initial value
@@ -715,22 +768,22 @@ precedents:
   SDL points the ecosystem is closed-world by default, because honest
   reproducibility requires the failure mode "I cannot realize this" to
   be louder than the failure mode "I quietly assumed something".
-- **OASIS CACAO v2** (`research/research/primary/literature/dsl-and-standards/cacao_v2_spec.pdf`):
+- **[OASIS CACAO v2](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)**:
   RFC 2119 field-level MUST / SHOULD / MAY semantics in a security
   playbook DSL; consumers MUST reject playbooks whose
   `playbook_extensions` are not supported, rather than silently dropping
   them. Direct analogue for I1 / I2 / I4.
-- **OASIS OpenC2 v2** (`research/research/primary/literature/dsl-and-standards/openc2_v2_spec.html`):
+- **[OASIS OpenC2 v2](https://docs.oasis-open.org/openc2/oc2ls/v2.0/oc2ls-v2.0.html)**:
   required `target` versus optional `args`; actuators advertise
   supported actions and reject commands outside that surface.
   Apparatus-manifest analogue for I4.
-- **Costa et al 2020, *VSDL — A Virtual Scenario Description Language***
-  (`research/research/primary/literature/dsl-and-standards/costa2020_vsdl.pdf`): distinguishes scenario
+- **[Costa et al 2020, *Automating the Generation of Cyber Range Virtual
+  Scenarios with VSDL*](https://arxiv.org/abs/2001.06681)**: distinguishes scenario
   template (open over parameters) from instantiated scenario (closed
   after binding); processor rejects scenarios it cannot fully
   instantiate rather than approximating. Precedent for the
   authoring / validation / instantiation boundary above.
-- **Sigma rules** (`research/research/primary/literature/dsl-and-standards/sigma_rules_spec.yml`):
+- **[Sigma rules](https://sigmahq.io/sigma-specification/specification/sigma-rules-specification.html)**:
   detection rules with backend-translation semantics that require a
   backend to signal `unsupported` rather than silently drop or
   approximate a field. Reinforces I2.
@@ -738,12 +791,9 @@ precedents:
   backend profiles** all share the same general shape with the
   `RealizationSupportDeclaration` per-domain mode used here. SEM-218
   adopts the shape and makes its semantics normative for RAES.
-- **Pham et al 2016 *CyRIS***
-  (`research/research/primary/literature/dsl-and-standards/pham2016_cyris.pdf`),
-  **Vykopal et al 2017 *KYPO***
-  (`research/research/primary/literature/dsl-and-standards/vykopal2017_kypo.pdf`),
-  **Standen et al 2021 *CybORG***
-  (`research/research/primary/literature/dsl-and-standards/standen2021_cyborg.pdf`): academically
+- **[Pham et al 2016 *CyRIS*](https://hdl.handle.net/10119/15062)**,
+  **[Vykopal et al 2017 *KYPO*](https://www.scitepress.org/Papers/2017/64282/)**,
+  **[Standen et al 2021 *CybORG*](https://arxiv.org/abs/2108.09118)**: academically
   published cyber-range and agent-evaluation systems whose authoring
   layers separate declared scenario structure from runtime instantiation
   choices. Aligned with the lifecycle-phase responsibilities above.

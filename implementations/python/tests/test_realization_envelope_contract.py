@@ -256,7 +256,7 @@ def test_manifest_plan_and_snapshot_publish_the_same_typed_identity():
             "realization_envelope": identity,
         }
     )
-    plan = ProvisioningPlanModel(realization_envelope=identity)
+    plan = ProvisioningPlanModel(realization_authority=[], realization_envelope=identity)
     snapshot = RuntimeSnapshotEnvelopeModel(realization_envelope=identity)
 
     assert manifest.realization_envelope == plan.realization_envelope == snapshot.realization_envelope

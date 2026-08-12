@@ -14,6 +14,7 @@ from raes_contracts.planning import (
     planned_infrastructure_spec,
     planned_resource_payload,
 )
+from raes_contracts.realization_authority import planned_realization_selection_diagnostics
 
 from .._payload import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE, SUPPORTED_RESOURCE_TYPES, _os_family
 from ..acls import realize_node_acls
@@ -60,7 +61,8 @@ def interpret_provisioning_plan(
     """
 
     capabilities = provisioner_capabilities or LIBVIRT_PROVISIONER_CAPABILITIES
-    diagnostics: list[Diagnostic] = list(capability_envelope_diagnostics(plan, capabilities))
+    diagnostics: list[Diagnostic] = list(planned_realization_selection_diagnostics(plan))
+    diagnostics.extend(capability_envelope_diagnostics(plan, capabilities))
     network_resources, node_resources, placement_resources = _collect_supported_resources(plan, diagnostics)
 
     networks = [_network_spec(resource) for resource, _ in network_resources]

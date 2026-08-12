@@ -28,7 +28,13 @@ from raes_contracts.apparatus import (
     RealizationObservationCapability,
     RealizationSupportDeclaration,
 )
-from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.planning import (
+    ChangeAction,
+    ProvisioningPlan,
+    ProvisionOp,
+    RealizationAuthorityMode,
+    RuntimeDomain,
+)
 from raes_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
     realization_envelope_digest,
@@ -216,6 +222,15 @@ def test_most_specific_scopes_override_in_both_directions_and_ignore_order():
         if requirement.explicitness is ExplicitnessClass.OPEN
     } == _open_node_realization_fields("worker") | _open_compute_substrate_fields("web", "worker")
     assert first.realization_requirements == second.realization_requirements
+    handed_off = {
+        entry.field_path: entry
+        for entry in plan(first, _manifest(RealizationSupportMode.OPEN_REALIZATION)).provisioning.realization_authority
+    }
+    assert handed_off["nodes.worker.os"].mode is RealizationAuthorityMode.OPEN
+    assert handed_off["nodes.worker.os"].governing_scope == "#/nodes/worker"
+    assert handed_off["nodes.web.os"].mode is RealizationAuthorityMode.CLOSED
+    assert handed_off["nodes.web.os"].governing_scope == "#/nodes"
+    assert handed_off["nodes.worker.type"].mode is RealizationAuthorityMode.EXACT
 
     closed_then_open = """realization:
       default: closed
@@ -369,6 +384,14 @@ def test_imported_scope_is_qualified_and_does_not_leak_to_host_or_sibling(tmp_pa
     } == _open_node_realization_fields("openmod.vm") | _open_compute_substrate_fields(
         "openmod.vm", "closedmod.vm", "host"
     )
+    authority = {
+        entry.field_path: entry
+        for entry in plan(model, _manifest(RealizationSupportMode.OPEN_REALIZATION)).provisioning.realization_authority
+    }
+    assert authority["nodes.openmod.vm.os"].mode is RealizationAuthorityMode.OPEN
+    assert authority["nodes.openmod.vm.os"].governing_scope == "openmod#/nodes/openmod.vm"
+    assert authority["nodes.closedmod.vm.os"].mode is RealizationAuthorityMode.CLOSED
+    assert authority["nodes.host.os"].mode is RealizationAuthorityMode.CLOSED
 
 
 def test_open_demand_is_rejected_without_open_realization_support():

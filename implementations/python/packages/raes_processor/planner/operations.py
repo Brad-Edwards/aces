@@ -1,6 +1,7 @@
 """Domain plan construction from reconciled resources and actions."""
 
 from raes_backend_protocols.capabilities import BackendManifest
+from raes_contracts.planning import ResolvedRealizationAuthority
 
 from ..models import (
     ChangeAction,
@@ -24,7 +25,7 @@ from .ordering import _delete_order, _entry_matches_resource, _topological_order
 def _build_operations(
     resources: dict[str, PlannedResource],
     snapshot: RuntimeSnapshot,
-    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
+    realization_requirements: tuple[CompiledRealizationRequirement, ...],
 ) -> tuple[dict[str, ChangeAction], dict[str, SnapshotEntry]]:
     semantic_actions, deleted_entries = reconcile_resource_actions(
         resources,
@@ -45,7 +46,8 @@ def _build_provisioning_plan(
     actions: dict[str, ChangeAction],
     deleted_entries: dict[str, SnapshotEntry],
     manifest: BackendManifest,
-    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
+    realization_requirements: tuple[CompiledRealizationRequirement, ...],
+    realization_authority: tuple[ResolvedRealizationAuthority, ...],
 ) -> ProvisioningPlan:
     provisioning_resources = {
         address: resource for address, resource in resources.items() if resource.domain == RuntimeDomain.PROVISIONING
@@ -80,6 +82,9 @@ def _build_provisioning_plan(
     return ProvisioningPlan(
         resources=provisioning_resources,
         operations=ops,
+        realization_authority=tuple(
+            entry for entry in realization_authority if entry.address in provisioning_resources
+        ),
         realization_envelope=(
             manifest.realization_envelope.identity if manifest.realization_envelope is not None else None
         ),

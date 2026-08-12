@@ -98,6 +98,16 @@
       "title": "ExactDomain",
       "type": "object"
     },
+    "ExplicitnessProvenance": {
+      "description": "Where the classified value came from in the SDL lifecycle.",
+      "enum": [
+        "author-declared",
+        "processor-derived",
+        "backend-realized"
+      ],
+      "title": "ExplicitnessProvenance",
+      "type": "string"
+    },
     "GovernedReferenceDomain": {
       "additionalProperties": false,
       "description": "References in a finite governed set under a named authority.",
@@ -177,6 +187,17 @@
         "number"
       ],
       "title": "NumericType",
+      "type": "string"
+    },
+    "ObservationStrength": {
+      "description": "Strongest evidence a backend configuration emits for one concern.",
+      "enum": [
+        "none",
+        "driver-reported",
+        "daemon-observed",
+        "guest-observed"
+      ],
+      "title": "ObservationStrength",
       "type": "string"
     },
     "PlanOperationModel": {
@@ -355,6 +376,81 @@
       "title": "PlannedRealizationConstraintModel",
       "type": "object"
     },
+    "RealizationAuthorityBoundModel": {
+      "additionalProperties": false,
+      "description": "One safe typed domain over a resolved concern value or owned leaf.",
+      "properties": {
+        "domain": {
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanDomain",
+              "enum": "#/$defs/EnumDomain",
+              "exact": "#/$defs/ExactDomain",
+              "governed-reference": "#/$defs/GovernedReferenceDomain",
+              "numeric-interval": "#/$defs/NumericIntervalDomain",
+              "record": "#/$defs/RecordDomain"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExactDomain"
+            },
+            {
+              "$ref": "#/$defs/EnumDomain"
+            },
+            {
+              "$ref": "#/$defs/BooleanDomain"
+            },
+            {
+              "$ref": "#/$defs/NumericIntervalDomain"
+            },
+            {
+              "$ref": "#/$defs/GovernedReferenceDomain"
+            },
+            {
+              "$ref": "#/$defs/RecordDomain"
+            }
+          ],
+          "title": "Domain"
+        },
+        "identity_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identity Digest"
+        },
+        "value_pointer": {
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Value Pointer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value_pointer",
+        "domain"
+      ],
+      "title": "RealizationAuthorityBoundModel",
+      "type": "object"
+    },
+    "RealizationAuthorityMode": {
+      "description": "Resolved author permission for one portable realization concern.",
+      "enum": [
+        "closed",
+        "open",
+        "constrained",
+        "exact"
+      ],
+      "title": "RealizationAuthorityMode",
+      "type": "string"
+    },
     "RealizationEnvelopeIdentityModel": {
       "additionalProperties": false,
       "description": "Immutable realization-envelope identity carried across runtime contracts.",
@@ -395,6 +491,27 @@
       "title": "RealizationEnvelopeIdentityModel",
       "type": "object"
     },
+    "RealizationResolutionSource": {
+      "description": "Canonical source that supplied a resolved realization decision.",
+      "enum": [
+        "authored-leaf",
+        "authored-scope",
+        "apparatus-default",
+        "legacy-default",
+        "processor-derived"
+      ],
+      "title": "RealizationResolutionSource",
+      "type": "string"
+    },
+    "RealizationVerificationScope": {
+      "description": "Closed scope at which an inventory realization was corroborated.",
+      "enum": [
+        "presence",
+        "configuration"
+      ],
+      "title": "RealizationVerificationScope",
+      "type": "string"
+    },
     "RecordDomain": {
       "additionalProperties": false,
       "description": "Product structure: each declared field references another named domain.\n\n``extra`` controls undeclared fields: ``False`` (closed) rejects any field not\nnamed in ``fields``; ``True`` (open) admits them. Field values reference domain\nnames resolved against the envelope's ``domains`` map, keeping the structure\nacyclic and free of inline recursion.",
@@ -427,6 +544,193 @@
         "fields"
       ],
       "title": "RecordDomain",
+      "type": "object"
+    },
+    "ResolvedRealizationAuthorityModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "constrained"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bounds": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "bounds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "closed",
+                  "open",
+                  "exact"
+                ]
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bounds": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "const": "legacy-default"
+              }
+            },
+            "required": [
+              "source"
+            ]
+          },
+          "then": {
+            "properties": {
+              "mode": {
+                "const": "closed"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "const": "apparatus-default"
+              }
+            },
+            "required": [
+              "source"
+            ]
+          },
+          "then": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "closed",
+                  "open"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "description": "Published value-free realization authority for one plan concern.",
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "bounds": {
+          "items": {
+            "$ref": "#/$defs/RealizationAuthorityBoundModel"
+          },
+          "title": "Bounds",
+          "type": "array"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "governing_scope": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Governing Scope"
+        },
+        "mode": {
+          "$ref": "#/$defs/RealizationAuthorityMode"
+        },
+        "payload_pointer": {
+          "pattern": "^/(?:[^~/]|~[01])*(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Payload Pointer",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ExplicitnessProvenance",
+          "default": "author-declared"
+        },
+        "required_observation_strength": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservationStrength"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "requirement_kind": {
+          "minLength": 1,
+          "title": "Requirement Kind",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/RealizationResolutionSource"
+        },
+        "verification_scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RealizationVerificationScope"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "domain",
+        "requirement_kind",
+        "payload_pointer",
+        "mode",
+        "source"
+      ],
+      "title": "ResolvedRealizationAuthorityModel",
       "type": "object"
     }
   },
@@ -462,6 +766,13 @@
       "title": "Operations",
       "type": "array"
     },
+    "realization_authority": {
+      "items": {
+        "$ref": "#/$defs/ResolvedRealizationAuthorityModel"
+      },
+      "title": "Realization Authority",
+      "type": "array"
+    },
     "realization_constraints": {
       "items": {
         "$ref": "#/$defs/PlannedRealizationConstraintModel"
@@ -481,6 +792,9 @@
       "default": null
     }
   },
+  "required": [
+    "realization_authority"
+  ],
   "title": "ProvisioningPlanModel",
   "type": "object"
 }

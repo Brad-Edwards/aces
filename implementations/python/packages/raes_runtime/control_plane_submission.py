@@ -28,7 +28,11 @@ from raes_contracts.planning import (
     require_plan_operation_identity,
 )
 from raes_contracts.runtime_state import RuntimeSnapshot
-from raes_processor.planner import account_credential_spec_is_valid, generated_artifact_payload_diagnostic
+from raes_processor.planner import (
+    account_credential_spec_is_valid,
+    generated_artifact_payload_diagnostic,
+    realization_authority_diagnostics,
+)
 
 _STATEFUL_ADMISSION_BY_RESOURCE_TYPE = {
     "generated-artifact": (
@@ -67,24 +71,26 @@ def _provisioning_submission_diagnostics(
 ) -> list[Diagnostic]:
     if manifest is None:
         raise ValueError("provisioning submission admission requires a backend manifest")
-    diagnostic = _account_credential_submission_diagnostic(plan, manifest) or _stateful_submission_diagnostic(
-        plan, manifest
-    )
-    if diagnostic is not None:
-        return [diagnostic]
-    service_diagnostics = service_materialization_plan_diagnostics(
-        plan,
-        manifest.provisioner,
-        manifest.realization_envelope,
-        manifest.realization_support,
-    )
-    if service_diagnostics:
-        return service_diagnostics[:1]
-    return domain_topology_plan_diagnostics(
-        plan,
-        snapshot=snapshot,
-        supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
-    )[:1]
+    diagnostics = realization_authority_diagnostics(plan, manifest)
+    if not diagnostics:
+        diagnostic = _account_credential_submission_diagnostic(plan, manifest) or _stateful_submission_diagnostic(
+            plan, manifest
+        )
+        diagnostics = [diagnostic] if diagnostic is not None else []
+    if not diagnostics:
+        diagnostics = service_materialization_plan_diagnostics(
+            plan,
+            manifest.provisioner,
+            manifest.realization_envelope,
+            manifest.realization_support,
+        )
+    if not diagnostics:
+        diagnostics = domain_topology_plan_diagnostics(
+            plan,
+            snapshot=snapshot,
+            supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
+        )
+    return diagnostics[:1]
 
 
 def _account_credential_submission_diagnostic(

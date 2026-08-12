@@ -1,9 +1,8 @@
 """Realization-requirement compilation (SEM-218)."""
 
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from raes.identifiers import QualifiedName
 from raes.nodes import NodeType
-from raes.realization_designation import RealizationConstraintPosture, resolve_realization_designation
+from raes.realization_designation import RealizationConstraintPosture
 from raes.runtime_resource_limits import (
     RuntimeProcessResourceLimit,
     process_resource_limit_identity_digest,
@@ -12,16 +11,18 @@ from raes.scenario import InstantiatedScenario
 from raes.semantics.domain_topology import (
     DomainTopologyAnalysis,
 )
+from raes_contracts.planning import RealizationAuthorityMode, RealizationResolutionSource
 from raes_contracts.vocabulary import ObservationStrength, ProcessResourceLimitScope, RealizationVerificationScope
 
 from ..semantics.realization import (
     REALIZATION_DOMAIN,
+    CompiledRealizationAuthority,
     CompiledRealizationRequirement,
     ProcessResourceLimitDemand,
     RealizationValueConstraint,
     registered_realization_concern_descriptors,
 )
-from ..semantics.realization_concerns import RegisteredRealizationConcern
+from ..semantics.realization_concerns import CONCERN_PAYLOAD_PATH, RegisteredRealizationConcern
 from .addresses import (
     _account_address,
     _condition_binding_address,
@@ -35,6 +36,7 @@ from .addresses import (
     _node_address,
     _persistent_volume_address,
 )
+from .realization_authority_posture import designated_registered_posture, explicit_registered_posture
 
 
 def _append_source_artifact_requirement(
@@ -280,10 +282,10 @@ def _append_service_materialization_requirements(
         )
 
 
-def _compiled_registered_requirement(
+def _compiled_registered_realization(
     scenario: InstantiatedScenario,
     registered: RegisteredRealizationConcern,
-) -> CompiledRealizationRequirement | None:
+) -> tuple[CompiledRealizationRequirement | None, CompiledRealizationAuthority | None]:
     descriptor = registered.descriptor
     section_name = descriptor.section
     declaration_name = registered.declaration_name
@@ -304,47 +306,52 @@ def _compiled_registered_requirement(
             authored_value=authored_value,
         )
     if record is not None and not descriptor.includes_authored_value(authored_value):
-        return None
-    if record is not None:
-        explicitness = record.classification
-        provenance = record.provenance
-        governing_scope = f"#{field_pointer}"
-        delegated = False
-    else:
-        resolution = resolve_realization_designation(
-            scenario.instantiation_provenance.realization_designations,
-            field_pointer=field_pointer,
-            owner_namespace=QualifiedName.parse(declaration_name).parts[:-1],
-        )
-        closed = resolution.closure is not None and resolution.closure.value == "closed-world"
-        if resolution.source == "legacy-default" or (closed and not resolution.delegated):
-            return None
-        explicitness = (
-            ExplicitnessClass.OPEN
-            if resolution.closure is not None and resolution.closure.value == "open-world"
-            else None
-        )
-        provenance = ExplicitnessProvenance.AUTHOR_DECLARED
-        governing_scope = resolution.governing_scope
-        delegated = resolution.delegated
-    return CompiledRealizationRequirement(
-        field_path=registered.field_path,
-        address=_realization_requirement_address(
+        return None, None
+    posture = (
+        explicit_registered_posture(record, field_pointer)
+        if record is not None
+        else designated_registered_posture(
             scenario,
-            section_name=section_name,
+            field_pointer=field_pointer,
             declaration_name=declaration_name,
-        ),
+        )
+    )
+    address = _realization_requirement_address(
+        scenario,
+        section_name=section_name,
+        declaration_name=declaration_name,
+    )
+    authority = CompiledRealizationAuthority(
+        field_path=registered.field_path,
+        address=address,
         domain=REALIZATION_DOMAIN,
         requirement_kind=descriptor.concern_kind,
-        explicitness=explicitness,
-        provenance=provenance,
-        governing_scope=governing_scope,
-        delegated=delegated,
+        payload_path=descriptor.payload_path,
+        mode=posture.mode,
+        source=posture.source,
+        provenance=posture.provenance,
+        governing_scope=posture.governing_scope,
+        delegated=posture.delegated,
+        verification_scope=descriptor.required_verification_scope(authored_value),
+        required_observation_strength=descriptor.required_observation_strength(),
+    )
+    if posture.explicitness is None and not posture.delegated:
+        return None, authority
+    requirement = CompiledRealizationRequirement(
+        field_path=registered.field_path,
+        address=address,
+        domain=REALIZATION_DOMAIN,
+        requirement_kind=descriptor.concern_kind,
+        explicitness=posture.explicitness,
+        provenance=posture.provenance,
+        governing_scope=posture.governing_scope,
+        delegated=posture.delegated,
         verification_scope=descriptor.required_verification_scope(authored_value),
         required_observation_strength=descriptor.required_observation_strength(),
         value_constraints=value_constraints,
         process_resource_limits=process_resource_limits,
     )
+    return requirement, authority
 
 
 def _compiled_process_resource_limits(
@@ -390,10 +397,10 @@ def _compiled_process_resource_limits(
     return tuple(constraints), demands
 
 
-def _compile_realization_requirements(
+def _compile_realization(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
-) -> tuple[CompiledRealizationRequirement, ...]:
+) -> tuple[tuple[CompiledRealizationRequirement, ...], tuple[CompiledRealizationAuthority, ...]]:
     """SEM-218 typed compiler emission: lower each authored realization concern
     into a compiled requirement carrying its classifier explicitness class.
 
@@ -404,17 +411,48 @@ def _compile_realization_requirements(
 
     requirements: list[CompiledRealizationRequirement] = []
     _append_compute_substrate_requirements(requirements, scenario)
+    authority: list[CompiledRealizationAuthority] = []
     for registered in registered_realization_concern_descriptors(
         declaration_names={"nodes": scenario.nodes, "content": scenario.content}
     ):
-        requirement = _compiled_registered_requirement(scenario, registered)
+        requirement, authority_entry = _compiled_registered_realization(scenario, registered)
         if requirement is not None:
             requirements.append(requirement)
+        if authority_entry is not None:
+            authority.append(authority_entry)
     _append_domain_topology_requirements(requirements, domain_analysis)
     _append_stateful_resource_requirements(requirements, scenario)
     _append_service_materialization_requirements(requirements, scenario)
     _append_source_artifact_requirements(requirements, scenario)
-    return tuple(requirements)
+    existing = {(entry.address, entry.field_path, entry.requirement_kind) for entry in authority}
+    authority.extend(
+        CompiledRealizationAuthority(
+            field_path=requirement.field_path,
+            address=requirement.address,
+            domain=requirement.domain,
+            requirement_kind=requirement.requirement_kind,
+            payload_path=CONCERN_PAYLOAD_PATH[requirement.requirement_kind],
+            mode=RealizationAuthorityMode.EXACT,
+            source=RealizationResolutionSource.PROCESSOR_DERIVED,
+            provenance=requirement.provenance,
+            governing_scope=requirement.governing_scope,
+            verification_scope=requirement.verification_scope,
+            required_observation_strength=requirement.required_observation_strength,
+        )
+        for requirement in requirements
+        if requirement.requirement_kind in CONCERN_PAYLOAD_PATH
+        if (requirement.address, requirement.field_path, requirement.requirement_kind) not in existing
+    )
+    return tuple(requirements), tuple(authority)
+
+
+def _compile_realization_requirements(
+    scenario: InstantiatedScenario,
+    domain_analysis: DomainTopologyAnalysis,
+) -> tuple[CompiledRealizationRequirement, ...]:
+    """Compatibility view over the SEM-218 realization demand graph."""
+
+    return _compile_realization(scenario, domain_analysis)[0]
 
 
 def _append_compute_substrate_requirements(

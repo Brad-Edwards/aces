@@ -158,11 +158,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover and the issue #674 target-node CPU architecture field addition; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, and issue #1067 publication of resolved realization authority; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "stable",
         "diagnostic_kind": null,
-        "result_digest": "5460988359b89b26f4c2f8a8c49e9e239aa0e9220f20923d8f3bf557a37ef282"
+        "result_digest": "23b9d84fa757bd80436357ed52569b5445b0e4161641598e4b15c3b18cf6e668"
       }
     },
     {
@@ -177,11 +177,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, and issue #1066 registration of the portable process-resource-limit realization concern; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, and issue #1067 publication of resolved realization authority; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "distinguishable",
         "diagnostic_kind": null,
-        "result_digest": "f6f88ce366172d9eded8ea3fc05d5d196bbafde4894c9d47d3a9c8dc7999e3f3"
+        "result_digest": "2e92bdb90a218c29201312052b64b7fb88e8a65e887f05168e2273d9710a5080"
       }
     }
   ],
@@ -476,7 +476,7 @@
         "The witness ends at compiled output."
       ],
       "replayable": true,
-      "result_digest": "5460988359b89b26f4c2f8a8c49e9e239aa0e9220f20923d8f3bf557a37ef282",
+      "result_digest": "23b9d84fa757bd80436357ed52569b5445b0e4161641598e4b15c3b18cf6e668",
       "source_digest": null
     },
     {
@@ -499,7 +499,7 @@
         "Distinct digests are a non-vacuity control, not semantic non-equivalence proof."
       ],
       "replayable": true,
-      "result_digest": "f6f88ce366172d9eded8ea3fc05d5d196bbafde4894c9d47d3a9c8dc7999e3f3",
+      "result_digest": "2e92bdb90a218c29201312052b64b7fb88e8a65e887f05168e2273d9710a5080",
       "source_digest": null
     },
     {

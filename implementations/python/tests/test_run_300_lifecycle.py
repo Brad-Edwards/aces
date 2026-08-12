@@ -45,6 +45,10 @@ PARAM_OS_KIND = "linux"
 PARAM_CPU_COUNT = 2
 
 
+def _enveloped_stub_target():
+    return create_stub_target()
+
+
 def _raw_scenario():
     """Return a parsed, still-parameterized scenario.
 
@@ -70,6 +74,7 @@ def _raw_scenario():
               os_kind:
                 type: string
                 default: linux
+                allowed_values: [linux]
               cpu_count:
                 type: integer
                 default: 1
@@ -196,7 +201,7 @@ class TestRun300Lifecycle:
         )
 
         # ----- Stage 3: Planning -------------------------------------
-        target = create_stub_target()
+        target = _enveloped_stub_target()
         empty_snapshot = RuntimeSnapshot()
         execution_plan = plan_execution(
             model,
@@ -350,7 +355,7 @@ class TestRun300Lifecycle:
             parameters={"os_kind": PARAM_OS_KIND, "cpu_count": PARAM_CPU_COUNT},
         )
         model = compile_runtime_model(instantiated)
-        target = create_stub_target()
+        target = _enveloped_stub_target()
         empty_snapshot = RuntimeSnapshot()
         stale_plan = plan_execution(
             model,

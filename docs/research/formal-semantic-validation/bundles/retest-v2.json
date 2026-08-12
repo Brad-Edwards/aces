@@ -58,5 +58,5 @@
   "protocol_sha256": "abf94093e344bf495dfb04e8b0c5985c0beaab8ebb17a75e15c8674fa81b1a7c",
   "revision": "3.0.0",
   "snapshot_path": "docs/research/formal-semantic-validation/execution-snapshot-v2.json",
-  "snapshot_sha256": "d7a2a00a0bef277fb577e3374ae90cce51dbdf9d86d2b7e78921b248c44d2993"
+  "snapshot_sha256": "9906db9a340b56ecef4389f98b0c5d18bb00efe58fd8da2c8739b3bac039cb5b"
 }

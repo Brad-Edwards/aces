@@ -9,15 +9,19 @@ missing or does not apply to the resource's domain and type.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from raes.explicitness import ExplicitnessProvenance
+
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.bounded_domains import DomainDescriptor
 from raes_contracts.compute_substrate import validate_compute_substrate_constraint
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 
 if TYPE_CHECKING:
     from raes_contracts.contracts import RealizationEnvelopeIdentityModel
@@ -74,6 +78,115 @@ class ChangeAction(str, Enum):
     UPDATE = "update"
     DELETE = "delete"
     UNCHANGED = "unchanged"
+
+
+class RealizationAuthorityMode(str, Enum):
+    """Resolved author permission for one portable realization concern."""
+
+    CLOSED = "closed"
+    OPEN = "open"
+    CONSTRAINED = "constrained"
+    EXACT = "exact"
+
+
+class RealizationResolutionSource(str, Enum):
+    """Canonical source that supplied a resolved realization decision."""
+
+    AUTHORED_LEAF = "authored-leaf"
+    AUTHORED_SCOPE = "authored-scope"
+    APPARATUS_DEFAULT = "apparatus-default"
+    LEGACY_DEFAULT = "legacy-default"
+    PROCESSOR_DERIVED = "processor-derived"
+
+
+_JSON_POINTER_RE = re.compile(r"^(?:/(?:[^~/]|~[01])*)*$")
+
+
+def _require_json_pointer(value: object, *, field_name: str, allow_root: bool) -> str:
+    if not isinstance(value, str) or (not allow_root and not value) or _JSON_POINTER_RE.fullmatch(value) is None:
+        raise ValueError(f"{field_name} must be a canonical RFC 6901 JSON Pointer")
+    return value
+
+
+@dataclass(frozen=True)
+class RealizationAuthorityBound:
+    """One publication-safe typed bound over a concern value or owned leaf."""
+
+    value_pointer: str
+    domain: DomainDescriptor
+    identity_digest: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_json_pointer(self.value_pointer, field_name="authority bound value_pointer", allow_root=True)
+        if self.identity_digest is not None and not re.fullmatch(r"sha256:[a-f0-9]{64}", self.identity_digest):
+            raise ValueError("authority bound identity_digest must be a sha256 digest")
+
+
+def _require_authority_bounds(
+    mode: RealizationAuthorityMode,
+    bounds: tuple[RealizationAuthorityBound, ...],
+) -> None:
+    if mode is RealizationAuthorityMode.CONSTRAINED and not bounds:
+        raise ValueError("constrained realization authority requires typed bounds")
+    if mode is not RealizationAuthorityMode.CONSTRAINED and bounds:
+        raise ValueError("only constrained realization authority may carry typed bounds")
+
+
+def _require_authority_source(mode: RealizationAuthorityMode, source: RealizationResolutionSource) -> None:
+    if source is RealizationResolutionSource.LEGACY_DEFAULT and mode is not RealizationAuthorityMode.CLOSED:
+        raise ValueError("legacy realization default must resolve closed")
+    if source is RealizationResolutionSource.APPARATUS_DEFAULT and mode not in {
+        RealizationAuthorityMode.CLOSED,
+        RealizationAuthorityMode.OPEN,
+    }:
+        raise ValueError("apparatus realization default must resolve open or closed")
+
+
+@dataclass(frozen=True)
+class ResolvedRealizationAuthority:
+    """Portable, value-safe author boundary for one planned concern."""
+
+    address: str
+    field_path: str
+    domain: str
+    requirement_kind: str
+    payload_pointer: str
+    mode: RealizationAuthorityMode
+    source: RealizationResolutionSource
+    provenance: ExplicitnessProvenance = ExplicitnessProvenance.AUTHOR_DECLARED
+    governing_scope: str | None = None
+    bounds: tuple[RealizationAuthorityBound, ...] = ()
+    verification_scope: RealizationVerificationScope | None = None
+    required_observation_strength: ObservationStrength | None = None
+
+    def __post_init__(self) -> None:
+        require_compiled_address(self.address)
+        if not self.field_path or not self.domain or not self.requirement_kind:
+            raise ValueError("resolved realization authority requires non-empty concern identity")
+        _require_json_pointer(
+            self.payload_pointer,
+            field_name="resolved realization authority payload_pointer",
+            allow_root=False,
+        )
+        _require_authority_bounds(self.mode, self.bounds)
+        _require_authority_source(self.mode, self.source)
+
+
+def planned_realization_authority(
+    plan: ProvisioningPlan,
+    address: str,
+    requirement_kind: str,
+) -> ResolvedRealizationAuthority | None:
+    """Return one resolved authority entry, or ``None`` when not present."""
+
+    return next(
+        (
+            entry
+            for entry in plan.realization_authority
+            if entry.address == address and entry.requirement_kind == requirement_kind
+        ),
+        None,
+    )
 
 
 @dataclass(frozen=True)
@@ -233,6 +346,7 @@ class ProvisioningPlan:
     resources: dict[str, PlannedResource] = field(default_factory=dict)
     operations: list[ProvisionOp] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    realization_authority: tuple[ResolvedRealizationAuthority, ...] = ()
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
     realization_constraints: tuple[PlannedRealizationConstraint, ...] = ()
     operation_id: str | None = None
@@ -244,6 +358,7 @@ class ProvisioningPlan:
         identities = [(item.address, item.concern) for item in self.realization_constraints]
         if len(identities) != len(set(identities)):
             raise ValueError("Provisioning plan realization constraints must identify unique concerns")
+        _validate_realization_authority(self.operations, self.realization_authority)
 
     @property
     def actionable_operations(self) -> list[ProvisionOp]:
@@ -324,6 +439,22 @@ def _validate_plan_addresses(
         raise ValueError("Plan startup_order must reference admitted operation addresses")
 
 
+def _validate_realization_authority(
+    operations: list[PlanOperation],
+    authority: tuple[ResolvedRealizationAuthority, ...],
+) -> None:
+    identities = [(entry.address, entry.requirement_kind) for entry in authority]
+    if len(identities) != len(set(identities)):
+        raise ValueError("Provisioning plan realization authority must identify unique concerns")
+    pointers = [(entry.address, entry.payload_pointer) for entry in authority]
+    if len(pointers) != len(set(pointers)):
+        raise ValueError("Provisioning plan realization authority payload pointers must be unique per resource")
+    admitted_addresses = {operation.address for operation in operations if operation.action is not ChangeAction.DELETE}
+    stale = sorted({entry.address for entry in authority} - admitted_addresses)
+    if stale:
+        raise ValueError("Provisioning plan realization authority must reference non-delete operations")
+
+
 __all__ = (
     "ChangeAction",
     "EvaluationOp",
@@ -336,6 +467,10 @@ __all__ = (
     "PlannedResource",
     "ProvisionOp",
     "ProvisioningPlan",
+    "RealizationAuthorityBound",
+    "RealizationAuthorityMode",
+    "RealizationResolutionSource",
+    "ResolvedRealizationAuthority",
     "RuntimeDomain",
     "planned_infrastructure_spec",
     "planned_node_resources",
@@ -344,5 +479,6 @@ __all__ = (
     "planned_resource_authored_name",
     "planned_resource_name",
     "planned_resource_payload",
+    "planned_realization_authority",
     "require_plan_operation_identity",
 )

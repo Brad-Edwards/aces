@@ -20,6 +20,7 @@ from raes_contracts.realization_envelope import ObservationStrength, Realization
 from raes_contracts.realization_observation import RealizationObservation
 from raes_contracts.runtime_state import RealizationObservationDisclosure, RuntimeSnapshot, SnapshotEntry
 from raes_contracts.vocabulary import RealizationVerificationScope
+from realization_authority_fixtures import complete_test_realization_authority
 
 
 class _RecordingDriver:
@@ -105,20 +106,22 @@ def _network_resource(address: str = "provision.network.lan") -> PlannedResource
 
 
 def _plan(*resources: PlannedResource, action: ChangeAction = ChangeAction.CREATE) -> ProvisioningPlan:
-    return ProvisioningPlan(
-        resources={resource.address: resource for resource in resources},
-        operations=[
-            ProvisionOp(
-                action=action,
-                address=resource.address,
-                resource_type=resource.resource_type,
-                payload=resource.payload,
-                ordering_dependencies=resource.ordering_dependencies,
-                refresh_dependencies=resource.refresh_dependencies,
-            )
-            for resource in resources
-        ],
-        realization_envelope=load_libvirt_realization_envelope("generic").identity,
+    return complete_test_realization_authority(
+        ProvisioningPlan(
+            resources={resource.address: resource for resource in resources},
+            operations=[
+                ProvisionOp(
+                    action=action,
+                    address=resource.address,
+                    resource_type=resource.resource_type,
+                    payload=resource.payload,
+                    ordering_dependencies=resource.ordering_dependencies,
+                    refresh_dependencies=resource.refresh_dependencies,
+                )
+                for resource in resources
+            ],
+            realization_envelope=load_libvirt_realization_envelope("generic").identity,
+        )
     )
 
 
@@ -369,23 +372,25 @@ def test_apply_realizes_target_domain_when_only_a_placement_changes():
     account = _account_resource()
     # Node is UNCHANGED, but a new account placement targets it: the domain's seed
     # now carries different cloud-init, so the domain must still be realized.
-    plan = ProvisioningPlan(
-        resources={node.address: node, account.address: account},
-        operations=[
-            ProvisionOp(
-                action=ChangeAction.UNCHANGED,
-                address=node.address,
-                resource_type=node.resource_type,
-                payload=node.payload,
-            ),
-            ProvisionOp(
-                action=ChangeAction.CREATE,
-                address=account.address,
-                resource_type=account.resource_type,
-                payload=account.payload,
-            ),
-        ],
-        realization_envelope=load_libvirt_realization_envelope("generic").identity,
+    plan = complete_test_realization_authority(
+        ProvisioningPlan(
+            resources={node.address: node, account.address: account},
+            operations=[
+                ProvisionOp(
+                    action=ChangeAction.UNCHANGED,
+                    address=node.address,
+                    resource_type=node.resource_type,
+                    payload=node.payload,
+                ),
+                ProvisionOp(
+                    action=ChangeAction.CREATE,
+                    address=account.address,
+                    resource_type=account.resource_type,
+                    payload=account.payload,
+                ),
+            ],
+            realization_envelope=load_libvirt_realization_envelope("generic").identity,
+        )
     )
 
     result = LibvirtProvisioner(driver).apply(plan, RuntimeSnapshot())
