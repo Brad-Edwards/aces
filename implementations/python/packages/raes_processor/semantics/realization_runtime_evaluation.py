@@ -55,7 +55,23 @@ def evaluate_registered_realization(
     """Gate one compiled requirement against its realized value."""
 
     if requirement.requirement_kind == "compute-substrate":
-        return evaluate_compute_substrate(requirement, declared_plan, returned_snapshot, manifest)
+        result = evaluate_compute_substrate(requirement, declared_plan, returned_snapshot, manifest)
+    else:
+        result = _evaluate_non_compute_registered_realization(
+            requirement,
+            declared_plan,
+            returned_snapshot,
+            manifest,
+        )
+    return result
+
+
+def _evaluate_non_compute_registered_realization(
+    requirement: CompiledRealizationRequirement,
+    declared_plan: ProvisioningPlan,
+    returned_snapshot: RuntimeSnapshot,
+    manifest: BackendManifest | None,
+) -> tuple[Diagnostic | None, RealizationProvenanceEntry | None]:
     path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
     declared_ops = {op.address: op for op in declared_plan.operations}
     op = declared_ops.get(requirement.address)

@@ -10,6 +10,7 @@ realized RAES addresses; neither leaks into any portable artifact.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
@@ -38,7 +39,7 @@ class RecordedOp:
 class InProcessDriver:
     """Hermetic driver that records ops and synthesizes portable handles."""
 
-    driver_mode = "in-process-emulation"
+    driver_mode: ClassVar[str] = "in-process-emulation"
 
     recorded_ops: list[RecordedOp] = field(default_factory=list)
     _realized: set[str] = field(default_factory=set)

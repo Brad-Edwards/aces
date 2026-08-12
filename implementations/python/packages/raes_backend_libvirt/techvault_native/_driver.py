@@ -75,6 +75,8 @@ from ..techvault_observation import (
 )
 from ._define import define_domain, define_domains, define_network, define_networks
 
+_CONNECTION_ADDRESS = "runtime.libvirt.connection"
+
 
 @dataclass
 class TechVaultNativeLibvirtDriver:
@@ -136,7 +138,7 @@ class TechVaultNativeLibvirtDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
+            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
         return self._realize_matrix(
             connection,
             matrix,
@@ -294,7 +296,7 @@ class TechVaultNativeLibvirtDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
+            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
         domain_handles: list[DomainHandle] = []
         network_handles: list[NetworkHandle] = []
         diagnostics: list[Diagnostic] = []
@@ -332,7 +334,7 @@ class TechVaultNativeLibvirtDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
+            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
         envelope = load_libvirt_realization_envelope(self.driver_mode)
         observations: list[RealizationObservation] = []
         handles: list[DomainHandle] = []

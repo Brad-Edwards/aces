@@ -47,6 +47,7 @@ _DOMAIN = "runtime"
 _CODE_OPERATION_FAILED = "libvirt-backend.driver.operation-failed"
 _CODE_UNAVAILABLE = "libvirt-backend.driver.unavailable"
 _CODE_OWNERSHIP_CONFLICT = "libvirt-backend.driver.ownership-conflict"
+_CONNECTION_ADDRESS = "runtime.libvirt.connection"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
 _WORKSPACE_PREFIX = "raes-libvirt-"
 
@@ -100,7 +101,7 @@ class LibvirtDeploymentDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
+            return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         realize_network_specs(self, connection, networks, created_networks, network_handles, diagnostics)
         realize_domain_specs(
@@ -172,7 +173,7 @@ class LibvirtDeploymentDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
+            return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
         observations: list[RealizationObservation] = []
         diagnostics: list[Diagnostic] = []
         handles: list[DomainHandle] = []
@@ -264,7 +265,7 @@ class LibvirtDeploymentDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
+            return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         domain_handles = self._destroy_domains(connection, domains, diagnostics)
         network_handles = self._destroy_networks(connection, networks, diagnostics)

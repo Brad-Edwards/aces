@@ -9,6 +9,7 @@ from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.bounded_domains import scalar_in_domain
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisioningPlan
+from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel, RealizationConcernDisclosureModel
 from raes_contracts.runtime_state import (
     RealizationObservationDisclosure,
     RealizationProvenanceEntry,
@@ -119,14 +120,7 @@ def _envelope_binding_matches(
 ) -> bool:
     identity = declared_plan.realization_envelope
     carrier = manifest.realization_envelope
-    claim = (
-        next(
-            (item for item in carrier.concerns if item.concern.value == "compute-substrate"),
-            None,
-        )
-        if carrier is not None
-        else None
-    )
+    claim = _compute_substrate_claim(carrier)
     return bool(
         identity is not None
         and returned_snapshot.realization_envelope == identity
@@ -137,6 +131,17 @@ def _envelope_binding_matches(
         and observation.envelope_digest == identity.digest
         and observation.configuration_digest == identity.configuration_digest
         and observation.binding_verified
+    )
+
+
+def _compute_substrate_claim(
+    carrier: BackendRealizationEnvelopeModel | None,
+) -> RealizationConcernDisclosureModel | None:
+    if carrier is None:
+        return None
+    return next(
+        (item for item in carrier.concerns if item.concern.value == "compute-substrate"),
+        None,
     )
 
 

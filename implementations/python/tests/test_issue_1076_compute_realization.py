@@ -318,8 +318,9 @@ def test_snapshot_and_plan_carriers_reject_domains_that_authoring_cannot_produce
     published = provisioning_plan_model(execution.provisioning)
     plan_payload = published.model_dump(mode="json")
     plan_payload["realization_constraints"][0]["value_domain"] = invalid_domain
+    published_type = type(published)
     with pytest.raises(ValidationError, match="compute-substrate|singleton"):
-        type(published).model_validate(plan_payload)
+        published_type.model_validate(plan_payload)
 
 
 def test_stub_noop_bootstraps_missing_substrate_disclosure() -> None:
