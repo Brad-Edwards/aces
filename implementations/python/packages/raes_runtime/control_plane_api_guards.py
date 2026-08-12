@@ -56,10 +56,22 @@ async def _body_size_guard_response(
     *,
     max_request_bytes: int,
 ) -> JSONResponse | None:
-    body = await request.body()
-    if len(body) > max_request_bytes:
-        return _request_too_large_response(control_plane, request)
-    request.state.raw_body = body
+    # Accumulate the body incrementally and stop as soon as the running total
+    # exceeds the limit. Buffering via ``request.body()`` would read the whole
+    # payload first, so a request without a declared ``content-length`` (e.g.
+    # ``Transfer-Encoding: chunked``) bypasses ``_content_length_guard_response``
+    # and could exhaust memory before any size check runs.
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > max_request_bytes:
+            return _request_too_large_response(control_plane, request)
+    accepted_body = bytes(body)
+    # Streaming consumes the receive channel, so seed Starlette's body cache the
+    # way ``Request.body()`` would. Route handlers and FastAPI's own body parsing
+    # then still see the payload instead of an exhausted stream.
+    request._body = accepted_body  # noqa: SLF001
+    request.state.raw_body = accepted_body
     return None
 
 

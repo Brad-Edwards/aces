@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
@@ -54,9 +55,14 @@ class _ControlPlaneApiAuth:
         authorization = request.headers.get("authorization", "")
         if authorization.lower().startswith("bearer "):
             token = authorization.split(" ", 1)[1].strip()
-            identity = self._security.bearer_tokens.get(token)
-            if identity is not None:
-                return identity
+            identity = self._resolve_bearer_identity(token)
+            # A presented-but-unresolvable token is a hard failure: falling through
+            # to the proxy-header path would let a revoked or bogus token keep
+            # working whenever header identities are trusted, and would leave the
+            # rejected credential out of the audit log entirely.
+            if identity is None:
+                raise HTTPException(status_code=401, detail="invalid bearer token")
+            return self._require_target_binding(identity)
         if not self._security.trust_proxy_identity_headers:
             raise HTTPException(status_code=401, detail="trusted proxy identity headers are not enabled")
         identity_name = request.headers.get(self._security.identity_header, "")
@@ -66,6 +72,24 @@ class _ControlPlaneApiAuth:
         identity = self._security.trusted_identities.get(identity_name)
         if identity is None:
             raise HTTPException(status_code=401, detail="unknown client identity")
+        return self._require_target_binding(identity)
+
+    def _resolve_bearer_identity(self, token: str) -> ControlPlaneIdentity | None:
+        """Resolve a bearer token without leaking which token matched via timing."""
+
+        # Compare encoded bytes: ``compare_digest`` rejects non-ASCII ``str``, so a
+        # non-ASCII token would raise instead of being reported as unauthorized.
+        # The loop never breaks early, so timing does not reveal which token matched.
+        presented = token.encode("utf-8")
+        matched: ControlPlaneIdentity | None = None
+        for candidate, identity in self._security.bearer_tokens.items():
+            if hmac.compare_digest(candidate.encode("utf-8"), presented):
+                matched = identity
+        return matched
+
+    def _require_target_binding(self, identity: ControlPlaneIdentity) -> ControlPlaneIdentity:
+        """Reject an identity scoped to a different target than this control plane."""
+
         if identity.target_name and identity.target_name != self._control_plane.target_name:
             raise HTTPException(status_code=403, detail="identity is not authorized for this target")
         return identity

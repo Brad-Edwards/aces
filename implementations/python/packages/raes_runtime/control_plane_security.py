@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
+from types import MappingProxyType
 
 
 class ControlPlaneRole(str, Enum):
@@ -62,8 +64,16 @@ class ControlPlaneSecurityConfig:
     identity_header: str = "x-raes-client-identity"
     trust_proxy_identity_headers: bool = False
     max_request_bytes: int = 1_000_000
-    trusted_identities: dict[str, ControlPlaneIdentity] = field(default_factory=dict)
-    bearer_tokens: dict[str, ControlPlaneIdentity] = field(default_factory=dict)
+    trusted_identities: Mapping[str, ControlPlaneIdentity] = field(default_factory=dict)
+    bearer_tokens: Mapping[str, ControlPlaneIdentity] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # ``frozen=True`` only blocks rebinding the attributes; a caller (or a
+        # later code path) could still mutate the underlying dicts and grant
+        # principals or tokens after construction, defeating ``strict_defaults``.
+        # Read-only proxies keep dict equality while blocking that mutation.
+        object.__setattr__(self, "trusted_identities", MappingProxyType(dict(self.trusted_identities)))
+        object.__setattr__(self, "bearer_tokens", MappingProxyType(dict(self.bearer_tokens)))
 
     @classmethod
     def strict_defaults(cls) -> ControlPlaneSecurityConfig:

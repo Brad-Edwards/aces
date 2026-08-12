@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import textwrap
 from pathlib import Path
 
 import pytest
 import raes_runtime.control_plane_store as control_plane_store_module
+from fastapi import HTTPException
 from raes import parse_sdl
 from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.contracts import (
@@ -26,12 +28,15 @@ from raes_processor.models import OperationReceipt, OperationState, OperationSta
 from raes_processor.planner import plan
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_api import create_control_plane_app
+from raes_runtime.control_plane_api._auth import _ControlPlaneApiAuth
+from raes_runtime.control_plane_api_guards import request_size_guard_response
 from raes_runtime.control_plane_security import (
     ControlPlaneIdentity,
     ControlPlaneRole,
     ControlPlaneSecurityConfig,
 )
 from raes_runtime.control_plane_store import ControlPlaneOperationRecord, LocalControlPlaneStore
+from starlette.requests import Request
 from starlette.testclient import TestClient
 
 
@@ -572,6 +577,173 @@ def test_control_plane_api_rejects_invalid_content_length_header():
     assert response.status_code == 400
     assert response.json() == {"detail": "invalid content-length"}
     assert control_plane.audit_log()[-1].reason == "invalid content-length"
+
+
+def test_control_plane_api_enforces_request_size_limit_without_content_length():
+    """A chunked body (no content-length) must still be rejected with 413."""
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    security = _test_security(target.name, max_request_bytes=32)
+    app = create_control_plane_app(control_plane, security=security)
+    headers = {
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
+        "content-type": "application/json",
+    }
+
+    def _chunked_body():
+        for _ in range(100):
+            yield b"x" * 32
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            content=_chunked_body(),
+            headers=headers,
+        )
+
+    assert response.status_code == 413
+    assert response.json() == {"detail": "request too large"}
+    assert control_plane.audit_log()[-1].reason == "request too large"
+
+
+def test_control_plane_api_rejects_invalid_bearer_token_instead_of_trusting_headers():
+    """An unresolvable bearer token must fail closed, not fall through to header identity."""
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/snapshot",
+            headers={
+                "authorization": "Bearer revoked-token",
+                "x-raes-client-verified": "true",
+                "x-raes-client-identity": "backend-service",
+            },
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "invalid bearer token"}
+    assert control_plane.audit_log()[-1].reason == "invalid bearer token"
+    assert control_plane.audit_log()[-1].allowed is False
+
+
+def test_control_plane_auth_rejects_non_ascii_bearer_token_as_unauthorized():
+    """A non-ASCII token must be reported unauthorized, not crash the comparison.
+
+    Starlette decodes header bytes as latin-1, so a raw request can deliver a
+    non-ASCII token string even though HTTP clients refuse to encode one. A
+    ``str``-based constant-time comparison would raise ``TypeError`` there and
+    surface as a 500 instead of a 401.
+    """
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    auth = _ControlPlaneApiAuth(control_plane, _test_security(target.name))
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/snapshot",
+            "headers": [(b"authorization", "Bearer token-\xf6\xe9".encode("latin-1"))],
+            "query_string": b"",
+        },
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        auth.read_identity(request)
+
+    assert excinfo.value.status_code == 401
+    assert excinfo.value.detail == "invalid bearer token"
+
+
+def test_control_plane_api_rejects_bearer_token_bound_to_another_target():
+    """A bearer token scoped to a different target must not authenticate here.
+
+    The header-identity path already enforces this binding; the bearer path must
+    apply the same check rather than returning the identity unconditionally.
+    """
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    security = ControlPlaneSecurityConfig(
+        trust_proxy_identity_headers=False,
+        bearer_tokens={
+            "other-target-token": ControlPlaneIdentity(
+                identity="operator",
+                roles=frozenset({ControlPlaneRole.OPERATOR}),
+                target_name="some-other-target",
+            ),
+        },
+    )
+    app = create_control_plane_app(control_plane, security=security)
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/snapshot",
+            headers={"authorization": "Bearer other-target-token"},
+        )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "identity is not authorized for this target"}
+
+
+def test_control_plane_security_config_mappings_cannot_be_mutated_after_construction():
+    """``strict_defaults`` must stay fail-closed; frozen=True alone does not stop dict mutation."""
+    security = ControlPlaneSecurityConfig.strict_defaults()
+    intruder = ControlPlaneIdentity(identity="intruder", roles=frozenset({ControlPlaneRole.OPERATOR}))
+
+    with pytest.raises(TypeError):
+        security.bearer_tokens["stolen"] = intruder  # type: ignore[index]
+    with pytest.raises(TypeError):
+        security.trusted_identities["stolen"] = intruder  # type: ignore[index]
+
+    assert security.bearer_tokens == {}
+    assert security.trusted_identities == {}
+
+
+def test_request_size_guard_stops_reading_an_oversized_chunked_body():
+    """The body guard must cap while streaming, not buffer the whole payload first.
+
+    A request without ``content-length`` (e.g. ``Transfer-Encoding: chunked``) is
+    invisible to the content-length guard, so the body guard is the only limit. If
+    it buffers the full body before measuring it, an unbounded chunked upload can
+    exhaust memory even though the response is still 413.
+    """
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    chunk = b"x" * 32
+    total_chunks = 1000
+    delivered = 0
+
+    async def receive() -> dict[str, object]:
+        nonlocal delivered
+        if delivered >= total_chunks:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        delivered += 1
+        return {"type": "http.request", "body": chunk, "more_body": True}
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/operations/provisioning",
+            "headers": [(b"content-type", b"application/json")],
+            "query_string": b"",
+        },
+        receive=receive,
+    )
+
+    response = asyncio.run(
+        request_size_guard_response(control_plane, request, max_request_bytes=64),
+    )
+
+    assert response is not None
+    assert response.status_code == 413
+    # Rejected after crossing the cap, not after draining all 1000 chunks.
+    assert delivered <= 3
 
 
 def test_local_control_plane_store_saves_snapshot_with_atomic_replace(
