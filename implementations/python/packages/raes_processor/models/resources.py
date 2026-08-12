@@ -54,10 +54,10 @@ class NetworkRuntime(ResolvedResource):
 
 @dataclass(frozen=True)
 class NodeRuntime(ResolvedResource):
-    """Compiled VM deployment."""
+    """Compiled backend-neutral compute deployment."""
 
     node_name: str = ""
-    node_type: str = ""
+    node_kind: str = ""
     os_family: str = ""
     architecture: str = ""
     count: int | str | None = None

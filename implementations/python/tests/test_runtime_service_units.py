@@ -441,7 +441,7 @@ def _scenario_with_units(units: list[dict], *, fs_inventory: list[dict] | None =
     if fs_inventory is not None:
         runtime["filesystem_inventory"] = fs_inventory
     node = {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "1 gib", "cpu": 1},
         "services": [{"port": 22, "name": "ssh"}],
         "runtime": runtime,
@@ -478,7 +478,7 @@ class TestSemanticValidatorServiceManagerUnits:
             [{**_BASE_UNIT, "service": "nodes.other.services.ssh"}],
             nodes={
                 "other": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 22, "name": "ssh"}],
                 }
@@ -495,7 +495,7 @@ class TestSemanticValidatorServiceManagerUnits:
             variables={"svc": {"type": "string", "required": True}},
             nodes={
                 "box": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 22, "name": "ssh"}],
                     "runtime": {
@@ -548,7 +548,7 @@ class TestSemanticValidatorServiceManagerUnits:
             variables={"unit_path": {"type": "string", "required": True}},
             nodes={
                 "box": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 22, "name": "ssh"}],
                     "runtime": {

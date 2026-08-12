@@ -6,9 +6,11 @@ import subprocess
 
 import pytest
 from raes_backend_protocols.naming import provider_resource_name
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
 from raes_reference_backend.driver import ContainerSpec, NetworkSpec, ServiceSpec
 from raes_reference_backend.drivers.inprocess import InProcessDriver
 from raes_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
+from raes_reference_backend.envelopes import load_reference_realization_envelope
 
 
 class _Recorder:
@@ -22,10 +24,29 @@ class _Recorder:
 
     def __call__(self, argv, **kwargs):
         self.calls.append({"argv": argv, "kwargs": kwargs})
+        stdout = self._stdout
+        if self._returncode == 0 and "inspect" in argv:
+            name = argv[-1]
+            run_call = next(
+                (
+                    call["argv"]
+                    for call in reversed(self.calls[:-1])
+                    if "run" in call["argv"]
+                    and "--name" in call["argv"]
+                    and call["argv"][call["argv"].index("--name") + 1] == name
+                ),
+                None,
+            )
+            if run_call is not None:
+                labels = [run_call[index + 1] for index, token in enumerate(run_call[:-1]) if token == "--label"]
+                workspace = next(label.split("=", 1)[1] for label in labels if label.startswith("raes.workspace="))
+                address = next(label.split("=", 1)[1] for label in labels if label.startswith("raes.address="))
+                native_id = self._stdout.strip().splitlines()[0]
+                stdout = f"{native_id}\n{workspace}\n{address}\n/{name}\n"
         return subprocess.CompletedProcess(
             args=argv,
             returncode=self._returncode,
-            stdout=self._stdout,
+            stdout=stdout,
             stderr=self._stderr,
         )
 
@@ -103,6 +124,30 @@ def test_oci_handles_never_carry_native_ids():
         assert "DEADBEEF" not in repr(handle)
     for handle in result.networks:
         assert handle.address == "provision.network.lan"
+
+
+def test_oci_observe_rehydrates_owned_container_without_running_it_again() -> None:
+    recorder = _Recorder(stdout="container-native-id-abc123\n")
+    spec = ContainerSpec(address="provision.node.web", name="web", image_ref="img")
+    first = _driver(recorder)
+    assert not first.realize(networks=(), containers=(spec,)).diagnostics
+    run_calls = tuple(call for call in recorder.calls if "run" in call["argv"])
+
+    restarted = _driver(recorder)
+    result = restarted.observe(containers=(spec,))
+
+    assert not result.diagnostics
+    [observation] = result.observations
+    envelope = load_reference_realization_envelope("oci-container")
+    assert observation.address == spec.address
+    assert observation.value == "operating-system-container"
+    assert observation.concern is RealizationConcern.COMPUTE_SUBSTRATE
+    assert observation.source is ObservationStrength.DAEMON_OBSERVED
+    assert observation.envelope_digest == envelope.digest
+    assert observation.configuration_digest == envelope.configuration.configuration_digest
+    assert observation.binding_verified
+    assert tuple(call for call in recorder.calls if "run" in call["argv"]) == run_calls
+    assert any("inspect" in call["argv"] for call in recorder.calls)
 
 
 def test_oci_failure_diagnostic_does_not_leak_native_output():
@@ -223,7 +268,14 @@ def test_oci_joins_only_a_run_owned_target_network_namespace():
         def __call__(self, argv, **kwargs):
             self.calls.append({"argv": argv, "kwargs": kwargs})
             if "inspect" in argv:
-                stdout = f"owner-native-id\nraes-ref-test\n{owner_address}\n/{owner_name}\n"
+                name = argv[-1]
+                if name == owner_name:
+                    native_id = "owner-native-id"
+                    address = owner_address
+                else:
+                    native_id = "capture-native-id"
+                    address = capture_address
+                stdout = f"{native_id}\nraes-ref-test\n{address}\n/{name}\n"
             elif "run" in argv and owner_name in argv:
                 stdout = "owner-native-id\n"
             else:

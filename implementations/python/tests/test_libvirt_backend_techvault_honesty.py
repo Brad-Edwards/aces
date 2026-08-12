@@ -121,7 +121,7 @@ def _node_resource(
     acls: list[dict[str, object]] | None = None,
 ) -> PlannedResource:
     node: dict[str, object] = {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": memory_mib, "cpu": vcpus},
         "services": services or [],
     }
@@ -136,7 +136,7 @@ def _node_resource(
         resource_type="node",
         payload={
             "name": "demo",
-            "node_type": "vm",
+            "node_kind": "compute",
             "os_family": "linux",
             "spec": {"node": node, "infrastructure": infrastructure},
         },

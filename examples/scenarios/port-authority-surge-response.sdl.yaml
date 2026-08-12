@@ -30,7 +30,7 @@ nodes:
     type: switch
     description: Historian and backup network
   shipping-portal:
-    type: vm
+    type: compute
     source:
       name: portal-app
       version: '*'
@@ -51,7 +51,7 @@ nodes:
     - port: 443
       name: shipping-portal-https
   manifest-db:
-    type: vm
+    type: compute
     source:
       name: manifest-db
       version: '*'
@@ -76,7 +76,7 @@ nodes:
       integrity: critical
       availability: high
   terminal-ops:
-    type: vm
+    type: compute
     source:
       name: terminal-operating-system
       version: '*'
@@ -97,7 +97,7 @@ nodes:
     - port: 443
       name: tos-https
   port-idp:
-    type: vm
+    type: compute
     source:
       name: port-idp
       version: '*'
@@ -118,7 +118,7 @@ nodes:
     - port: 443
       name: port-sso-https
   customs-gateway:
-    type: vm
+    type: compute
     source:
       name: customs-gateway
       version: '*'
@@ -139,7 +139,7 @@ nodes:
     - port: 443
       name: customs-api-https
   yard-hmi:
-    type: vm
+    type: compute
     source:
       name: yard-hmi
       version: '*'
@@ -167,7 +167,7 @@ nodes:
       integrity: critical
       availability: critical
   crane-plc:
-    type: vm
+    type: compute
     source:
       name: crane-plc
       version: '*'
@@ -186,7 +186,7 @@ nodes:
     - port: 4840
       name: crane-opcua
   gate-kiosk:
-    type: vm
+    type: compute
     source:
       name: gate-kiosk
       version: '*'
@@ -204,7 +204,7 @@ nodes:
     - port: 443
       name: gate-kiosk-https
   camera-analytics:
-    type: vm
+    type: compute
     source:
       name: camera-analytics
       version: '*'
@@ -225,7 +225,7 @@ nodes:
     - port: 443
       name: camera-analytics-ui
   historian01:
-    type: vm
+    type: compute
     source:
       name: ot-historian
       version: '*'
@@ -245,7 +245,7 @@ nodes:
     - port: 443
       name: historian-ui
   vendor-jump:
-    type: vm
+    type: compute
     source:
       name: vendor-jump
       version: '*'
@@ -264,7 +264,7 @@ nodes:
     - port: 22
       name: vendor-jump-ssh
   soc01:
-    type: vm
+    type: compute
     source:
       name: siem-stack
       version: '*'
@@ -287,7 +287,7 @@ nodes:
     - port: 5601
       name: port-soc-ui
   backup-vault:
-    type: vm
+    type: compute
     source:
       name: immutable-backup
       version: '*'

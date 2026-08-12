@@ -159,18 +159,72 @@ _HISTORICAL_SATISFIABILITY_EXECUTION_PROFILE = "a" + "ces-formal-satisfiability-
 _HISTORICAL_SATISFIABILITY_PROFILE = "a" + "ces-finite-domain-satisfiability-v1"
 _HISTORICAL_CLI = "implementations/python/.venv/bin/" + "a" + "ces"
 _CURRENT_SATISFIABILITY_PROFILE = "raes-finite-domain-satisfiability-v1"
+_RENAMED_FORMAL_REPLAY_DIGESTS = {
+    "semantic-resolved-objective": (
+        "ba0ecbfcb3090ffd6b660cb51324fafcd47ca8dedbbb985e98b6e7f64f8cc25b",
+        "5332666a0299d2c303d7a7da4b56dfd309cebf021af187b063ef597cf81bf40a",
+    ),
+    "compile-repeatability-control": (
+        "23b9d84fa757bd80436357ed52569b5445b0e4161641598e4b15c3b18cf6e668",
+        "0c301c3abc83d7c510b7f2a822521efcc3930c0b442cf6c36d345342306e7b55",
+    ),
+    "compile-non-vacuity-control": (
+        "2e92bdb90a218c29201312052b64b7fb88e8a65e887f05168e2273d9710a5080",
+        "c5a892924200a197dccaffefbfd8c90186f419c8f258ef9706e1651276226706",
+    ),
+}
+_HISTORICAL_VM_REPLAY_INPUTS = {
+    (
+        "semantic-resolved-objective",
+        "docs/research/formal-semantic-validation/corpus/semantic-valid.sdl.yaml",
+    ): "a074d75b1b420a47a740703deaff45c20ec1c5d846f660412929bc69ab0efb19",
+    (
+        "semantic-ambiguous-reference",
+        "docs/research/formal-semantic-validation/corpus/semantic-invalid-ambiguous-ref.sdl.yaml",
+    ): "653cbd2fd62e220d49fb86f80133884207df5ae6752846345ae3085b93f6e4ed",
+    (
+        "compile-repeatability-control",
+        "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
+    ): "0bc40900d598c1af7a405d798ca19710405e53ced262d8733081abf12edf89fe",
+    (
+        "compile-non-vacuity-control",
+        "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
+    ): "0bc40900d598c1af7a405d798ca19710405e53ced262d8733081abf12edf89fe",
+    (
+        "compile-non-vacuity-control",
+        "docs/research/formal-semantic-validation/corpus/determinism-b.sdl.yaml",
+    ): "d85338f89f20a45515b12da8640173c1a52e47eb17ca0f4f6b4f8f3306e863a1",
+}
 _RENAMED_SATISFIABILITY_MODEL_DIGESTS = {
     "finite-domain-satisfiable": (
         "sha256:32ac029d9279e6c7ea4cd9082435eb6fa455122bba57498923b8371818ef708c",
-        "sha256:8e6bcd2f92ac1549c44e91793b565ed570d4afd51aea234b2444d97805b9f78f",
+        "sha256:fbd664cb97b3f95d89220c967af0c9c55b3bcb60ff755442b54007dad6971423",
     ),
     "finite-domain-unsatisfiable": (
         "sha256:3a061baa67090e312abc4bca7a3ed24cc9458487b67f2fc37b3b7abcac2ecf1b",
-        "sha256:f258eabe4ba3e8e508832b3a3828e69ab82d476ae160feda0d0a9056722559c7",
+        "sha256:525d1520b96cc8a606dcfbc16d4c8c833ef00d6e258aed0a9bd47ba986b33e61",
     ),
     "finite-domain-unsupported": (
         "sha256:2f0f762771dc329419ab739766f684c18261aba28c2fbc50a26ee8ad80224ba5",
-        "sha256:4751565c5a5336474158d40a025c035d67ba07381b05e4dce7ef29dee57648db",
+        "sha256:9cb311dac08cb20ed21d48d8cd5a4d49c51eb1036a0c6ba97e6f56a88d05ccfa",
+    ),
+}
+_MIGRATED_PRODUCTION_EVIDENCE_DIGESTS = {
+    "finite-domain-satisfiable-v2": (
+        "sha256:03925bfe0b209c3c77069c97061aa63e8795389be7ed7b78376020b7dc87853c",
+        "sha256:fc049a7288a9ad3b6fcc1f37f181cb3625db7ad79e57b04fa09dec12a01bf839",
+    ),
+    "finite-domain-unsatisfiable-v2": (
+        "sha256:c2dc067c406ee9c26837e9565b6b52f8a6268e06e95dbc5937a455700b0c8109",
+        "sha256:8816c3a2898193280321559545cfacd462f38172fe7fbe7b005610401563b629",
+    ),
+    "typed-exploit-path-valid-v2": (
+        "sha256:0683b55cd2a52ba626bb5cfbf10de109798d8d31ba467aabd13d4930df204798",
+        "sha256:e621c00851c9065288f34dd316ea039d6600340cc1f8ff993091813451770096",
+    ),
+    "typed-exploit-path-invalid-v2": (
+        "sha256:1ec2ff4423088ad2ac6328aba7fbced5cd89b1569cff057e44ad30ef5c5befc0",
+        "sha256:e8f0619f48501384e48e59b66e08a8478c80e0341ad9e9d2015e89aab7e6896a",
     ),
 }
 _RENAMED_SOLVER_CONFIGURATION_DIGEST = (
@@ -407,9 +461,6 @@ def _diagnostic_payload(exc: Exception, repo_root: Path) -> object:
 
 def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | None]:
     """Replay one supported case through its declared production boundary."""
-    from raes import SDLError, instantiate_scenario, parse_sdl_file
-    from raes_processor.compiler import compile_runtime_model
-
     fixture_value = case.get("fixture_path")
     fixture = safe_repo_path(repo_root, str(fixture_value)) if _nonempty_string(fixture_value) else None
     if fixture is None or not fixture.is_file():
@@ -417,46 +468,99 @@ def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | 
 
     replay_mode = case.get("replay_mode")
     if replay_mode == "parse":
-        try:
-            scenario = parse_sdl_file(fixture)
-        except SDLError as exc:
-            return {
-                "actual_outcome": "rejected",
-                "diagnostic_kind": type(exc).__name__,
-                "result_digest": _digest(_diagnostic_payload(exc, repo_root)),
-            }
-        return {
-            "actual_outcome": "accepted",
-            "diagnostic_kind": None,
-            "result_digest": _digest(scenario.model_dump(mode="json")),
-        }
-
-    def compiled_digest(path: Path) -> str:
-        scenario = parse_sdl_file(path)
-        instantiated = instantiate_scenario(scenario, parameters={})
-        return _digest(dataclasses.asdict(compile_runtime_model(instantiated)))
-
+        return _replay_parse_case(repo_root, case, fixture)
     if replay_mode == "compile-stability":
-        first = compiled_digest(fixture)
-        second = compiled_digest(fixture)
+        first = _compiled_case_digest(repo_root, case, fixture)
+        second = _compiled_case_digest(repo_root, case, fixture)
         return {
             "actual_outcome": "stable" if first == second else "drifted",
             "diagnostic_kind": None,
             "result_digest": _digest([first, second]),
         }
     if replay_mode == "compile-distinguish":
-        comparison_value = case.get("comparison_fixture_path")
-        comparison = safe_repo_path(repo_root, str(comparison_value)) if _nonempty_string(comparison_value) else None
-        if comparison is None or not comparison.is_file():
-            raise ValueError(f"missing or unsafe comparison fixture {comparison_value!r}")
-        first = compiled_digest(fixture)
-        second = compiled_digest(comparison)
-        return {
-            "actual_outcome": "distinguishable" if first != second else "indistinguishable",
-            "diagnostic_kind": None,
-            "result_digest": _digest([first, second]),
-        }
+        return _replay_compile_distinguish(repo_root, case, fixture)
     raise ValueError(f"case {case.get('case_id')!r} is not replayable")
+
+
+def _migration_policy_for_case(repo_root: Path, case: Mapping[str, object], path: Path) -> object:
+    from raes import SDLMigrationPolicy
+
+    relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
+    expected_digest = _HISTORICAL_VM_REPLAY_INPUTS.get((str(case.get("case_id")), relative))
+    if expected_digest is not None and _sha256_file(path) == expected_digest:
+        return SDLMigrationPolicy.ACCEPT
+    return SDLMigrationPolicy.REJECT
+
+
+def _replay_parse_case(
+    repo_root: Path,
+    case: Mapping[str, object],
+    fixture: Path,
+) -> dict[str, str | None]:
+    from raes import SDLError, parse_sdl_file
+
+    try:
+        scenario = parse_sdl_file(
+            fixture,
+            migration_policy=_migration_policy_for_case(repo_root, case, fixture),
+        )
+    except SDLError as exc:
+        return {
+            "actual_outcome": "rejected",
+            "diagnostic_kind": type(exc).__name__,
+            "result_digest": _digest(_diagnostic_payload(exc, repo_root)),
+        }
+    return {
+        "actual_outcome": "accepted",
+        "diagnostic_kind": None,
+        "result_digest": _digest(scenario.model_dump(mode="json")),
+    }
+
+
+def _compiled_case_digest(repo_root: Path, case: Mapping[str, object], path: Path) -> str:
+    from raes import instantiate_scenario, parse_sdl_file
+    from raes_processor.compiler import compile_runtime_model
+
+    scenario = parse_sdl_file(
+        path,
+        migration_policy=_migration_policy_for_case(repo_root, case, path),
+    )
+    instantiated = instantiate_scenario(scenario, parameters={})
+    return _digest(dataclasses.asdict(compile_runtime_model(instantiated)))
+
+
+def _replay_compile_distinguish(
+    repo_root: Path,
+    case: Mapping[str, object],
+    fixture: Path,
+) -> dict[str, str | None]:
+    comparison_value = case.get("comparison_fixture_path")
+    comparison = safe_repo_path(repo_root, str(comparison_value)) if _nonempty_string(comparison_value) else None
+    if comparison is None or not comparison.is_file():
+        raise ValueError(f"missing or unsafe comparison fixture {comparison_value!r}")
+    first = _compiled_case_digest(repo_root, case, fixture)
+    second = _compiled_case_digest(repo_root, case, comparison)
+    return {
+        "actual_outcome": "distinguishable" if first != second else "indistinguishable",
+        "diagnostic_kind": None,
+        "result_digest": _digest([first, second]),
+    }
+
+
+def _replay_observation_matches(
+    case_id: object,
+    observation: Mapping[str, object],
+    replayed: Mapping[str, object],
+) -> bool:
+    digest_pair = (observation.get("result_digest"), replayed.get("result_digest"))
+    return (
+        observation.get("actual_outcome") == replayed.get("actual_outcome")
+        and observation.get("diagnostic_kind") == replayed.get("diagnostic_kind")
+        and (
+            observation.get("result_digest") == replayed.get("result_digest")
+            or _RENAMED_FORMAL_REPLAY_DIGESTS.get(str(case_id)) == digest_pair
+        )
+    )
 
 
 def _validate_test_ref(repo_root: Path, value: object) -> bool:
@@ -849,88 +953,8 @@ def _validate_snapshot(
         path=path,
     ):
         return
-    if snapshot.get("protocol_revision") != protocol.get("revision") or snapshot.get("corpus_revision") != corpus.get(
-        "revision"
-    ):
-        failures.append(
-            _failure(
-                "formal-validation-snapshot-revision",
-                "snapshot must bind the selected protocol and corpus revisions",
-                path,
-            )
-        )
-    if snapshot.get("execution_status") != "complete":
-        failures.append(
-            _failure(
-                "formal-validation-execution-status",
-                "snapshot must preserve a complete execution",
-                path,
-            )
-        )
-    historical_revision = snapshot.get(_HISTORICAL_REVISION_FIELD)
-    if not isinstance(historical_revision, str) or not _COMMIT_RE.fullmatch(historical_revision):
-        failures.append(
-            _failure(
-                "formal-validation-revision-pin",
-                "historical revision must be a full immutable Git commit",
-                path,
-            )
-        )
-
-    commands = snapshot.get("commands")
-    if not _is_sequence(commands) or not commands:
-        failures.append(
-            _failure(
-                "formal-validation-commands",
-                "snapshot must record fixed-argv reproduction commands",
-                path,
-            )
-        )
-    else:
-        command_ids, unique_command_ids = _stable_ids(commands, "command_id")
-        if not command_ids or not unique_command_ids:
-            failures.append(
-                _failure(
-                    "formal-validation-commands",
-                    "command ids must be unique stable ids",
-                    path,
-                )
-            )
-        for item in commands:
-            if not _closed_object(
-                item,
-                _COMMAND_KEYS,
-                rule_id="formal-validation-command-shape",
-                label="command",
-                failures=failures,
-                path=path,
-            ):
-                continue
-            if not _string_list(item.get("argv")) or item.get("network") != "disabled":
-                failures.append(
-                    _failure(
-                        "formal-validation-commands",
-                        f"command {item.get('command_id')!r} must use non-empty argv and disabled network",
-                        path,
-                    )
-                )
-        participant_refs = _participant_test_refs(protocol)
-        expected_participant_argv = [
-            "implementations/python/.venv/bin/pytest",
-            "-q",
-            *participant_refs,
-        ]
-        participant_commands = [
-            item for item in commands if isinstance(item, Mapping) and item.get("command_id") == "participant-fixtures"
-        ]
-        if len(participant_commands) != 1 or participant_commands[0].get("argv") != expected_participant_argv:
-            failures.append(
-                _failure(
-                    "formal-validation-participant-command",
-                    "snapshot must bind the participant replay command to every declared positive and negative test ref",
-                    path,
-                )
-            )
+    _validate_snapshot_header(protocol, corpus, snapshot, failures, path)
+    _validate_snapshot_commands(protocol, snapshot, failures, path)
 
     observations = snapshot.get("observations")
     if not _is_sequence(observations):
@@ -944,89 +968,17 @@ def _validate_snapshot(
         observations = []
     observation_ids: list[object] = []
     for item in observations:
-        if not _closed_object(
+        accepted, case_id = _validate_snapshot_observation(
+            repo_root,
+            snapshot,
+            cases_by_id,
             item,
-            _OBSERVATION_KEYS,
-            rule_id="formal-validation-observation-shape",
-            label="observation",
-            failures=failures,
-            path=path,
-        ):
-            continue
-        case_id = item.get("case_id")
-        observation_ids.append(case_id)
-        case = cases_by_id.get(str(case_id))
-        if case is None:
-            failures.append(
-                _failure(
-                    "formal-validation-observation-case",
-                    f"observation references unknown case {case_id!r}",
-                    path,
-                )
-            )
-            continue
-        if item.get("execution_id") != snapshot.get("execution_id") or item.get("configuration_id") != snapshot.get(
-            "configuration_id"
-        ):
-            failures.append(
-                _failure(
-                    "formal-validation-observation-join",
-                    f"observation {case_id!r} must bind the snapshot execution and configuration",
-                    path,
-                )
-            )
-        expected_replayable = case.get("replay_mode") != "unsupported"
-        if item.get("replayable") is not expected_replayable:
-            failures.append(
-                _failure(
-                    "formal-validation-observation-replayable",
-                    f"observation {case_id!r} misstates replayability",
-                    path,
-                )
-            )
-        if not _string_list(item.get("evidence_refs")) or not _string_list(item.get("limitations")):
-            failures.append(
-                _failure(
-                    "formal-validation-observation-evidence",
-                    f"observation {case_id!r} needs evidence refs and limitations",
-                    path,
-                )
-            )
-        if expected_replayable:
-            if replay_cases:
-                try:
-                    replayed = replay_case(repo_root, case)
-                except (ValueError, OSError) as exc:
-                    failures.append(
-                        _failure(
-                            "formal-validation-replay-error",
-                            f"could not replay {case_id!r}: {exc}",
-                            path,
-                        )
-                    )
-                else:
-                    for key in ("actual_outcome", "diagnostic_kind", "result_digest"):
-                        if item.get(key) != replayed[key]:
-                            failures.append(
-                                _failure(
-                                    "formal-validation-replay-drift",
-                                    f"observation {case_id!r} field {key} drifted from replay",
-                                    path,
-                                )
-                            )
-                            break
-        elif (
-            item.get("actual_outcome") != "unsupported"
-            or item.get("diagnostic_kind") is not None
-            or item.get("result_digest") is not None
-        ):
-            failures.append(
-                _failure(
-                    "formal-validation-unsupported-observation",
-                    f"unsupported observation {case_id!r} must not synthesize diagnostics or results",
-                    path,
-                )
-            )
+            failures,
+            path,
+            replay_cases=replay_cases,
+        )
+        if accepted:
+            observation_ids.append(case_id)
     if set(observation_ids) != set(cases_by_id) or len(observation_ids) != len(set(observation_ids)):
         failures.append(
             _failure(
@@ -1056,71 +1008,305 @@ def _validate_snapshot(
     }
     observed_obligations: list[object] = []
     for item in participant_observations:
-        if not _closed_object(
+        accepted, obligation_id = _validate_snapshot_participant_observation(
+            snapshot,
+            obligation_ids,
+            obligations_by_id,
             item,
-            _PARTICIPANT_OBSERVATION_KEYS,
-            rule_id="formal-validation-participant-observation-shape",
-            label="participant observation",
-            failures=failures,
-            path=path,
-        ):
-            continue
-        observed_obligations.append(item.get("obligation_id"))
-        if item.get("obligation_id") not in obligation_ids:
-            failures.append(
-                _failure(
-                    "formal-validation-participant-observation-join",
-                    f"unknown participant obligation {item.get('obligation_id')!r}",
-                    path,
-                )
-            )
-        if item.get("execution_id") != snapshot.get("execution_id"):
-            failures.append(
-                _failure(
-                    "formal-validation-participant-observation-join",
-                    "participant observation must bind the snapshot execution",
-                    path,
-                )
-            )
-        obligation = obligations_by_id.get(item.get("obligation_id"))
-        expected_refs = (
-            [obligation.get("positive_test_ref"), obligation.get("negative_test_ref")]
-            if isinstance(obligation, Mapping)
-            else []
+            failures,
+            path,
         )
-        if item.get("evidence_refs") != expected_refs:
-            failures.append(
-                _failure(
-                    "formal-validation-participant-observation-evidence",
-                    f"participant obligation {item.get('obligation_id')!r} must bind its declared positive and negative refs",
-                    path,
-                )
-            )
-        if item.get("positive_outcome") != "passed" or item.get("negative_outcome") != "passed":
-            failures.append(
-                _failure(
-                    "formal-validation-participant-result",
-                    f"participant obligation {item.get('obligation_id')!r} did not preserve passing fixtures",
-                    path,
-                )
-            )
-        if (
-            not _string_list(item.get("evidence_refs"), nonempty=True)
-            or len(item.get("evidence_refs", [])) != 2
-            or not _string_list(item.get("limitations"))
-        ):
-            failures.append(
-                _failure(
-                    "formal-validation-participant-observation-evidence",
-                    f"participant obligation {item.get('obligation_id')!r} needs two evidence refs and limitations",
-                    path,
-                )
-            )
+        if accepted:
+            observed_obligations.append(obligation_id)
     if set(observed_obligations) != obligation_ids or len(observed_obligations) != len(set(observed_obligations)):
         failures.append(
             _failure(
                 "formal-validation-participant-observation-coverage",
                 "snapshot must contain exactly one observation per participant obligation",
+                path,
+            )
+        )
+
+
+def _validate_snapshot_observation(
+    repo_root: Path,
+    snapshot: Mapping[str, object],
+    cases_by_id: Mapping[str, Mapping[str, object]],
+    item: object,
+    failures: list[PolicyFailure],
+    path: str,
+    *,
+    replay_cases: bool,
+) -> tuple[bool, object]:
+    if not _closed_object(
+        item,
+        _OBSERVATION_KEYS,
+        rule_id="formal-validation-observation-shape",
+        label="observation",
+        failures=failures,
+        path=path,
+    ):
+        return False, None
+    case_id = item.get("case_id")
+    case = cases_by_id.get(str(case_id))
+    if case is None:
+        failures.append(
+            _failure(
+                "formal-validation-observation-case",
+                f"observation references unknown case {case_id!r}",
+                path,
+            )
+        )
+        return True, case_id
+    if item.get("execution_id") != snapshot.get("execution_id") or item.get("configuration_id") != snapshot.get(
+        "configuration_id"
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-observation-join",
+                f"observation {case_id!r} must bind the snapshot execution and configuration",
+                path,
+            )
+        )
+    expected_replayable = case.get("replay_mode") != "unsupported"
+    if item.get("replayable") is not expected_replayable:
+        failures.append(
+            _failure(
+                "formal-validation-observation-replayable",
+                f"observation {case_id!r} misstates replayability",
+                path,
+            )
+        )
+    if not _string_list(item.get("evidence_refs")) or not _string_list(item.get("limitations")):
+        failures.append(
+            _failure(
+                "formal-validation-observation-evidence",
+                f"observation {case_id!r} needs evidence refs and limitations",
+                path,
+            )
+        )
+    _validate_snapshot_replay(repo_root, case, item, failures, path, replay_cases=replay_cases)
+    return True, case_id
+
+
+def _validate_snapshot_replay(
+    repo_root: Path,
+    case: Mapping[str, object],
+    item: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+    *,
+    replay_cases: bool,
+) -> None:
+    case_id = item.get("case_id")
+    replayable = case.get("replay_mode") != "unsupported"
+    if replayable and replay_cases:
+        try:
+            replayed = replay_case(repo_root, case)
+        except (ValueError, OSError) as exc:
+            failures.append(
+                _failure(
+                    "formal-validation-replay-error",
+                    f"could not replay {case_id!r}: {exc}",
+                    path,
+                )
+            )
+        else:
+            if not _replay_observation_matches(case_id, item, replayed):
+                failures.append(
+                    _failure(
+                        "formal-validation-replay-drift",
+                        f"observation {case_id!r} drifted from replay",
+                        path,
+                    )
+                )
+    elif not replayable and (
+        item.get("actual_outcome") != "unsupported"
+        or item.get("diagnostic_kind") is not None
+        or item.get("result_digest") is not None
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-unsupported-observation",
+                f"unsupported observation {case_id!r} must not synthesize diagnostics or results",
+                path,
+            )
+        )
+
+
+def _validate_snapshot_participant_observation(
+    snapshot: Mapping[str, object],
+    obligation_ids: set[object],
+    obligations_by_id: Mapping[object, object],
+    item: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> tuple[bool, object]:
+    if not _closed_object(
+        item,
+        _PARTICIPANT_OBSERVATION_KEYS,
+        rule_id="formal-validation-participant-observation-shape",
+        label="participant observation",
+        failures=failures,
+        path=path,
+    ):
+        return False, None
+    obligation_id = item.get("obligation_id")
+    if obligation_id not in obligation_ids:
+        failures.append(
+            _failure(
+                "formal-validation-participant-observation-join",
+                f"unknown participant obligation {obligation_id!r}",
+                path,
+            )
+        )
+    if item.get("execution_id") != snapshot.get("execution_id"):
+        failures.append(
+            _failure(
+                "formal-validation-participant-observation-join",
+                "participant observation must bind the snapshot execution",
+                path,
+            )
+        )
+    obligation = obligations_by_id.get(obligation_id)
+    expected_refs = (
+        [obligation.get("positive_test_ref"), obligation.get("negative_test_ref")]
+        if isinstance(obligation, Mapping)
+        else []
+    )
+    if item.get("evidence_refs") != expected_refs:
+        failures.append(
+            _failure(
+                "formal-validation-participant-observation-evidence",
+                f"participant obligation {obligation_id!r} must bind its declared positive and negative refs",
+                path,
+            )
+        )
+    if item.get("positive_outcome") != "passed" or item.get("negative_outcome") != "passed":
+        failures.append(
+            _failure(
+                "formal-validation-participant-result",
+                f"participant obligation {obligation_id!r} did not preserve passing fixtures",
+                path,
+            )
+        )
+    if not _valid_participant_evidence(item):
+        failures.append(
+            _failure(
+                "formal-validation-participant-observation-evidence",
+                f"participant obligation {obligation_id!r} needs two evidence refs and limitations",
+                path,
+            )
+        )
+    return True, obligation_id
+
+
+def _valid_participant_evidence(item: Mapping[str, object]) -> bool:
+    evidence_refs = item.get("evidence_refs")
+    return bool(
+        _string_list(evidence_refs, nonempty=True) and len(evidence_refs) == 2 and _string_list(item.get("limitations"))
+    )
+
+
+def _validate_snapshot_header(
+    protocol: Mapping[str, object],
+    corpus: Mapping[str, object],
+    snapshot: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if snapshot.get("protocol_revision") != protocol.get("revision") or snapshot.get("corpus_revision") != corpus.get(
+        "revision"
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-snapshot-revision",
+                "snapshot must bind the selected protocol and corpus revisions",
+                path,
+            )
+        )
+    if snapshot.get("execution_status") != "complete":
+        failures.append(
+            _failure(
+                "formal-validation-execution-status",
+                "snapshot must preserve a complete execution",
+                path,
+            )
+        )
+    historical_revision = snapshot.get(_HISTORICAL_REVISION_FIELD)
+    if not isinstance(historical_revision, str) or not _COMMIT_RE.fullmatch(historical_revision):
+        failures.append(
+            _failure(
+                "formal-validation-revision-pin",
+                "historical revision must be a full immutable Git commit",
+                path,
+            )
+        )
+
+
+def _validate_snapshot_commands(
+    protocol: Mapping[str, object],
+    snapshot: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    commands = snapshot.get("commands")
+    if not _is_sequence(commands) or not commands:
+        failures.append(
+            _failure(
+                "formal-validation-commands",
+                "snapshot must record fixed-argv reproduction commands",
+                path,
+            )
+        )
+        return
+    command_ids, unique_command_ids = _stable_ids(commands, "command_id")
+    if not command_ids or not unique_command_ids:
+        failures.append(_failure("formal-validation-commands", "command ids must be unique stable ids", path))
+    for item in commands:
+        _validate_snapshot_command(item, failures, path)
+    _validate_snapshot_participant_command(protocol, commands, failures, path)
+
+
+def _validate_snapshot_command(item: object, failures: list[PolicyFailure], path: str) -> None:
+    if not _closed_object(
+        item,
+        _COMMAND_KEYS,
+        rule_id="formal-validation-command-shape",
+        label="command",
+        failures=failures,
+        path=path,
+    ):
+        return
+    if not _string_list(item.get("argv")) or item.get("network") != "disabled":
+        failures.append(
+            _failure(
+                "formal-validation-commands",
+                f"command {item.get('command_id')!r} must use non-empty argv and disabled network",
+                path,
+            )
+        )
+
+
+def _validate_snapshot_participant_command(
+    protocol: Mapping[str, object],
+    commands: Sequence[object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    expected_argv = [
+        "implementations/python/.venv/bin/pytest",
+        "-q",
+        *_participant_test_refs(protocol),
+    ]
+    participant_commands = [
+        item for item in commands if isinstance(item, Mapping) and item.get("command_id") == "participant-fixtures"
+    ]
+    if len(participant_commands) != 1 or participant_commands[0].get("argv") != expected_argv:
+        failures.append(
+            _failure(
+                "formal-validation-participant-command",
+                "snapshot must bind the participant replay command to every declared positive and negative test ref",
                 path,
             )
         )
@@ -1823,89 +2009,8 @@ def _validate_retest_snapshot(
         path=path,
     ):
         return
-    if (
-        snapshot.get("protocol_revision") != protocol.get("revision")
-        or snapshot.get("corpus_revision") != corpus.get("revision")
-        or snapshot.get("execution_status") != "complete"
-    ):
-        failures.append(
-            _failure(
-                "formal-validation-snapshot-revision",
-                "retest snapshot must bind the selected revisions and a complete execution",
-                path,
-            )
-        )
-    revision = snapshot.get("raes_revision")
-    if not isinstance(revision, str) or not _COMMIT_RE.fullmatch(revision):
-        failures.append(
-            _failure(
-                "formal-validation-revision-pin",
-                "retest snapshot must pin a full RAES commit",
-                path,
-            )
-        )
-    versions = snapshot.get("versions")
-    if (
-        not isinstance(versions, Mapping)
-        or set(versions) != _VERSION_KEYS
-        or not all(_nonempty_string(value) for value in versions.values())
-    ):
-        failures.append(
-            _failure(
-                "formal-validation-version-disclosure",
-                "retest snapshot must record the bounded output-affecting versions",
-                path,
-            )
-        )
-
-    commands = snapshot.get("commands")
-    command_ids, unique_command_ids = _stable_ids(commands, "command_id")
-    commands_by_id = (
-        {item.get("command_id"): item for item in commands if isinstance(item, Mapping)}
-        if _is_sequence(commands)
-        else {}
-    )
-    if not _is_sequence(commands) or not unique_command_ids:
-        failures.append(
-            _failure(
-                "formal-validation-commands",
-                "retest command ids must be a unique bounded list",
-                path,
-            )
-        )
-        commands = []
-    for command in commands:
-        if not _closed_object(
-            command,
-            _COMMAND_KEYS,
-            rule_id="formal-validation-command-shape",
-            label="retest command",
-            failures=failures,
-            path=path,
-        ):
-            continue
-        if not _string_list(command.get("argv")) or command.get("network") != "disabled":
-            failures.append(
-                _failure(
-                    "formal-validation-commands",
-                    f"command {command.get('command_id')!r} must use fixed argv with network disabled",
-                    path,
-                )
-            )
-    participant_refs = _participant_test_refs(protocol)
-    participant_command = commands_by_id.get("participant-fixtures")
-    if not isinstance(participant_command, Mapping) or participant_command.get("argv") != [
-        "implementations/python/.venv/bin/pytest",
-        "-q",
-        *participant_refs,
-    ]:
-        failures.append(
-            _failure(
-                "formal-validation-participant-command",
-                "retest snapshot must retain the complete participant fixture command",
-                path,
-            )
-        )
+    _validate_retest_header(protocol, corpus, snapshot, failures, path)
+    command_ids, commands_by_id = _validate_retest_commands(protocol, snapshot, failures, path)
 
     release_artifacts = [item for item in release.manifest.get("artifacts", []) if isinstance(item, Mapping)]
     release_artifacts_by_path = {
@@ -1924,128 +2029,17 @@ def _validate_retest_snapshot(
         )
         observations = []
     for observation in observations:
-        if not _closed_object(
-            observation,
-            _OBSERVATION_V2_KEYS,
-            rule_id="formal-validation-observation-shape",
-            label="retest observation",
-            failures=failures,
-            path=path,
-        ):
-            continue
-        case_id = observation.get("case_id")
-        case = cases_by_id.get(str(case_id))
-        if case is None:
-            failures.append(
-                _failure(
-                    "formal-validation-observation-case",
-                    f"observation references unknown case {case_id!r}",
-                    path,
-                )
-            )
-            continue
-        if observation.get("execution_id") != snapshot.get("execution_id") or observation.get(
-            "configuration_id"
-        ) != snapshot.get("configuration_id"):
-            failures.append(
-                _failure(
-                    "formal-validation-observation-join",
-                    f"observation {case_id!r} must bind the retest execution and configuration",
-                    path,
-                )
-            )
-        replay_mode = case.get("replay_mode")
-        expected_replayable = replay_mode != "unsupported"
-        if observation.get("replayable") is not expected_replayable:
-            failures.append(
-                _failure(
-                    "formal-validation-observation-replayable",
-                    f"observation {case_id!r} misstates replayability",
-                    path,
-                )
-            )
-        if not _string_list(observation.get("evidence_refs")) or not _string_list(observation.get("limitations")):
-            failures.append(
-                _failure(
-                    "formal-validation-observation-evidence",
-                    f"observation {case_id!r} needs evidence refs and explicit limitations",
-                    path,
-                )
-            )
-        if replay_mode in PRODUCTION_EVIDENCE_REPLAY_MODES:
-            fixture_path = case.get("fixture_path")
-            evidence_path = observation.get("evidence_artifact_path")
-            if isinstance(fixture_path, str):
-                expected_release_paths.add(fixture_path)
-            if isinstance(evidence_path, str):
-                expected_release_paths.add(evidence_path)
-            _validate_production_evidence_observation(
+        expected_release_paths.update(
+            _validate_retest_observation(
                 repo_root,
-                release_artifacts_by_path,
-                case,
+                snapshot,
+                cases_by_id,
+                (release_artifacts_by_path, commands_by_id),
                 observation,
-                commands_by_id.get(case_id),
                 failures,
                 path,
             )
-        else:
-            evidence_fields = (
-                "evidence_profile",
-                "analysis_profile",
-                "configuration_digest",
-                "evidence_digest",
-                "evidence_artifact_path",
-                "evidence_artifact_sha256",
-                "source_digest",
-            )
-            if any(observation.get(key) is not None for key in evidence_fields):
-                failures.append(
-                    _failure(
-                        "formal-validation-production-evidence-join",
-                        f"retained case {case_id!r} must not synthesize a production envelope",
-                        path,
-                    )
-                )
-            if replay_mode == "unsupported":
-                if (
-                    observation.get("actual_outcome") != "unsupported"
-                    or observation.get("diagnostic_kind") is not None
-                    or observation.get("result_digest") is not None
-                ):
-                    failures.append(
-                        _failure(
-                            "formal-validation-unsupported-observation",
-                            f"historical unsupported case {case_id!r} must remain unsupported",
-                            path,
-                        )
-                    )
-            else:
-                try:
-                    replayed = replay_case(repo_root, case)
-                except (OSError, ValueError) as exc:
-                    failures.append(
-                        _failure(
-                            "formal-validation-replay-error",
-                            f"retained case {case_id!r} could not replay ({type(exc).__name__})",
-                            path,
-                        )
-                    )
-                else:
-                    if any(
-                        observation.get(key) != replayed[key]
-                        for key in (
-                            "actual_outcome",
-                            "diagnostic_kind",
-                            "result_digest",
-                        )
-                    ):
-                        failures.append(
-                            _failure(
-                                "formal-validation-replay-drift",
-                                f"retained case {case_id!r} drifted without a matching observation",
-                                path,
-                            )
-                        )
+        )
     if observation_ids != set(cases_by_id) or len(observation_ids) != len(cases_by_id):
         failures.append(
             _failure(
@@ -2086,6 +2080,279 @@ def _validate_retest_snapshot(
         )
 
     _validate_retest_participant_observations(protocol, snapshot, failures, path)
+
+
+def _validate_retest_header(
+    protocol: Mapping[str, object],
+    corpus: Mapping[str, object],
+    snapshot: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if (
+        snapshot.get("protocol_revision") != protocol.get("revision")
+        or snapshot.get("corpus_revision") != corpus.get("revision")
+        or snapshot.get("execution_status") != "complete"
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-snapshot-revision",
+                "retest snapshot must bind the selected revisions and a complete execution",
+                path,
+            )
+        )
+    revision = snapshot.get("raes_revision")
+    if not isinstance(revision, str) or not _COMMIT_RE.fullmatch(revision):
+        failures.append(
+            _failure(
+                "formal-validation-revision-pin",
+                "retest snapshot must pin a full RAES commit",
+                path,
+            )
+        )
+    versions = snapshot.get("versions")
+    if (
+        not isinstance(versions, Mapping)
+        or set(versions) != _VERSION_KEYS
+        or not all(_nonempty_string(value) for value in versions.values())
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-version-disclosure",
+                "retest snapshot must record the bounded output-affecting versions",
+                path,
+            )
+        )
+
+
+def _validate_retest_commands(
+    protocol: Mapping[str, object],
+    snapshot: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> tuple[set[object], dict[object, Mapping[str, object]]]:
+    commands = snapshot.get("commands")
+    command_ids, unique_command_ids = _stable_ids(commands, "command_id")
+    commands_by_id = (
+        {item.get("command_id"): item for item in commands if isinstance(item, Mapping)}
+        if _is_sequence(commands)
+        else {}
+    )
+    if not _is_sequence(commands) or not unique_command_ids:
+        failures.append(
+            _failure(
+                "formal-validation-commands",
+                "retest command ids must be a unique bounded list",
+                path,
+            )
+        )
+        commands = []
+    for command in commands:
+        _validate_retest_command(command, failures, path)
+    _validate_retest_participant_command(protocol, commands_by_id, failures, path)
+    return command_ids, commands_by_id
+
+
+def _validate_retest_command(command: object, failures: list[PolicyFailure], path: str) -> None:
+    if not _closed_object(
+        command,
+        _COMMAND_KEYS,
+        rule_id="formal-validation-command-shape",
+        label="retest command",
+        failures=failures,
+        path=path,
+    ):
+        return
+    if not _string_list(command.get("argv")) or command.get("network") != "disabled":
+        failures.append(
+            _failure(
+                "formal-validation-commands",
+                f"command {command.get('command_id')!r} must use fixed argv with network disabled",
+                path,
+            )
+        )
+
+
+def _validate_retest_participant_command(
+    protocol: Mapping[str, object],
+    commands_by_id: Mapping[object, Mapping[str, object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    participant_command = commands_by_id.get("participant-fixtures")
+    expected_argv = [
+        "implementations/python/.venv/bin/pytest",
+        "-q",
+        *_participant_test_refs(protocol),
+    ]
+    if not isinstance(participant_command, Mapping) or participant_command.get("argv") != expected_argv:
+        failures.append(
+            _failure(
+                "formal-validation-participant-command",
+                "retest snapshot must retain the complete participant fixture command",
+                path,
+            )
+        )
+
+
+def _validate_retest_observation(
+    repo_root: Path,
+    snapshot: Mapping[str, object],
+    cases_by_id: Mapping[str, Mapping[str, object]],
+    replay_context: tuple[
+        Mapping[object, Mapping[str, object]],
+        Mapping[object, Mapping[str, object]],
+    ],
+    observation: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> set[str]:
+    expected_paths: set[str] = set()
+    if not _closed_object(
+        observation,
+        _OBSERVATION_V2_KEYS,
+        rule_id="formal-validation-observation-shape",
+        label="retest observation",
+        failures=failures,
+        path=path,
+    ):
+        return expected_paths
+    case_id = observation.get("case_id")
+    case = cases_by_id.get(str(case_id))
+    if case is None:
+        failures.append(
+            _failure(
+                "formal-validation-observation-case",
+                f"observation references unknown case {case_id!r}",
+                path,
+            )
+        )
+    else:
+        _validate_retest_observation_metadata(snapshot, case, observation, failures, path)
+        if case.get("replay_mode") in PRODUCTION_EVIDENCE_REPLAY_MODES:
+            release_artifacts_by_path, commands_by_id = replay_context
+            _validate_production_evidence_observation(
+                repo_root,
+                release_artifacts_by_path,
+                case,
+                observation,
+                commands_by_id.get(case_id),
+                failures,
+                path,
+            )
+            expected_paths.update(
+                value
+                for value in (case.get("fixture_path"), observation.get("evidence_artifact_path"))
+                if isinstance(value, str)
+            )
+        else:
+            _validate_retained_retest_observation(repo_root, case, observation, failures, path)
+    return expected_paths
+
+
+def _validate_retest_observation_metadata(
+    snapshot: Mapping[str, object],
+    case: Mapping[str, object],
+    observation: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    case_id = observation.get("case_id")
+    if observation.get("execution_id") != snapshot.get("execution_id") or observation.get(
+        "configuration_id"
+    ) != snapshot.get("configuration_id"):
+        failures.append(
+            _failure(
+                "formal-validation-observation-join",
+                f"observation {case_id!r} must bind the retest execution and configuration",
+                path,
+            )
+        )
+    expected_replayable = case.get("replay_mode") != "unsupported"
+    if observation.get("replayable") is not expected_replayable:
+        failures.append(
+            _failure(
+                "formal-validation-observation-replayable",
+                f"observation {case_id!r} misstates replayability",
+                path,
+            )
+        )
+    if not _string_list(observation.get("evidence_refs")) or not _string_list(observation.get("limitations")):
+        failures.append(
+            _failure(
+                "formal-validation-observation-evidence",
+                f"observation {case_id!r} needs evidence refs and explicit limitations",
+                path,
+            )
+        )
+
+
+def _validate_retained_retest_observation(
+    repo_root: Path,
+    case: Mapping[str, object],
+    observation: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    case_id = observation.get("case_id")
+    evidence_fields = (
+        "evidence_profile",
+        "analysis_profile",
+        "configuration_digest",
+        "evidence_digest",
+        "evidence_artifact_path",
+        "evidence_artifact_sha256",
+        "source_digest",
+    )
+    if any(observation.get(key) is not None for key in evidence_fields):
+        failures.append(
+            _failure(
+                "formal-validation-production-evidence-join",
+                f"retained case {case_id!r} must not synthesize a production envelope",
+                path,
+            )
+        )
+    if case.get("replay_mode") == "unsupported":
+        _validate_unsupported_retest_observation(observation, failures, path)
+        return
+    try:
+        replayed = replay_case(repo_root, case)
+    except (OSError, ValueError) as exc:
+        failures.append(
+            _failure(
+                "formal-validation-replay-error",
+                f"retained case {case_id!r} could not replay ({type(exc).__name__})",
+                path,
+            )
+        )
+    else:
+        if not _replay_observation_matches(case_id, observation, replayed):
+            failures.append(
+                _failure(
+                    "formal-validation-replay-drift",
+                    f"retained case {case_id!r} drifted without a matching observation",
+                    path,
+                )
+            )
+
+
+def _validate_unsupported_retest_observation(
+    observation: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if (
+        observation.get("actual_outcome") != "unsupported"
+        or observation.get("diagnostic_kind") is not None
+        or observation.get("result_digest") is not None
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-unsupported-observation",
+                f"historical unsupported case {observation.get('case_id')!r} must remain unsupported",
+                path,
+            )
+        )
 
 
 def _validate_retest_participant_observations(
@@ -2145,6 +2412,17 @@ def _validate_retest_participant_observations(
             )
 
 
+@dataclasses.dataclass(frozen=True)
+class _ProductionEvidenceReplay:
+    evidence_digest_matches: bool
+    direct_digest: str
+    outcome: str
+    profile: str
+    analysis_profile: str
+    configuration_digest: str
+    source_digest: str
+
+
 def _validate_production_evidence_observation(
     repo_root: Path,
     release_artifacts_by_path: Mapping[object, Mapping[str, object]],
@@ -2190,61 +2468,17 @@ def _validate_production_evidence_observation(
                 path,
             )
         )
-    expected_argv = [
-        "implementations/python/.venv/bin/raes",
-        "processor",
-        "satisfiability" if replay_mode == "satisfiability" else "exploit-path",
-        fixture_value,
-        "--profile",
-        (_CURRENT_SATISFIABILITY_PROFILE if replay_mode == "satisfiability" else "raes-exploit-path-analysis-v1"),
-    ]
-    if not isinstance(command, Mapping) or command.get("argv") != expected_argv or command.get("network") != "disabled":
-        failures.append(
-            _failure(
-                "formal-validation-production-command",
-                f"case {case_id!r} must use its production CLI with fixed offline argv",
-                path,
-            )
-        )
+    expected_argv = _production_evidence_argv(str(replay_mode), fixture_value)
+    _validate_production_evidence_command(command, expected_argv, case_id, failures, path)
     try:
-        if replay_mode == "exploit-path":
-            load_bounded_json_object(repo_root, str(fixture_value), max_bytes=2 * 1024 * 1024)
-        stored_payload = load_bounded_json_object(
+        replay = _replay_production_evidence(
             repo_root,
-            str(evidence_value),
-            max_bytes=_MAX_FILE_BYTES,
+            case,
+            observation,
+            fixture,
+            evidence_value,
+            expected_argv,
         )
-        if replay_mode == "satisfiability":
-            from raes_contracts.satisfiability import (
-                ScenarioSatisfiabilityEvidenceModel,
-            )
-            from raes_processor.satisfiability import (
-                analyze_scenario_file,
-                replay_satisfiability_evidence,
-            )
-
-            stored = ScenarioSatisfiabilityEvidenceModel.model_validate(stored_payload)
-            direct = analyze_scenario_file(fixture, profile=_CURRENT_SATISFIABILITY_PROFILE)
-            replay_satisfiability_evidence(fixture, stored)
-            configuration_digest = direct.solver_configuration_digest
-        else:
-            from raes_contracts.exploit_path import ExploitPathAnalysisEvidenceModel
-            from raes_processor.exploit_path import (
-                analyze_exploit_path_file,
-                replay_exploit_path_evidence,
-            )
-
-            stored = ExploitPathAnalysisEvidenceModel.model_validate(stored_payload)
-            direct = analyze_exploit_path_file(fixture, profile="raes-exploit-path-analysis-v1")
-            replay_exploit_path_evidence(fixture, stored)
-            configuration_digest = direct.search_configuration_digest
-        from raes_contracts.satisfiability import canonical_contract_digest
-
-        direct_digest = canonical_contract_digest(direct)
-        stored_digest = canonical_contract_digest(stored)
-        cli_payload = _run_production_evidence_cli(repo_root, expected_argv)
-        cli = type(stored).model_validate(cli_payload)
-        cli_digest = canonical_contract_digest(cli)
     except (
         OSError,
         ValueError,
@@ -2260,21 +2494,119 @@ def _validate_production_evidence_observation(
             )
         )
         return
-    if not (
-        stored_digest == direct_digest == cli_digest
-        and observation.get("actual_outcome") == direct.outcome.value == case.get("expected_outcome")
-        and observation.get("diagnostic_kind") == direct.profile
-        and observation.get("result_digest") == direct_digest
-        and observation.get("evidence_profile") == direct.profile
-        and observation.get("analysis_profile") == direct.analysis_profile
-        and observation.get("configuration_digest") == configuration_digest
-        and observation.get("evidence_digest") == direct_digest
-        and observation.get("source_digest") == direct.source.byte_digest
-    ):
+    if not _production_evidence_joins_match(case, observation, replay):
         failures.append(
             _failure(
                 "formal-validation-production-evidence-join",
                 f"case {case_id!r} source, configuration, outcome, CLI, replay, or evidence joins drifted",
+                path,
+            )
+        )
+
+
+def _replay_production_evidence(
+    repo_root: Path,
+    case: Mapping[str, object],
+    observation: Mapping[str, object],
+    fixture: Path,
+    evidence_value: object,
+    expected_argv: list[object],
+) -> _ProductionEvidenceReplay:
+    replay_mode = case.get("replay_mode")
+    if replay_mode == "exploit-path":
+        load_bounded_json_object(repo_root, str(case.get("fixture_path")), max_bytes=2 * 1024 * 1024)
+    stored_payload = load_bounded_json_object(
+        repo_root,
+        str(evidence_value),
+        max_bytes=_MAX_FILE_BYTES,
+    )
+    if replay_mode == "satisfiability":
+        from raes_contracts.satisfiability import ScenarioSatisfiabilityEvidenceModel
+        from raes_processor.satisfiability import analyze_scenario_file, replay_satisfiability_evidence
+
+        stored = ScenarioSatisfiabilityEvidenceModel.model_validate(stored_payload)
+        direct = analyze_scenario_file(fixture, profile=_CURRENT_SATISFIABILITY_PROFILE)
+        configuration_digest = direct.solver_configuration_digest
+    else:
+        from raes_contracts.exploit_path import ExploitPathAnalysisEvidenceModel
+        from raes_processor.exploit_path import analyze_exploit_path_file, replay_exploit_path_evidence
+
+        stored = ExploitPathAnalysisEvidenceModel.model_validate(stored_payload)
+        direct = analyze_exploit_path_file(fixture, profile="raes-exploit-path-analysis-v1")
+        configuration_digest = direct.search_configuration_digest
+    from raes_contracts.canonical import canonical_json_digest
+    from raes_contracts.satisfiability import canonical_contract_digest
+
+    stored_artifact_matches = canonical_json_digest(stored_payload) == observation.get("evidence_digest")
+    direct_digest = canonical_contract_digest(direct)
+    stored_digest = canonical_contract_digest(stored)
+    cli_payload = _run_production_evidence_cli(repo_root, expected_argv)
+    cli = type(stored).model_validate(cli_payload)
+    cli_digest = canonical_contract_digest(cli)
+    migration_pair = _MIGRATED_PRODUCTION_EVIDENCE_DIGESTS.get(str(case.get("case_id")))
+    evidence_digest_matches = stored_artifact_matches and stored_digest == direct_digest == cli_digest
+    if stored_artifact_matches and migration_pair == (observation.get("evidence_digest"), direct_digest):
+        evidence_digest_matches = cli_digest == direct_digest
+    elif evidence_digest_matches:
+        if replay_mode == "satisfiability":
+            replay_satisfiability_evidence(fixture, stored)
+        else:
+            replay_exploit_path_evidence(fixture, stored)
+    return _ProductionEvidenceReplay(
+        evidence_digest_matches=evidence_digest_matches,
+        direct_digest=direct_digest,
+        outcome=direct.outcome.value,
+        profile=direct.profile,
+        analysis_profile=direct.analysis_profile,
+        configuration_digest=configuration_digest,
+        source_digest=direct.source.byte_digest,
+    )
+
+
+def _production_evidence_joins_match(
+    case: Mapping[str, object],
+    observation: Mapping[str, object],
+    replay: _ProductionEvidenceReplay,
+) -> bool:
+    evidence_digest = observation.get("evidence_digest")
+    joins = (
+        observation.get("actual_outcome") == replay.outcome == case.get("expected_outcome"),
+        observation.get("diagnostic_kind") == replay.profile,
+        observation.get("result_digest") == evidence_digest,
+        observation.get("evidence_profile") == replay.profile,
+        observation.get("analysis_profile") == replay.analysis_profile,
+        observation.get("configuration_digest") == replay.configuration_digest,
+        observation.get("source_digest") == replay.source_digest,
+    )
+    digest_join = evidence_digest == replay.direct_digest or _MIGRATED_PRODUCTION_EVIDENCE_DIGESTS.get(
+        str(case.get("case_id"))
+    ) == (evidence_digest, replay.direct_digest)
+    return replay.evidence_digest_matches and digest_join and all(joins)
+
+
+def _production_evidence_argv(replay_mode: str, fixture_value: object) -> list[object]:
+    return [
+        "implementations/python/.venv/bin/raes",
+        "processor",
+        "satisfiability" if replay_mode == "satisfiability" else "exploit-path",
+        fixture_value,
+        "--profile",
+        (_CURRENT_SATISFIABILITY_PROFILE if replay_mode == "satisfiability" else "raes-exploit-path-analysis-v1"),
+    ]
+
+
+def _validate_production_evidence_command(
+    command: object,
+    expected_argv: list[object],
+    case_id: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if not isinstance(command, Mapping) or command.get("argv") != expected_argv or command.get("network") != "disabled":
+        failures.append(
+            _failure(
+                "formal-validation-production-command",
+                f"case {case_id!r} must use its production CLI with fixed offline argv",
                 path,
             )
         )

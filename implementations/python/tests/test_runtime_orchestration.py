@@ -306,7 +306,7 @@ def _docker_sock_interface(**overrides) -> dict:
 
 def _authority_node(*, authority: dict, interfaces: list[dict] | None = None) -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "2 gib", "cpu": 2},
         "runtime": {
             "local_control_interfaces": interfaces if interfaces is not None else [_docker_sock_interface()],

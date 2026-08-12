@@ -14,7 +14,7 @@ nodes:
     description: Main network
 
   server-01:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 GiB, cpu: 1}
     features: [my-service]
@@ -43,7 +43,7 @@ nodes:
     description: Corporate network
 
   web-server:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 GiB, cpu: 2}
     features: {web-app: web-admin}
@@ -54,7 +54,7 @@ nodes:
       web-admin: www-data
 
   db-server:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 GiB, cpu: 2}
     features: {database: dba}
@@ -182,7 +182,7 @@ nodes:
     description: Corporate network
 
   web-server:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 GiB, cpu: 2}
     features: {web-app: web-admin}
@@ -196,7 +196,7 @@ nodes:
         entities: [blue-team.web-ops]
 
   db-server:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 GiB, cpu: 2}
     features: {database: dba}

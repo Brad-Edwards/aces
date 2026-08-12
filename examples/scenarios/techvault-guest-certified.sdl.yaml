@@ -10,7 +10,7 @@ nodes:
   guest-net:
     type: switch
   guest-vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 128 MiB, cpu: 1}
     services:

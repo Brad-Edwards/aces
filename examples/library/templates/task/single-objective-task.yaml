@@ -12,7 +12,7 @@ body:
   description: Task-oriented SDL wrapper using a single objective and success condition.
   nodes:
     target:
-      type: VM
+      type: compute
       resources: {ram: 1 GiB, cpu: 1}
       services:
         - {port: 22, name: ssh}

@@ -530,7 +530,7 @@ def test_legacy_profiles_compile_into_canonical_demand_representation() -> None:
 
 def test_manifest_round_trip_separates_support_capacity_and_realization() -> None:
     runtime_model, _ = _compiled()
-    manifest = _autonomous_manifest(runtime_model)
+    manifest = _autonomous_manifest(runtime_model, with_realization_envelope=False)
     capability = manifest.participant_runtime
     assert capability is not None
     governed = replace(capability, resource_budgets=_capabilities())

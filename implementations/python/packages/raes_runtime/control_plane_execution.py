@@ -239,6 +239,7 @@ def execute_operation(
         snapshot,
         address=request.address,
         snapshot=snapshot,
+        operation_id=operation_id,
         realization=(
             _RealizationApplyContext(
                 plan=request.plan,

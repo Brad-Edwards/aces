@@ -45,7 +45,7 @@ def _payload() -> dict[str, object]:
             "architecture": "x86_64",
             "image_policy": "local-qcow2",
             "network_policy": "libvirt-managed",
-            "supported_node_types": ["switch", "vm"],
+            "supported_node_types": ["switch", "compute"],
             "supported_os_families": ["linux"],
             "supported_content_types": ["file"],
             "supported_account_features": ["groups"],
@@ -68,6 +68,13 @@ def _payload() -> dict[str, object]:
                 "observation_strength": "driver-reported",
                 "mechanism": "libvirt-domain-xml",
                 "transformations": ["bounded-normalization"],
+            },
+            {
+                "concern": "compute-substrate",
+                "disposition": "realized",
+                "observation_strength": "daemon-observed",
+                "mechanism": "virtual-machine",
+                "transformations": [],
             },
             *[
                 {
@@ -105,7 +112,7 @@ def test_backend_realization_envelope_validates_its_canonical_digest():
         architecture="x86_64",
         image_policy="local-qcow2",
         network_policy="libvirt-managed",
-        supported_node_types=["switch", "vm"],
+        supported_node_types=["switch", "compute"],
         supported_os_families=["linux"],
         supported_content_types=["file"],
         supported_account_features=["groups"],
@@ -131,6 +138,7 @@ def test_backend_realization_envelope_validates_its_canonical_digest():
 
 def test_realization_concern_taxonomy_accounts_for_declared_services():
     assert RealizationConcern.SERVICE.value == "service"
+    assert RealizationConcern.COMPUTE_SUBSTRATE.value == "compute-substrate"
 
 
 def test_backend_realization_envelope_rejects_content_tampering():
@@ -164,7 +172,7 @@ def test_published_schema_enforces_expressible_realization_invariants():
     validator = Draft202012Validator(schema)
 
     duplicate_term = _payload()
-    duplicate_term["configuration"]["supported_node_types"] = ["vm", "vm"]  # type: ignore[index]
+    duplicate_term["configuration"]["supported_node_types"] = ["compute", "compute"]  # type: ignore[index]
     assert list(validator.iter_errors(duplicate_term))
 
     missing_concern = _payload()
@@ -241,7 +249,7 @@ def test_manifest_plan_and_snapshot_publish_the_same_typed_identity():
             "capabilities": {
                 "provisioner": {
                     "name": "test",
-                    "supported_node_types": ["vm"],
+                    "supported_node_types": ["compute"],
                     "supported_os_families": ["linux"],
                 }
             },
@@ -300,7 +308,7 @@ def test_backend_manifest_requires_contract_declaration_for_envelope_identity():
         "capabilities": {
             "provisioner": {
                 "name": "test",
-                "supported_node_types": ["vm"],
+                "supported_node_types": ["compute"],
                 "supported_os_families": ["linux"],
             }
         },

@@ -36,7 +36,7 @@ def _node_agent_scenario(*, role: str, bind_evidence: bool) -> str:
     name: forwarding-agent-posture
     nodes:
       sensor:
-        type: vm
+        type: compute
         resources: {{ram: 1 gib, cpu: 1}}
         runtime:
           forwarding_agents:

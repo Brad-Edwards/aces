@@ -11,6 +11,7 @@ from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from ..addressing import CompiledAddress
 from ..artifact_requirements import ArtifactSatisfactionDisclosureModel
 from ..bounded_domains import DomainDescriptor
+from ..compute_substrate import validate_compute_substrate_constraint
 from ..planning import (
     RealizationAuthorityMode,
     RealizationResolutionSource,
@@ -90,6 +91,23 @@ class RealizationEnvelopeIdentityModel(ContractModel):
     schema_version: Literal["realization-envelope/v1"] = "realization-envelope/v1"
     digest: Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
     configuration_digest: Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+
+
+class PlannedRealizationConstraintModel(ContractModel):
+    """Published author realization demand on a provisioning plan."""
+
+    address: CompiledAddress
+    field_path: NonEmptyString
+    concern: Literal["compute-substrate"]
+    posture: Literal["open", "constrained", "exact"]
+    value_domain: DomainDescriptor | None = None
+    governing_scope: NonEmptyString
+    provenance: Literal["author-declared", "legacy-node-type-vm"]
+
+    @model_validator(mode="after")
+    def _validate_domain(self) -> PlannedRealizationConstraintModel:
+        validate_compute_substrate_constraint(self.posture, self.value_domain)
+        return self
 
 
 class RealizationAuthorityBoundModel(ContractModel):
@@ -178,11 +196,16 @@ class ProvisioningPlanModel(ContractModel):
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
     realization_authority: list[ResolvedRealizationAuthorityModel]
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
+    realization_constraints: list[PlannedRealizationConstraintModel] = Field(default_factory=list)
+    operation_id: NonEmptyString | None = None
 
     @model_validator(mode="after")
     def _validate_operation_addresses(self) -> ProvisioningPlanModel:
         _require_unique_operation_addresses(self.operations)
         _require_operation_identities(self.operations, RuntimeDomain.PROVISIONING)
+        identities = [(item.address, item.concern) for item in self.realization_constraints]
+        if len(identities) != len(set(identities)):
+            raise ValueError("Provisioning plan realization constraints must identify unique concerns")
         authority_keys = [(entry.address, entry.requirement_kind) for entry in self.realization_authority]
         if len(authority_keys) != len(set(authority_keys)):
             raise ValueError("Provisioning plan realization authority must identify unique concerns")
@@ -255,7 +278,7 @@ class RealizationProvenanceEntryModel(ContractModel):
 
 
 class RealizationObservationDisclosureModel(ContractModel):
-    """Value-free corroboration metadata for one realized inventory concern."""
+    """Corroboration metadata, with governed substrate evidence when applicable."""
 
     address: CompiledAddress
     field_path: NonEmptyString
@@ -263,11 +286,34 @@ class RealizationObservationDisclosureModel(ContractModel):
     requirement_kind: NonEmptyString
     verification_scope: RealizationVerificationScope
     observation_strength: ObservationStrength = Field(json_schema_extra={"not": {"const": "none"}})
+    observed_value: NonEmptyString | None = None
+    operation_id: NonEmptyString | None = None
+    envelope_digest: str | None = Field(default=None, pattern=r"^sha256:[a-f0-9]{64}$")
+    configuration_digest: str | None = Field(default=None, pattern=r"^sha256:[a-f0-9]{64}$")
+    observer_version: NonEmptyString | None = None
+    sequence: int | None = Field(default=None, ge=0)
+    binding_verified: bool = False
 
     @model_validator(mode="after")
     def _require_evidence(self) -> RealizationObservationDisclosureModel:
         if self.observation_strength is ObservationStrength.NONE:
             raise ValueError("realization observation disclosure must provide non-none evidence")
+        substrate_fields = (
+            self.observed_value,
+            self.operation_id,
+            self.envelope_digest,
+            self.configuration_digest,
+            self.observer_version,
+            self.sequence,
+        )
+        if self.requirement_kind == "compute-substrate":
+            if any(value is None for value in substrate_fields) or not self.binding_verified:
+                raise ValueError("compute-substrate disclosure requires governed value and verified execution binding")
+            from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
+
+            validate_controlled_vocabulary_value("compute-substrates", self.observed_value)
+        elif any(value is not None for value in substrate_fields) or self.binding_verified:
+            raise ValueError("value-bearing execution bindings are reserved for compute-substrate disclosures")
         return self
 
 

@@ -5,16 +5,21 @@ from __future__ import annotations
 from raes_backend_libvirt import LibvirtProvisioner
 from raes_backend_libvirt.driver import DomainHandle, DriverResult, NetworkHandle
 from raes_backend_libvirt.envelopes import load_libvirt_realization_envelope
+from raes_contracts.bounded_domains import ExactDomain
 from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.planning import (
     ChangeAction,
     EvaluationPlan,
+    PlannedRealizationConstraint,
     PlannedResource,
     ProvisioningPlan,
     ProvisionOp,
     RuntimeDomain,
 )
-from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from raes_contracts.realization_observation import RealizationObservation
+from raes_contracts.runtime_state import RealizationObservationDisclosure, RuntimeSnapshot, SnapshotEntry
+from raes_contracts.vocabulary import RealizationVerificationScope
 from realization_authority_fixtures import complete_test_realization_authority
 
 
@@ -22,6 +27,7 @@ class _RecordingDriver:
     def __init__(self) -> None:
         self.realize_calls: list[dict[str, object]] = []
         self.destroy_calls: list[dict[str, object]] = []
+        self.observe_calls: list[dict[str, object]] = []
         self._realized: set[str] = set()
 
     def realize(self, *, networks, domains):
@@ -42,6 +48,28 @@ class _RecordingDriver:
             domains=tuple(DomainHandle(address=address, realized=False) for address in domains),
         )
 
+    def observe(self, *, domains):
+        self.observe_calls.append({"domains": domains})
+        envelope = load_libvirt_realization_envelope("generic")
+        return DriverResult(
+            domains=tuple(DomainHandle(address=spec.address) for spec in domains),
+            observations=tuple(
+                RealizationObservation(
+                    address=spec.address,
+                    field_path="compute-substrate",
+                    concern=RealizationConcern.COMPUTE_SUBSTRATE,
+                    source=ObservationStrength.DAEMON_OBSERVED,
+                    value="virtual-machine",
+                    envelope_digest=envelope.digest,
+                    configuration_digest=envelope.configuration.configuration_digest,
+                    observer_version="recording-libvirt-readback/v1",
+                    sequence=index,
+                    binding_verified=True,
+                )
+                for index, spec in enumerate(domains)
+            ),
+        )
+
     def realized_addresses(self):
         return frozenset(self._realized)
 
@@ -54,11 +82,11 @@ def _node_resource(address: str = "provision.node.web") -> PlannedResource:
         payload={
             "name": "web",
             "node_name": "web",
-            "node_type": "vm",
+            "node_kind": "compute",
             "os_family": "linux",
             "spec": {
                 "node": {
-                    "type": "vm",
+                    "type": "compute",
                     "source": {"name": "/var/lib/libvirt/images/base.qcow2"},
                     "resources": {"ram": 1073741824, "cpu": 2},
                 },
@@ -130,6 +158,46 @@ def test_apply_reconciles_snapshot_and_drives_libvirt_driver_for_create():
     networks = driver.realize_calls[0]["networks"]
     assert [spec.address for spec in domains] == ["provision.node.web"]
     assert [spec.address for spec in networks] == ["provision.network.lan"]
+
+
+def test_delete_of_last_compute_removes_stale_substrate_observation() -> None:
+    envelope = load_libvirt_realization_envelope("generic")
+    resource = _node_resource()
+    previous = RealizationObservationDisclosure(
+        address=resource.address,
+        field_path="compute-substrate",
+        domain="runtime-realization",
+        requirement_kind="compute-substrate",
+        verification_scope=RealizationVerificationScope.PRESENCE,
+        observation_strength=ObservationStrength.DAEMON_OBSERVED,
+        observed_value="virtual-machine",
+        operation_id="previous-operation",
+        envelope_digest=envelope.digest,
+        configuration_digest=envelope.configuration.configuration_digest,
+        observer_version="libvirt-test-readback/v1",
+        sequence=0,
+        binding_verified=True,
+    )
+    snapshot = RuntimeSnapshot(
+        entries={
+            resource.address: SnapshotEntry(
+                address=resource.address,
+                domain=resource.domain,
+                resource_type=resource.resource_type,
+                payload=resource.payload,
+            )
+        },
+        realization_observations=(previous,),
+        realization_envelope=envelope.identity,
+    )
+
+    result = LibvirtProvisioner(_RecordingDriver()).apply(
+        _plan(resource, action=ChangeAction.DELETE),
+        snapshot,
+    )
+
+    assert result.success is True
+    assert result.snapshot.realization_observations == ()
 
 
 def test_apply_rejects_missing_envelope_identity_before_driver_io():
@@ -259,6 +327,45 @@ def test_apply_unchanged_placement_is_noop_with_unchanged_status():
     assert result.snapshot.entries["provision.account.admin"].status == "unchanged"
 
 
+def test_unchanged_compute_bootstraps_missing_substrate_evidence_with_readback() -> None:
+    driver = _RecordingDriver()
+    resource = _node_resource()
+    created = LibvirtProvisioner(driver).apply(_plan(resource), RuntimeSnapshot())
+    assert created.success
+    legacy_snapshot = created.snapshot.with_entries(
+        created.snapshot.entries,
+        realization_observations=(),
+    )
+    envelope = load_libvirt_realization_envelope("generic")
+    unchanged = _plan(resource, action=ChangeAction.UNCHANGED)
+    unchanged = ProvisioningPlan(
+        resources=unchanged.resources,
+        operations=unchanged.operations,
+        realization_envelope=envelope.identity,
+        realization_constraints=(
+            PlannedRealizationConstraint(
+                address=resource.address,
+                field_path="compute-substrate",
+                concern="compute-substrate",
+                posture="exact",
+                value_domain=ExactDomain(value="virtual-machine"),
+                governing_scope="#/nodes/web",
+                provenance="author-declared",
+            ),
+        ),
+        operation_id="libvirt-upgrade-noop",
+    )
+
+    result = LibvirtProvisioner(driver).apply(unchanged, legacy_snapshot)
+
+    assert result.success
+    assert len(driver.realize_calls) == 1
+    assert [spec.address for spec in driver.observe_calls[-1]["domains"]] == [resource.address]
+    [disclosure] = result.snapshot.realization_observations
+    assert disclosure.observed_value == "virtual-machine"
+    assert disclosure.operation_id == "libvirt-upgrade-noop"
+
+
 def test_apply_realizes_target_domain_when_only_a_placement_changes():
     driver = _RecordingDriver()
     node = _node_resource()
@@ -360,7 +467,7 @@ def _out_of_envelope_node(address: str = "provision.node.gw") -> PlannedResource
         payload={
             "name": "gw",
             "node_name": "gw",
-            "node_type": "router",
+            "node_kind": "router",
             "os_family": "linux",
             "spec": {"node": {"type": "router"}, "infrastructure": {}},
         },
@@ -398,7 +505,7 @@ def test_apply_validates_operation_payloads_not_only_resources():
                 action=ChangeAction.CREATE,
                 address="provision.node.gw",
                 resource_type="node",
-                payload={"name": "gw", "node_type": "router", "os_family": "linux", "spec": {}},
+                payload={"name": "gw", "node_kind": "router", "os_family": "linux", "spec": {}},
             )
         ],
         realization_envelope=load_libvirt_realization_envelope("generic").identity,

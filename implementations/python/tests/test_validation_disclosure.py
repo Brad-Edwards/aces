@@ -38,14 +38,14 @@ _SNAPSHOT_SDL = """\
 name: validation-basis-snapshot
 nodes:
   target:
-    type: vm
+    type: compute
     os: linux
 """
 _SNAPSHOT_SDL_MUTATED = """\
 name: validation-basis-snapshot
 nodes:
   target:
-    type: vm
+    type: compute
     os: windows
 """
 

@@ -19,6 +19,7 @@ from raes_contracts.realization_envelope import RealizationEnvelopeModel
 from raes_contracts.vocabulary import ObservationStrength
 
 _NODE_ARCHITECTURE_VOCABULARY = "provisioner-node-architectures"
+_COMPUTE_SUBSTRATE_VOCABULARY = "compute-substrates"
 
 DigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
 
@@ -45,6 +46,7 @@ class RealizationConcern(str, Enum):
     FEATURE_BINDING = "feature-binding"
     SERVICE = "service"
     ACL = "acl"
+    COMPUTE_SUBSTRATE = "compute-substrate"
 
 
 class TransformationKind(str, Enum):
@@ -155,6 +157,11 @@ class RealizationConcernDisclosureModel(ContractModel):
                 raise ValueError("unsupported disposition cannot claim observation or mechanism")
         elif self.observation_strength is ObservationStrength.NONE or self.mechanism is None:
             raise ValueError("supported dispositions require observation and mechanism")
+        if self.concern is RealizationConcern.COMPUTE_SUBSTRATE and self.mechanism is not None:
+            try:
+                validate_controlled_vocabulary_value(_COMPUTE_SUBSTRATE_VOCABULARY, self.mechanism)
+            except ValueError as exc:
+                raise ValueError(f"compute-substrate mechanism must be a governed term: {exc}") from exc
         return self
 
     @classmethod

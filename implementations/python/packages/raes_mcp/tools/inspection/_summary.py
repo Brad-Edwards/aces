@@ -50,9 +50,9 @@ def _topology_lines(scenario: Scenario) -> list[str]:
 
     if not scenario.nodes:
         return []
-    vm_count = sum(1 for node in scenario.nodes.values() if node.type == NodeType.VM)
+    compute_count = sum(1 for node in scenario.nodes.values() if node.type == NodeType.COMPUTE)
     switch_count = sum(1 for node in scenario.nodes.values() if node.type == NodeType.SWITCH)
-    return ["\n--- Topology ---", f"  VMs: {vm_count}", f"  Switches: {switch_count}"]
+    return ["\n--- Topology ---", f"  Compute nodes: {compute_count}", f"  Switches: {switch_count}"]
 
 
 def _variable_lines(scenario: Scenario) -> list[str]:

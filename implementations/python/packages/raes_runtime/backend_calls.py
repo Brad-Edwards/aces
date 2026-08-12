@@ -1,10 +1,7 @@
-"""Backend call adapters for runtime execution."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from copy import deepcopy
-from dataclasses import replace
 
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
@@ -25,7 +22,11 @@ from .backend_account_credentials import (
     sanitize_account_credential_result,
     value_free_backend_diagnostics,
 )
-from .backend_realization_authority import _apply_authority_diagnostics, _RealizationApplyContext
+from .backend_realization_authority import (
+    _apply_authority_diagnostics,
+    _bind_submitted_plan,
+    _RealizationApplyContext,
+)
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
 from .participant_result_contracts import (
@@ -67,42 +68,58 @@ def _call_backend_apply(
     address: str,
     snapshot: RuntimeSnapshot,
     realization: _RealizationApplyContext | None = None,
+    operation_id: str | None = None,
     information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> ApplyResult:
     realization_context = realization or _RealizationApplyContext()
-    if realization_context.plan is None:
-        submitted_plan = next((arg for arg in args if isinstance(arg, ProvisioningPlan)), None)
-        if submitted_plan is not None:
-            realization_context = replace(realization_context, plan=submitted_plan)
+    args, realization_context = _bind_submitted_plan(args, realization_context, operation_id)
     baseline_snapshot = deepcopy(snapshot)
     authority_diagnostics = _apply_authority_diagnostics(realization_context, address)
     if authority_diagnostics:
-        finalized = ApplyResult(
+        return ApplyResult(
             success=False,
             snapshot=baseline_snapshot,
             diagnostics=authority_diagnostics,
         )
-    else:
-        backend_snapshot = deepcopy(snapshot)
-        backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
-        try:
-            result = method(*backend_args)
-        except (TypeError, ValueError):
-            finalized = _failed_apply_result(
-                baseline_snapshot,
-                _backend_contract_invalid(address, "Backend could not construct a valid apply result."),
-            )
-        except Exception as exc:
-            finalized = _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
-        else:
-            finalized = _finalize_backend_apply(
-                result,
-                address=address,
-                baseline_snapshot=baseline_snapshot,
-                realization=realization_context,
-                information_state_context_resolver=information_state_context_resolver,
-            )
-    return finalized
+    return _invoke_backend_apply(
+        method,
+        args,
+        address=address,
+        snapshot=snapshot,
+        baseline_snapshot=baseline_snapshot,
+        realization=realization_context,
+        information_state_context_resolver=information_state_context_resolver,
+    )
+
+
+def _invoke_backend_apply(
+    method: Callable[..., object],
+    args: tuple[object, ...],
+    *,
+    address: str,
+    snapshot: RuntimeSnapshot,
+    baseline_snapshot: RuntimeSnapshot,
+    realization: _RealizationApplyContext,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
+) -> ApplyResult:
+    backend_snapshot = deepcopy(snapshot)
+    backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
+    try:
+        result = method(*backend_args)
+    except (TypeError, ValueError):
+        return _failed_apply_result(
+            baseline_snapshot,
+            _backend_contract_invalid(address, "Backend could not construct a valid apply result."),
+        )
+    except Exception as exc:
+        return _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
+    return _finalize_backend_apply(
+        result,
+        address=address,
+        baseline_snapshot=baseline_snapshot,
+        realization=realization,
+        information_state_context_resolver=information_state_context_resolver,
+    )
 
 
 def _finalize_backend_apply(

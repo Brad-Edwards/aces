@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from uuid import uuid4
 
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
@@ -48,4 +49,24 @@ def _apply_authority_diagnostics(
     return diagnostics
 
 
-__all__ = ["_RealizationApplyContext", "_apply_authority_diagnostics"]
+def _bind_submitted_plan(
+    args: tuple[object, ...],
+    realization: _RealizationApplyContext,
+    operation_id: str | None,
+) -> tuple[tuple[object, ...], _RealizationApplyContext]:
+    """Bind a per-apply operation id to the submitted plan and authority context."""
+
+    submitted_plan = next((arg for arg in args if isinstance(arg, ProvisioningPlan)), None)
+    if submitted_plan is None:
+        return args, realization
+    bound_plan = replace(
+        submitted_plan,
+        operation_id=operation_id or submitted_plan.operation_id or str(uuid4()),
+    )
+    bound_args = tuple(bound_plan if arg is submitted_plan else arg for arg in args)
+    if realization.plan is None or realization.plan is submitted_plan:
+        realization = replace(realization, plan=bound_plan)
+    return bound_args, realization
+
+
+__all__ = ["_RealizationApplyContext", "_apply_authority_diagnostics", "_bind_submitted_plan"]

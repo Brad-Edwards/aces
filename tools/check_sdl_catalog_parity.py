@@ -291,13 +291,13 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "content.*.target": (
         "nodes",
         _SEMANTIC,
-        "fatal unless target is a vm node",
+        "fatal unless target is a compute node",
         _CONTENT_VALIDATOR,
     ),
     "content.*.service_materialization.target_service_ref": (
         "derived:node_services",
         _SEMANTIC,
-        "fatal unless the exact service exists on the content target vm",
+        "fatal unless the exact service exists on the content target compute node",
         _SERVICE_MATERIALIZATION_VALIDATOR,
     ),
     "content.*.service_materialization.shared_service_relationship_ref": (
@@ -393,7 +393,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "identity_facades.*.service_ref": (
         "targetable",
         _SEMANTIC,
-        "fatal unless target is a named vm service",
+        "fatal unless target is a named compute service",
         _ENTERPRISE_IDENTITY_SEMANTICS,
     ),
     "deployment_cells.*.tenant_ref": (
@@ -411,7 +411,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "accounts.*.node": (
         "nodes",
         _SEMANTIC,
-        "fatal unless target is a vm node",
+        "fatal unless target is a compute node",
         _ACCOUNT_VALIDATOR,
     ),
     "relationships.*.source": (
@@ -520,7 +520,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "agents.*.interactive_access.*.target_ref": (
         "nodes",
         _SEMANTIC,
-        "fatal dangling, ambiguous, or non-vm target",
+        "fatal dangling, ambiguous, or non-compute target",
         _PARTICIPANT_INTERACTIVE_ACCESS_SEMANTICS,
     ),
     "agents.*.interactive_access.*.account_ref": (
@@ -538,7 +538,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "agents.*.initial_knowledge.hosts[]": (
         "nodes",
         _SEMANTIC,
-        "fatal unless the target is a vm node",
+        "fatal unless the target is a compute node",
         _PARTICIPANT_VALIDATOR,
     ),
     "agents.*.initial_knowledge.subnets[]": (
@@ -574,7 +574,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "agents.*.operating_scope[]": (
         "derived:operating_scope",
         _SEMANTIC,
-        "fatal dangling or ambiguous outside vm nodes, switch-backed infrastructure, services, and content",
+        "fatal dangling or ambiguous outside compute nodes, switch-backed infrastructure, services, and content",
         _PARTICIPANT_VALIDATOR,
     ),
     "agents.*.observation_boundaries[]": (

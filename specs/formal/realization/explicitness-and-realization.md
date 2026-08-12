@@ -25,10 +25,10 @@ that names a concern a backend will later realize, three questions:
    value or structure, and under what bounds?
 3. if the realizer cannot honor a binding declaration, what must happen?
 
-The note owns one typed scenario-root SDL `realization` designation surface.
-It does not add realization fields to nested models, define new
-exact-requirement kinds, or describe wave-3 participant semantics that build
-on this boundary. Those are governed elsewhere.
+The note owns one typed scenario-root SDL `realization` designation surface and
+the compute-substrate concern carried by that surface. It does not add
+realization fields to nested models or describe wave-3 participant semantics
+that build on this boundary. Those are governed elsewhere.
 
 ## Realization Status
 
@@ -180,6 +180,55 @@ closed fallback. Equal-scope duplicates are invalid, and list/import order has
 no semantic effect. Imported declarations and designation scopes are qualified
 through the composition symbol map, so a module default cannot govern host or
 sibling declarations.
+
+### Compute resource kind and substrate concern
+
+`nodes.<id>.type` classifies the structural resource kind. Its canonical values
+are `compute` and `switch`; it MUST NOT encode the apparatus mechanism. A
+`compute` node therefore imposes no virtual-machine, container, physical-device,
+or emulator requirement by itself. A `switch` remains a strict connectivity
+resource and MUST reject compute-only fields and compute-substrate constraints.
+
+`compute-substrate` is the registered mechanism concern for compute nodes. An
+author MAY constrain it through `Scenario.realization.constraints`, addressed by
+module `namespace` and the node's canonical RFC 6901 `field_pointer`. Its posture
+is exactly one of `open` with no domain, `constrained` with an enum or
+governed-reference domain, or `exact` with one exact governed value. The
+portable base values are `virtual-machine`, `operating-system-container`, and
+`physical-device`; governed extension values use the `compute-substrates`
+vocabulary. Absence of a compute-substrate constraint is, by this owning
+semantic rule, an intentionally portable open concern. It does not weaken any
+other closed-world SDL field.
+
+Historical `type: vm` source is non-canonical and MUST fail under strict
+parsing. An explicitly selected migration MAY accept it only by producing
+`type: compute` plus an exact `virtual-machine` compute-substrate constraint and
+recording `legacy-node-type-vm` provenance. A collision with an authored
+constraint MUST fail; migration MUST NOT silently choose precedence. Canonical
+serialization emits only the migrated form. The versioned deserializer for
+historical instantiated `v1` snapshots applies the same meaning-preserving
+upgrade so immutable evidence remains replayable without weakening current
+authoring.
+
+Every compute node MUST compile to one typed compute-substrate requirement.
+Planning MUST keep the structural resource kind, authored substrate constraint,
+and selected apparatus envelope as distinct data. A backend's
+`supported_node_types` claim answers only whether it can provision `compute`;
+it does not prove which substrate will be used. Exact and constrained demand
+MUST be admitted by the selected envelope's compute-substrate claim, and
+out-of-domain demand MUST be rejected before mutation.
+
+The actual selected substrate is runtime evidence, not authored or planned
+state. A value-bearing compute-substrate observation MUST identify the governed
+selected value and bind it to the runtime operation, selected envelope digest,
+configuration digest, observer version, monotonic sequence, and a verified
+execution binding. Plan values, requested configuration, backend handles, and
+manifest capability declarations alone MUST NOT be treated as observations.
+Bounded demand requires daemon-observed or stronger independent readback; open
+demand requires at least driver-reported readback. A claimed value outside the
+selected envelope or authored domain MUST reject the runtime result. An
+in-process emulator may disclose a governed extension value but does not count
+as an independent native container, virtual-machine, or physical mechanism.
 
 ### Resolved backend-facing authority
 
@@ -386,7 +435,9 @@ Provenance lives on the existing runtime plan / result / snapshot /
 participant-episode contracts; no new private channel may carry
 realization decisions out of band. The provenance contract above is realized
 on the existing runtime snapshot contract. Backend-filled open slots carry a
-stable `governing_scope` reference, never the realized value itself.
+stable `governing_scope` reference; the provenance ledger never carries the
+realized value itself. Value-bearing concerns such as compute-substrate record
+the actual selection separately in the bound runtime observation surface.
 
 ### Phase responsibilities
 
@@ -402,10 +453,10 @@ substitute for that published contract.
 | Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | active — closed Pydantic models, the leaf classifier, and the typed scenario/scoped `realization` designation surface carry author intent without conflating it with apparatus capability. |
 | Validation | Apparatus declarations and SDL designation scopes are structurally and semantically validated, including canonical pointers, namespace ownership, and equal-specificity conflicts. | active — contract shape gates and `SemanticValidator` enforce both authorities fail closed. |
 | Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | active — `instantiate_scenario` preserves explicitness plus typed designation provenance and revalidates concrete content. |
-| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | active — `compile_runtime_model` applies leaf precedence, retains realizable demand, and separately carries complete authority for closed, open, constrained, exact, legacy, and delegated concerns. |
-| Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | active — support and envelope gates intersect author permission, delegation is resolved with its source retained, and the mandatory draft provisioning-plan contract carries the complete typed boundary. |
-| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | active — both direct-manager and published control-plane execution validate completeness, envelope identity, backend support, closed excess, typed bounds, and non-approximation from the same plan-owned authority before accepting a snapshot; remote operation-bearing plans additionally resolve the exact canonical plan digest from the trusted planner registry. |
-| Observation | Realized values land in plan, result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state. | active — admitted authority drives safe snapshot projection and the value-free provenance ledger, while backend-only state remains outside scenario provenance. |
+| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. Every compute node emits a separate compute-substrate requirement. | active — `compile_runtime_model` applies leaf precedence, retains realizable demand, and separately carries complete authority for closed, open, constrained, exact, legacy, and delegated concerns. |
+| Planning | Matches every compiled requirement against the candidate backend manifest and selected envelope. Structural node-kind support, compute-substrate mechanism constraints, and resolved backend authority remain separate. Unsupported demand MUST cause plan rejection before deployment. | active — support and envelope gates intersect author permission, delegation is resolved with its source retained, and the provisioning plan carries both the complete typed authority boundary and author substrate constraints. |
+| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, silently narrow an open realization beyond its declared constraints, or add values at closed concerns. | active — direct-manager and control-plane execution validate plan-owned authority, envelope identity, backend support, typed bounds, and non-approximation before accepting a snapshot; operation-bearing plans are bound to trusted planner content. |
+| Observation | Realized values land in result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state or plan echo. | active — admitted authority drives safe projection and value-free provenance, while bound compute-substrate observations carry the selected value and reject missing, weak, stale, unbound, or out-of-domain readback. |
 
 ## Cross-Cutting Gates
 
@@ -469,8 +520,10 @@ realization status, are:
   explicitness class, origin, and governing designation scope and round-trips
   through the control-plane snapshot serializers and authenticated snapshot
   response model. Concern corroboration is carried separately by
-  `realization_observations`, which records no realized value and is checked
-  against the compiled scope and selected backend manifest before persistence.
+  `realization_observations`, whose ordinary inventory corroboration remains
+  value-free. Compute-substrate is the value-bearing exception: it is checked
+  against the compiled domain, selected envelope, operation/configuration
+  binding, and independently reported runtime observation before persistence.
 - **Host / OS exposure gate** — exact values, credentials, and backend
   tokens MUST NOT be passed through process argv, logs, audit details,
   diagnostics, JSON fixtures, or semantic-profile artifacts when they
@@ -607,6 +660,13 @@ invariant I1–I5 is enforced by named code.
   and require configuration-scope guest observation; runtime evaluation in
   `realization_runtime_evaluation` checks complete-set equality or constrained
   domain membership before accepting the snapshot.
+- I1–I5 compute-substrate separation — `raes.nodes`,
+  `raes.realization_designation`, compiler realization requirements, planner
+  envelope admission, and runtime realization evaluation preserve resource
+  kind, authored mechanism constraint, apparatus claim, and independently
+  observed selection as four distinct values. Reference OCI and libvirt drivers
+  obtain their observation from daemon readback; the in-process reference mode
+  discloses only its governed emulation extension.
 - I5 runtime provenance — the `realization_provenance` ledger
   (`RealizationProvenanceEntry` in
   `implementations/python/packages/raes_contracts/runtime_state.py`, published as
@@ -652,6 +712,10 @@ invariant I1–I5 is enforced by named code.
   constrained / open compilation and apparatus admission, effective
   observation, complete-set runtime comparison, baseline retention,
   canonical ordering, and command redaction.
+- `implementations/python/tests/test_issue_1076_compute_realization.py` —
+  portable compute authoring, strict-switch rejection, explicit legacy
+  migration, exact and constrained mechanism planning, independent runtime
+  observation binding, two native mechanisms, and out-of-domain rejection.
 
 ## Non-Goals
 

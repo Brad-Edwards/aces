@@ -56,7 +56,7 @@ def _scenario(realization: str = "", *, web_os: str = ""):
             f"{realization_block + chr(10) if realization_block else ''}"
             "nodes:\n"
             "  web:\n"
-            "    type: vm\n"
+            "    type: compute\n"
             f"{os_line}"
             "    resources: {ram: 1 gib, cpu: 1}\n"
         )
@@ -83,7 +83,7 @@ def _manifest(mode: RealizationSupportMode = RealizationSupportMode.OPEN_REALIZA
         concept_bindings=(ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),),
         provisioner=ProvisionerCapabilities(
             name="authority-handoff",
-            supported_node_types=frozenset({"vm"}),
+            supported_node_types=frozenset({"compute"}),
             supported_os_families=frozenset({"linux", "windows"}),
         ),
         realization_envelope=base.realization_envelope,
@@ -192,7 +192,7 @@ def test_processor_derived_provisioning_requirement_uses_the_same_plan_authority
                 """
                 name: processor-derived-authority
                 nodes:
-                  worker: {type: vm, os: linux}
+                  worker: {type: compute, os: linux}
                 generated_artifacts:
                   config:
                     generator: rendered_config
@@ -693,6 +693,7 @@ def test_reference_adapter_sends_in_bound_constrained_selection_to_driver() -> N
         execution.provisioning,
         allowed_values=["linux", "windows"],
     )
+    authorized = replace(authorized, operation_id="issue-1067-reference-apply")
 
     result = target.provisioner.apply(authorized, RuntimeSnapshot())
 

@@ -87,10 +87,23 @@ from the rows; changing a row without reconciling it fails the contract gate.
 
 `realization` is the scenario-root, authoring-only designation table. Its
 `default` is `closed`, `open`, or `unspecified`; optional `scopes` override that
-posture at canonical namespace/pointer identities. Expansion and instantiation
-remove the block from executable `ScenarioContent` and carry typed designation
-records in phase provenance so compilation can resolve the cascade without
-turning authoring machinery into runtime scenario content.
+posture at canonical namespace/pointer identities. Its optional `constraints`
+list carries addressed concern-specific mechanism intent. A compute-substrate
+constraint uses a `namespace`, a `field_pointer` addressing one compute node, the
+literal concern `compute-substrate`, an `open`, `constrained`, or `exact`
+posture, and a compatible domain when bounded. Equal
+`(namespace, field_pointer, concern)` identities are invalid. Expansion and
+instantiation remove the block from executable `ScenarioContent` and carry typed
+designation and constraint records in phase provenance so compilation can
+resolve them without turning authoring machinery into runtime scenario content.
+
+`nodes.*.type` is a structural resource kind, not a deployment mechanism. Its
+canonical values are `compute` and `switch`. A `compute` node is portable and
+does not imply a virtual machine, container, physical device, or in-process
+emulator. Authors who require or bound a mechanism use
+`realization.constraints`; an omitted compute-substrate constraint deliberately
+leaves that registered concern open. A switch remains a strict connectivity
+resource and cannot carry compute-substrate constraints or compute-only fields.
 
 `forwarding_agents` is the **scenario-level** forwarding-agent inventory. It is
 distinct from the node-scoped `forwarding_agents` runtime-family collection that

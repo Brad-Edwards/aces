@@ -26,7 +26,7 @@ _EXACT_SCENARIO = """
 name: sem-218-exact-realization
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 """
@@ -37,7 +37,7 @@ variables:
   os_choice: {type: string, default: linux, allowed_values: [linux, windows]}
 nodes:
   web:
-    type: vm
+    type: compute
     os: ${os_choice}
     resources: {ram: 1 gib, cpu: 1}
 """
@@ -50,7 +50,7 @@ def _scenario(yaml_str: str):
 def _manifest(
     *,
     realization_support: tuple[RealizationSupportDeclaration, ...],
-    node_types: frozenset[str] = frozenset({"vm"}),
+    node_types: frozenset[str] = frozenset({"compute"}),
     os_families: frozenset[str] = frozenset({"linux"}),
 ) -> BackendManifest:
     """A minimal backend manifest with caller-controlled realization support.
@@ -97,6 +97,10 @@ def test_compiled_class_matches_scenario_classifier_output():
 
     assert model.realization_requirements
     for req in model.realization_requirements:
+        if req.requirement_kind == "compute-substrate":
+            assert req.field_path not in classified
+            assert req.explicitness is ExplicitnessClass.OPEN
+            continue
         assert req.field_path in classified
         assert req.explicitness is classified[req.field_path].classification
 

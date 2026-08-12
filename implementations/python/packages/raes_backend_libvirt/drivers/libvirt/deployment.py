@@ -11,6 +11,8 @@ from typing import cast
 
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from raes_contracts.realization_observation import RealizationObservation
 
 from raes_backend_libvirt.driver import (
     DomainHandle,
@@ -20,8 +22,10 @@ from raes_backend_libvirt.driver import (
     NetworkSpec,
 )
 
+from ...envelopes import load_libvirt_realization_envelope
 from .._libvirt_xml import _domain_xml, _network_xml, _nwfilter_xml
 from ..seed import _SEED_DIR_MODE, GenisoimageSeedBuilder, SeedBuilder, write_seed_files
+from ._deployment_batch import realize_domain_specs, realize_network_specs
 from ._native import (
     Connector,
     _call_libvirt,
@@ -43,6 +47,7 @@ _DOMAIN = "runtime"
 _CODE_OPERATION_FAILED = "libvirt-backend.driver.operation-failed"
 _CODE_UNAVAILABLE = "libvirt-backend.driver.unavailable"
 _CODE_OWNERSHIP_CONFLICT = "libvirt-backend.driver.ownership-conflict"
+_CONNECTION_ADDRESS = "runtime.libvirt.connection"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
 _WORKSPACE_PREFIX = "raes-libvirt-"
 
@@ -86,6 +91,7 @@ class LibvirtDeploymentDriver:
         diagnostics: list[Diagnostic] = []
         network_handles: list[NetworkHandle] = []
         domain_handles: list[DomainHandle] = []
+        observations: list[RealizationObservation] = []
         # Addresses this call newly created (no owned object pre-existed). Only
         # these are rolled back on failure — never a pre-existing resource an
         # UPDATE converged, whose destruction would contradict the baseline
@@ -95,21 +101,18 @@ class LibvirtDeploymentDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
+            return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
-        for spec in networks:
-            failure = self._realize_network(connection, spec, created_networks)
-            if failure is not None:
-                diagnostics.append(failure)
-            else:
-                network_handles.append(NetworkHandle(address=spec.address, realized=True))
-
-        for spec in domains:
-            failure = self._realize_domain(connection, spec, created_domains)
-            if failure is not None:
-                diagnostics.append(failure)
-            else:
-                domain_handles.append(DomainHandle(address=spec.address, realized=True))
+        realize_network_specs(self, connection, networks, created_networks, network_handles, diagnostics)
+        realize_domain_specs(
+            self,
+            connection,
+            domains,
+            created_domains,
+            domain_handles,
+            observations,
+            diagnostics,
+        )
 
         if diagnostics:
             # Roll back only newly-created objects — including a domain whose XML was
@@ -120,7 +123,77 @@ class LibvirtDeploymentDriver:
             # ownership-safe, so a never-defined address is a harmless no-op.
             self._rollback(created_networks, created_domains)
             return DriverResult(diagnostics=tuple(diagnostics))
-        return DriverResult(networks=tuple(network_handles), domains=tuple(domain_handles))
+        return DriverResult(
+            networks=tuple(network_handles),
+            domains=tuple(domain_handles),
+            observations=tuple(observations),
+        )
+
+    @staticmethod
+    def _operation_failure(address: str) -> Diagnostic:
+        return _failure(address, _CODE_OPERATION_FAILED)
+
+    def _compute_substrate_observation(
+        self,
+        connection: object,
+        address: str,
+        *,
+        sequence: int,
+    ) -> RealizationObservation | None:
+        """Read the current owned domain back from libvirt after realization."""
+
+        observation = None
+        lookup = getattr(connection, "lookupByName", None)
+        if callable(lookup):
+            try:
+                native = lookup(self._name_for(address))
+                active = getattr(native, "isActive", None)
+                owned_and_active = _existing_uuid(native) == _raes_uuid(address) and callable(active) and active() == 1
+            except Exception:
+                owned_and_active = False
+            if owned_and_active:
+                envelope = load_libvirt_realization_envelope(self.driver_mode)
+                observation = RealizationObservation(
+                    address=address,
+                    field_path="compute-substrate",
+                    concern=RealizationConcern.COMPUTE_SUBSTRATE,
+                    source=ObservationStrength.DAEMON_OBSERVED,
+                    value="virtual-machine",
+                    envelope_digest=envelope.digest,
+                    configuration_digest=envelope.configuration.configuration_digest,
+                    observer_version="libvirt-domain-readback/v1",
+                    sequence=sequence,
+                    binding_verified=True,
+                )
+        return observation
+
+    def observe(self, *, domains: tuple[DomainSpec, ...]) -> DriverResult:
+        """Read current owned domains without converging or restarting them."""
+
+        try:
+            connection = self._conn()
+        except Exception:
+            return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
+        observations: list[RealizationObservation] = []
+        diagnostics: list[Diagnostic] = []
+        handles: list[DomainHandle] = []
+        for spec in domains:
+            observation = self._compute_substrate_observation(
+                connection,
+                spec.address,
+                sequence=len(observations),
+            )
+            if observation is None:
+                diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
+                continue
+            self._realized.add(spec.address)
+            handles.append(DomainHandle(address=spec.address, realized=True))
+            observations.append(observation)
+        return DriverResult(
+            domains=tuple(handles),
+            diagnostics=tuple(diagnostics),
+            observations=tuple(observations),
+        )
 
     def _realize_network(self, connection: object, spec: NetworkSpec, created: list[str]) -> Diagnostic | None:
         """Realize one network, or return a redacted failure diagnostic.
@@ -192,16 +265,30 @@ class LibvirtDeploymentDriver:
         try:
             connection = self._conn()
         except Exception:
-            return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
+            return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
-        domain_handles: list[DomainHandle] = []
-        for address in domains:
+        domain_handles = self._destroy_domains(connection, domains, diagnostics)
+        network_handles = self._destroy_networks(connection, networks, diagnostics)
+
+        return DriverResult(
+            networks=tuple(network_handles),
+            domains=tuple(domain_handles),
+            diagnostics=tuple(diagnostics),
+        )
+
+    def _destroy_domains(
+        self,
+        connection: object,
+        addresses: tuple[str, ...],
+        diagnostics: list[Diagnostic],
+    ) -> list[DomainHandle]:
+        handles: list[DomainHandle] = []
+        for address in addresses:
             try:
                 ok = self._destroy_one(connection, "lookupByName", address)
             except _OwnershipConflict:
-                # Never delete an object this plan does not own (name collision).
                 diagnostics.append(_failure(address, _CODE_OWNERSHIP_CONFLICT))
-                domain_handles.append(DomainHandle(address=address, realized=True))
+                handles.append(DomainHandle(address=address, realized=True))
                 continue
             if ok:
                 self._realized.discard(address)
@@ -210,28 +297,30 @@ class LibvirtDeploymentDriver:
                 self._undefine_nwfilter(connection, address)
             else:
                 diagnostics.append(_failure(address, _CODE_OPERATION_FAILED))
-            domain_handles.append(DomainHandle(address=address, realized=not ok))
+            handles.append(DomainHandle(address=address, realized=not ok))
+        return handles
 
-        network_handles: list[NetworkHandle] = []
-        for address in networks:
+    def _destroy_networks(
+        self,
+        connection: object,
+        addresses: tuple[str, ...],
+        diagnostics: list[Diagnostic],
+    ) -> list[NetworkHandle]:
+        handles: list[NetworkHandle] = []
+        for address in addresses:
             try:
                 ok = self._destroy_one(connection, "networkLookupByName", address)
             except _OwnershipConflict:
                 diagnostics.append(_failure(address, _CODE_OWNERSHIP_CONFLICT))
-                network_handles.append(NetworkHandle(address=address, realized=True))
+                handles.append(NetworkHandle(address=address, realized=True))
                 continue
             if ok:
                 self._realized.discard(address)
                 self._names.pop(address, None)
             else:
                 diagnostics.append(_failure(address, _CODE_OPERATION_FAILED))
-            network_handles.append(NetworkHandle(address=address, realized=not ok))
-
-        return DriverResult(
-            networks=tuple(network_handles),
-            domains=tuple(domain_handles),
-            diagnostics=tuple(diagnostics),
-        )
+            handles.append(NetworkHandle(address=address, realized=not ok))
+        return handles
 
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)

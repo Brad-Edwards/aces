@@ -2,7 +2,7 @@
 
 The low-level, package-internal layer both :mod:`realization` (interpretation)
 and :mod:`capability_envelope` (capability-envelope diagnostics) build on, so the
-two never duplicate — or diverge on — how a plan payload's node type, OS family,
+two never duplicate — or diverge on — how a plan payload's node kind, OS family,
 content type, or spec is read.
 """
 
@@ -54,10 +54,10 @@ def _architecture(payload: Mapping[str, object]) -> str:
     return node_architecture if isinstance(node_architecture, str) else ""
 
 
-def _node_type(payload: Mapping[str, object]) -> str:
-    node_type = payload.get("node_type")
-    if isinstance(node_type, str) and node_type:
-        return node_type
+def _node_kind(payload: Mapping[str, object]) -> str:
+    node_kind = payload.get("node_kind")
+    if isinstance(node_kind, str) and node_kind:
+        return node_kind
     node = _spec(payload).get("node")
     nested = node.get("type") if isinstance(node, Mapping) else None
     return nested if isinstance(nested, str) else ""

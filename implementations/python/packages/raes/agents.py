@@ -33,7 +33,7 @@ class ParticipantInteractiveAccessChannel(str, Enum):
 
 
 class ParticipantInteractiveAccess(SDLModel):
-    """One authored participant-to-VM interactive-access binding.
+    """One authored participant-to-compute-node interactive-access binding.
 
     This record carries portable intent only. It is not a host locator, port,
     credential, portal session, listener observation, or realization claim.
@@ -89,7 +89,7 @@ class Agent(SDLModel):
     - ``observation_boundaries`` links to declared participant observation
       boundaries that define participant-specific projections of world and
       evidence state (SEM-208)
-    - ``interactive_access`` declares the VM/channel pairs that may be offered
+    - ``interactive_access`` declares the compute-node/channel pairs that may be offered
       to this participant, without inferring a listener, locator, credential,
       operating scope, action authority, or successful realization (DSL-117)
 

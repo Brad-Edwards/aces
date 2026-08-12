@@ -1,6 +1,6 @@
 """Node models — VMs and network switches.
 
-Ports the OCR SDL Node/VM/Switch/Resources/Role structs with
+Ports the OCR SDL Node/Compute/Switch/Resources/Role structs with
 backend-agnostic Source references.
 """
 
@@ -174,14 +174,14 @@ MAX_NODE_NAME_LENGTH = 35
 
 
 class NodeType(str, Enum):
-    """Whether a node is a virtual machine or network switch."""
+    """Structural resource kind, independent of its realization mechanism."""
 
-    VM = "vm"
+    COMPUTE = "compute"
     SWITCH = "switch"
 
 
 class Resources(SDLModel):
-    """Compute resources for a VM node."""
+    """Compute resources for a compute node."""
 
     ram: int | str = Field(description="RAM in bytes (parsed from human-readable)")
     cpu: int | str = Field(description="Number of CPU cores")
@@ -198,7 +198,7 @@ class Resources(SDLModel):
 
 
 class Role(SDLModel):
-    """A named role on a VM with optional entity assignments.
+    """A named role on a compute node with optional entity assignments.
 
     Shorthand: ``admin: "username"`` (just the username string).
     Longhand: ``admin: {username: "admin", entities: ["blue-team.bob"]}``.
@@ -274,10 +274,10 @@ class ServicePort(SDLModel):
 
 
 class Node(SDLModel):
-    """A scenario node — either a VM or a Switch.
+    """A scenario node — either a compute endpoint or a strict switch.
 
-    The ``type`` field determines which variant is active. VM fields
-    are only valid when type is VM; Switch nodes carry no extra data.
+    The ``type`` field determines which structural variant is active. Compute
+    fields are only valid for compute nodes; switches carry no extra data.
     """
 
     type: NodeType = Field(alias="type")
@@ -320,16 +320,16 @@ class Node(SDLModel):
 
     @model_validator(mode="after")
     def validate_type_constraints(self) -> "Node":
-        """Switch nodes cannot carry VM-only fields."""
+        """Switch nodes cannot carry compute-only fields."""
         if self.type != NodeType.SWITCH:
             return self
 
-        disallowed_fields = self._populated_vm_only_fields()
+        disallowed_fields = self._populated_compute_only_fields()
         if disallowed_fields:
-            raise ValueError("Switch nodes cannot have VM-only fields: " + ", ".join(disallowed_fields))
+            raise ValueError("Switch nodes cannot have compute-only fields: " + ", ".join(disallowed_fields))
         return self
 
-    def _populated_vm_only_fields(self) -> list[str]:
+    def _populated_compute_only_fields(self) -> list[str]:
         fields = {
             "source": self.source is not None,
             "resources": self.resources is not None,
@@ -350,8 +350,8 @@ class Node(SDLModel):
 
     @model_validator(mode="after")
     def validate_unique_service_ports(self) -> "Node":
-        """Concrete VM service bindings must stay uniquely addressable."""
-        if self.type != NodeType.VM:
+        """Concrete compute service bindings must stay uniquely addressable."""
+        if self.type != NodeType.COMPUTE:
             return self
 
         seen: set[tuple[str, int]] = set()

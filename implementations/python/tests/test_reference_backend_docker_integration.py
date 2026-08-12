@@ -32,7 +32,7 @@ _SCENARIO = f"""
 name: ref-docker
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     source: {_IMAGE}
     resources: {{ram: 1 gib, cpu: 1}}
@@ -107,7 +107,9 @@ def test_real_container_provision_inventory_and_teardown(container_runtime: str)
         driver.destroy(networks=(), containers=("provision.node.web",))
 
 
-def test_real_driver_conformance_passes(container_runtime: str):
+def test_real_driver_conformance_executes_native_cases_and_fails_closed_for_nonconstructive_envelope(
+    container_runtime: str,
+):
     driver = OciDeploymentDriver(
         runtime=container_runtime,
         workspace="raes-ref-it-conf",
@@ -122,8 +124,12 @@ def test_real_driver_conformance_passes(container_runtime: str):
         )
 
         assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
-        assert report.passed is True, [
-            diagnostic.message for case in report.cases if not case.passed for diagnostic in case.diagnostics
-        ]
+        assert report.passed is False
+        failed_cases = [case for case in report.cases if not case.passed]
+        assert {case.name for case in failed_cases} == {"realization-envelope-constructive"}
+        assert {diagnostic.code for case in failed_cases for diagnostic in case.diagnostics} == {
+            "realization-envelope.positive-probe.no-witness",
+            "realization-envelope.negative-probe.no-witness",
+        }
     finally:
         driver.destroy(networks=(), containers=("provision.node.vm",))

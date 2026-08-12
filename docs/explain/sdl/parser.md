@@ -140,7 +140,7 @@ their strict decoded object validates against it directly.
 8. **Declaration indexing** — retain typed provenance, reject canonical-address collisions, and build aliases
 9. **Semantic validation** — exact cross-reference checks plus variable-reference checks (see [validation.md](validation.md))
 
-On success, the returned `Scenario` may still carry non-fatal advisories in `scenario.advisories` (for example, VM nodes without explicit `resources`).
+On success, the returned `Scenario` may still carry non-fatal advisories in `scenario.advisories` (for example, compute nodes without explicit `resources`).
 
 ## API
 

@@ -111,12 +111,12 @@ def test_merge_source_and_local_field_must_be_disjoint() -> None:
 name: merge-conflict
 nodes:
   first:
-    type: vm
+    type: compute
     resources: &resources
       ram: 1 gib
       cpu: 1
   second:
-    type: vm
+    type: compute
     resources:
       <<: *resources
       cpu: 2
@@ -134,17 +134,17 @@ def test_merge_sources_must_be_pairwise_disjoint_and_collect_all_conflicts() -> 
 name: merge-sources
 nodes:
   first:
-    type: vm
+    type: compute
     resources: &first
       ram: 1 gib
       cpu: 1
   second:
-    type: vm
+    type: compute
     resources: &second
       RAM: 2 gib
       CPU: 2
   third:
-    type: vm
+    type: compute
     resources:
       <<: [*first, *second]
 """,
@@ -163,12 +163,12 @@ def test_disjoint_merge_is_valid_only_in_migration_mode() -> None:
 name: merge-disjoint
 nodes:
   first:
-    type: vm
+    type: compute
     resources: &resources
       ram: 1 gib
       cpu: 1
   second:
-    type: vm
+    type: compute
     resources:
       <<: *resources
 """

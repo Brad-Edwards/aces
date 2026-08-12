@@ -51,7 +51,7 @@ def _local_module(path: Path, *, version: str = "1.2.3", exports: str = "nodes: 
                 exports_block,
                 "nodes:",
                 "  vm:",
-                "    type: vm",
+                "    type: compute",
                 "    os: linux",
                 "    resources: {ram: 1 gib, cpu: 1}",
                 "infrastructure:",
@@ -243,7 +243,7 @@ def test_module_exports_are_enforced_for_importers(tmp_path: Path):
             infrastructure: [vm]
         nodes:
           vm:
-            type: vm
+            type: compute
             os: linux
             resources: {ram: 1 gib, cpu: 1}
             conditions: {health: ops}
@@ -455,7 +455,7 @@ def test_publishing_local_bundle_rejects_import_escape(tmp_path: Path):
             namespace: shared
         nodes:
           vm:
-            type: vm
+            type: compute
             os: linux
             resources: {ram: 1 gib, cpu: 1}
         infrastructure:
@@ -831,7 +831,7 @@ def test_database_and_application_refs_survive_module_namespacing():
         name="db-module",
         nodes={
             "db": {
-                "type": "vm",
+                "type": "compute",
                 "services": [{"port": 5432, "name": "pg"}],
                 "runtime": {
                     "database_services": [
@@ -846,7 +846,7 @@ def test_database_and_application_refs_survive_module_namespacing():
                 },
             },
             "web": {
-                "type": "vm",
+                "type": "compute",
                 "services": [{"port": 8080, "name": "http"}],
                 "runtime": {"applications": [{"application_id": "webapp", "service": "http"}]},
             },

@@ -695,13 +695,38 @@
       "extension_policy": "governed-extension",
       "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
       "terms": {
-        "vm": {
-          "title": "Virtual Machine",
-          "description": "Provisioner can realize virtual machine nodes."
+        "compute": {
+          "title": "Compute",
+          "description": "Provisioner can realize backend-neutral compute endpoint nodes."
         },
         "switch": {
           "title": "Switch",
           "description": "Provisioner can realize switch nodes."
+        }
+      }
+    },
+    "compute-substrates": {
+      "title": "Compute Substrates",
+      "description": "Portable execution or isolation substrate vocabulary for compute-node realization constraints and observations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "scenario.realization.constraints.compute-substrate",
+        "runtime.snapshot.realization_observations.compute-substrate"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "virtual-machine": {
+          "title": "Virtual Machine",
+          "description": "A compute endpoint realized as a hardware-virtualized machine."
+        },
+        "operating-system-container": {
+          "title": "Operating-System Container",
+          "description": "A compute endpoint realized through operating-system-level container isolation."
+        },
+        "physical-device": {
+          "title": "Physical Device",
+          "description": "A compute endpoint realized on a physical computer or special-purpose device without requiring a virtualization substrate."
         }
       }
     },

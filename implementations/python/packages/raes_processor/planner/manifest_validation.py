@@ -44,16 +44,16 @@ def _validate_switch_support(model: RuntimeModel, provisioner: ProvisionerCapabi
     return diagnostics
 
 
-def _validate_node_type_support(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
+def _validate_node_kind_support(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     for node in model.node_deployments.values():
-        if node.node_type and node.node_type not in provisioner.supported_node_types:
+        if node.node_kind and node.node_kind not in provisioner.supported_node_types:
             diagnostics.append(
                 Diagnostic(
                     code="provisioner.unsupported-node-type",
                     domain="provisioning",
                     address=node.address,
-                    message=f"Provisioner does not support node type '{node.node_type}'.",
+                    message=f"Provisioner does not support node kind '{node.node_kind}'.",
                 )
             )
         diagnostics.extend(
@@ -359,7 +359,7 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_validate_acls(model, provisioner))
     diagnostics.extend(_validate_switch_support(model, provisioner))
-    diagnostics.extend(_validate_node_type_support(model, provisioner))
+    diagnostics.extend(_validate_node_kind_support(model, provisioner))
     diagnostics.extend(_validate_total_node_count(model, provisioner))
     diagnostics.extend(_validate_content_type_support(model, provisioner))
     diagnostics.extend(_validate_account_support(model, provisioner))

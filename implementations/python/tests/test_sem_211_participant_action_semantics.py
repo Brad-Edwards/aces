@@ -43,7 +43,7 @@ def _scenario_yaml() -> str:
         name: sem-211
         nodes:
           web:
-            type: VM
+            type: compute
             resources: {ram: 1 GiB, cpu: 1}
             services: [{port: 80, name: http}]
         entities:

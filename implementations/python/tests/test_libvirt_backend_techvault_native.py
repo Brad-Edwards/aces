@@ -205,7 +205,7 @@ name: bounded
 nodes:
   lab: {type: switch}
   demo:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 128 MiB, cpu: 1}
     services: []
@@ -328,8 +328,18 @@ def test_bounded_substrate_emits_complete_daemon_observations(tmp_path):
     result = driver.realize(networks=(network,), domains=(domain,))
 
     assert not result.diagnostics
-    assert len(result.observations) == 13
+    assert len(result.observations) == 14
     assert {observation.source.value for observation in result.observations} == {"daemon-observed"}
+    substrate = next(
+        observation for observation in result.observations if observation.concern.value == "compute-substrate"
+    )
+    assert substrate.value == "virtual-machine"
+    assert substrate.binding_verified
+    definitions_before = tuple(connection.domain_xml)
+    readback = driver.observe(domains=(domain,))
+    assert not readback.diagnostics
+    assert [item.value for item in readback.observations] == ["virtual-machine"]
+    assert tuple(connection.domain_xml) == definitions_before
     surface = expected_surface(driver.last_snapshot)
     assert surface["source"] == "daemon-observed"
     assert surface["domains"] == (provider_resource_name(domain.address, prefix="native-test"),)

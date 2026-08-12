@@ -21,8 +21,8 @@ def _scenario(extra: str = ""):
             f"""
             name: stateful-service
             nodes:
-              indexer: {{type: vm, os: linux}}
-              manager: {{type: vm, os: linux}}
+              indexer: {{type: compute, os: linux}}
+              manager: {{type: compute, os: linux}}
             generated_artifacts:
               indexer-certs:
                 generator: certificate_bundle
@@ -68,8 +68,8 @@ def _ssh_scenario(*, outputs: str, consumers: str):
     return parse_sdl(
         "name: ssh-access\n"
         "nodes:\n"
-        "  producer: {type: vm, os: linux}\n"
-        "  client: {type: vm, os: linux}\n"
+        "  producer: {type: compute, os: linux}\n"
+        "  client: {type: compute, os: linux}\n"
         "generated_artifacts:\n"
         "  access:\n"
         "    generator: ssh_key_bundle\n"
@@ -300,7 +300,7 @@ def test_stateful_resources_reject_unknown_references(mutation: str, message: st
             "    consumers:",
             "    lifecycle: retain\n    access_mode: read_write_once\n    consumers:",
         )
-    invalid_sdl = textwrap.dedent(f"name: invalid\nnodes:\n  indexer: {{type: vm, os: linux}}\n{mutation}\n")
+    invalid_sdl = textwrap.dedent(f"name: invalid\nnodes:\n  indexer: {{type: compute, os: linux}}\n{mutation}\n")
     with pytest.raises(SDLValidationError, match=message):
         parse_sdl(invalid_sdl)
 
@@ -311,7 +311,7 @@ def test_stateful_resource_dependency_cycle_fails_before_backend_dispatch():
             """
             name: cycle
             nodes:
-              indexer: {type: vm, os: linux}
+              indexer: {type: compute, os: linux}
             persistent_volumes:
               a:
                 lifecycle: retain
@@ -339,7 +339,7 @@ def test_stateful_resources_reject_ambiguous_bare_dependency_during_semantic_adm
         """
         name: ambiguous-stateful-dependency
         nodes:
-          vm: {type: vm, os: linux}
+          vm: {type: compute, os: linux}
         generated_artifacts:
           shared:
             generator: rendered_config
@@ -381,7 +381,7 @@ def test_composed_stateful_resources_reject_ambiguous_bare_dependency(tmp_path: 
                 generated_artifacts: [shared, consumer]
                 persistent_volumes: [shared]
             nodes:
-              vm: {type: vm, os: linux}
+              vm: {type: compute, os: linux}
             generated_artifacts:
               shared:
                 generator: rendered_config
@@ -503,9 +503,9 @@ def test_stateful_resources_reject_cross_resource_access_conflicts(
         """
         name: invalid-stateful-access
         nodes:
-          first: {type: vm, os: linux}
-          second: {type: vm, os: linux}
-          windows: {type: vm, os: windows}
+          first: {type: compute, os: linux}
+          second: {type: compute, os: linux}
+          windows: {type: compute, os: windows}
         """
     ) + textwrap.dedent(resources)
 
@@ -527,7 +527,7 @@ def test_generated_artifact_output_paths_must_be_canonical_posix(invalid_path: s
         f"""
         name: invalid-output-path
         nodes:
-          vm: {{type: vm, os: linux}}
+          vm: {{type: compute, os: linux}}
         generated_artifacts:
           config:
             generator: rendered_config
@@ -545,7 +545,7 @@ def test_generated_artifact_output_paths_must_be_canonical_posix(invalid_path: s
 def test_stateful_collection_schema_rejects_exact_duplicates():
     payload = {
         "name": "duplicate-stateful-members",
-        "nodes": {"vm": {"type": "vm", "os": "linux"}},
+        "nodes": {"vm": {"type": "compute", "os": "linux"}},
         "generated_artifacts": {
             "config": {
                 "generator": "rendered_config",

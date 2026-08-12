@@ -2,9 +2,9 @@
   "contract_id": "provisioning-plan-v1",
   "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
   "stability": "draft",
-  "content_hash": "98c2fec4467c763bacebd2ee8efd8603d6188aea907bf4b364601dae86831d38",
+  "content_hash": "18166a63a4da604a62d4957fac6cca4344a285de17c7fa67746bfcbeae58ac5c",
   "last_change": {
-    "summary": "Added mandatory resolved realization authority to the backend-facing provisioning plan for issue #1067.",
-    "content_hash": "98c2fec4467c763bacebd2ee8efd8603d6188aea907bf4b364601dae86831d38"
+    "summary": "Added mandatory resolved realization authority, operation identity, and separate authored compute-substrate constraints to provisioning plans for issues #1067 and #1076.",
+    "content_hash": "18166a63a4da604a62d4957fac6cca4344a285de17c7fa67746bfcbeae58ac5c"
   }
 }

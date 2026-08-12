@@ -152,6 +152,7 @@ def plan(
         actions,
         deleted_entries,
         manifest,
+        effective_requirements,
         resolved_authority,
     )
     materialization_diagnostics = service_materialization_plan_diagnostics(

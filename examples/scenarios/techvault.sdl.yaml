@@ -3,7 +3,7 @@ description: TechVault webapp runtime facts used to exercise RAES SDL runtime in
   parity.
 nodes:
   techvault-webapp:
-    type: vm
+    type: compute
     source:
       name: techvault-webapp
       version: local

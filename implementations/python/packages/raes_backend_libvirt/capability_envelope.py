@@ -1,6 +1,6 @@
 """Typed capability-envelope diagnostics for the libvirt backend (issue #605).
 
-A provisioning plan may ask the backend to realize a node type, OS family,
+A provisioning plan may ask the backend to realize a resource kind, OS family,
 content type, or account feature outside the selected manifest's declared
 :class:`ProvisionerCapabilities` envelope (an ungoverned/extension term the
 backend does not realize). This module surfaces those as blocking, typed
@@ -27,7 +27,7 @@ from ._payload import (
     NETWORK_RESOURCE_TYPE,
     NODE_RESOURCE_TYPE,
     _architecture,
-    _node_type,
+    _node_kind,
     _os_family,
     _spec,
     _str,
@@ -35,7 +35,7 @@ from ._payload import (
 
 _DOMAIN = "runtime"
 
-# A network resource is realized as a libvirt switch, so its node-type envelope
+# A network resource is realized as a libvirt switch, so its node-kind envelope
 # term is fixed.
 _SWITCH_NODE_TYPE = "switch"
 
@@ -71,8 +71,8 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
     _EnvelopeDimension(
         resource_types=frozenset({NODE_RESOURCE_TYPE}),
         code=_CODE_UNSUPPORTED_NODE_TYPE,
-        noun="node type",
-        extract=lambda payload: (_node_type(payload),),
+        noun="node kind",
+        extract=lambda payload: (_node_kind(payload),),
         supported=lambda caps: caps.supported_node_types,
     ),
     _EnvelopeDimension(
@@ -92,7 +92,7 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
     _EnvelopeDimension(
         resource_types=frozenset({NETWORK_RESOURCE_TYPE}),
         code=_CODE_UNSUPPORTED_NODE_TYPE,
-        noun="node type",
+        noun="node kind",
         extract=lambda payload: (_SWITCH_NODE_TYPE,),
         supported=lambda caps: caps.supported_node_types,
     ),

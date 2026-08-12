@@ -35,7 +35,7 @@ nodes:
   lab-network:
     type: Switch
   web:
-    type: VM
+    type: compute
     os: linux
     resources:
       ram: 2 GiB

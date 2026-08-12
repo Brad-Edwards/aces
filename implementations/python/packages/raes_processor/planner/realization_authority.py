@@ -368,6 +368,7 @@ def _constraint_diagnostic(
 def _evaluate_authority_disclosure(
     authority: ResolvedRealizationAuthority,
     runtime_views: dict[tuple[str, str], CompiledRealizationRequirement],
+    declared_plan: ProvisioningPlan,
     declared_ops: dict[str, object],
     returned_snapshot: RuntimeSnapshot,
     manifest: BackendManifest | None,
@@ -379,7 +380,7 @@ def _evaluate_authority_disclosure(
         requirement = runtime_views[(authority.address, authority.requirement_kind)]
         diagnostic, entry = evaluate_registered_realization(
             requirement,
-            declared_ops,
+            declared_plan,
             returned_snapshot,
             manifest=manifest,
         )
@@ -415,6 +416,7 @@ def realization_authority_disclosure(
         diagnostic, entry = _evaluate_authority_disclosure(
             authority,
             runtime_views,
+            declared_plan,
             declared_ops,
             returned_snapshot,
             manifest,

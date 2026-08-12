@@ -132,7 +132,7 @@ class TestBackendRegistry:
                 ),
                 provisioner=ProvisionerCapabilities(
                     name="manifest-a-provisioner",
-                    supported_node_types=frozenset({"vm"}),
+                    supported_node_types=frozenset({"compute"}),
                     supported_os_families=frozenset({"linux"}),
                 ),
             )

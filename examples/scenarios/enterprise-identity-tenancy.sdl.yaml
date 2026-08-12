@@ -4,12 +4,12 @@ description: Portable enterprise forest, carrier placement, and shared inference
 
 nodes:
   dc:
-    type: vm
+    type: compute
     os: windows
     resources: {ram: 2 GiB, cpu: 2}
     endpoint_persona: service
   idp:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     endpoint_persona: service
@@ -17,17 +17,17 @@ nodes:
       - name: oidc
         port: 8443
   carrier:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 2 GiB, cpu: 2}
     endpoint_persona: carrier
   workforce:
-    type: vm
+    type: compute
     os: windows
     resources: {ram: 1 GiB, cpu: 1}
     endpoint_persona: workforce
   inference:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 2 GiB, cpu: 2}
     endpoint_persona: service

@@ -362,6 +362,7 @@ from .realization_plans import (
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
+    PlannedRealizationConstraintModel,
     PlanOperationModel,
     ProvisioningPlanModel,
     RealizationAuthorityBoundModel,

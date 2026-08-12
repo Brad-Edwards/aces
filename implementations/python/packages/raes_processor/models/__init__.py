@@ -56,6 +56,7 @@ from raes_contracts.planning import EvaluationOp as EvaluationOp
 from raes_contracts.planning import EvaluationPlan as EvaluationPlan
 from raes_contracts.planning import OrchestrationOp as OrchestrationOp
 from raes_contracts.planning import OrchestrationPlan as OrchestrationPlan
+from raes_contracts.planning import PlannedRealizationConstraint as PlannedRealizationConstraint
 from raes_contracts.planning import PlannedResource as PlannedResource
 from raes_contracts.planning import PlanOperation as PlanOperation
 from raes_contracts.planning import ProvisioningPlan as ProvisioningPlan

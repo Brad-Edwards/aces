@@ -289,7 +289,7 @@ def _semantic_scenario(*, success_assertion: str = "service-ready") -> str:
 name: proposition-semantics
 nodes:
   web:
-    type: vm
+    type: compute
     resources: {{ram: 1 gib, cpu: 1}}
     conditions: {{http-health: ops}}
     roles: {{ops: operator}}

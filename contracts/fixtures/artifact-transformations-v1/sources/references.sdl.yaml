@@ -1,7 +1,7 @@
 name: transformation-reference-case
 nodes:
   web:
-    type: vm
+    type: compute
     resources:
       ram: 1 GiB
       cpu: 1

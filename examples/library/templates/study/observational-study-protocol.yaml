@@ -12,7 +12,7 @@ body:
   description: Study-oriented SDL wrapper whose objective asserts observable success via a condition. Graded scoring and reward are experiment/evaluator-plane concerns per ADR-073, not SDL surfaces.
   nodes:
     study-target:
-      type: VM
+      type: compute
       resources: {ram: 1 GiB, cpu: 1}
       services:
         - {port: 443, name: https}

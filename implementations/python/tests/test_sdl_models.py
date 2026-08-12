@@ -362,11 +362,11 @@ class TestResources:
 class TestNode:
     def test_vm_node(self):
         n = Node(
-            type="vm",
+            type="compute",
             source={"name": "ubuntu", "version": "22.04"},
             resources={"ram": "4 gib", "cpu": 2},
         )
-        assert n.type == NodeType.VM
+        assert n.type == NodeType.COMPUTE
 
     def test_switch_node(self):
         n = Node(type="switch")
@@ -402,7 +402,7 @@ class TestNode:
 
     def test_vm_runtime_configuration_surfaces(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "mounts": [
                     {
@@ -601,12 +601,12 @@ class TestNode:
     )
     def test_vm_runtime_rejects_observation_only_capture_facts(self, runtime):
         with pytest.raises(ValidationError):
-            Node(type="vm", runtime=runtime)
+            Node(type="compute", runtime=runtime)
 
     def test_vm_runtime_rejects_duplicate_software_component_id(self):
         with pytest.raises(ValidationError, match="Duplicate runtime software component 'webapp'"):
             Node(
-                type="vm",
+                type="compute",
                 runtime={
                     "software_components": [
                         {"component_id": "webapp", "name": "web application"},
@@ -618,7 +618,7 @@ class TestNode:
     def test_vm_runtime_software_component_paths_must_be_absolute(self):
         with pytest.raises(ValidationError, match="manifest_path must be an absolute path"):
             Node(
-                type="vm",
+                type="compute",
                 runtime={
                     "software_components": [
                         {
@@ -632,7 +632,7 @@ class TestNode:
 
     def test_vm_runtime_operational_surfaces(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "processes": [
                     {
@@ -711,7 +711,7 @@ class TestNode:
 
     def test_vm_runtime_filesystem_inventory_surfaces(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "filesystem_inventory": [
                     {
@@ -767,7 +767,7 @@ class TestNode:
 
     def test_vm_runtime_filesystem_entry_presence_defaults_to_present(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "filesystem_inventory": [
                     {"path": "/etc/hosts", "entry_type": "file"},
@@ -780,7 +780,7 @@ class TestNode:
 
     def test_vm_runtime_filesystem_entry_expected_absent_preserves_entry_type(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "filesystem_inventory": [
                     {
@@ -799,7 +799,7 @@ class TestNode:
 
     def test_vm_runtime_file_service_surface(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "file_services": [
                     {
@@ -954,7 +954,7 @@ class TestNode:
         ):
             with pytest.raises(ValidationError, match=field_name):
                 Node(
-                    type="vm",
+                    type="compute",
                     runtime={
                         "filesystem_inventory": [
                             {
@@ -969,7 +969,7 @@ class TestNode:
 
     def test_vm_runtime_container_host_config_surfaces(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "mounts": [
                     {
@@ -1268,11 +1268,11 @@ class TestNode:
     )
     def test_runtime_configuration_rejects_invalid_runtime_anchors(self, runtime, message):
         with pytest.raises(ValidationError, match=message):
-            Node(type="vm", runtime=runtime)
+            Node(type="compute", runtime=runtime)
 
     def test_runtime_init_process_accepts_variable_refs_and_redaction(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "container": {
                     "init_process": {
@@ -1333,7 +1333,7 @@ class TestNode:
 
     def test_vm_runtime_process_capability_overrides_surfaces(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "processes": [
                     {"name": "entrypoint", "pid": 1, "role": "supervisor"},
@@ -1571,7 +1571,7 @@ class TestNode:
 
     def test_vm_runtime_local_identity_inventory_surfaces(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "local_identity": {
                     "description": "getent passwd/group capture",
@@ -1682,7 +1682,7 @@ class TestNode:
 
     def test_runtime_local_identity_inventory_is_optional(self):
         assert RuntimeLocalIdentityInventory().users == []
-        assert Node(type="vm", runtime={}).runtime.local_identity is None
+        assert Node(type="compute", runtime={}).runtime.local_identity is None
 
     def test_runtime_sudo_rule_redacted_commands_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted sudo rules must omit commands"):
@@ -1697,7 +1697,7 @@ class TestNode:
 class TestRuntimeIdentityAuthorities:
     def test_vm_runtime_identity_authority_inventory_surfaces(self):
         n = Node(
-            type="vm",
+            type="compute",
             services=[
                 {"port": 389, "name": "ldap"},
                 {"port": 88, "name": "kerberos"},
@@ -1810,7 +1810,7 @@ class TestRuntimeIdentityAuthorities:
             RuntimeIdentityAttribute(name="misp_role", origin="provisioned", provenance="runtime_created")
 
     def test_runtime_identity_authority_inventory_is_optional(self):
-        assert Node(type="vm", runtime={}).runtime.identity_authorities == []
+        assert Node(type="compute", runtime={}).runtime.identity_authorities == []
 
 
 # ---------------------------------------------------------------------------
@@ -1821,7 +1821,7 @@ class TestRuntimeIdentityAuthorities:
 class TestRuntimeNetworkRealization:
     def test_vm_runtime_network_surface(self):
         n = Node(
-            type="vm",
+            type="compute",
             runtime={
                 "network": {
                     "description": "Docker network realization observed by harness inspection.",
@@ -1886,7 +1886,7 @@ class TestRuntimeNetworkRealization:
 
     def test_runtime_network_is_optional(self):
         assert RuntimeNetworkRealization().endpoints == []
-        assert Node(type="vm", runtime={}).runtime.network is None
+        assert Node(type="compute", runtime={}).runtime.network is None
 
     def test_endpoint_accepts_variable_placeholders(self):
         ep = RuntimeNetworkEndpoint(
@@ -2534,20 +2534,20 @@ class TestACLRule:
 
 class TestOSFamily:
     def test_windows(self):
-        n = Node(type="vm", os="windows", resources={"ram": "1 gib", "cpu": 1})
+        n = Node(type="compute", os="windows", resources={"ram": "1 gib", "cpu": 1})
         assert n.os == OSFamily.WINDOWS
 
     def test_linux(self):
-        n = Node(type="vm", os="linux", resources={"ram": "1 gib", "cpu": 1})
+        n = Node(type="compute", os="linux", resources={"ram": "1 gib", "cpu": 1})
         assert n.os == OSFamily.LINUX
 
     def test_no_os(self):
-        n = Node(type="vm", resources={"ram": "1 gib", "cpu": 1})
+        n = Node(type="compute", resources={"ram": "1 gib", "cpu": 1})
         assert n.os is None
 
     def test_os_placeholder(self):
         n = Node(
-            type="vm",
+            type="compute",
             os="${node_os}",
             resources={"ram": "1 gib", "cpu": 1},
         )
@@ -2565,7 +2565,7 @@ class TestAssetValue:
 
     def test_on_node(self):
         n = Node(
-            type="vm",
+            type="compute",
             resources={"ram": "1 gib", "cpu": 1},
             asset_value={"confidentiality": "high", "availability": "critical"},
         )
@@ -2583,7 +2583,7 @@ class TestServicePort:
 
     def test_on_node(self):
         n = Node(
-            type="vm",
+            type="compute",
             resources={"ram": "1 gib", "cpu": 1},
             services=[{"port": 22, "name": "ssh"}, {"port": 80, "name": "http"}],
         )
@@ -2592,7 +2592,7 @@ class TestServicePort:
     def test_duplicate_port_protocol_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate service binding"):
             Node(
-                type="vm",
+                type="compute",
                 resources={"ram": "1 gib", "cpu": 1},
                 services=[
                     {"port": 443, "protocol": "tcp", "name": "https"},
@@ -2603,7 +2603,7 @@ class TestServicePort:
     def test_duplicate_named_service_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate named service"):
             Node(
-                type="vm",
+                type="compute",
                 resources={"ram": "1 gib", "cpu": 1},
                 services=[
                     {"port": 22, "name": "admin"},
@@ -2613,7 +2613,7 @@ class TestServicePort:
 
     def test_same_port_with_different_protocols_allowed(self):
         n = Node(
-            type="vm",
+            type="compute",
             resources={"ram": "1 gib", "cpu": 1},
             services=[
                 {"port": 53, "protocol": "tcp", "name": "dns-tcp"},
@@ -3017,7 +3017,7 @@ class TestBooleanPlaceholders:
 class TestRuntimeApplicationSurface:
     def test_vm_runtime_application_surface(self):
         n = Node(
-            type="vm",
+            type="compute",
             services=[{"port": 8080, "name": "techvault-http"}],
             runtime={
                 "applications": [
@@ -3227,7 +3227,7 @@ class TestRuntimeApplicationSurface:
     def test_duplicate_application_id_on_node_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate runtime application_id 'app'"):
             Node(
-                type="vm",
+                type="compute",
                 runtime={
                     "applications": [
                         {"application_id": "app"},
@@ -3337,7 +3337,7 @@ class TestRelationshipProxyUpstream:
 class TestRuntimeDnsService:
     def test_vm_runtime_dns_service_inventory(self):
         n = Node(
-            type="vm",
+            type="compute",
             services=[
                 {"port": 53, "protocol": "udp", "name": "dns-udp"},
                 {"port": 53, "protocol": "tcp", "name": "dns-tcp"},
@@ -3598,7 +3598,7 @@ class TestRuntimeDnsService:
     def test_duplicate_dns_rrset_binding_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate DNS RRset binding"):
             Node(
-                type="vm",
+                type="compute",
                 runtime={
                     "dns_services": [
                         {
@@ -3639,7 +3639,7 @@ class TestRuntimeDnsService:
 class TestRuntimeDatabaseService:
     def test_vm_runtime_database_service(self):
         n = Node(
-            type="vm",
+            type="compute",
             services=[{"port": 5432, "name": "techvault-pg"}],
             runtime={
                 "database_services": [

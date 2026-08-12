@@ -589,13 +589,20 @@ def _compiled() -> tuple[object, object]:
     return runtime_model, specification.autonomous_execution
 
 
-def _autonomous_manifest(runtime_model: object) -> object:
+def _autonomous_manifest(
+    runtime_model: object,
+    *,
+    with_realization_envelope: bool = True,
+) -> object:
     policies = tuple(
         specification.autonomous_execution
         for specification in runtime_model.behavior_specifications.values()
         if specification.autonomous_execution is not None
     )
-    base_manifest = create_stub_manifest(with_time=True)
+    base_manifest = create_stub_manifest(
+        with_time=True,
+        with_realization_envelope=with_realization_envelope,
+    )
     assert base_manifest.participant_runtime is not None
     return replace(
         base_manifest,
@@ -830,7 +837,7 @@ def test_backend_admission_enforces_finite_autonomous_execution_limits() -> None
         for specification in runtime_model.behavior_specifications.values()
         if specification.autonomous_execution is not None
     )
-    manifest = _autonomous_manifest(runtime_model)
+    manifest = _autonomous_manifest(runtime_model, with_realization_envelope=False)
     assert participant_autonomous_execution_capability_gaps(manifest, policies) == ()
 
     assert manifest.participant_runtime is not None
@@ -874,7 +881,7 @@ def test_backend_admission_requires_exact_v2_activity_and_random_profile_support
         for specification in runtime_model.behavior_specifications.values()
         if specification.autonomous_execution is not None
     )
-    manifest = _autonomous_manifest(runtime_model)
+    manifest = _autonomous_manifest(runtime_model, with_realization_envelope=False)
 
     assert participant_autonomous_execution_capability_gaps(manifest, policies, runtime_model.time_model) == ()
     restored = backend_manifest_from_v2_model(backend_manifest_v2_model(manifest))

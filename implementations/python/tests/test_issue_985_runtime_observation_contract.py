@@ -62,7 +62,7 @@ def _authoritative_environment_plan() -> tuple[ProvisioningPlan, BackendManifest
 name: issue-985-authoritative-runtime-observation
 nodes:
   worker:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     runtime:

@@ -16,7 +16,7 @@ name: language-service-test
 nodes:
   net: {type: Switch}
   net2: {type: Switch}
-  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}}
+  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}}
 infrastructure:
   net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
   net2: {count: 1, properties: {cidr: 10.0.1.0/24, gateway: 10.0.1.1}}
@@ -29,7 +29,7 @@ INVALID_REFERENCE_SDL = """\
 name: broken
 nodes:
   web:
-    type: VM
+    type: compute
     os: linux
     features: {ghost-feature: admin}
 """
@@ -61,7 +61,7 @@ def test_language_completions_cover_contexts_and_filters() -> None:
     sdl = """\
 name: completion-contexts
 nodes:
-  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}}
+  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}}
 conditions:
   alive: {command: "true", interval: 5}
 relationships:
@@ -94,7 +94,7 @@ def test_targetable_completions_exclude_non_targetable_sections() -> None:
     sdl = """\
 name: targetable-completions
 nodes:
-  web: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+  web: {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}}
 variables:
   count: {type: integer, default: 1}
 evidence_requirements:
@@ -123,11 +123,11 @@ def test_valid_document_completions_use_typed_nested_declarations() -> None:
 name: nested-completions
 nodes:
   web:
-    type: vm
+    type: compute
     resources: {ram: 1 GiB, cpu: 1}
     services: [{name: http, port: 80}]
   api:
-    type: vm
+    type: compute
     resources: {ram: 1 GiB, cpu: 1}
     services: [{name: http, port: 8080}]
 content:
@@ -152,7 +152,7 @@ def test_qualified_targetable_reference_reports_occurrence() -> None:
     sdl = """\
 name: targetable-reference
 nodes:
-  web: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+  web: {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}}
 behavior_specifications:
   baseline:
     semantic_version: 1.0.0
@@ -173,7 +173,7 @@ def test_qualified_targetable_reference_excludes_non_targetable_occurrence() -> 
     sdl = """\
 name: targetable-reference
 nodes:
-  web: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+  web: {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}}
 objectives:
   inspect: {targets: [objectives.inspect], success: {conditions: []}}
 """
@@ -206,7 +206,7 @@ def test_qualified_language_references_do_not_match_other_sections() -> None:
     sdl = """\
 name: qualified-reference-test
 nodes:
-  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}}
+  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}}
 features:
   app: {type: Service, source: webapp}
 conditions:

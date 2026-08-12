@@ -95,6 +95,19 @@ def provisioning_plan_model(plan: ProvisioningPlan) -> ProvisioningPlanModel:
         diagnostics=_diagnostic_payloads(plan.diagnostics),
         realization_authority=[_realization_authority_model(entry) for entry in plan.realization_authority],
         realization_envelope=plan.realization_envelope,
+        realization_constraints=[
+            {
+                "address": item.address,
+                "field_path": item.field_path,
+                "concern": item.concern,
+                "posture": item.posture,
+                "value_domain": item.value_domain,
+                "governing_scope": item.governing_scope,
+                "provenance": item.provenance,
+            }
+            for item in plan.realization_constraints
+        ],
+        operation_id=plan.operation_id,
     )
 
 

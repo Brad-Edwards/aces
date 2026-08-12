@@ -403,7 +403,8 @@
         "account-placement",
         "feature-binding",
         "service",
-        "acl"
+        "acl",
+        "compute-substrate"
       ],
       "title": "RealizationConcern",
       "type": "string"
@@ -991,13 +992,28 @@
           },
           "maxContains": 1,
           "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "compute-substrate"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
         }
       ],
       "items": {
         "$ref": "#/$defs/RealizationConcernDisclosureModel"
       },
-      "maxItems": 10,
-      "minItems": 10,
+      "maxItems": 11,
+      "minItems": 11,
       "title": "Concerns",
       "type": "array"
     },

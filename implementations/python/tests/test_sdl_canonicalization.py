@@ -188,7 +188,7 @@ variables:
     allowed_values: [linux]
 nodes:
   host:
-    type: vm
+    type: compute
     os: ${image_os}
     resources: {ram: 1 gib, cpu: 1}
 infrastructure:

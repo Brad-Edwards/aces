@@ -54,7 +54,7 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
     name: conformance
     nodes:
       vm:
-        type: vm
+        type: compute
         os: linux
         resources: {ram: 1 gib, cpu: 1}
         conditions: {health: ops}

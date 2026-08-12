@@ -499,7 +499,7 @@ def test_source_artifact_requirement_lowers_into_existing_compiled_demand() -> N
 name: portable-artifact
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     source:
       name: ubuntu-server
@@ -539,7 +539,7 @@ def test_planner_threads_scoped_artifact_availability_into_admission() -> None:
 name: portable-artifact-plan
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     source:
       name: ubuntu-server

@@ -190,6 +190,30 @@ readback. Desired-payload echo, runtime inspect output, VM allocation, cgroup
 capacity, or datastore `memory_locked` state is insufficient. Backends without
 both materialization and effective readback remain honestly unsupported.
 
+## Compute Kind And Realization Mechanism
+
+The canonical node kinds are `compute` and `switch`. `compute` describes what
+the scenario needs structurally; it does not select a virtual machine,
+container, physical device, or emulator. Mechanism intent is instead an
+addressed `compute-substrate` entry in `Scenario.realization.constraints`.
+Omitting that entry keeps the compute node portable. Exact and constrained
+entries retain their governed domain through instantiation, compilation, and a
+separate plan constraint; `supported_node_types` remains only the provisioner's
+resource-kind claim.
+
+Runtime selection is a separate observation. The backend must bind the observed
+governed mechanism to the operation, selected envelope, and configuration. A
+plan echo or provisioner handle is not evidence. OCI and libvirt modes use
+daemon readback; the in-process reference mode reports an extension term and is
+not presented as a second native isolation mechanism. The runtime gate rejects
+missing readback, weak evidence for bounded demand, envelope/domain mismatch,
+and unverified execution binding before snapshot persistence.
+
+Legacy `type: vm` is not treated as a generic compute alias. Strict authoring
+rejects it. Explicit migration preserves its historical exact meaning by
+emitting `type: compute`, an exact `virtual-machine` substrate constraint, and
+`legacy-node-type-vm` provenance; collisions are fatal.
+
 ## Scoped Default Cascade
 
 The one author-facing inherited-default surface is the optional scenario-root

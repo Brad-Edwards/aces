@@ -25,7 +25,7 @@ _RUNTIME_SCENARIO = """
 name: issue-985-runtime-concerns
 nodes:
   worker:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     runtime:
@@ -124,7 +124,7 @@ def test_constrained_runtime_dimension_requires_its_manifest_concern_kind() -> N
                 allowed_values: [first, second]
             nodes:
               worker:
-                type: vm
+                type: compute
                 os: linux
                 resources: {ram: 1 gib, cpu: 1}
                 runtime:
@@ -185,7 +185,7 @@ def test_nested_open_designation_lowers_an_omitted_runtime_dimension() -> None:
                       posture: open
                 nodes:
                   worker:
-                    type: vm
+                    type: compute
                     os: linux
                     resources: {ram: 1 gib, cpu: 1}
                     runtime: {}
@@ -206,7 +206,7 @@ def test_stateful_resource_destination_cannot_also_be_a_runtime_mount() -> None:
     name: issue-985-mount-overlap
     nodes:
       worker:
-        type: vm
+        type: compute
         os: linux
         resources: {ram: 1 gib, cpu: 1}
         runtime:

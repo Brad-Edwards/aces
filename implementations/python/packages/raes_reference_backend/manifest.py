@@ -36,15 +36,24 @@ from raes_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
-from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
+from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
+from raes_contracts.vocabulary import (
+    ParticipantFeatureSupportLevel,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
+
+from .envelopes import ReferenceDriverMode, load_reference_realization_envelope
 
 REFERENCE_BACKEND_NAME = "reference-emulation"
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
-    contract_id
-    for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS
-    if contract_id not in {"experiment-binding-descriptors-v1", "realization-envelope-v1"}
+    contract_id for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS if contract_id != "experiment-binding-descriptors-v1"
 )
 _TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"})
 
@@ -114,7 +123,10 @@ def _concept_bindings(*, with_time: bool) -> tuple[ConceptBinding, ...]:
     return bindings
 
 
-def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
+def _realization_support(
+    envelope: BackendRealizationEnvelopeModel,
+) -> tuple[RealizationSupportDeclaration, ...]:
+    substrate_claim = next(claim for claim in envelope.concerns if claim.concern.value == "compute-substrate")
     return (
         RealizationSupportDeclaration(
             domain="runtime-realization",
@@ -122,6 +134,7 @@ def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
             supported_constraint_kinds=frozenset(
                 {
                     "node-type",
+                    "compute-substrate",
                     "os-family",
                     "node-architecture",
                     "content-type",
@@ -138,6 +151,12 @@ def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
                     "operation-status-v1",
                 }
             ),
+            observation_capabilities={
+                "compute-substrate": RealizationObservationCapability(
+                    verification_scope=RealizationVerificationScope.PRESENCE,
+                    observation_strength=substrate_claim.observation_strength,
+                )
+            },
         ),
     )
 
@@ -246,19 +265,24 @@ def _cleanup_capabilities() -> CleanupCapabilities:
     )
 
 
-def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
+def _capabilities(
+    *,
+    with_time: bool,
+    envelope: BackendRealizationEnvelopeModel,
+) -> BackendCapabilitySet:
+    configuration = envelope.configuration
     return BackendCapabilitySet(
         provisioner=ProvisionerCapabilities(
             name="reference-emulation-provisioner",
-            supported_node_types=frozenset({"vm", "switch"}),
-            supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
+            supported_node_types=frozenset(configuration.supported_node_types),
+            supported_os_families=frozenset(configuration.supported_os_families),
             supported_node_architectures=frozenset({"x86_64", "aarch64"}),
-            supported_content_types=frozenset({"file", "dataset", "directory"}),
-            supported_account_features=frozenset({"groups", "mail", "shell", "home", "disabled", "auth_method"}),
-            supported_domain_profiles=frozenset(),
+            supported_content_types=frozenset(configuration.supported_content_types),
+            supported_account_features=frozenset(configuration.supported_account_features),
+            supported_domain_profiles=frozenset(configuration.supported_domain_profiles),
             max_total_nodes=None,
-            supports_acls=False,
-            supports_accounts=True,
+            supports_acls=configuration.supports_acls,
+            supports_accounts=bool(configuration.supported_account_features),
         ),
         orchestrator=OrchestratorCapabilities(
             name="reference-emulation-orchestrator",
@@ -313,7 +337,11 @@ def create_reference_backend_manifest(*, with_time: bool = False, **config) -> B
     and ignores them.
     """
 
-    del config
+    driver = config.get("driver")
+    mode = ReferenceDriverMode(
+        str(config.get("driver_mode") or getattr(driver, "driver_mode", ReferenceDriverMode.IN_PROCESS_EMULATION.value))
+    )
+    envelope = load_reference_realization_envelope(mode)
     return BackendManifest(
         name=REFERENCE_BACKEND_NAME,
         version=_current_backend_version(),
@@ -324,6 +352,7 @@ def create_reference_backend_manifest(*, with_time: bool = False, **config) -> B
         ),
         compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=_concept_bindings(with_time=with_time),
-        realization_support=_realization_support(),
-        capabilities=_capabilities(with_time=with_time),
+        realization_support=_realization_support(envelope),
+        capabilities=_capabilities(with_time=with_time, envelope=envelope),
+        realization_envelope=envelope,
     )

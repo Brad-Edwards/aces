@@ -250,6 +250,20 @@
       "diagnostic_codes": []
     },
     {
+      "name": "target-provisioning",
+      "contract_name": "operation-status-v1",
+      "valid": true,
+      "passed": true,
+      "diagnostic_codes": []
+    },
+    {
+      "name": "target-snapshot",
+      "contract_name": "runtime-snapshot-v1",
+      "valid": true,
+      "passed": true,
+      "diagnostic_codes": []
+    },
+    {
       "name": "realization-envelope-constructive",
       "contract_name": "realization-envelope-v1",
       "valid": true,

@@ -1,12 +1,12 @@
 name: merge-conflict
 nodes:
   first:
-    type: vm
+    type: compute
     resources: &resources
       ram: 1 gib
       cpu: 1
   second:
-    type: vm
+    type: compute
     resources:
       <<: *resources
       cpu: 2

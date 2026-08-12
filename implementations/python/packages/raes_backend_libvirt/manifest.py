@@ -13,8 +13,16 @@ from raes_backend_protocols.capabilities import (
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
 )
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
+from raes_contracts.vocabulary import (
+    ParticipantFeatureSupportLevel,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 
 from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
 
@@ -173,6 +181,9 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
     enable_participant_runtime = bool(config.get("participant_runtime", False))
     mode = LibvirtDriverMode(str(config.get("driver_mode", LibvirtDriverMode.GENERIC.value)))
     realization_envelope = load_libvirt_realization_envelope(mode)
+    substrate_claim = next(
+        claim for claim in realization_envelope.concerns if claim.concern.value == "compute-substrate"
+    )
     provisioner_capabilities = _provisioner_capabilities(mode)
 
     supported_contract_versions = (
@@ -205,7 +216,14 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
                 domain="runtime-realization",
                 support_mode=RealizationSupportMode.CONSTRAINED,
                 supported_constraint_kinds=frozenset(
-                    {"node-type", "os-family", "node-architecture", "content-type", "account-feature"}
+                    {
+                        "node-type",
+                        "compute-substrate",
+                        "os-family",
+                        "node-architecture",
+                        "content-type",
+                        "account-feature",
+                    }
                 ),
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset(
@@ -215,6 +233,12 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
                         "runtime-snapshot-v1",
                     }
                 ),
+                observation_capabilities={
+                    "compute-substrate": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=substrate_claim.observation_strength,
+                    )
+                },
             ),
         ),
         capabilities=BackendCapabilitySet(

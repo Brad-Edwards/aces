@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "e39589c32a8905cd2e2a32fc03c9ad59e25c17705384987fa2f471b86e6b6692",
+  "content_hash": "0b4f45eca295ce8a3b3113b4dc208267d1d32fa4bf644f8ee912ef8f307c6c84",
   "last_change": {
-    "summary": "Propagated concrete structured portable process-resource limits into the canonical instantiated snapshot contract for issue #1066 and removed the superseded scalar open_files authority.",
-    "content_hash": "e39589c32a8905cd2e2a32fc03c9ad59e25c17705384987fa2f471b86e6b6692"
+    "summary": "Separated compute resource kind from substrate constraints and preserved exact legacy virtual-machine intent during historical v1 snapshot migration for issue #1076.",
+    "content_hash": "0b4f45eca295ce8a3b3113b4dc208267d1d32fa4bf644f8ee912ef8f307c6c84"
   }
 }

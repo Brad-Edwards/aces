@@ -146,7 +146,7 @@ class Account(SDLModel):
     """A user account on a scenario node.
 
     Distinct from OCR's ``Role`` model: roles map exercise participants
-    to VM logins for exercise access. Accounts describe the environment
+    to compute-node logins for exercise access. Accounts describe the environment
     state — what accounts attackers will encounter or exploit.
     """
 

@@ -160,8 +160,8 @@ def _module_import_root(tmp_path: Path) -> Path:
             nodes: [web, db, edge]
             infrastructure: [web, db, edge]
         nodes:
-          web: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
-          db: {type: vm, os: linux, resources: {ram: 2 gib, cpu: 2}}
+          web: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+          db: {type: compute, os: linux, resources: {ram: 2 gib, cpu: 2}}
           edge: {type: switch}
         infrastructure:
           web: {count: 1, links: [edge]}

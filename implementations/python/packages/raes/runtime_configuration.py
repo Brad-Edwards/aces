@@ -356,7 +356,7 @@ def _reject_duplicate_keys(items: Iterable[object], *, attr: str, label: str) ->
 
 
 class RuntimeConfiguration(SDLModel):
-    """Declarative runtime state required by a VM node.
+    """Declarative runtime state required by a compute node.
 
     Captured observations remain in evidence records unless an author
     deliberately promotes the fact to one of these contract fields.

@@ -27,7 +27,7 @@ nodes:
     type: switch
     description: Backup and recovery network
   mail-gateway:
-    type: vm
+    type: compute
     source:
       name: secure-mail-gateway
       version: '*'
@@ -48,7 +48,7 @@ nodes:
     - port: 443
       name: mail-admin-ui
   vpn-gateway:
-    type: vm
+    type: compute
     source:
       name: vpn-concentrator
       version: '*'
@@ -73,7 +73,7 @@ nodes:
       protocol: udp
       name: vpn-tunnel
   ad01:
-    type: vm
+    type: compute
     source:
       name: windows-ad
       version: '*'
@@ -203,7 +203,7 @@ nodes:
           source_ref: hospital-adfs
           target_ref: ehr-application
   exchange01:
-    type: vm
+    type: compute
     source:
       name: exchange-2019
       version: '*'
@@ -228,7 +228,7 @@ nodes:
     - port: 25
       name: exchange-smtp
   ehr-frontend:
-    type: vm
+    type: compute
     source:
       name: ehr-web-tier
       version: '*'
@@ -256,7 +256,7 @@ nodes:
       integrity: critical
       availability: critical
   ehr-db:
-    type: vm
+    type: compute
     source:
       name: postgres-cluster
       version: '*'
@@ -281,7 +281,7 @@ nodes:
       confidentiality: critical
       integrity: critical
   pacs01:
-    type: vm
+    type: compute
     source:
       name: pacs-archive
       version: '*'
@@ -309,7 +309,7 @@ nodes:
       integrity: high
       availability: critical
   med-gateway:
-    type: vm
+    type: compute
     source:
       name: medical-device-broker
       version: '*'
@@ -330,7 +330,7 @@ nodes:
     - port: 8883
       name: med-mqtt
   backup-vault:
-    type: vm
+    type: compute
     source:
       name: immutable-backup-appliance
       version: '*'
@@ -354,7 +354,7 @@ nodes:
     - port: 2049
       name: backup-nfs
   siem01:
-    type: vm
+    type: compute
     source:
       name: siem-stack
       version: '*'
@@ -379,7 +379,7 @@ nodes:
     - port: 9200
       name: soc-search
   vendor-jump:
-    type: vm
+    type: compute
     source:
       name: vendor-workstation
       version: '*'

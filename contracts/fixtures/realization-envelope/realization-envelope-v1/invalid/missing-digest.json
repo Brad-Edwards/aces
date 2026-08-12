@@ -18,7 +18,7 @@
     "network_policy": "libvirt-managed",
     "supported_node_types": [
       "switch",
-      "vm"
+      "compute"
     ],
     "supported_os_families": [
       "linux"
@@ -44,6 +44,13 @@
     }
   },
   "concerns": [
+    {
+      "concern": "compute-substrate",
+      "disposition": "realized",
+      "observation_strength": "daemon-observed",
+      "mechanism": "virtual-machine",
+      "transformations": []
+    },
     {
       "concern": "topology",
       "disposition": "realized",

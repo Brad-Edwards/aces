@@ -276,6 +276,106 @@
       "title": "PlanOperationModel",
       "type": "object"
     },
+    "PlannedRealizationConstraintModel": {
+      "additionalProperties": false,
+      "description": "Published author realization demand on a provisioning plan.",
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "concern": {
+          "const": "compute-substrate",
+          "title": "Concern",
+          "type": "string"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "governing_scope": {
+          "minLength": 1,
+          "title": "Governing Scope",
+          "type": "string"
+        },
+        "posture": {
+          "enum": [
+            "open",
+            "constrained",
+            "exact"
+          ],
+          "title": "Posture",
+          "type": "string"
+        },
+        "provenance": {
+          "enum": [
+            "author-declared",
+            "legacy-node-type-vm"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "value_domain": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "boolean": "#/$defs/BooleanDomain",
+                  "enum": "#/$defs/EnumDomain",
+                  "exact": "#/$defs/ExactDomain",
+                  "governed-reference": "#/$defs/GovernedReferenceDomain",
+                  "numeric-interval": "#/$defs/NumericIntervalDomain",
+                  "record": "#/$defs/RecordDomain"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ExactDomain"
+                },
+                {
+                  "$ref": "#/$defs/EnumDomain"
+                },
+                {
+                  "$ref": "#/$defs/BooleanDomain"
+                },
+                {
+                  "$ref": "#/$defs/NumericIntervalDomain"
+                },
+                {
+                  "$ref": "#/$defs/GovernedReferenceDomain"
+                },
+                {
+                  "$ref": "#/$defs/RecordDomain"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value Domain"
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "concern",
+        "posture",
+        "governing_scope",
+        "provenance"
+      ],
+      "title": "PlannedRealizationConstraintModel",
+      "type": "object"
+    },
     "RealizationAuthorityBoundModel": {
       "additionalProperties": false,
       "description": "One safe typed domain over a resolved concern value or owned leaf.",
@@ -646,6 +746,19 @@
       "title": "Diagnostics",
       "type": "array"
     },
+    "operation_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Operation Id"
+    },
     "operations": {
       "items": {
         "$ref": "#/$defs/PlanOperationModel"
@@ -658,6 +771,13 @@
         "$ref": "#/$defs/ResolvedRealizationAuthorityModel"
       },
       "title": "Realization Authority",
+      "type": "array"
+    },
+    "realization_constraints": {
+      "items": {
+        "$ref": "#/$defs/PlannedRealizationConstraintModel"
+      },
+      "title": "Realization Constraints",
       "type": "array"
     },
     "realization_envelope": {

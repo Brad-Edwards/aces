@@ -81,6 +81,20 @@ def test_historical_release_validation_does_not_replay_current_code(
     assert validate_release_bundle(REPO_ROOT, release) == []
 
 
+def test_unlisted_current_replay_does_not_enable_legacy_sdl_migration() -> None:
+    result = formal_validation.replay_case(
+        REPO_ROOT,
+        {
+            "case_id": "current-unpinned-case",
+            "fixture_path": "docs/research/formal-semantic-validation/corpus/semantic-valid.sdl.yaml",
+            "replay_mode": "parse",
+        },
+    )
+
+    assert result["actual_outcome"] == "rejected"
+    assert result["diagnostic_kind"] == "SDLParseError"
+
+
 def test_retest_gate_requires_explicit_baseline_drift_disposition() -> None:
     release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
     snapshot = deepcopy(snapshot)
@@ -162,6 +176,32 @@ def test_retest_gate_rejects_forged_production_configuration_digest() -> None:
     snapshot = deepcopy(snapshot)
     observation = next(item for item in snapshot["observations"] if item["case_id"] == "finite-domain-satisfiable-v2")
     observation["configuration_digest"] = f"sha256:{'0' * 64}"
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-production-evidence-join" in _rule_ids(failures)
+
+
+def test_retest_gate_authenticates_immutable_evidence_payload_before_migration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from raes_processor.satisfiability import analyze_scenario_file
+
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    evidence_path = "docs/research/formal-semantic-validation/evidence/finite-domain-satisfiable-v2.json"
+    fixture_path = REPO_ROOT / "docs/research/formal-semantic-validation/corpus/satisfiable-control.sdl.yaml"
+    replacement = analyze_scenario_file(
+        fixture_path,
+        profile="raes-finite-domain-satisfiability-v1",
+    ).model_dump(mode="json")
+    original_loader = formal_validation.load_bounded_json_object
+
+    def replace_stored_evidence(repo_root: Path, relative_path: str, *, max_bytes: int):
+        if relative_path == evidence_path:
+            return replacement
+        return original_loader(repo_root, relative_path, max_bytes=max_bytes)
+
+    monkeypatch.setattr(formal_validation, "load_bounded_json_object", replace_stored_evidence)
 
     failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
 

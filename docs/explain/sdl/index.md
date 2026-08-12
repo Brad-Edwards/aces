@@ -103,14 +103,14 @@ nodes:
   lab-net:
     type: Switch
   webapp:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: [flask-app]
     services: [{port: 8080, name: http}]
     vulnerabilities: [sqli]
   database:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: [postgres]

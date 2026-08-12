@@ -11,6 +11,7 @@ from raes.canonical import (
     INSTANTIATED_SNAPSHOT_PROFILE,
     InstantiatedScenarioSnapshot,
     canonical_instantiated_sdl_digest,
+    migrate_legacy_instantiated_snapshot_join,
 )
 from raes.phase_contracts import ResolvedImportProvenance, SemanticDigest
 
@@ -158,6 +159,22 @@ class SatisfiableWitnessModel(ContractModel):
     profile: Literal["raes-satisfiability-witness/v1"]
     snapshot: InstantiatedScenarioSnapshot
     snapshot_digest: PrefixedDigestString
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_snapshot_join(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        migrated_snapshot, migrated_digest, changed = migrate_legacy_instantiated_snapshot_join(
+            value.get("snapshot"),
+            value.get("snapshot_digest"),
+        )
+        if not changed:
+            return value
+        migrated = dict(value)
+        migrated["snapshot"] = migrated_snapshot
+        migrated["snapshot_digest"] = migrated_digest
+        return migrated
 
     @model_validator(mode="after")
     def _validate_snapshot(self) -> SatisfiableWitnessModel:

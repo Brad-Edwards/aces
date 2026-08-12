@@ -116,7 +116,7 @@ def _mail_service(**overrides) -> dict:
 
 def _mail_node(service: dict | None = None) -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "1 gib", "cpu": 1},
         "services": [
             {"port": 25, "name": "smtp"},
@@ -141,7 +141,7 @@ def test_mail_runtime_surface_is_node_scoped_not_top_level() -> None:
 
 
 def test_vm_runtime_mail_service_surface() -> None:
-    node = Node(type="vm", runtime={"mail_services": [_mail_service()]})
+    node = Node(type="compute", runtime={"mail_services": [_mail_service()]})
 
     service = node.runtime.mail_services[0]
     assert service.mail_service_id == "techvault-mail"
@@ -164,7 +164,7 @@ def test_parser_accepts_canonical_runtime_mail_services() -> None:
         name: mail-parser
         nodes:
           mail:
-            type: vm
+            type: compute
             resources: {ram: 1 gib, cpu: 1}
             services:
               - {port: 25, name: smtp}
@@ -246,7 +246,7 @@ class TestRuntimeMailSemanticValidation:
             nodes={
                 "mail": _mail_node(service),
                 "other": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 25, "name": "smtp"}],
                 },
@@ -413,7 +413,7 @@ class TestRelationshipMailAccess:
             name="mail",
             nodes={
                 "mail": _mail_node(),
-                "client": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "client": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             relationships={"client-to-mail": relationship},
         )

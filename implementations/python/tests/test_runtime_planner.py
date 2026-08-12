@@ -104,7 +104,7 @@ class TestRuntimePlanner:
                 _scenario("""
 name: provenance
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -122,7 +122,7 @@ nodes:
                 _scenario("""
 name: provenance
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             create_stub_manifest(),
@@ -136,7 +136,7 @@ nodes:
                 _scenario("""
 name: payload-shape
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             create_stub_manifest(),
@@ -155,8 +155,8 @@ nodes:
             _scenario("""
 name: original
 nodes:
-  vm1: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  vm2: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm1: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm2: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
         )
         old_plan = plan(old_model, create_stub_manifest())
@@ -166,7 +166,7 @@ nodes:
             _scenario("""
 name: original
 nodes:
-  vm1: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm1: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
         )
         new_plan = plan(new_model, create_stub_manifest(), snapshot)
@@ -183,8 +183,8 @@ nodes:
                     textwrap.dedent("""
 name: provisioning-cycle
 nodes:
-  a: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  b: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  a: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  b: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   a: {dependencies: [b]}
   b: {dependencies: [a]}
@@ -206,7 +206,7 @@ infrastructure:
 name: objective-cycle
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -246,7 +246,7 @@ objectives:
 name: original
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -278,7 +278,7 @@ objectives:
 name: original
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -317,13 +317,13 @@ objectives:
 name: ambiguous
 nodes:
   a:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
   b:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -357,7 +357,7 @@ events:
 name: injects
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 injects:
@@ -378,7 +378,7 @@ events:
 name: unbound
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 conditions:
@@ -422,7 +422,7 @@ events:
 name: workflows
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -462,7 +462,7 @@ workflows:
 name: workflows
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -671,7 +671,7 @@ workflows:
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -713,7 +713,7 @@ workflows:
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -757,7 +757,7 @@ workflows:
 name: cross-domain
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -804,7 +804,7 @@ events:
 name: objective-window
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -860,7 +860,7 @@ workflows:
 name: windows
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -923,7 +923,7 @@ workflows:
 name: provision
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -944,7 +944,7 @@ accounts:
 name: provision
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -968,7 +968,7 @@ accounts:
 name: provision
 nodes:
   web:
-    type: vm
+    type: compute
     os: windows
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -992,7 +992,7 @@ accounts:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm", "switch"}),
+                supported_node_types=frozenset({"compute", "switch"}),
                 supported_os_families=frozenset({"linux"}),
                 supported_content_types=frozenset({"file"}),
                 supported_account_features=frozenset({"groups"}),
@@ -1018,9 +1018,9 @@ accounts:
 name: limited
 nodes:
   corp: {type: switch}
-  stateful: {type: vm, os: linux}
+  stateful: {type: compute, os: linux}
   dc:
-    type: vm
+    type: compute
     os: windows
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -1112,7 +1112,7 @@ workflows:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 supports_acls=False,
             ),
@@ -1122,7 +1122,7 @@ workflows:
 name: node-acl
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 infrastructure:
@@ -1146,7 +1146,7 @@ infrastructure:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux", "windows"}),
             ),
         )
@@ -1161,7 +1161,7 @@ variables:
     default: linux
     allowed_values: [linux, windows]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -1177,7 +1177,7 @@ nodes:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1192,7 +1192,7 @@ variables:
     default: linux
     allowed_values: [linux, windows]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -1214,7 +1214,7 @@ variables:
     default: banana
     allowed_values: [banana]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             )
         assert "/nodes/vm/os" in str(exc.value)
@@ -1224,7 +1224,7 @@ nodes:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1238,7 +1238,7 @@ variables:
     type: string
     default: linux
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -1256,7 +1256,7 @@ nodes:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1264,7 +1264,7 @@ nodes:
             textwrap.dedent("""
 name: variable-os
 nodes:
-  vm: {type: vm, os: '${missing_os}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${missing_os}', resources: {ram: 1 gib, cpu: 1}}
 """),
             skip_semantic_validation=True,
         )
@@ -1278,7 +1278,7 @@ nodes:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=2,
             ),
@@ -1294,7 +1294,7 @@ variables:
     default: 1
     allowed_values: [1, 3]
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${node_count}
 """)
@@ -1337,7 +1337,7 @@ variables:
     allowed_values: [linux, windows]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: '${os_name}'
     resources: {ram: 1 gib, cpu: 1}
 """,
@@ -1358,7 +1358,7 @@ imports:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1376,7 +1376,7 @@ imports:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=10,
             ),
@@ -1392,7 +1392,7 @@ variables:
     default: 0
     allowed_values: [0]
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${node_count}
 """)
@@ -1408,7 +1408,7 @@ infrastructure:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1424,7 +1424,7 @@ variables:
     default: linux
     allowed_values: [linux, windows]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """),
         )
         execution_plan = plan(compile_runtime_model(instantiated), manifest)
@@ -1443,7 +1443,7 @@ nodes:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm", "switch"}),
+                supported_node_types=frozenset({"compute", "switch"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=2,
             ),
@@ -1477,7 +1477,7 @@ infrastructure:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=1,
             ),
@@ -1492,7 +1492,7 @@ variables:
     type: integer
     default: 3
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${node_count}
 """)
@@ -1511,7 +1511,7 @@ infrastructure:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=1,
             ),
@@ -1520,7 +1520,7 @@ infrastructure:
             textwrap.dedent("""
 name: variable-count
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${missing_count}
 """),
@@ -1539,7 +1539,7 @@ name: ordering
 nodes:
   corp: {type: switch}
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
