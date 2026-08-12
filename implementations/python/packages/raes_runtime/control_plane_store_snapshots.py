@@ -37,6 +37,60 @@ def _require_complete_runtime_snapshot_fields(values: dict[str, Any]) -> None:
         raise RuntimeError(f"runtime snapshot durable codec field mismatch: missing={missing}; unexpected={unexpected}")
 
 
+def _realization_provenance_payload(snapshot: RuntimeSnapshot) -> list[dict[str, Any]]:
+    return [
+        {
+            "address": entry.address,
+            "field_path": entry.field_path,
+            "domain": entry.domain,
+            "requirement_kind": entry.requirement_kind,
+            "explicitness": entry.explicitness.value,
+            "provenance": entry.provenance.value,
+            "governing_scope": entry.governing_scope,
+            "artifact_satisfaction": (
+                entry.artifact_satisfaction.model_dump(mode="json") if entry.artifact_satisfaction is not None else None
+            ),
+        }
+        for entry in snapshot.realization_provenance
+    ]
+
+
+def _realization_observations_payload(snapshot: RuntimeSnapshot) -> list[dict[str, Any]]:
+    return [
+        {
+            "address": entry.address,
+            "field_path": entry.field_path,
+            "domain": entry.domain,
+            "requirement_kind": entry.requirement_kind,
+            "verification_scope": entry.verification_scope.value,
+            "observation_strength": entry.observation_strength.value,
+            **(
+                {
+                    "observed_value": entry.observed_value,
+                    "operating_system": (
+                        {
+                            "family": entry.operating_system.family,
+                            "distribution": entry.operating_system.distribution,
+                            "version": entry.operating_system.version,
+                        }
+                        if entry.operating_system is not None
+                        else None
+                    ),
+                    "operation_id": entry.operation_id,
+                    "envelope_digest": entry.envelope_digest,
+                    "configuration_digest": entry.configuration_digest,
+                    "observer_version": entry.observer_version,
+                    "sequence": entry.sequence,
+                    "binding_verified": entry.binding_verified,
+                }
+                if entry.requirement_kind in {"compute-substrate", "operating-system"}
+                else {}
+            ),
+        }
+        for entry in snapshot.realization_observations
+    ]
+
+
 def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
     require_participant_autonomous_runtime_snapshot(snapshot)
     snapshot_fields: dict[str, Any] = {
@@ -96,56 +150,8 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         "time_model_state": (
             snapshot.time_model_state.model_dump(mode="json") if snapshot.time_model_state is not None else None
         ),
-        "realization_provenance": [
-            {
-                "address": entry.address,
-                "field_path": entry.field_path,
-                "domain": entry.domain,
-                "requirement_kind": entry.requirement_kind,
-                "explicitness": entry.explicitness.value,
-                "provenance": entry.provenance.value,
-                "governing_scope": entry.governing_scope,
-                "artifact_satisfaction": (
-                    entry.artifact_satisfaction.model_dump(mode="json")
-                    if entry.artifact_satisfaction is not None
-                    else None
-                ),
-            }
-            for entry in snapshot.realization_provenance
-        ],
-        "realization_observations": [
-            {
-                "address": entry.address,
-                "field_path": entry.field_path,
-                "domain": entry.domain,
-                "requirement_kind": entry.requirement_kind,
-                "verification_scope": entry.verification_scope.value,
-                "observation_strength": entry.observation_strength.value,
-                **(
-                    {
-                        "observed_value": entry.observed_value,
-                        "operating_system": (
-                            {
-                                "family": entry.operating_system.family,
-                                "distribution": entry.operating_system.distribution,
-                                "version": entry.operating_system.version,
-                            }
-                            if entry.operating_system is not None
-                            else None
-                        ),
-                        "operation_id": entry.operation_id,
-                        "envelope_digest": entry.envelope_digest,
-                        "configuration_digest": entry.configuration_digest,
-                        "observer_version": entry.observer_version,
-                        "sequence": entry.sequence,
-                        "binding_verified": entry.binding_verified,
-                    }
-                    if entry.requirement_kind in {"compute-substrate", "operating-system"}
-                    else {}
-                ),
-            }
-            for entry in snapshot.realization_observations
-        ],
+        "realization_provenance": _realization_provenance_payload(snapshot),
+        "realization_observations": _realization_observations_payload(snapshot),
         "realization_envelope": (
             snapshot.realization_envelope.model_dump(mode="json") if snapshot.realization_envelope is not None else None
         ),
@@ -165,9 +171,9 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
     return payload
 
 
-def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
+def _snapshot_entries_from_payload(payload: dict[str, Any]) -> dict[str, SnapshotEntry]:
     entries_payload = payload.get("entries", {})
-    entries = {
+    return {
         address: SnapshotEntry(
             address=str(entry.get("address", address)),
             domain=RuntimeDomain(str(entry.get("domain", "provisioning"))),
@@ -180,8 +186,34 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         for address, entry in entries_payload.items()
         if isinstance(entry, dict)
     }
+
+
+def _realization_provenance_from_payload(payload: dict[str, Any]) -> tuple[RealizationProvenanceEntry, ...]:
+    return tuple(
+        RealizationProvenanceEntry(
+            address=str(item.get("address", "")),
+            field_path=str(item.get("field_path", "")),
+            domain=str(item.get("domain", "")),
+            requirement_kind=str(item.get("requirement_kind", "")),
+            explicitness=ExplicitnessClass(str(item.get("explicitness", ExplicitnessClass.EXACT.value))),
+            provenance=ExplicitnessProvenance(
+                str(item.get("provenance", ExplicitnessProvenance.AUTHOR_DECLARED.value))
+            ),
+            governing_scope=(str(item["governing_scope"]) if item.get("governing_scope") is not None else None),
+            artifact_satisfaction=(
+                ArtifactSatisfactionDisclosureModel.model_validate(item["artifact_satisfaction"])
+                if item.get("artifact_satisfaction") is not None
+                else None
+            ),
+        )
+        for item in payload.get("realization_provenance", [])
+        if isinstance(item, dict)
+    )
+
+
+def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
     snapshot_fields: dict[str, Any] = {
-        "entries": entries,
+        "entries": _snapshot_entries_from_payload(payload),
         "orchestration_results": dict(payload.get("orchestration_results", {})),
         "orchestration_history": {
             address: list(events) for address, events in payload.get("orchestration_history", {}).items()
@@ -232,26 +264,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             if payload.get("time_model_state") is not None
             else None
         ),
-        "realization_provenance": tuple(
-            RealizationProvenanceEntry(
-                address=str(item.get("address", "")),
-                field_path=str(item.get("field_path", "")),
-                domain=str(item.get("domain", "")),
-                requirement_kind=str(item.get("requirement_kind", "")),
-                explicitness=ExplicitnessClass(str(item.get("explicitness", ExplicitnessClass.EXACT.value))),
-                provenance=ExplicitnessProvenance(
-                    str(item.get("provenance", ExplicitnessProvenance.AUTHOR_DECLARED.value))
-                ),
-                governing_scope=(str(item["governing_scope"]) if item.get("governing_scope") is not None else None),
-                artifact_satisfaction=(
-                    ArtifactSatisfactionDisclosureModel.model_validate(item["artifact_satisfaction"])
-                    if item.get("artifact_satisfaction") is not None
-                    else None
-                ),
-            )
-            for item in payload.get("realization_provenance", [])
-            if isinstance(item, dict)
-        ),
+        "realization_provenance": _realization_provenance_from_payload(payload),
         "realization_observations": tuple(
             realization_observation_from_payload(item)
             for item in payload.get("realization_observations", [])

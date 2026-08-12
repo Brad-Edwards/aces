@@ -45,6 +45,8 @@ def _require_safe_store_path_metadata(
     get_effective_uid = getattr(os, "geteuid", None)
     if callable(get_effective_uid) and metadata.st_uid != get_effective_uid():
         raise RuntimeError(f"local control-plane {kind} must be owned by the current user: {path}")
+    if kind in {"database file", "SQLite sidecar"} and getattr(metadata, "st_nlink", 1) != 1:
+        raise RuntimeError(f"local control-plane {kind} must not have hard links: {path}")
 
 
 def _secure_store_directory(path: Path) -> None:

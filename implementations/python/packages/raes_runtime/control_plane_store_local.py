@@ -25,15 +25,17 @@ from .control_plane_store import (
     _require_terminal_operation_transition,
 )
 from .control_plane_store_lease import RuntimeOwnerLease, require_single_worker_configuration
+from .control_plane_store_legacy import _read_legacy_state
 from .control_plane_store_paths import (
     _copy_regular_file_durably,
     _fsync_directory,
-    _participant_transition_count,
-    _read_json_object,
     _require_same_file,
     _secure_database_file,
     _secure_store_directory,
     _validate_sqlite_sidecars,
+)
+from .control_plane_store_paths import (
+    _participant_transition_count as _count_participant_transitions,
 )
 from .control_plane_store_records import (
     _audit_event_from_payload,
@@ -47,6 +49,14 @@ _SNAPSHOT_KEY = "runtime-snapshot"
 _SCHEMA_VERSION = "1"
 _BUSY_TIMEOUT_MILLISECONDS = 10_000
 _RUNTIME_OWNER_LOCK_NAME = "runtime-owner.lock"
+_OPERATION_RECORD_KIND = "operation record"
+_INSERT_AUDIT_EVENT = "INSERT INTO audit_events(payload, digest) VALUES (?, ?)"
+
+
+def _participant_transition_count(snapshot: RuntimeSnapshot) -> int:
+    """Retain the pre-split private helper for compatible test and tool imports."""
+
+    return _count_participant_transitions(snapshot)
 
 
 class LocalControlPlaneStore:
@@ -67,9 +77,13 @@ class LocalControlPlaneStore:
         self._operations_path = self._base_dir / "operations.json"
         self._audit_path = self._base_dir / "audit.jsonl"
         self._control_state_path = self._base_dir / "control-transition-state.json"
+        self._database_identity: os.stat_result | None = None
         database_existed = _secure_database_file(self._database_path, allow_missing=True) is not None
         _validate_sqlite_sidecars(self._database_path)
         self._initialize_database(database_existed=database_existed)
+        database_identity = _secure_database_file(self._database_path, allow_missing=False)
+        assert database_identity is not None
+        self._database_identity = database_identity
 
     def acquire_runtime_lease(self) -> RuntimeOwnerLease:
         """Fail fast unless this process is the store's sole runtime owner."""
@@ -100,7 +114,7 @@ class LocalControlPlaneStore:
             ).fetchall()
         records: dict[str, ControlPlaneOperationRecord] = {}
         for operation_id, payload, digest in rows:
-            record = _record_from_payload(_decode_payload(payload, digest, kind="operation record"))
+            record = _record_from_payload(_decode_payload(payload, digest, kind=_OPERATION_RECORD_KIND))
             if record.receipt.operation_id != operation_id:
                 raise ValueError("operation record identity does not match its durable key")
             records[operation_id] = record
@@ -133,7 +147,8 @@ class LocalControlPlaneStore:
             existing = self._load_record(connection, record.receipt.operation_id)
             changed = _require_terminal_operation_transition(existing, record)
             if not changed:
-                if self._load_snapshot(connection) != snapshot:
+                canonical_snapshot = _snapshot_from_payload(_snapshot_payload(snapshot))
+                if self._load_snapshot(connection) != canonical_snapshot:
                     raise ValueError("terminal operation retry does not match the durable snapshot")
                 return
             self._upsert_snapshot(connection, snapshot)
@@ -161,7 +176,7 @@ class LocalControlPlaneStore:
         payload, digest = _encode_payload(asdict(event))
         with self._connection() as connection, _transaction(connection):
             connection.execute(
-                "INSERT INTO audit_events(payload, digest) VALUES (?, ?)",
+                _INSERT_AUDIT_EVENT,
                 (payload, digest),
             )
 
@@ -189,7 +204,7 @@ class LocalControlPlaneStore:
             self._upsert_record(connection, record)
             payload, digest = _encode_payload(asdict(audit_event))
             connection.execute(
-                "INSERT INTO audit_events(payload, digest) VALUES (?, ?)",
+                _INSERT_AUDIT_EVENT,
                 (payload, digest),
             )
 
@@ -209,12 +224,15 @@ class LocalControlPlaneStore:
             self._upsert_record(connection, record)
             payload, digest = _encode_payload(asdict(audit_event))
             connection.execute(
-                "INSERT INTO audit_events(payload, digest) VALUES (?, ?)",
+                _INSERT_AUDIT_EVENT,
                 (payload, digest),
             )
 
     def _connect(self, *, allow_create: bool = False) -> tuple[sqlite3.Connection, os.stat_result]:
         before = _secure_database_file(self._database_path, allow_missing=allow_create)
+        expected_identity = self._database_identity
+        if expected_identity is not None and before is not None:
+            _require_same_file(expected_identity, before, self._database_path, "the store was active")
         _validate_sqlite_sidecars(self._database_path)
         database_mode = "rwc" if before is None and allow_create else "rw"
         database_uri = f"{self._database_path.absolute().as_uri()}?mode={database_mode}"
@@ -229,6 +247,8 @@ class LocalControlPlaneStore:
             assert after is not None
             if before is not None:
                 _require_same_file(before, after, self._database_path, "SQLite opened it")
+            if expected_identity is not None:
+                _require_same_file(expected_identity, after, self._database_path, "SQLite opened it")
             connection.execute(f"PRAGMA busy_timeout={_BUSY_TIMEOUT_MILLISECONDS}")
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("PRAGMA synchronous=FULL")
@@ -247,6 +267,13 @@ class LocalControlPlaneStore:
             closed_metadata = _secure_database_file(self._database_path, allow_missing=False)
             assert closed_metadata is not None
             _require_same_file(connected_metadata, closed_metadata, self._database_path, "SQLite was connected")
+            if self._database_identity is not None:
+                _require_same_file(
+                    self._database_identity,
+                    closed_metadata,
+                    self._database_path,
+                    "the store was active",
+                )
             _validate_sqlite_sidecars(self._database_path)
 
     def _initialize_database(self, *, database_existed: bool) -> None:
@@ -305,7 +332,12 @@ class LocalControlPlaneStore:
             connection.execute("INSERT INTO metadata(key, value) VALUES ('legacy-json-migration', 'not-present')")
             return
 
-        snapshot, records, audits = self._read_legacy_state()
+        snapshot, records, audits = _read_legacy_state(
+            snapshot_path=self._snapshot_path,
+            operations_path=self._operations_path,
+            audit_path=self._audit_path,
+            control_state_path=self._control_state_path,
+        )
         backup_dir = self._backup_legacy_files(legacy_paths)
         self._upsert_snapshot(connection, snapshot)
         for record in records.values():
@@ -313,7 +345,7 @@ class LocalControlPlaneStore:
         for event in audits:
             payload, digest = _encode_payload(asdict(event))
             connection.execute(
-                "INSERT INTO audit_events(payload, digest) VALUES (?, ?)",
+                _INSERT_AUDIT_EVENT,
                 (payload, digest),
             )
         stored_record_count = connection.execute("SELECT COUNT(*) FROM operations").fetchone()[0]
@@ -336,48 +368,6 @@ class LocalControlPlaneStore:
             )
             if path.exists()
         ]
-
-    def _read_legacy_state(
-        self,
-    ) -> tuple[RuntimeSnapshot, dict[str, ControlPlaneOperationRecord], list[AuditEvent]]:
-        snapshot = RuntimeSnapshot()
-        if self._snapshot_path.exists():
-            snapshot = _snapshot_from_payload(_read_json_object(self._snapshot_path))
-
-        control_state: dict[str, Any] = {}
-        if self._control_state_path.exists():
-            control_state = _read_json_object(self._control_state_path)
-            committed = _snapshot_from_payload(dict(control_state.get("snapshot", {})))
-            if _participant_transition_count(committed) > _participant_transition_count(snapshot):
-                snapshot = committed
-
-        records = {
-            operation_id: _record_from_payload(payload)
-            for operation_id, payload in dict(control_state.get("records", {})).items()
-            if isinstance(payload, dict)
-        }
-        if self._operations_path.exists():
-            records.update(
-                {
-                    operation_id: _record_from_payload(payload)
-                    for operation_id, payload in _read_json_object(self._operations_path).items()
-                    if isinstance(payload, dict)
-                }
-            )
-
-        audits = [
-            _audit_event_from_payload(payload)
-            for payload in control_state.get("audit", [])
-            if isinstance(payload, dict)
-        ]
-        if self._audit_path.exists():
-            for line in self._audit_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                event = _audit_event_from_payload(json.loads(line))
-                if event not in audits:
-                    audits.append(event)
-        return snapshot, records, audits
 
     def _backup_legacy_files(self, paths: list[Path]) -> Path:
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
@@ -410,7 +400,7 @@ class LocalControlPlaneStore:
         ).fetchone()
         if row is None:
             return None
-        record = _record_from_payload(_decode_payload(row[0], row[1], kind="operation record"))
+        record = _record_from_payload(_decode_payload(row[0], row[1], kind=_OPERATION_RECORD_KIND))
         if record.receipt.operation_id != operation_id:
             raise ValueError("operation record identity does not match its durable key")
         return record
@@ -467,7 +457,7 @@ class LocalControlPlaneStore:
         ).fetchone()
         if row is None:
             return None
-        return _record_from_payload(_decode_payload(row[0], row[1], kind="operation record"))
+        return _record_from_payload(_decode_payload(row[0], row[1], kind=_OPERATION_RECORD_KIND))
 
 
 @contextmanager

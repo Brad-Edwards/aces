@@ -17,15 +17,25 @@ from raes_contracts.runtime_state import (
     RuntimeSnapshot,
 )
 
-from .control_plane_store_snapshots import (
-    _snapshot_from_payload as _snapshot_from_payload,
-)
-from .control_plane_store_snapshots import (
-    _snapshot_payload as _snapshot_payload,
-)
+from .control_plane_store_snapshots import _snapshot_from_payload as _decode_snapshot_payload
+from .control_plane_store_snapshots import _snapshot_payload as _encode_snapshot_payload
 
 if TYPE_CHECKING:
     from .control_plane_store_local import LocalControlPlaneStore
+
+_IDEMPOTENCY_KEY_CONFLICT = "idempotency key already belongs to another operation"
+
+
+def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
+    """Retain the pre-split private codec import for compatible callers."""
+
+    return _encode_snapshot_payload(snapshot)
+
+
+def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
+    """Retain the pre-split private codec import for compatible callers."""
+
+    return _decode_snapshot_payload(payload)
 
 
 class ParticipantCrossingHistoryPresence(str, Enum):
@@ -169,8 +179,6 @@ class ControlPlaneStore(Protocol):
 
     def save_record(self, record: ControlPlaneOperationRecord) -> None: ...
 
-    def claim_record(self, record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord: ...
-
     def find_by_idempotency(
         self,
         key: str,
@@ -202,6 +210,8 @@ class ControlPlaneStore(Protocol):
 
 class AtomicControlPlaneStore(ControlPlaneStore, Protocol):
     """Optional crash-atomic terminal commit and recovery capabilities."""
+
+    def claim_record(self, record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord: ...
 
     def commit_terminal_operation(
         self,
@@ -319,7 +329,7 @@ class InMemoryControlPlaneStore:
             if record.idempotency_key:
                 existing_operation_id = idempotency.get(record.idempotency_key)
                 if existing_operation_id is not None and existing_operation_id != record.receipt.operation_id:
-                    raise ValueError("idempotency key already belongs to another operation")
+                    raise ValueError(_IDEMPOTENCY_KEY_CONFLICT)
                 idempotency[record.idempotency_key] = record.receipt.operation_id
             self._snapshot = snapshot
             self._records = records
@@ -393,7 +403,7 @@ class InMemoryControlPlaneStore:
             if record.idempotency_key:
                 existing_operation_id = idempotency.get(record.idempotency_key)
                 if existing_operation_id is not None and existing_operation_id != record.receipt.operation_id:
-                    raise ValueError("idempotency key already belongs to another operation")
+                    raise ValueError(_IDEMPOTENCY_KEY_CONFLICT)
                 idempotency[record.idempotency_key] = record.receipt.operation_id
             self._snapshot = snapshot
             self._records = records
@@ -404,7 +414,7 @@ class InMemoryControlPlaneStore:
         if record.idempotency_key:
             existing_operation_id = self._idempotency.get(record.idempotency_key)
             if existing_operation_id is not None and existing_operation_id != record.receipt.operation_id:
-                raise ValueError("idempotency key already belongs to another operation")
+                raise ValueError(_IDEMPOTENCY_KEY_CONFLICT)
             self._idempotency[record.idempotency_key] = record.receipt.operation_id
         self._records[record.receipt.operation_id] = record
 

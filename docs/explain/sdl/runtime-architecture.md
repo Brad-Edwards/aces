@@ -502,7 +502,11 @@ tightening for type, owner, private-mode, and main-database same-file checks,
 so an independent `close()` cannot cancel SQLite's POSIX locks. Existing opens
 use URI `mode=rw`; only first creation uses
 `mode=rwc`, preventing a disappeared database from being silently recreated.
-Unsafe symlink, reparse, type, owner, mode, or identity changes fail closed.
+The initialized database identity remains pinned for the store lifetime, and
+hard-linked aliases are rejected. Unsafe symlink, reparse, type, owner, mode, or
+identity changes fail closed. If a commit reports an error after its outcome is
+uncertain, the runtime reloads both durable caches; a failed reload poisons the
+runtime until restart rather than allowing another mutation from stale state.
 
 Built-in stores use the complete crash-atomic commit capability. Existing 3.x
 custom `ControlPlaneStore` adapters remain accepted when they implement the
@@ -516,7 +520,10 @@ terminal/recovery methods before upgrading.
 The local runtime is deliberately single-process. Its cached snapshot does not
 yet implement cross-process compare-and-swap, so a non-blocking filesystem
 lease admits one `RuntimeControlPlane` owner and rejects another, including
-inherited post-fork use. Run one ASGI worker with reload disabled. This is a
+inherited post-fork use. POSIX runtimes also hold a store-directory guard so
+unlinking or replacing the owner-file path cannot admit a second owner. Close
+drains admitted composite calls, including their nested guarded work, before it
+releases authority. Run one ASGI worker with reload disabled. This is a
 single-host reference boundary, not a distributed queue, replication, or
 multi-host availability claim.
 

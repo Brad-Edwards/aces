@@ -9,11 +9,13 @@ import os
 import sqlite3
 import stat
 import sys
+from contextlib import closing
 from dataclasses import asdict, fields, replace
 from hashlib import sha256
 from multiprocessing import get_all_start_methods, get_context
 from pathlib import Path
 from threading import Event, RLock, Thread
+from time import monotonic, sleep
 from types import SimpleNamespace
 from typing import Any
 
@@ -45,8 +47,10 @@ from raes_runtime.control_plane_execution import (
 )
 from raes_runtime.control_plane_store import (
     INTERRUPTED_OPERATION_DIAGNOSTIC_CODE,
+    AtomicControlPlaneStore,
     AuditEvent,
     ControlPlaneOperationRecord,
+    ControlPlaneStore,
     InMemoryControlPlaneStore,
 )
 from raes_runtime.control_plane_store_compatibility import (
@@ -347,13 +351,12 @@ def test_terminal_commit_is_idempotent_but_rejects_snapshot_or_record_rewrite(
     store.commit_terminal_operation(snapshot, terminal)
     store.commit_terminal_operation(snapshot, terminal)
 
+    different_snapshot = RuntimeSnapshot(metadata={"generation": 2})
     with pytest.raises(ValueError, match="does not match the durable snapshot"):
-        store.commit_terminal_operation(RuntimeSnapshot(metadata={"generation": 2}), terminal)
+        store.commit_terminal_operation(different_snapshot, terminal)
+    rewritten = replace(terminal, status=replace(terminal.status, updated_at="2026-08-11T12:00:03Z"))
     with pytest.raises(ValueError, match="cannot be rewritten"):
-        store.commit_terminal_operation(
-            snapshot,
-            replace(terminal, status=replace(terminal.status, updated_at="2026-08-11T12:00:03Z")),
-        )
+        store.commit_terminal_operation(snapshot, rewritten)
 
 
 @pytest.mark.parametrize("store_kind", ["memory", "local"])
@@ -363,35 +366,30 @@ def test_terminal_commit_rejects_nonterminal_and_immutable_identity_changes(
 ) -> None:
     store = _atomic_store(store_kind, tmp_path)
     running = _running_record("immutable")
+    empty_snapshot = RuntimeSnapshot()
 
     with pytest.raises(ValueError, match="requires a terminal status"):
-        store.commit_terminal_operation(RuntimeSnapshot(), running)
+        store.commit_terminal_operation(empty_snapshot, running)
     terminal_status = _terminal_record(running).status
     for status, message in (
         (replace(terminal_status, operation_id="other"), "identities do not match"),
         (replace(terminal_status, domain=RuntimeDomain.EVALUATION), "domains do not match"),
         (replace(terminal_status, submitted_at="2026-08-11T12:00:04Z"), "submission times do not match"),
     ):
+        invalid_record = replace(_terminal_record(running), status=status)
         with pytest.raises(ValueError, match=message):
-            store.commit_terminal_operation(
-                RuntimeSnapshot(),
-                replace(_terminal_record(running), status=status),
-            )
+            store.commit_terminal_operation(empty_snapshot, invalid_record)
 
     store.claim_record(running)
+    changed_receipt = replace(
+        _terminal_record(running),
+        receipt=replace(running.receipt, accepted=False),
+    )
     with pytest.raises(ValueError, match="receipt is immutable"):
-        store.commit_terminal_operation(
-            RuntimeSnapshot(),
-            replace(
-                _terminal_record(running),
-                receipt=replace(running.receipt, accepted=False),
-            ),
-        )
+        store.commit_terminal_operation(empty_snapshot, changed_receipt)
+    changed_fingerprint = replace(_terminal_record(running), request_fingerprint="changed")
     with pytest.raises(ValueError, match="operation identity is immutable"):
-        store.commit_terminal_operation(
-            RuntimeSnapshot(),
-            replace(_terminal_record(running), request_fingerprint="changed"),
-        )
+        store.commit_terminal_operation(empty_snapshot, changed_fingerprint)
 
 
 @pytest.mark.parametrize("store_kind", ["memory", "local"])
@@ -406,14 +404,14 @@ def test_interrupted_reconciliation_validates_and_seals_terminal_record(
 
     store.reconcile_interrupted_records((recovered,))
     store.reconcile_interrupted_records((recovered,))
+    rewritten = replace(recovered, status=replace(recovered.status, updated_at="2026-08-11T12:00:05Z"))
     with pytest.raises(ValueError, match="cannot be rewritten during recovery"):
-        store.reconcile_interrupted_records(
-            (replace(recovered, status=replace(recovered.status, updated_at="2026-08-11T12:00:05Z")),)
-        )
+        store.reconcile_interrupted_records((rewritten,))
 
     missing = _running_record("missing")
+    interrupted_missing = _interrupted_record(missing)
     with pytest.raises(ValueError, match="no longer exists"):
-        store.reconcile_interrupted_records((_interrupted_record(missing),))
+        store.reconcile_interrupted_records((interrupted_missing,))
 
 
 @pytest.mark.parametrize("store_kind", ["memory", "local"])
@@ -447,9 +445,10 @@ def test_terminal_commit_rolls_back_idempotency_collision(
     first = replace(_running_record("first"), idempotency_key="shared")
     second = replace(_terminal_record(_running_record("second")), idempotency_key="shared")
     store.save_record(first)
+    rollback_snapshot = RuntimeSnapshot(metadata={"should": "rollback"})
 
     with pytest.raises(ValueError, match="idempotency key already belongs"):
-        store.commit_terminal_operation(RuntimeSnapshot(metadata={"should": "rollback"}), second)
+        store.commit_terminal_operation(rollback_snapshot, second)
 
     assert store.load_snapshot() == RuntimeSnapshot()
     assert set(store.load_records()) == {"first"}
@@ -472,13 +471,15 @@ def test_in_memory_participant_transition_rolls_back_idempotency_collision() -> 
     first = replace(_running_record("first-transition"), idempotency_key="shared-transition")
     competing = replace(_terminal_record(_running_record("competing-transition")), idempotency_key="shared-transition")
     store.save_record(first)
+    rollback_snapshot = RuntimeSnapshot(metadata={"must": "rollback"})
+    event = _audit_event("participant-transition")
 
     with pytest.raises(ValueError, match="idempotency key already belongs"):
         store.commit_participant_transition(
             expected_history_heads={},
-            snapshot=RuntimeSnapshot(metadata={"must": "rollback"}),
+            snapshot=rollback_snapshot,
             record=competing,
-            audit_event=_audit_event("participant-transition"),
+            audit_event=event,
         )
 
     assert store.load_snapshot() == RuntimeSnapshot()
@@ -572,14 +573,15 @@ def test_terminal_transaction_rolls_back_at_each_internal_write_boundary(
         raise KeyboardInterrupt(f"injected crash after {write_boundary} write")
 
     monkeypatch.setattr(store, method_name, interrupt_after_write)
+    terminal = _terminal_record(running)
     with pytest.raises(KeyboardInterrupt, match=f"after {write_boundary} write"):
-        store.commit_terminal_operation(next_snapshot, _terminal_record(running))
+        store.commit_terminal_operation(next_snapshot, terminal)
 
     assert store.load_snapshot() == RuntimeSnapshot()
     assert store.load_records()[running.receipt.operation_id] == running
 
 
-def test_durable_terminal_commit_survives_crash_before_memory_publish_and_retry_is_idempotent(
+def test_runtime_resynchronizes_after_error_reported_after_durable_terminal_commit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -589,12 +591,12 @@ def test_durable_terminal_commit_survives_crash_before_memory_publish_and_retry_
     control_plane = RuntimeControlPlane(target, store=store)
     real_commit = store.commit_terminal_operation
 
-    def commit_then_interrupt(snapshot: RuntimeSnapshot, record: ControlPlaneOperationRecord) -> None:
+    def commit_then_error(snapshot: RuntimeSnapshot, record: ControlPlaneOperationRecord) -> None:
         real_commit(snapshot, record)
-        raise KeyboardInterrupt("injected crash after terminal commit")
+        raise RuntimeError("injected error after terminal commit")
 
-    monkeypatch.setattr(store, "commit_terminal_operation", commit_then_interrupt)
-    with pytest.raises(KeyboardInterrupt, match="after terminal commit"):
+    monkeypatch.setattr(store, "commit_terminal_operation", commit_then_error)
+    with pytest.raises(RuntimeError, match="after terminal commit"):
         control_plane.submit_provisioning(
             provisioning_plan,
             idempotency_key="committed",
@@ -604,19 +606,50 @@ def test_durable_terminal_commit_survives_crash_before_memory_publish_and_retry_
     durable_record = next(iter(store.load_records().values()))
     assert durable_record.status.state == OperationState.SUCCEEDED
     assert store.load_snapshot().entries
-    assert control_plane.snapshot.entries == {}
-    control_plane.close()
+    assert control_plane.snapshot == store.load_snapshot()
+    assert control_plane.get_operation(durable_record.receipt.operation_id) == durable_record.status
 
-    restarted = RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
-    assert restarted.get_operation(durable_record.receipt.operation_id) == durable_record.status
-    retry = restarted.submit_provisioning(
+    retry = control_plane.submit_provisioning(
         provisioning_plan,
         idempotency_key="committed",
         request_fingerprint="same-request",
     )
     assert retry.operation_id == durable_record.receipt.operation_id
     assert provisioner.apply_count == 1
+    control_plane.close()
+
+    restarted = RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
+    assert restarted.get_operation(durable_record.receipt.operation_id) == durable_record.status
+    restarted_retry = restarted.submit_provisioning(
+        provisioning_plan,
+        idempotency_key="committed",
+        request_fingerprint="same-request",
+    )
+    assert restarted_retry.operation_id == durable_record.receipt.operation_id
+    assert provisioner.apply_count == 1
     restarted.close()
+
+
+def test_runtime_poisoned_when_store_error_cannot_be_reconciled(monkeypatch: pytest.MonkeyPatch) -> None:
+    target, provisioning_plan, _ = _target_and_plan()
+    store = InMemoryControlPlaneStore()
+    control_plane = RuntimeControlPlane(target, store=store)
+
+    def fail_commit(_snapshot: RuntimeSnapshot, _record: ControlPlaneOperationRecord) -> None:
+        raise RuntimeError("terminal commit failed")
+
+    def fail_reload() -> RuntimeSnapshot:
+        raise OSError("durable reload failed")
+
+    monkeypatch.setattr(store, "commit_terminal_operation", fail_commit)
+    monkeypatch.setattr(store, "load_snapshot", fail_reload)
+
+    with pytest.raises(RuntimeError, match="terminal commit failed") as caught:
+        control_plane.submit_provisioning(provisioning_plan)
+    assert any("runtime is poisoned" in note for note in caught.value.__notes__)
+    with pytest.raises(RuntimeError, match="requires restart"):
+        control_plane.get_snapshot()
+    control_plane.close()
 
 
 def test_startup_reconciliation_is_atomic_and_restarts_cleanly_after_failure(
@@ -640,8 +673,9 @@ def test_startup_reconciliation_is_atomic_and_restarts_cleanly_after_failure(
             raise OSError("injected recovery crash")
 
     monkeypatch.setattr(store, "_upsert_record", fail_second_recovery_write)
+    target = create_stub_target()
     with pytest.raises(OSError, match="injected recovery crash"):
-        RuntimeControlPlane(create_stub_target(), store=store)
+        RuntimeControlPlane(target, store=store)
 
     assert {record.status.state for record in store.load_records().values()} == {
         OperationState.ACCEPTED,
@@ -661,15 +695,17 @@ def test_startup_reconciliation_is_atomic_and_restarts_cleanly_after_failure(
 def test_local_store_rejects_second_runtime_owner_then_allows_clean_handoff(tmp_path: Path) -> None:
     store_path = tmp_path / "control-plane"
     store = LocalControlPlaneStore(store_path)
-    first = RuntimeControlPlane(create_stub_target(), store=store)
+    target = create_stub_target()
+    first = RuntimeControlPlane(target, store=store)
 
     with pytest.raises(RuntimeError, match="exactly one worker"):
-        RuntimeControlPlane(create_stub_target(), store=store)
+        RuntimeControlPlane(target, store=store)
+    competing_store = LocalControlPlaneStore(store_path)
     with pytest.raises(RuntimeError, match="exactly one worker"):
-        RuntimeControlPlane(create_stub_target(), store=LocalControlPlaneStore(store_path))
+        RuntimeControlPlane(target, store=competing_store)
 
     first.close()
-    second = RuntimeControlPlane(create_stub_target(), store=LocalControlPlaneStore(store_path))
+    second = RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
     second.close()
 
 
@@ -688,8 +724,10 @@ def test_local_store_rejects_empty_idempotency_lookup_and_tampered_operation_ide
 
     with pytest.raises(ValueError, match="identity does not match its durable key"):
         store.load_records()
+    terminal = _terminal_record(_running_record(tampered_key))
+    empty_snapshot = RuntimeSnapshot()
     with pytest.raises(ValueError, match="identity does not match its durable key"):
-        store.commit_terminal_operation(RuntimeSnapshot(), _terminal_record(_running_record(tampered_key)))
+        store.commit_terminal_operation(empty_snapshot, terminal)
 
 
 def test_local_store_rejects_unsupported_schema_and_failed_quick_check(
@@ -772,7 +810,7 @@ def test_local_store_rejects_non_wal_before_schema_or_legacy_migration(
 
     assert legacy_path.read_text(encoding="utf-8") == legacy_payload
     assert list(store_path.glob("legacy-json-backup-*")) == []
-    with real_connect(store_path / "control-plane.sqlite3") as connection:
+    with closing(real_connect(store_path / "control-plane.sqlite3")) as connection, connection:
         assert connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == []
 
 
@@ -889,7 +927,7 @@ def test_local_store_backup_file_fsync_failure_rolls_back_and_restarts_migration
     assert caught.value.__cause__.errno == errno.EIO
     assert legacy_path.read_text(encoding="utf-8") == legacy_payload
     assert len(list(store_path.glob("legacy-json-backup-*"))) == 1
-    with sqlite3.connect(store_path / "control-plane.sqlite3") as connection:
+    with closing(sqlite3.connect(store_path / "control-plane.sqlite3")) as connection, connection:
         assert connection.execute("SELECT value FROM metadata WHERE key='legacy-json-migration'").fetchone() is None
 
     monkeypatch.undo()
@@ -961,16 +999,50 @@ def test_snapshot_serialization_preserves_account_placement_without_credentials(
     assert _snapshot_payload(snapshot)["entries"][address]["payload"] == payload
 
 
+def test_terminal_commit_retry_compares_canonical_value_free_snapshot(tmp_path: Path) -> None:
+    address = "provision.account.test"
+    snapshot = RuntimeSnapshot(
+        entries={
+            address: SnapshotEntry(
+                address=address,
+                domain=RuntimeDomain.PROVISIONING,
+                resource_type="account-placement",
+                payload={
+                    "spec": {
+                        "credential_bindings": [
+                            {
+                                "credential_id": "root",
+                                "purpose": "login",
+                                "auth_method": "password",
+                                "material": {"classification": "secret_fixture", "value": "secret"},
+                            }
+                        ]
+                    }
+                },
+            )
+        }
+    )
+    store = LocalControlPlaneStore(tmp_path / "control-plane")
+    running = replace(_running_record("canonical-terminal-retry"), idempotency_key="canonical-retry")
+    terminal = _terminal_record(running)
+    store.claim_record(running)
+
+    store.commit_terminal_operation(snapshot, terminal)
+    store.commit_terminal_operation(snapshot, terminal)
+
+    assert store.load_records()[running.receipt.operation_id] == terminal
+    assert store.load_snapshot() == _snapshot_from_payload(_snapshot_payload(snapshot))
+
+
 def test_local_store_rejects_configured_multiworker_startup(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("WEB_CONCURRENCY", "2")
+    target = create_stub_target()
+    store = LocalControlPlaneStore(tmp_path / "control-plane")
     with pytest.raises(RuntimeError, match="WEB_CONCURRENCY=2"):
-        RuntimeControlPlane(
-            create_stub_target(),
-            store=LocalControlPlaneStore(tmp_path / "control-plane"),
-        )
+        RuntimeControlPlane(target, store=store)
 
 
 def test_local_store_rejects_invalid_worker_count_configuration(
@@ -978,11 +1050,10 @@ def test_local_store_rejects_invalid_worker_count_configuration(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("UVICORN_WORKERS", "many")
+    target = create_stub_target()
+    store = LocalControlPlaneStore(tmp_path / "control-plane")
     with pytest.raises(RuntimeError, match="UVICORN_WORKERS must be 1"):
-        RuntimeControlPlane(
-            create_stub_target(),
-            store=LocalControlPlaneStore(tmp_path / "control-plane"),
-        )
+        RuntimeControlPlane(target, store=store)
 
 
 def test_local_store_accepts_explicit_single_worker_configuration(
@@ -1152,6 +1223,33 @@ def test_local_store_rejects_database_identity_replacement_across_sqlite_connect
 
     with pytest.raises(RuntimeError, match=message):
         store.load_snapshot()
+
+
+def test_local_store_rejects_database_replacement_between_connections(tmp_path: Path) -> None:
+    original_path = tmp_path / "original"
+    replacement_path = tmp_path / "replacement"
+    store = LocalControlPlaneStore(original_path)
+    store.save_snapshot(RuntimeSnapshot(metadata={"database": "original"}))
+    replacement = LocalControlPlaneStore(replacement_path)
+    replacement.save_snapshot(RuntimeSnapshot(metadata={"database": "replacement"}))
+    os.replace(replacement._database_path, store._database_path)
+
+    with pytest.raises(RuntimeError, match="database file changed while the store was active"):
+        store.load_snapshot()
+
+
+def test_local_store_rejects_hard_linked_database_alias(tmp_path: Path) -> None:
+    original_path = tmp_path / "original"
+    alias_path = tmp_path / "alias"
+    original = LocalControlPlaneStore(original_path)
+    alias_path.mkdir(mode=0o700)
+    try:
+        os.link(original._database_path, alias_path / "control-plane.sqlite3")
+    except OSError:
+        pytest.skip("hard links are unavailable")
+
+    with pytest.raises(RuntimeError, match="database file must not have hard links"):
+        LocalControlPlaneStore(alias_path)
 
 
 def test_sqlite_sidecar_validation_is_metadata_only_and_tolerates_disappearance(
@@ -1661,8 +1759,9 @@ def test_close_waits_for_backend_and_keeps_lease_until_terminal_commit(tmp_path:
         for closer in closers:
             closer.start()
         assert not any(completed.wait(timeout=0.1) for completed in close_completed)
+        competing_store = LocalControlPlaneStore(store_path)
         with pytest.raises(RuntimeError, match="exactly one worker"):
-            RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
+            RuntimeControlPlane(target, store=competing_store)
     finally:
         provisioner.release.set()
         submission.join(timeout=5)
@@ -1679,6 +1778,83 @@ def test_close_waits_for_backend_and_keeps_lease_until_terminal_commit(tmp_path:
 
     restarted = RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
     restarted.close()
+
+
+def test_close_allows_nested_work_from_an_already_admitted_call() -> None:
+    control_plane = RuntimeControlPlane(create_stub_target())
+    outer_admitted = Event()
+    enter_nested = Event()
+    nested_completed = Event()
+
+    def admitted_call() -> None:
+        with control_plane._runtime_call():
+            outer_admitted.set()
+            assert enter_nested.wait(timeout=2)
+            with control_plane._runtime_call():
+                nested_completed.set()
+
+    worker = Thread(target=admitted_call)
+    worker.start()
+    assert outer_admitted.wait(timeout=2)
+    closer = Thread(target=control_plane.close)
+    closer.start()
+    deadline = monotonic() + 2
+    while not control_plane._closing and monotonic() < deadline:
+        sleep(0.001)
+    assert control_plane._closing
+
+    enter_nested.set()
+    worker.join(timeout=2)
+    closer.join(timeout=2)
+
+    assert nested_completed.is_set()
+    assert not worker.is_alive()
+    assert not closer.is_alive()
+    assert control_plane._closed
+
+
+@pytest.mark.parametrize("transition_kind", ["control", "participant"])
+def test_runtime_resynchronizes_after_transition_commit_reports_postcommit_error(
+    monkeypatch: pytest.MonkeyPatch,
+    transition_kind: str,
+) -> None:
+    store = InMemoryControlPlaneStore()
+    control_plane = RuntimeControlPlane(create_stub_target(), store=store)
+    snapshot = RuntimeSnapshot(metadata={"committed": transition_kind})
+    record = _terminal_record(_running_record(f"{transition_kind}-postcommit"))
+    event = _audit_event(f"{transition_kind}-postcommit")
+    method_name = f"commit_{transition_kind}_transition"
+    real_commit = getattr(store, method_name)
+
+    def commit_then_error(**kwargs: object) -> None:
+        real_commit(**kwargs)
+        raise RuntimeError("postcommit transition error")
+
+    monkeypatch.setattr(store, method_name, commit_then_error)
+
+    def commit_transition() -> None:
+        if transition_kind == "control":
+            control_plane._commit_control_transition(
+                participant_address="participant.test",
+                expected_head=None,
+                snapshot=snapshot,
+                record=record,
+                audit_event=event,
+            )
+        else:
+            control_plane._commit_participant_transition(
+                expected_history_heads={},
+                snapshot=snapshot,
+                record=record,
+                audit_event=event,
+            )
+
+    with pytest.raises(RuntimeError, match="postcommit transition error"):
+        commit_transition()
+
+    assert control_plane.snapshot == snapshot
+    assert control_plane.get_operation(record.receipt.operation_id) == record.status
+    control_plane.close()
 
 
 def test_every_public_runtime_method_and_property_has_lifecycle_admission() -> None:
@@ -1776,11 +1952,84 @@ def test_runtime_owner_acquisition_releases_descriptor_after_base_exception(
             raise KeyboardInterrupt("injected lock acquisition crash")
 
         patch.setattr(lease_module, "_lock_runtime_owner", interrupt_lock)
+        target = create_stub_target()
         with pytest.raises(KeyboardInterrupt, match="lock acquisition crash"):
-            RuntimeControlPlane(create_stub_target(), store=store)
+            RuntimeControlPlane(target, store=store)
 
     owner = RuntimeControlPlane(create_stub_target(), store=store)
     owner.close()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="directory flock guard is POSIX-specific")
+def test_runtime_owner_directory_guard_maps_secure_open_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lock_path = tmp_path / "runtime-owner.lock"
+
+    def deny_directory_open(*_args: Any, **_kwargs: Any) -> int:
+        raise PermissionError("injected directory-open denial")
+
+    monkeypatch.setattr(lease_module.os, "open", deny_directory_open)
+
+    with pytest.raises(RuntimeError, match="could not securely open runtime-owner store directory"):
+        lease_module._acquire_store_directory_guard(lock_path)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="directory flock guard is POSIX-specific")
+def test_runtime_owner_directory_guard_rejects_non_directory_descriptor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lock_path = tmp_path / "runtime-owner.lock"
+    opened_descriptors: list[int] = []
+    real_open = lease_module.os.open
+    real_fstat = lease_module.os.fstat
+
+    def observe_open(*args: Any, **kwargs: Any) -> int:
+        descriptor = real_open(*args, **kwargs)
+        opened_descriptors.append(descriptor)
+        return descriptor
+
+    monkeypatch.setattr(lease_module.os, "open", observe_open)
+    monkeypatch.setattr(
+        lease_module.os,
+        "fstat",
+        lambda _descriptor: SimpleNamespace(st_mode=stat.S_IFREG | 0o600),
+    )
+
+    with pytest.raises(RuntimeError, match="store path must be a directory"):
+        lease_module._acquire_store_directory_guard(lock_path)
+
+    assert len(opened_descriptors) == 1
+    with pytest.raises(OSError) as closed:
+        real_fstat(opened_descriptors[0])
+    assert closed.value.errno == errno.EBADF
+
+
+@pytest.mark.skipif(os.name == "nt", reason="directory flock guard is POSIX-specific")
+def test_runtime_owner_file_lock_failure_releases_directory_guard(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lock_path = tmp_path / "runtime-owner.lock"
+    real_lock = lease_module._lock_runtime_owner
+    lock_calls = 0
+
+    def fail_file_lock(descriptor: int) -> None:
+        nonlocal lock_calls
+        lock_calls += 1
+        if lock_calls == 2:
+            raise BlockingIOError("injected file-lock contention")
+        real_lock(descriptor)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(lease_module, "_lock_runtime_owner", fail_file_lock)
+        with pytest.raises(RuntimeError, match="exactly one worker"):
+            lease_module.RuntimeOwnerLease.acquire(lock_path)
+
+    lease = lease_module.RuntimeOwnerLease.acquire(lock_path)
+    lease.close()
 
 
 def test_closed_runtime_owner_lease_fails_closed_and_close_is_idempotent(tmp_path: Path) -> None:
@@ -1820,15 +2069,22 @@ def test_runtime_owner_lease_rejects_and_closes_in_a_different_process_identity(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    descriptor = os.open(tmp_path / "runtime-owner.lock", os.O_CREAT | os.O_RDWR, 0o600)
-    lease = lease_module.RuntimeOwnerLease(descriptor)
-    monkeypatch.setattr(lease_module.os, "getpid", lambda: lease._owner_pid + 1)
+    lock_path = tmp_path / "runtime-owner.lock"
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    descriptor_only_lease = lease_module.RuntimeOwnerLease(descriptor)
+    descriptor_only_lease.assert_owner()
+    descriptor_only_lease.close()
 
-    with pytest.raises(RuntimeError, match="cannot be used after fork"):
-        lease.assert_owner()
-
-    lease.close()
+    lease = lease_module.RuntimeOwnerLease.acquire(lock_path)
+    with monkeypatch.context() as patch:
+        patch.setattr(lease_module.os, "getpid", lambda: lease._owner_pid + 1)
+        with pytest.raises(RuntimeError, match="cannot be used after fork"):
+            lease.assert_owner()
+        lease.close()
     assert lease.closed is True
+
+    reacquired = lease_module.RuntimeOwnerLease.acquire(lock_path)
+    reacquired.close()
 
 
 def test_local_store_runtime_lease_blocks_another_process(tmp_path: Path) -> None:
@@ -1847,6 +2103,26 @@ def test_local_store_runtime_lease_blocks_another_process(tmp_path: Path) -> Non
         assert "exactly one worker" in queue.get(timeout=2)
     finally:
         owner.close()
+
+
+def test_runtime_owner_directory_guard_survives_lock_path_replacement(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip("directory flock guard is POSIX-specific")
+    store_path = tmp_path / "control-plane"
+    target = create_stub_target()
+    owner = RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
+    lock_path = store_path / "runtime-owner.lock"
+    lock_path.unlink()
+    competing_store = LocalControlPlaneStore(store_path)
+
+    with pytest.raises(RuntimeError, match="exactly one worker"):
+        RuntimeControlPlane(target, store=competing_store)
+    with pytest.raises(RuntimeError, match="lock path changed while the lease was active"):
+        owner.get_snapshot()
+
+    owner.close()
+    restarted = RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
+    restarted.close()
 
 
 @pytest.mark.skipif("fork" not in get_all_start_methods(), reason="fork is unavailable")
@@ -1905,6 +2181,11 @@ def test_runtime_preserves_ordered_legacy_store_commits_with_deprecation(
         )
     assert store.write_calls == ["save_record", "save_snapshot", "save_record"]
     control_plane.close()
+
+
+def test_public_store_protocol_keeps_atomic_capabilities_optional() -> None:
+    assert not callable(getattr(ControlPlaneStore, "claim_record", None))
+    assert callable(getattr(AtomicControlPlaneStore, "claim_record", None))
 
 
 def test_legacy_store_claim_fallback_returns_existing_idempotency_record() -> None:
@@ -1980,15 +2261,18 @@ def test_runtime_legacy_store_resynchronizes_after_snapshot_write_failure() -> N
 
 
 def test_runtime_rejects_store_without_the_legacy_contract() -> None:
+    target = create_stub_target()
+    missing_store = object()
     with pytest.raises(TypeError, match="missing required capabilities"):
-        RuntimeControlPlane(create_stub_target(), store=object())  # type: ignore[arg-type]
+        RuntimeControlPlane(target, store=missing_store)  # type: ignore[arg-type]
 
 
 def test_runtime_requires_policy_resolver_for_persisted_crossing_history() -> None:
     store = InMemoryControlPlaneStore(RuntimeSnapshot(participant_crossing_history={"participant.demo": [{}]}))
+    target = create_stub_target()
 
     with pytest.raises(ValueError, match="persisted participant crossing history requires a policy resolver"):
-        RuntimeControlPlane(create_stub_target(), store=store)
+        RuntimeControlPlane(target, store=store)
 
 
 def test_execution_helpers_return_the_durable_winner_when_an_idempotency_claim_loses() -> None:
@@ -2123,11 +2407,27 @@ def test_runtime_owner_lock_rejects_symlink_without_opening_or_changing_target(
         return real_open(path, *args, **kwargs)
 
     monkeypatch.setattr(lease_module.os, "open", track_open)
+    target = create_stub_target()
     with pytest.raises(RuntimeError, match="must not be a symlink or reparse point"):
-        RuntimeControlPlane(create_stub_target(), store=store)
+        RuntimeControlPlane(target, store=store)
 
     assert opened_lock is False
     assert victim.read_text(encoding="utf-8") == "must remain unchanged"
+
+
+def test_runtime_owner_lock_rejects_hard_link_alias(tmp_path: Path) -> None:
+    store_path = tmp_path / "control-plane"
+    store = LocalControlPlaneStore(store_path)
+    lock_path = store_path / "runtime-owner.lock"
+    lock_path.touch(mode=0o600)
+    try:
+        os.link(lock_path, tmp_path / "runtime-owner-alias.lock")
+    except OSError:
+        pytest.skip("hard links are unavailable")
+    target = create_stub_target()
+
+    with pytest.raises(RuntimeError, match="lock path must not have hard links"):
+        RuntimeControlPlane(target, store=store)
 
 
 def test_runtime_owner_lock_rejects_post_open_identity_change_before_truncation(
@@ -2140,9 +2440,10 @@ def test_runtime_owner_lock_rejects_post_open_identity_change_before_truncation(
     lock_path.write_text("sentinel", encoding="ascii")
     lock_path.chmod(0o600)
     monkeypatch.setattr(lease_module.os.path, "samestat", lambda _left, _right: False)
+    target = create_stub_target()
 
     with pytest.raises(RuntimeError, match="changed while it was opened"):
-        RuntimeControlPlane(create_stub_target(), store=store)
+        RuntimeControlPlane(target, store=store)
 
     assert lock_path.read_text(encoding="ascii") == "sentinel"
 
@@ -2205,5 +2506,6 @@ def test_runtime_owner_secure_open_failure_is_fail_closed(
         return real_open(path, *args, **kwargs)
 
     monkeypatch.setattr(lease_module.os, "open", deny_lock_open)
+    target = create_stub_target()
     with pytest.raises(RuntimeError, match="could not securely open runtime-owner lock path"):
-        RuntimeControlPlane(create_stub_target(), store=store)
+        RuntimeControlPlane(target, store=store)

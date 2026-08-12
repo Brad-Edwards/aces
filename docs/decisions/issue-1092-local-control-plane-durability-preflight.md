@@ -49,7 +49,11 @@ path-based, no-follow `chmod` before SQLite opens them; a new database is
 created by SQLite and validated before schema work. Directory paths retain
 descriptor identity checks. SQLite-managed paths fail closed when stable
 metadata identifies a symlink/reparse point, wrong filesystem type, foreign
-owner, non-private POSIX mode, or main-database identity replacement. Windows
+owner, non-private POSIX mode, a hard-linked SQLite alias, or main-database
+identity replacement. The store pins the database identity established at
+initialization and requires that same object on every later connection; an
+operator restore by pathname therefore requires a runtime restart rather than
+silently switching the live cache to another database. Windows
 reparse/type checks remain enforced, while deployment ACLs are the authority
 for permissions that POSIX mode bits cannot express.
 
@@ -136,13 +140,24 @@ but they do not grant another process authority to execute target mutations.
 must release the first owner before constructing an intentional in-process
 restart against the same local store.
 
+On POSIX the lease also holds an advisory lock on the private store directory.
+That stable guard remains locked if the human-readable owner file is unlinked or
+replaced, while each admitted call still verifies that the path names the
+original locked file. Main databases and owner files with multiple hard links
+are rejected so two store directories cannot acquire independent owner paths
+for one SQLite object. Windows retains its native byte-range owner-file lock and
+path-identity validation; the deployment ACL remains responsible for preventing
+same-owner replacement of that file.
+
 Public runtime calls take lifecycle admission before reading cached state,
 calling a backend, or touching the store. `close()` first stops new admission,
 waits for every admitted call (including a blocked backend effect and its
 terminal commit), and only then releases the runtime-owner lease. Reads remain
 concurrent with an active mutation; the lifecycle counter is distinct from the
 mutation lock. Closing from inside an active call fails rather than deadlocking
-or releasing authority underneath that call.
+or releasing authority underneath that call. A call already admitted before
+shutdown may re-enter another lifecycle-guarded runtime surface; shutdown blocks
+only new outermost calls, so it cannot interrupt an admitted composite action.
 
 The lease and store directory are opened with `O_NOFOLLOW` where the platform
 exposes it and are rejected unless pre-open, descriptor, and post-open metadata
@@ -223,9 +238,15 @@ startup recovery. Those fallbacks are explicitly not atomic across custom
 store instances and will be removed in version 4; partial atomic
 implementations also use the coherent legacy mode rather than mixing commit
 semantics. If either ordered terminal write raises, the runtime reloads the
-adapter's durable snapshot so its cache reflects the actual compatibility
-boundary. The built-in in-memory and local SQLite stores implement the
-complete atomic set and never enter the fallback.
+adapter's durable snapshot and operation records so both caches reflect the
+actual compatibility boundary. The same reconciliation runs when a built-in
+atomic method reports an error after its transaction may already have committed.
+If either durable reload fails, the runtime is poisoned and rejects every new
+call until it is closed and restarted; it never continues from an unknown cache.
+Canonical value-free snapshot projection is applied before an idempotent
+terminal retry is compared, so deliberate credential redaction does not turn an
+exact retry into a false mismatch. The built-in in-memory and local SQLite
+stores implement the complete atomic set and never enter the fallback.
 
 ## Verification
 
@@ -253,7 +274,10 @@ Acceptance requires regression coverage for:
     encoded create-versus-existing URI modes, repeated multiprocess writes,
     and the original cross-process API regression; and
 15. exact WAL admission before schema or legacy migration plus fail-closed
-    directory synchronization outside the narrow portability boundary.
+    directory synchronization outside the narrow portability boundary; and
+16. database identity replacement between calls, hard-linked aliases,
+    owner-file replacement, admitted-call re-entry during close, post-commit
+    cache reconciliation/poisoning, and canonical value-free retry comparison.
 
 The repository policy, API-404 requirement trace, unit/integration suites, and
 full verification remain release gates. Issue #1093 separately owns event-loop

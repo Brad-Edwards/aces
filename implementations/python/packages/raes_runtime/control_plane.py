@@ -33,6 +33,7 @@ from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.models import ParticipantBehaviorSpecificationRuntime
 
 from .backend_calls import _call_backend_diagnostics
+from .control_plane_durability import RuntimeDurabilityMixin
 from .control_plane_execution import (
     OperationExecutionRequest,
     _utc_now,
@@ -104,6 +105,7 @@ def _require_final_sink_flow_control_configuration(
 
 class RuntimeControlPlane(
     RuntimeLifecycleMixin,
+    RuntimeDurabilityMixin,
     WorkflowControlMixin,
     ParticipantControlMixin,
     ParticipantRetrievalMixin,
@@ -434,21 +436,6 @@ class RuntimeControlPlane(
             raise ValueError("Idempotency-Key was reused with a different request body.")
         self._operations[record.receipt.operation_id] = record
         return record.receipt
-
-    def _commit_terminal_operation(
-        self,
-        snapshot: RuntimeSnapshot,
-        record: ControlPlaneOperationRecord,
-    ) -> None:
-        self._assert_runtime_owner()
-        try:
-            self._store_commits.commit_terminal_operation(snapshot, record)
-        except BaseException:
-            if not self._store_commits.crash_atomic:
-                self._snapshot = self._store.load_snapshot()
-            raise
-        self._snapshot = snapshot
-        self._operations[record.receipt.operation_id] = record
 
     def _claim_record(self, record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
         self._assert_runtime_owner()
