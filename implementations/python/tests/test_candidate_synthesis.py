@@ -369,7 +369,8 @@ def test_changed_derivation_and_sdl_semantics_are_separate_axes() -> None:
     profile = SemanticComparisonProfileModel.model_validate_json(
         (REPO_ROOT / "contracts" / "profiles" / "semantic-comparison" / "reference-v1.json").read_text(encoding="utf-8")
     )
-    assert before.candidate is not None and after.candidate is not None
+    assert before.candidate is not None
+    assert after.candidate is not None
     scope = build_impact_scope(
         (before.candidate,),
         (after.candidate,),

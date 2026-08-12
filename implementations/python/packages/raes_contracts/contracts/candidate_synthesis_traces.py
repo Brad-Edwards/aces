@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Set
 from enum import Enum
 from typing import Annotated
 
@@ -53,8 +54,25 @@ class CandidateSynthesisConstructTraceModel(ContractModel):
         return value
 
 
+ContributionKey = tuple[SynthesisContributionKind, str]
+
+
+def validate_resolved_contributions(
+    contributions: Set[ContributionKey],
+    owners: Mapping[SynthesisContributionKind, Set[str]],
+    required: Set[ContributionKey],
+) -> None:
+    if any(ref_id not in owners[kind] for kind, ref_id in contributions):
+        raise ValueError("construct contribution reference does not resolve against its owning collection")
+    if not required <= contributions:
+        raise ValueError("construct trace omits required assertion, assumption, or decision provenance")
+    if not any(kind == SynthesisContributionKind.INFERRED_STRUCTURE for kind, _ in contributions):
+        raise ValueError("construct trace requires at least one resolved transformation rule")
+
+
 __all__ = [
     "CandidateSynthesisConstructTraceModel",
     "CandidateSynthesisContributionModel",
     "SynthesisContributionKind",
+    "validate_resolved_contributions",
 ]

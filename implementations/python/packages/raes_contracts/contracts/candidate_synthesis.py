@@ -30,6 +30,7 @@ from .candidate_synthesis_traces import (
     CandidateSynthesisContributionModel,
     CanonicalSDLRef,
     SynthesisContributionKind,
+    validate_resolved_contributions,
 )
 from .external_concept_bindings import ExternalConceptSchemeCoordinateModel
 from .schema_invariants import _add_raes_invariant
@@ -176,29 +177,33 @@ class CandidateSynthesisDecisionModel(ContractModel):
 
 def _assertion_coordinates(assertion: SourceAssertion) -> tuple[ExternalConceptSchemeCoordinateModel, ...]:
     if isinstance(assertion, ConceptSourceAssertionModel):
-        return (assertion.concept,)
-    if isinstance(assertion, RelationshipSourceAssertionModel):
-        return (assertion.relationship_term,)
-    if isinstance(assertion, PreconditionSourceAssertionModel):
-        return (assertion.predicate_term,)
-    if isinstance(assertion, OrderingSourceAssertionModel):
-        return (assertion.ordering_term,)
-    if isinstance(assertion, ParameterizationSourceAssertionModel):
-        return (assertion.parameter_term,)
-    return (assertion.example_ref,)
+        coordinate = assertion.concept
+    elif isinstance(assertion, RelationshipSourceAssertionModel):
+        coordinate = assertion.relationship_term
+    elif isinstance(assertion, PreconditionSourceAssertionModel):
+        coordinate = assertion.predicate_term
+    elif isinstance(assertion, OrderingSourceAssertionModel):
+        coordinate = assertion.ordering_term
+    elif isinstance(assertion, ParameterizationSourceAssertionModel):
+        coordinate = assertion.parameter_term
+    else:
+        coordinate = assertion.example_ref
+    return (coordinate,)
 
 
 def _assertion_refs(assertion: SourceAssertion) -> tuple[str, ...]:
     if isinstance(assertion, RelationshipSourceAssertionModel):
-        return (assertion.source_assertion_id, assertion.target_assertion_id)
-    if isinstance(
+        refs = (assertion.source_assertion_id, assertion.target_assertion_id)
+    elif isinstance(
         assertion,
         (PreconditionSourceAssertionModel, ParameterizationSourceAssertionModel, ExampleSourceAssertionModel),
     ):
-        return (assertion.subject_assertion_id,)
-    if isinstance(assertion, OrderingSourceAssertionModel):
-        return (assertion.left_assertion_id, assertion.right_assertion_id)
-    return ()
+        refs = (assertion.subject_assertion_id,)
+    elif isinstance(assertion, OrderingSourceAssertionModel):
+        refs = (assertion.left_assertion_id, assertion.right_assertion_id)
+    else:
+        refs = ()
+    return refs
 
 
 def _validate_source_assertion_join(
@@ -334,6 +339,16 @@ class CandidateSynthesisRecordModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_result_shape(self) -> CandidateSynthesisRecordModel:
+        self._validate_input_binding()
+        if self.disposition == CandidateSynthesisDisposition.SUCCESS:
+            self._validate_success_shape()
+            self._validate_construct_contributions()
+        else:
+            self._validate_refusal_shape()
+        self._validate_record_ordering()
+        return self
+
+    def _validate_input_binding(self) -> None:
         assertion_ids = {item.assertion_id for item in self.input.assertions}
         for item in self.unresolved_choices:
             if not set(item.assertion_ids) <= assertion_ids:
@@ -347,37 +362,38 @@ class CandidateSynthesisRecordModel(ContractModel):
             raise ValueError("record input_digest must match the transformation source digest")
         if self.profile is not None and self.input.transformation_profile != self.profile.coordinate():
             raise ValueError("record profile artifact does not match the input transformation coordinate")
-        success = self.disposition == CandidateSynthesisDisposition.SUCCESS
-        if success:
-            if self.profile is None:
-                raise ValueError("successful synthesis requires the complete transformation profile artifact")
-            if self.candidate_exact_digest is None or self.candidate_canonical_digest is None:
-                raise ValueError("successful synthesis requires exact and canonical candidate digests")
-            if self.unresolved_choices:
-                raise ValueError("successful synthesis cannot retain unresolved choices")
-            if not self.construct_traces:
-                raise ValueError("successful synthesis requires complete construct traces")
-            if self.transformation_report.status != ArtifactTransformationStatus.SUCCESS:
-                raise ValueError("successful synthesis requires a successful transformation report")
-            if self.candidate_canonical_digest != self.transformation_report.target_digest:
-                raise ValueError("candidate canonical digest must match the transformation target digest")
-            self._validate_construct_contributions()
-        else:
-            if self.candidate_exact_digest is not None or self.candidate_canonical_digest is not None:
-                raise ValueError("refused synthesis cannot expose candidate digests")
-            if not self.unresolved_choices:
-                raise ValueError("refused synthesis requires typed unresolved choices")
-            if self.construct_traces:
-                raise ValueError("refused synthesis cannot expose generated construct traces")
-            if self.transformation_report.status != ArtifactTransformationStatus.REFUSED:
-                raise ValueError("refused synthesis requires a refused transformation report")
+
+    def _validate_success_shape(self) -> None:
+        if self.profile is None:
+            raise ValueError("successful synthesis requires the complete transformation profile artifact")
+        if self.candidate_exact_digest is None or self.candidate_canonical_digest is None:
+            raise ValueError("successful synthesis requires exact and canonical candidate digests")
+        if self.unresolved_choices:
+            raise ValueError("successful synthesis cannot retain unresolved choices")
+        if not self.construct_traces:
+            raise ValueError("successful synthesis requires complete construct traces")
+        if self.transformation_report.status != ArtifactTransformationStatus.SUCCESS:
+            raise ValueError("successful synthesis requires a successful transformation report")
+        if self.candidate_canonical_digest != self.transformation_report.target_digest:
+            raise ValueError("candidate canonical digest must match the transformation target digest")
+
+    def _validate_refusal_shape(self) -> None:
+        if self.candidate_exact_digest is not None or self.candidate_canonical_digest is not None:
+            raise ValueError("refused synthesis cannot expose candidate digests")
+        if not self.unresolved_choices:
+            raise ValueError("refused synthesis requires typed unresolved choices")
+        if self.construct_traces:
+            raise ValueError("refused synthesis cannot expose generated construct traces")
+        if self.transformation_report.status != ArtifactTransformationStatus.REFUSED:
+            raise ValueError("refused synthesis requires a refused transformation report")
+
+    def _validate_record_ordering(self) -> None:
         choice_ids = tuple(item.choice_id for item in self.unresolved_choices)
         if choice_ids != tuple(sorted(set(choice_ids))):
             raise ValueError("unresolved choices must be sorted and unique by choice_id")
         trace_refs = tuple(item.target_ref for item in self.construct_traces)
         if trace_refs != tuple(sorted(set(trace_refs))):
             raise ValueError("construct traces must be sorted and unique by target_ref")
-        return self
 
     def _validate_construct_contributions(self) -> None:
         if self.profile is None:
@@ -402,9 +418,6 @@ class CandidateSynthesisRecordModel(ContractModel):
         if set(contributions_by_target) != set(decisions_by_target):
             raise ValueError("construct traces must exactly cover decision target_ref values")
         for target_ref, contributions in contributions_by_target.items():
-            for kind, ref_id in contributions:
-                if ref_id not in owners[kind]:
-                    raise ValueError("construct contribution reference does not resolve against its owning collection")
             decision = decisions_by_target[target_ref]
             expected_decision_kind = (
                 SynthesisContributionKind.AUTHOR_DECISION
@@ -420,10 +433,7 @@ class CandidateSynthesisRecordModel(ContractModel):
                 for item in self.input.assumptions
                 if set(item.assertion_ids) & set(decision.assertion_ids)
             )
-            if not required <= contributions:
-                raise ValueError("construct trace omits required assertion, assumption, or decision provenance")
-            if not any(kind == SynthesisContributionKind.INFERRED_STRUCTURE for kind, _ in contributions):
-                raise ValueError("construct trace requires at least one resolved transformation rule")
+            validate_resolved_contributions(contributions, owners, required)
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -435,14 +445,20 @@ class CandidateSynthesisRecordModel(ContractModel):
         _add_raes_invariant(
             schema,
             "candidate-synthesis-all-or-none",
-            "Success carries one complete digest-bound candidate and traces; refusal carries no candidate and typed choices.",
+            (
+                "Success carries one complete digest-bound candidate and traces; "
+                "refusal carries no candidate and typed choices."
+            ),
             validator="raes_contracts.contracts.CandidateSynthesisRecordModel.model_validate",
             inputs=[{"contract_id": "sdl-candidate-synthesis-record-v1", "instance_path": "#"}],
         )
         _add_raes_invariant(
             schema,
             "candidate-synthesis-provenance-separation",
-            "Source assertions, assumptions, decisions, construct contributions, unresolved choices, and transformation evidence remain distinct.",
+            (
+                "Source assertions, assumptions, decisions, construct contributions, "
+                "unresolved choices, and transformation evidence remain distinct."
+            ),
             validator="raes_contracts.contracts.CandidateSynthesisRecordModel.model_validate",
             inputs=[{"contract_id": "sdl-candidate-synthesis-record-v1", "instance_path": "#"}],
         )
