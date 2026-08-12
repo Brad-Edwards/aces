@@ -13,7 +13,6 @@ from raes_contracts.artifact_requirements import ArtifactRequirementContractMode
 
 from . import semantic_profiles, semantic_projection
 from .admitted_trial_plan import AdmittedTrialPlanModel
-from .artifact_transformations import ArtifactTransformationReportModel
 from .associated_artifacts import AssociatedArtifactManifestModel
 from .batch_execution import BatchExecutionReceiptModel
 from .catalogs import (
@@ -119,6 +118,7 @@ from .schema_invariants import (
     _attach_stateful_resource_invariants,
 )
 from .time_model import RealizedTimeModelProvenanceModel, TimeModelDeclarationModel, TimeRuntimeStateModel
+from .transformation_schemas import transformation_schema_bundle
 from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .vocabulary_sources import (
@@ -159,7 +159,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
         "artifact-requirement-v1": ArtifactRequirementContractModel.model_json_schema(),
-        "artifact-transformation-report-v1": ArtifactTransformationReportModel.model_json_schema(),
+        **transformation_schema_bundle(),
         "semantic-comparison-request-v1": SemanticComparisonRequestModel.model_json_schema(),
         "semantic-comparison-result-v1": SemanticComparisonResultModel.model_json_schema(),
         "exploit-path-analysis-evidence-v1": ExploitPathAnalysisEvidenceModel.model_json_schema(),
