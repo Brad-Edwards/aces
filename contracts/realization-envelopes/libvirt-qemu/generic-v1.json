@@ -12,11 +12,11 @@
   },
   "configuration": {
     "mode": "generic",
-    "configuration_digest": "sha256:227d7807516ed39ad04acd4eb9fac26d0f0d3d9c81eb42a3cbf25c9215888a8c",
+    "configuration_digest": "sha256:af14a9757a7b80bedab5cea712f60d2a05ee1d3406fbb7c71e196eaca4746c15",
     "architecture": "x86_64",
     "image_policy": "local-qcow2",
     "network_policy": "libvirt-managed",
-    "supported_node_types": ["switch", "vm"],
+    "supported_node_types": ["switch", "compute"],
     "supported_os_families": ["linux"],
     "supported_content_types": ["file"],
     "supported_account_features": ["auth_method", "disabled", "groups", "home", "shell"],
@@ -26,6 +26,7 @@
     "vcpus": {"minimum": 1, "maximum": null}
   },
   "concerns": [
+    {"concern": "compute-substrate", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "virtual-machine", "transformations": []},
     {"concern": "topology", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-domain-network", "transformations": []},
     {"concern": "architecture", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "qemu-x86_64-domain", "transformations": []},
     {"concern": "image", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "qcow2-disk-attachment", "transformations": []},
@@ -37,5 +38,5 @@
     {"concern": "service", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "acl", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-nwfilter", "transformations": []}
   ],
-  "digest": "sha256:85136f73d2752c5fdaf8c4219aefc42de756486555c17fe2f4b71a7c042221f0"
+  "digest": "sha256:0a4ff252cde4d85a1f0ddc896a82d10679b805723df55d0042b9932a61d037e7"
 }

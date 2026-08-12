@@ -63,7 +63,7 @@ def _compile_condition_bindings(
 ) -> dict[str, ConditionBinding]:
     condition_bindings: dict[str, ConditionBinding] = {}
     for node_name, node in scenario.nodes.items():
-        if node.type != NodeType.VM:
+        if node.type != NodeType.COMPUTE:
             continue
         node_addr = _node_address(node_name)
         for condition_name, role_name in node.conditions.items():

@@ -76,6 +76,7 @@ def domain_observations(
         network_addresses.get(source.get("network", "")) for source in root.findall("./devices/interface/source")
     )
     return (
+        substrate_observation(address),
         observation(
             address,
             "exists",
@@ -88,6 +89,24 @@ def domain_observations(
         observation(address, "memory-mib", RealizationConcern.RESOURCE_ALLOCATION, memory_mib(root)),
         observation(address, "vcpus", RealizationConcern.RESOURCE_ALLOCATION, xml_int(root.findtext("vcpu"))),
         observation(address, "network-attachments", RealizationConcern.NETWORK, attachments),
+    )
+
+
+def substrate_observation(address: str) -> RealizationObservation:
+    from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
+
+    envelope = load_libvirt_realization_envelope(LibvirtDriverMode.TECHVAULT_APPLIANCE)
+    return RealizationObservation(
+        address=address,
+        field_path="compute-substrate",
+        concern=RealizationConcern.COMPUTE_SUBSTRATE,
+        source=ObservationStrength.DAEMON_OBSERVED,
+        value="virtual-machine",
+        envelope_digest=envelope.digest,
+        configuration_digest=envelope.configuration.configuration_digest,
+        observer_version="libvirt-domain-xml-readback/v1",
+        sequence=0,
+        binding_verified=True,
     )
 
 

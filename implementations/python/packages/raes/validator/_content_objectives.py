@@ -256,8 +256,8 @@ class _ContentObjectivesMixin:
         for name, item in self._s.content.items():
             if item.target and not self._is_unresolved_var(item.target) and item.target not in self._s.nodes:
                 self._err(f"Content '{name}' targets undefined node '{item.target}'")
-            elif item.target and not self._is_unresolved_var(item.target) and not self._is_vm_node(item.target):
-                self._err(f"Content '{name}' target '{item.target}' must be a VM node")
+            elif item.target and not self._is_unresolved_var(item.target) and not self._is_compute_node(item.target):
+                self._err(f"Content '{name}' target '{item.target}' must be a compute node")
             if item.service_materialization is not None:
                 self._verify_service_materialization(name, item)
 
@@ -287,7 +287,7 @@ class _ContentObjectivesMixin:
             agents_by_name=self._s.agents,
             nodes=self._s.nodes,
             accounts=self._s.accounts,
-            is_vm_node=self._is_vm_node,
+            is_vm_node=self._is_compute_node,
             is_unresolved=self._is_unresolved_var,
         ):
             self._err(issue.message)
@@ -356,8 +356,8 @@ class _ContentObjectivesMixin:
                 continue
             if host not in self._s.nodes:
                 self._err(f"{label} initial_knowledge host '{host}' not in nodes section")
-            elif not self._is_vm_node(host):
-                self._err(f"{label} initial_knowledge host '{host}' must reference a VM node")
+            elif not self._is_compute_node(host):
+                self._err(f"{label} initial_knowledge host '{host}' must reference a compute node")
 
     def _verify_participant_behavior(self) -> None:
         analysis = analyze_participant_behavior(

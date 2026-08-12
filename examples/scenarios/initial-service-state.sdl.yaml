@@ -3,7 +3,7 @@ description: Provider-neutral initial content materialized through a named servi
 
 nodes:
   mail:
-    type: vm
+    type: compute
     os: linux
     resources:
       ram: 2 gib

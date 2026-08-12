@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "1f0a43de5f3f3dc0494b6d14ef8491bb80ce2be6f72dec5392b0c5d65b9b0607",
+  "content_hash": "56a173d2383a9f277f5aa7351bf207ab96c2728d63077f7e5fbce6b5dc727267",
   "last_change": {
-    "summary": "Propagated concrete structured portable process-resource limits through the canonical instantiated witness embedded by satisfiability evidence for issue #1066 and removed the superseded scalar open_files authority.",
-    "content_hash": "1f0a43de5f3f3dc0494b6d14ef8491bb80ce2be6f72dec5392b0c5d65b9b0607"
+    "summary": "Propagated canonical compute kind and compute-substrate provenance through instantiated satisfiability witnesses for issue #1076.",
+    "content_hash": "56a173d2383a9f277f5aa7351bf207ab96c2728d63077f7e5fbce6b5dc727267"
   }
 }

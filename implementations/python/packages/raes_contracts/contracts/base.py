@@ -298,6 +298,8 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
         "external_concept_bindings.bindings.*.approximation.posture",
         "external_concept_bindings.bindings.*.review.status",
         "external_concept_bindings.bindings.*.perspective.participant_availability.kind",
+        "scenario.realization.constraints.compute-substrate",
+        "runtime.snapshot.realization_observations.compute-substrate",
         *_BACKEND_CONCEPT_BINDING_SCOPES,
         *_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
     }

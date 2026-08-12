@@ -20,7 +20,7 @@ def _scenario_yaml(*, source_ref: str = OBSERVABILITY_REF, trigger: str | None =
     name: dsl-124
     nodes:
       siem:
-        type: vm
+        type: compute
         resources:
           ram: 1 gib
           cpu: 1

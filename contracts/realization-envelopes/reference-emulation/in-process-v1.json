@@ -1,0 +1,42 @@
+{
+  "schema_version": "realization-envelope/v1",
+  "contract_id": "realization-envelope-v1",
+  "id": "reference-emulation.in-process.v1",
+  "expression": {
+    "schema_version": "realization-envelope/v1",
+    "id": "reference-emulation.in-process.expression.v1",
+    "scope": "scenario",
+    "domains": {},
+    "bindings": [],
+    "closure": []
+  },
+  "configuration": {
+    "mode": "in-process-emulation",
+    "configuration_digest": "sha256:aaea24e0dbc889cb03080115b2bd68c5c33a005d882400adfd4cd935cd710b17",
+    "architecture": "x86_64",
+    "image_policy": "descriptor-only",
+    "network_policy": "in-process-emulation",
+    "supported_node_types": ["switch", "compute"],
+    "supported_os_families": ["linux", "windows", "macos", "freebsd", "other"],
+    "supported_content_types": ["file", "dataset", "directory"],
+    "supported_account_features": ["auth_method", "disabled", "groups", "home", "mail", "shell"],
+    "supported_domain_profiles": [],
+    "supports_acls": false,
+    "memory_mib": {"minimum": 1, "maximum": null},
+    "vcpus": {"minimum": 1, "maximum": null}
+  },
+  "concerns": [
+    {"concern": "compute-substrate", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "x-openrae:in-process-emulation", "transformations": []},
+    {"concern": "topology", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "in-process-ledger", "transformations": []},
+    {"concern": "architecture", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
+    {"concern": "image", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
+    {"concern": "resource-allocation", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
+    {"concern": "network", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "in-process-ledger", "transformations": []},
+    {"concern": "content-placement", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
+    {"concern": "account-placement", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
+    {"concern": "feature-binding", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
+    {"concern": "service", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
+    {"concern": "acl", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []}
+  ],
+  "digest": "sha256:7e7b4e907437562cb5fbee20527a41a69da90d84da72d52db616fe707410b5ea"
+}

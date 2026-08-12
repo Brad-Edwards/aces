@@ -26,7 +26,7 @@ def _scenario_with_explicitness_cases():
           net:
             type: switch
           vm:
-            type: vm
+            type: compute
             os: ${os_choice}
             resources:
               ram: 1 gib
@@ -84,7 +84,7 @@ def test_unclassifiable_variable_reference_is_reported_through_validation_errors
             name: sem-218-unclassifiable
             nodes:
               vm:
-                type: vm
+                type: compute
                 os: ${missing_os}
                 resources:
                   ram: 1 gib

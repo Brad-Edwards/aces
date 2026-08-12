@@ -20,6 +20,7 @@ from ._errors import (
     SDLSourceRange,
     SDLValidationError,
 )
+from ._legacy_node_migration import migrate_legacy_vm_nodes
 from ._mapping_scopes import (
     HASHMAP_SECTIONS,
     NESTED_HASHMAP_FIELDS,
@@ -438,4 +439,12 @@ def _load_normalized_data(
     if any(not isinstance(key, str) for key in data):
         raise SDLParseError("SDL top-level mapping keys must be strings", path=path)
     _reject_variable_mapping_keys(data)
-    return _expand_shorthands(data)
+    data = _expand_shorthands(data)
+    migrate_legacy_vm_nodes(
+        data,
+        path=path,
+        migration_policy=migration_policy,
+        source_diagnostics=source_diagnostics,
+        source_ranges=source_ranges,
+    )
+    return data

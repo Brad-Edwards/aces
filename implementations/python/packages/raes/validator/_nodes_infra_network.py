@@ -104,7 +104,7 @@ class _NodesInfraNetworkMixin:
         node = self._s.nodes[name]
         if node.type == NodeType.SWITCH and isinstance(infra.count, int) and infra.count > 1:
             self._err(f"Switch node '{name}' cannot have count > 1")
-        if node.type == NodeType.VM and node.conditions and isinstance(infra.count, int) and infra.count > 1:
+        if node.type == NodeType.COMPUTE and node.conditions and isinstance(infra.count, int) and infra.count > 1:
             self._err(f"Node '{name}' has conditions and cannot have count > 1")
 
     def _verify_infra_property_ips(self, name: str, infra: object) -> None:
@@ -206,8 +206,8 @@ class _NodesInfraNetworkMixin:
         self._verify_network_namespace_source(source_name, target_name, source)
 
     def _verify_network_namespace_target(self, source_name: str, target_name: str, target: object) -> None:
-        if target.type != NodeType.VM:
-            self._err(f"Node '{source_name}' network namespace target '{target_name}' must reference a VM node")
+        if target.type != NodeType.COMPUTE:
+            self._err(f"Node '{source_name}' network namespace target '{target_name}' must reference a compute node")
         if self._network_namespace(target) is not None:
             self._err(
                 f"Node '{source_name}' network namespace target '{target_name}' must be a canonical namespace owner"

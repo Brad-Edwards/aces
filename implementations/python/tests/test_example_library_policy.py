@@ -21,7 +21,7 @@ _VALID_BODY = {
     "name": "library-policy-test",
     "nodes": {
         "app": {
-            "type": "VM",
+            "type": "compute",
             "resources": {"ram": "1 GiB", "cpu": 1},
             "services": [{"port": 443, "name": "https"}],
         }

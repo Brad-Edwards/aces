@@ -50,12 +50,15 @@ def test_fixture_suite_passes_for_orchestration_evaluation_profile():
     assert required_contracts(report.profile)
 
 
-def test_target_conformance_passes_for_stub_target():
+def test_stub_target_realization_claim_fails_closed_until_its_envelope_is_constructive():
     report = run_target_conformance(create_stub_target())
 
     assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
-    assert report.passed is True
-    assert report.claim.left_carrier_ref == "backend-target:stub"
+    assert report.passed is False
+    constructive = next(case for case in report.cases if case.name == "realization-envelope-constructive")
+    assert constructive.outcome == "unsupported"
+    assert report.claim.left_carrier_ref.startswith("backend-target:stub@")
+    assert ";envelope=sha256:" in report.claim.left_carrier_ref
     assert report.claim.observation_projection_revision == "rev1"
     assert "Does not establish trace equivalence or bisimulation." in report.claim.explicit_non_claims
     assert not report.unsupported_contract_gaps
@@ -1234,7 +1237,7 @@ def _fixed_topology_manifest() -> BackendManifest:
         capabilities=BackendCapabilitySet(
             provisioner=ProvisionerCapabilities(
                 name="fixed-topology-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         ),
@@ -1288,7 +1291,7 @@ def _reference_scenario(node_name: str, *, os_family: str = "linux") -> str:
 name: conformance
 nodes:
   {node_name}:
-    type: vm
+    type: compute
     os: {os_family}
     resources: {{ram: 1 gib, cpu: 1}}
     conditions: {{health: ops}}

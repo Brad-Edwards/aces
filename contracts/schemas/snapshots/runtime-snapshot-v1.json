@@ -10441,7 +10441,7 @@
     },
     "RealizationObservationDisclosureModel": {
       "additionalProperties": false,
-      "description": "Value-free corroboration metadata for one realized inventory concern.",
+      "description": "Corroboration metadata, with governed substrate evidence when applicable.",
       "properties": {
         "address": {
           "maxLength": 2048,
@@ -10453,10 +10453,41 @@
           "title": "Address",
           "type": "string"
         },
+        "binding_verified": {
+          "default": false,
+          "title": "Binding Verified",
+          "type": "boolean"
+        },
+        "configuration_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Configuration Digest"
+        },
         "domain": {
           "minLength": 1,
           "title": "Domain",
           "type": "string"
+        },
+        "envelope_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Envelope Digest"
         },
         "field_path": {
           "minLength": 1,
@@ -10469,10 +10500,62 @@
             "const": "none"
           }
         },
+        "observed_value": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed Value"
+        },
+        "observer_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observer Version"
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        },
         "requirement_kind": {
           "minLength": 1,
           "title": "Requirement Kind",
           "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
         },
         "verification_scope": {
           "$ref": "#/$defs/RealizationVerificationScope"

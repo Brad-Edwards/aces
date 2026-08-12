@@ -134,7 +134,13 @@ def plan(
         effective_requirements,
     )
 
-    provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
+    provisioning = _build_provisioning_plan(
+        resources,
+        actions,
+        deleted_entries,
+        manifest,
+        effective_requirements,
+    )
     materialization_diagnostics = service_materialization_plan_diagnostics(
         provisioning,
         manifest.provisioner,

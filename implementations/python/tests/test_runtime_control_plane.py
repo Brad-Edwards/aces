@@ -46,7 +46,7 @@ def _participant_binding_scenario_yaml() -> str:
 name: participant-binding
 nodes:
   web:
-    type: VM
+    type: compute
     resources: {ram: 1 GiB, cpu: 1}
     services: [{port: 80, name: http}]
 entities:
@@ -264,7 +264,7 @@ def test_control_plane_submits_provisioning_and_updates_snapshot():
 name: provision
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 """)
@@ -552,7 +552,7 @@ def test_control_plane_submits_orchestration_with_portable_workflow_state():
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}

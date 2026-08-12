@@ -143,8 +143,8 @@
     "provisioner": {
       "name": "stub-provisioner",
       "supported_node_types": [
-        "switch",
-        "vm"
+        "compute",
+        "switch"
       ],
       "supported_os_families": [
         "freebsd",

@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.realization_observation import RealizationObservation
 
 
 @dataclass(frozen=True)
@@ -101,6 +102,7 @@ class DriverResult:
     networks: tuple[NetworkHandle, ...] = ()
     containers: tuple[ContainerHandle, ...] = ()
     diagnostics: tuple[Diagnostic, ...] = ()
+    observations: tuple[RealizationObservation, ...] = ()
 
 
 class DeploymentDriver(Protocol):
@@ -127,6 +129,10 @@ class DeploymentDriver(Protocol):
         containers: tuple[str, ...],
     ) -> DriverResult:
         """Destroy the realized resources for the given RAES addresses."""
+        ...
+
+    def observe(self, *, containers: tuple[ContainerSpec, ...]) -> DriverResult:
+        """Read existing containers without mutating their native state."""
         ...
 
     def realized_addresses(self) -> frozenset[str]:

@@ -81,7 +81,7 @@ Existing advisory conditions, documented here by reference (not redefined):
   `sdl-yaml/v1` decoding still rejects it, and the migrated output must pass
   strict decoding. Ambiguity and unknown fields remain fatal in migration mode.
 
-- **VM without resources.** A virtual-machine node declared without a
+- **Compute node without resources.** A compute node declared without a
   `resources` block is **valid** SDL; it is flagged as an advisory because it may
   be undeployable unless a backend supplies defaults. It is not an error.
 - **Name-based secret-classification heuristics.** A field whose *name* suggests
@@ -136,7 +136,7 @@ disagree about whether the document is valid, it is an error. This rule is
 directional with §4: it governs how a *new* condition is classified, while §4
 forbids re-labelling an *already-classified* condition to change its severity.
 
-The existing conditions in §4 are consistent with this criterion. "VM without
+The existing conditions in §4 are consistent with this criterion. "Compute node without
 resources" and the name-based secret heuristic are deployability/quality
 heuristics that leave meaning intact, so they are advisories; reference
 resolution, uniqueness, acyclicity, ambiguity, required-profile guards, and
@@ -208,6 +208,7 @@ map, secret, or traceback.
 | `sdl.model.invalid` | Typed model field violates its declared structural contract | error | error |
 | `sdl.noncanonical_field` | Recognized legacy structural-field spelling | error | warning |
 | `sdl.noncanonical_merge` | YAML 1.1 `<<` migration syntax | error | warning |
+| `sdl.legacy_node_type_vm` | Historical `type: vm`, preserving exact virtual-machine intent | error | warning |
 
 For `sdl.noncanonical_field`, `authored_keys` contains the authored and
 canonical spellings, and the path points to the canonical field. For
@@ -215,6 +216,14 @@ canonical spellings, and the path points to the canonical field. For
 are retained on the successfully migrated scenario and by formatting, MCP, and
 CLI adapters. Strict validation is the default at every ordinary parse ingress;
 migration acceptance requires an explicit caller choice.
+
+`sdl.legacy_node_type_vm` is not a case-folding alias for `compute`. A migration
+MUST rewrite the resource kind to `compute` and add an exact
+`compute-substrate = virtual-machine` realization constraint with migration
+provenance. It MUST reject a colliding authored substrate constraint. The
+canonical migrated output contains neither `type: vm` nor an implicit mechanism
+choice. Historical instantiated `v1` artifacts use the same semantics-preserving
+upgrade at their versioned deserialization boundary.
 
 An identifier diagnostic points to the exact defining key or scalar-id token
 and carries that token's source range. Its bounded message states the grammar

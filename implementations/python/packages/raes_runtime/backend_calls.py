@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from copy import deepcopy
 from dataclasses import dataclass, replace
+from uuid import uuid4
 
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
@@ -71,13 +72,19 @@ def _call_backend_apply(
     address: str,
     snapshot: RuntimeSnapshot,
     realization: _RealizationApplyContext | None = None,
+    operation_id: str | None = None,
     information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> ApplyResult:
     realization_context = realization or _RealizationApplyContext()
-    if realization_context.plan is None:
-        submitted_plan = next((arg for arg in args if isinstance(arg, ProvisioningPlan)), None)
-        if submitted_plan is not None:
-            realization_context = replace(realization_context, plan=submitted_plan)
+    submitted_plan = next((arg for arg in args if isinstance(arg, ProvisioningPlan)), None)
+    if submitted_plan is not None:
+        bound_plan = replace(
+            submitted_plan,
+            operation_id=operation_id or submitted_plan.operation_id or str(uuid4()),
+        )
+        args = tuple(bound_plan if arg is submitted_plan else arg for arg in args)
+        if realization_context.plan is None or realization_context.plan is submitted_plan:
+            realization_context = replace(realization_context, plan=bound_plan)
     baseline_snapshot = deepcopy(snapshot)
     backend_snapshot = deepcopy(snapshot)
     backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)

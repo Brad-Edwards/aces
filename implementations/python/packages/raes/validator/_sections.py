@@ -9,6 +9,7 @@ from .._base import VARIABLE_TOKEN_RE
 from .._stateful_resource_references import stateful_resource_reference_errors
 from ..entities import flatten_entities
 from ..explicitness import classify_scenario_explicitness
+from ..nodes import Node, NodeType
 from ..realization_designation import designation_records, resolve_json_pointer_surface
 from ..scenario import ExpandedScenario, Scenario
 from ._support import _topological_sort
@@ -85,6 +86,26 @@ class _SectionsMixin:
                 self._err(
                     "Realization designation field_pointer does not resolve to a typed SDL surface: "
                     f"{record.field_pointer or '/'}"
+                )
+        if isinstance(self._s, Scenario) and self._s.realization is not None:
+            constraints = self._s.realization.constraints
+        elif isinstance(self._s, ExpandedScenario):
+            constraints = self._s.expansion_provenance.realization_constraints
+        else:
+            constraints = ()
+        for constraint in constraints:
+            if constraint.namespace not in known_namespaces:
+                self._err("Realization constraint references an unresolved module namespace")
+                continue
+            found, target = resolve_json_pointer_surface(self._s, constraint.field_pointer)
+            if not found or not isinstance(target, Node):
+                self._err(
+                    f"Realization constraint field_pointer must resolve to a compute node: {constraint.field_pointer}"
+                )
+            elif target.type is NodeType.SWITCH:
+                self._err(
+                    f"Realization concern '{constraint.concern.value}' cannot target strict switch "
+                    f"'{constraint.field_pointer}'"
                 )
 
     def _all_named_elements(self) -> set[str]:

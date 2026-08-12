@@ -16,19 +16,19 @@ nodes:
     description: SOC and security tooling network.
 
   webapp:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: http, port: 8080, protocol: tcp}
   db:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: postgres, port: 5432, protocol: tcp}
   ad:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
@@ -36,14 +36,14 @@ nodes:
       - {name: kerberos, port: 88, protocol: tcp}
       - {name: smb, port: 445, protocol: tcp}
   workstation:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ssh, port: 22, protocol: tcp}
 
   wazuh-manager:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
@@ -52,27 +52,27 @@ nodes:
       - {name: syslog, port: 514, protocol: udp}
     conditions: {wazuh-manager-health: ""}
   wazuh-indexer:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: indexer-api, port: 9200, protocol: tcp}
 
   aptl-otel-collector:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: otlp-grpc, port: 4317, protocol: tcp}
       - {name: otlp-http, port: 4318, protocol: tcp}
   aptl-tempo:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: tempo-http, port: 3200, protocol: tcp}
   aptl-grafana-otel:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:

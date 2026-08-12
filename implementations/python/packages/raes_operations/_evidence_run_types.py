@@ -88,7 +88,7 @@ class NodeDeployment(Protocol):
 
     address: str
     name: str
-    node_type: str | None
+    node_kind: str | None
     os_family: str | None
     spec: Mapping[str, Any]
 

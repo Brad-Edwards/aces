@@ -18,8 +18,8 @@ variables:
     allowed_values: [/opt/payload-a, /opt/payload-b]
 
 nodes:
-  primary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
-  secondary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
+  primary: {type: compute, resources: {ram: 1 GiB, cpu: 1}}
+  secondary: {type: compute, resources: {ram: 1 GiB, cpu: 1}}
 
 content:
   payload: {type: file, target: primary, path: '${payload_path}'}

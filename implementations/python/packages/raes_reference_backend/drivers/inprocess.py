@@ -12,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from raes_contracts.realization_observation import RealizationObservation
 
 from raes_reference_backend.driver import (
     ContainerHandle,
@@ -20,6 +22,7 @@ from raes_reference_backend.driver import (
     NetworkHandle,
     NetworkSpec,
 )
+from raes_reference_backend.envelopes import load_reference_realization_envelope
 
 
 @dataclass(frozen=True)
@@ -34,6 +37,8 @@ class RecordedOp:
 @dataclass
 class InProcessDriver:
     """Hermetic driver that records ops and synthesizes portable handles."""
+
+    driver_mode = "in-process-emulation"
 
     recorded_ops: list[RecordedOp] = field(default_factory=list)
     _realized: set[str] = field(default_factory=set)
@@ -74,6 +79,9 @@ class InProcessDriver:
         return DriverResult(
             networks=tuple(network_handles),
             containers=tuple(container_handles),
+            observations=tuple(
+                _substrate_observation(spec.address, sequence=index) for index, spec in enumerate(containers)
+            ),
         )
 
     def destroy(
@@ -97,5 +105,44 @@ class InProcessDriver:
             containers=tuple(container_handles),
         )
 
+    def observe(self, *, containers: tuple[ContainerSpec, ...]) -> DriverResult:
+        """Read the current in-process ledger without recording a mutation."""
+
+        missing = tuple(spec.address for spec in containers if spec.address not in self._realized)
+        if missing:
+            return DriverResult(
+                diagnostics=tuple(
+                    Diagnostic(
+                        code="reference-backend.driver.compute-substrate-unobserved",
+                        domain="runtime",
+                        address=address,
+                        message=f"In-process runtime did not observe an existing resource for '{address}'.",
+                        severity=Severity.ERROR,
+                    )
+                    for address in missing
+                )
+            )
+        return DriverResult(
+            observations=tuple(
+                _substrate_observation(spec.address, sequence=index) for index, spec in enumerate(containers)
+            )
+        )
+
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)
+
+
+def _substrate_observation(address: str, *, sequence: int) -> RealizationObservation:
+    envelope = load_reference_realization_envelope(InProcessDriver.driver_mode)
+    return RealizationObservation(
+        address=address,
+        field_path="compute-substrate",
+        concern=RealizationConcern.COMPUTE_SUBSTRATE,
+        source=ObservationStrength.DRIVER_REPORTED,
+        value="x-openrae:in-process-emulation",
+        envelope_digest=envelope.digest,
+        configuration_digest=envelope.configuration.configuration_digest,
+        observer_version="reference-in-process/v1",
+        sequence=sequence,
+        binding_verified=True,
+    )

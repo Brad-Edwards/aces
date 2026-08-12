@@ -223,14 +223,14 @@ _MINIMAL_EXAMPLE = """\
 name: simple-pentest-lab
 description: Web app with SQL injection targeting a database
 
-# --- Topology: nodes define VMs and network switches ---
+# --- Topology: nodes define compute resources and network switches ---
 nodes:
   lab-net:
     type: Switch                         # pure connectivity, no OS/resources
     description: Lab network
 
   webapp:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 GiB, cpu: 1}      # human-readable RAM
     features: [flask-app]                 # list shorthand for feature bindings
@@ -239,7 +239,7 @@ nodes:
     vulnerabilities: [sqli]
 
   database:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     features: [postgres]
@@ -260,7 +260,7 @@ infrastructure:
     count: 1
     links: [lab-net]
 
-# --- Software deployed onto VMs ---
+# --- Software deployed onto compute nodes ---
 features:
   flask-app: {type: Service, source: vulnerable-flask-app}
   postgres: {type: Service, source: postgresql-16}
@@ -285,7 +285,7 @@ relationships:
 accounts:
   db-admin:
     username: admin
-    node: database                         # must reference a VM node
+    node: database                         # must reference a compute node
     password_strength: weak                # weak, medium, strong, none
 
 # --- Health checks ---
@@ -361,9 +361,9 @@ composition fields, and optional authoring sections organized by concern.
 ### Topology and Software
 | Section | Purpose |
 |---------|---------|
-| `nodes` | VMs and network switches — the compute/network topology |
+| `nodes` | Compute nodes and network switches — the compute/network topology |
 | `infrastructure` | Deployment: counts, links, dependencies, IPs, CIDRs, ACLs |
-| `features` | Software (Service/Configuration/Artifact) deployed to VMs |
+| `features` | Software (Service/Configuration/Artifact) deployed to compute nodes |
 | `conditions` | Health checks (command+interval or library source) |
 | `vulnerabilities` | CWE-classified weaknesses |
 
@@ -450,8 +450,8 @@ description: Basic web app scenario
 
 nodes:
   net: {type: Switch}
-  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: [app]}
-  db:  {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}, features: [postgres]}
+  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: [app]}
+  db:  {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}, features: [postgres]}
 
 infrastructure:
   net: {count: 1, properties: {cidr: 10.0.0.0/24}}

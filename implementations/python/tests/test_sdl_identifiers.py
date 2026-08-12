@@ -217,7 +217,7 @@ forwarding_agents:
 name: root
 nodes:
   vm:
-    type: vm
+    type: compute
     runtime:
       database_services:
         - database_service_id: bad.name
@@ -331,7 +331,7 @@ def test_raw_forwarding_agent_id_is_local_but_expanded_id_may_be_qualified() -> 
             name="root",
             nodes={
                 "shared.vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "runtime": {
                         "forwarding_agents": [
                             {"forwarding_agent_id": "shared.shipper"},
@@ -352,7 +352,7 @@ variables:
     required: true
 nodes:
   vm:
-    type: vm
+    type: compute
     description: ${label}
     resources: {ram: 1 gib, cpu: 1}
 """,
@@ -373,7 +373,7 @@ def test_declaration_index_covers_typed_nested_addresses_and_aliases() -> None:
         name="root",
         nodes={
             "vm": {
-                "type": "vm",
+                "type": "compute",
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "roles": {"admin": {"username": "root"}},
                 "services": [{"port": 443, "name": "https"}],
@@ -414,7 +414,7 @@ def test_declaration_index_rejects_cross_kind_render_collision() -> None:
         name="root",
         nodes={
             "a": {
-                "type": "vm",
+                "type": "compute",
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "services": [{"port": 443, "name": "b"}],
             },
@@ -439,14 +439,14 @@ def test_runtime_references_are_resolved_by_exact_declaration_not_marker_split()
         name="root",
         nodes={
             application_node: {
-                "type": "vm",
+                "type": "compute",
                 "services": [{"port": 8080, "name": "http"}],
                 "runtime": {
                     "applications": [{"application_id": "frontend", "service": "http"}],
                 },
             },
             database_node: {
-                "type": "vm",
+                "type": "compute",
                 "services": [{"port": 5432, "name": "postgres"}],
                 "runtime": {
                     "database_services": [
@@ -571,7 +571,7 @@ def test_published_schema_constrains_runtime_family_identifiers() -> None:
         "name": "root",
         "nodes": {
             "vm": {
-                "type": "vm",
+                "type": "compute",
                 "runtime": {
                     "database_services": [
                         {"database_service_id": "bad.name"},
@@ -600,7 +600,7 @@ def test_published_schema_separates_top_level_forwarder_identity_phases() -> Non
         "name": "root",
         "nodes": {
             "shared.vm": {
-                "type": "vm",
+                "type": "compute",
                 "runtime": {
                     "forwarding_agents": [{"forwarding_agent_id": "shared.shipper"}],
                 },
@@ -765,7 +765,7 @@ def test_composed_realization_concern_retains_canonical_resource_address() -> No
             name="root",
             nodes={
                 "shared.vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "os": "linux",
                     "resources": {"ram": "1 gib", "cpu": 1},
                 }

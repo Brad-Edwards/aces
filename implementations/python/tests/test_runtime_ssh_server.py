@@ -44,7 +44,7 @@ def _validate(scenario: Scenario) -> list[str]:
 
 def _ssh_node() -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "services": [{"port": 22, "name": "ssh"}],
         "runtime": {
             "ssh_servers": [
@@ -628,7 +628,7 @@ module:
     relationships: [ssh-policy]
 nodes:
   kali:
-    type: vm
+    type: compute
     services:
       - {port: 22, name: ssh}
     runtime:

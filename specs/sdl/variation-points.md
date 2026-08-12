@@ -79,8 +79,8 @@ required owner kind and candidate kind; authors cannot widen either with data.
 | Slot | Owner | Candidate |
 | --- | --- | --- |
 | `conditions.proposition` | `conditions` | `propositions` |
-| `content.target` | `content` | VM `nodes` |
-| `accounts.node` | `accounts` | VM `nodes` |
+| `content.target` | `content` | compute `nodes` |
+| `accounts.node` | `accounts` | compute `nodes` |
 | `accounts.domain_ref` | `accounts` | `identity_domains` |
 | `identity_domains.authority_account_ref` | `identity_domains` | `accounts` |
 | `objectives.agent` | `objectives` | `agents` |

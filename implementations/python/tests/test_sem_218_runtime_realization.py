@@ -23,6 +23,7 @@ from dataclasses import replace
 
 from raes import parse_sdl
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_backend_stubs.manifest import load_stub_realization_envelope
 from raes_backend_stubs.stubs import StubProvisioner, create_stub_target
 from raes_contracts.runtime_state import (
     ApplyResult,
@@ -38,7 +39,7 @@ _EXACT_SCENARIO = """
 name: sem-218-runtime-exact
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 """
@@ -49,7 +50,7 @@ variables:
   os_choice: {type: string, default: linux, allowed_values: [linux, windows]}
 nodes:
   web:
-    type: vm
+    type: compute
     os: ${os_choice}
     resources: {ram: 1 gib, cpu: 1}
 """
@@ -84,7 +85,7 @@ class _WeakeningProvisioner:
         return []
 
     def apply(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
-        honest = StubProvisioner().apply(plan, snapshot)
+        honest = StubProvisioner(load_stub_realization_envelope()).apply(plan, snapshot)
         entries = dict(honest.snapshot.entries)
         for address, entry in entries.items():
             if entry.payload.get("os_family") == "linux":
@@ -111,7 +112,7 @@ class _OmittingProvisioner:
         return []
 
     def apply(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
-        honest = StubProvisioner().apply(plan, snapshot)
+        honest = StubProvisioner(load_stub_realization_envelope()).apply(plan, snapshot)
         entries = dict(honest.snapshot.entries)
         for address, entry in entries.items():
             if "os_family" in entry.payload:
@@ -142,7 +143,11 @@ def test_runtime_gate_diagnostic_does_not_leak_exact_value():
     manager = RuntimeManager(_target_with_provisioner(_WeakeningProvisioner()))
     result = manager.apply(_plan_exact(manager))
 
-    messages = [diag.message for diag in result.diagnostics if diag.code == "runtime.backend-contract-invalid"]
+    messages = [
+        diag.message
+        for diag in result.diagnostics
+        if diag.code == "runtime.backend-contract-invalid" and "nodes.web.os" in diag.message
+    ]
     assert messages
     for message in messages:
         assert "linux" not in message

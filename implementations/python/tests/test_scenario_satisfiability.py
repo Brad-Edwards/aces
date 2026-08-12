@@ -27,7 +27,7 @@ variables:
     required: true
 nodes:
   target:
-    type: vm
+    type: compute
     os: ${platform}
 """
 
@@ -40,7 +40,7 @@ variables:
     required: true
 nodes:
   target:
-    type: vm
+    type: compute
     os: ${platform}
 infrastructure:
   target:
@@ -57,7 +57,7 @@ variables:
     required: true
 nodes:
   target:
-    type: vm
+    type: compute
     resources:
       ram: 1 gib
       cpu: ${cpu_count}
@@ -110,7 +110,7 @@ variables:
   copies: {type: integer, allowed_values: [2, 0, 1], required: true}
   private: {type: boolean, required: true}
 nodes:
-  target: {type: vm}
+  target: {type: compute}
 infrastructure:
   target:
     count: ${copies}
@@ -257,7 +257,7 @@ def test_diagnostic_limit_returns_bounded_unsupported_evidence(tmp_path: Path) -
         "\n".join(
             (
                 f"  target_{index:03d}:",
-                "    type: vm",
+                "    type: compute",
                 "    resources:",
                 "      ram: 1 gib",
                 f"      cpu: ${{count_{index:03d}}}",
@@ -279,7 +279,7 @@ def test_diagnostic_limit_returns_bounded_unsupported_evidence(tmp_path: Path) -
 
 
 def test_clause_limit_returns_bounded_unsupported_evidence(tmp_path: Path) -> None:
-    nodes = "\n".join(f"  target_{index:03d}: {{type: vm, os: '${{platform}}'}}" for index in range(512))
+    nodes = "\n".join(f"  target_{index:03d}: {{type: compute, os: '${{platform}}'}}" for index in range(512))
     source = _write(
         tmp_path,
         "clause-limit.sdl.yaml",

@@ -118,7 +118,7 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         section="nodes",
         authored_path=("type",),
         concern_kind="node-type",
-        payload_path=("node_type",),
+        payload_path=("node_kind",),
     ),
     RealizationConcernDescriptor(
         section="nodes",

@@ -40,7 +40,7 @@ nodes:
     type: Switch
 
   web-frontend-1:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: {apache-struts: www}
@@ -52,7 +52,7 @@ nodes:
     asset_value: {confidentiality: low, availability: medium}
 
   web-frontend-2:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: {apache-struts: www}
@@ -62,7 +62,7 @@ nodes:
     roles: {www: www-data}
 
   app-server:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 gib, cpu: 2}
     features: {java-backend: app}
@@ -72,7 +72,7 @@ nodes:
     roles: {app: appuser}
 
   db-primary:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 8 gib, cpu: 4}
     features: {postgres-db: dba}
@@ -82,7 +82,7 @@ nodes:
     asset_value: {confidentiality: critical, integrity: critical}
 
   db-replica-1:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 gib, cpu: 2}
     features: {postgres-db: dba}
@@ -91,7 +91,7 @@ nodes:
     asset_value: {confidentiality: critical}
 
   db-replica-2:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 gib, cpu: 2}
     features: {postgres-db: dba}
@@ -219,7 +219,7 @@ nodes:
   infra-net: {type: Switch}
 
   pfsense:
-    type: VM
+    type: compute
     os: freebsd
     resources: {ram: 512 mib, cpu: 1}
     features: {firewall-rules: admin}
@@ -228,7 +228,7 @@ nodes:
     roles: {admin: admin}
 
   prod-joomla:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: {joomla-cms: www, apache-web: www}
@@ -239,14 +239,14 @@ nodes:
     roles: {www: www-data}
 
   workstation:
-    type: VM
+    type: compute
     os: windows
     os_version: "10"
     resources: {ram: 4 gib, cpu: 2}
     services: [{port: 3389, name: rdp}]
 
   ad-server:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2019"
     resources: {ram: 4 gib, cpu: 2}
@@ -259,7 +259,7 @@ nodes:
     roles: {admin: Administrator}
 
   fileshare:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2019"
     resources: {ram: 2 gib, cpu: 1}
@@ -268,7 +268,7 @@ nodes:
     roles: {admin: Administrator}
 
   database:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 4 gib, cpu: 2}
     features: {mysql-server: dba}
@@ -333,7 +333,7 @@ nodes:
   team-net: {type: Switch}
 
   win2003-ad:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2003"
     resources: {ram: 1 gib, cpu: 1}
@@ -345,7 +345,7 @@ nodes:
     roles: {admin: Administrator}
 
   win2000-dns:
-    type: VM
+    type: compute
     os: windows
     os_version: "2000"
     resources: {ram: 512 mib, cpu: 1}
@@ -356,7 +356,7 @@ nodes:
     roles: {admin: Administrator}
 
   solaris-ecom:
-    type: VM
+    type: compute
     os: other
     os_version: "Solaris 10"
     resources: {ram: 1 gib, cpu: 1}
@@ -367,7 +367,7 @@ nodes:
     roles: {app: webadmin}
 
   ubuntu-backend:
-    type: VM
+    type: compute
     os: linux
     os_version: "Ubuntu 6.06"
     resources: {ram: 1 gib, cpu: 1}
@@ -378,7 +378,7 @@ nodes:
     roles: {app: appuser, dba: mysql}
 
   freebsd-mail:
-    type: VM
+    type: compute
     os: freebsd
     resources: {ram: 512 mib, cpu: 1}
     features: {postfix-smtp: mail}
@@ -440,7 +440,7 @@ nodes:
   admin-net: {type: Switch}
 
   web-portal:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: {dotnet-webapp: www}
@@ -449,7 +449,7 @@ nodes:
     roles: {www: www-data}
 
   mssql-server:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2019"
     resources: {ram: 4 gib, cpu: 2}
@@ -459,7 +459,7 @@ nodes:
     roles: {dba: sa}
 
   dc-corp:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2022"
     resources: {ram: 4 gib, cpu: 2}
@@ -469,7 +469,7 @@ nodes:
     roles: {admin: Administrator}
 
   dc-dev:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2019"
     resources: {ram: 4 gib, cpu: 2}
@@ -479,7 +479,7 @@ nodes:
     roles: {admin: Administrator}
 
   exchange:
-    type: VM
+    type: compute
     os: windows
     resources: {ram: 8 gib, cpu: 4}
     features: {exchange-svc: admin}
@@ -488,7 +488,7 @@ nodes:
     roles: {admin: Administrator}
 
   jumpbox:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     services: [{port: 22, name: ssh}]
@@ -588,7 +588,7 @@ nodes:
   lab-net: {type: Switch}
 
   metasploitable:
-    type: VM
+    type: compute
     os: linux
     os_version: "Ubuntu 8.04"
     resources: {ram: 512 mib, cpu: 1}
@@ -632,7 +632,7 @@ nodes:
     asset_value: {confidentiality: high}
 
   attacker:
-    type: VM
+    type: compute
     os: linux
     source: kali
     resources: {ram: 2 gib, cpu: 2}
@@ -696,7 +696,7 @@ nodes:
   scada-net: {type: Switch}
 
   ad-dc:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2022"
     resources: {ram: 4 gib, cpu: 2}
@@ -706,7 +706,7 @@ nodes:
     asset_value: {confidentiality: high, integrity: critical, availability: critical}
 
   mail-server:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: {postfix-mail: mail}
@@ -714,7 +714,7 @@ nodes:
     roles: {mail: postfix}
 
   web-portal:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: {gov-website: www}
@@ -722,7 +722,7 @@ nodes:
     roles: {www: www-data}
 
   dns-server:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {bind-dns: dns}
@@ -730,7 +730,7 @@ nodes:
     roles: {dns: named}
 
   hmi-server:
-    type: VM
+    type: compute
     os: windows
     os_version: "Server 2008 R2"
     resources: {ram: 2 gib, cpu: 1}
@@ -741,7 +741,7 @@ nodes:
     asset_value: {integrity: critical, availability: critical}
 
   plc-power:
-    type: VM
+    type: compute
     os: other
     os_version: "SIEMENS S7-300"
     resources: {ram: 256 mib, cpu: 1}
@@ -750,7 +750,7 @@ nodes:
     asset_value: {integrity: critical, availability: critical}
 
   plc-water:
-    type: VM
+    type: compute
     os: other
     os_version: "SIEMENS S7-300"
     resources: {ram: 256 mib, cpu: 1}
@@ -940,7 +940,7 @@ def test_scenario_stats(label, yaml_str):
     content-presence checks in test_sdl_stress.py::test_scenario_parses_and_validates).
     """
     scenario = parse_sdl(textwrap.dedent(yaml_str))
-    nodes = len([n for n in scenario.nodes.values() if n.type.value == "vm"])
+    nodes = len([n for n in scenario.nodes.values() if n.type.value == "compute"])
     nets = len([n for n in scenario.nodes.values() if n.type.value == "switch"])
     vulns = len(scenario.vulnerabilities)
     features = len(scenario.features)
@@ -949,7 +949,7 @@ def test_scenario_stats(label, yaml_str):
 
     # Every study scenario is a multi-host, networked topology with service
     # feature bindings, so these lower bounds hold for the whole parametrized set.
-    assert nodes >= 1, f"{label}: no VM nodes"
+    assert nodes >= 1, f"{label}: no compute nodes"
     assert nets >= 1, f"{label}: no networks"
     assert features >= 1, f"{label}: no feature bindings"
 

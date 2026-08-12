@@ -92,7 +92,7 @@ def _family() -> ExpandedScenario:
         },
         "nodes": {
             "primary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
             }
@@ -857,7 +857,8 @@ def test_selected_scenario_must_be_a_member_of_exact_envelope() -> None:
 def test_realization_envelope_content_digest_changes_sealed_plan_identity() -> None:
     request = _request()
     changed_payload = json.loads(_ENVELOPE_FIXTURE.read_text(encoding="utf-8"))
-    changed_payload["concerns"][0]["mechanism"] = "alternate-trusted-topology-mechanism"
+    topology = next(claim for claim in changed_payload["concerns"] if claim["concern"] == "topology")
+    topology["mechanism"] = "alternate-trusted-topology-mechanism"
     changed_payload["digest"] = realization_envelope_digest(changed_payload)
     changed = _with_envelope(
         request,

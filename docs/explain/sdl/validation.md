@@ -45,8 +45,8 @@ no longer a "references undefined metric/evaluation/TLO/goal" validation error;
 
 | Pass | What It Checks |
 |------|----------------|
-| `verify_content` | Content targets reference existing VM nodes. |
-| `verify_accounts` | Account nodes reference existing VM nodes. |
+| `verify_content` | Content targets reference existing compute nodes. |
+| `verify_accounts` | Account nodes reference existing compute nodes. |
 | `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime service listener refs, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime network detection-engine refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
 | `verify_relationship_forwarding_edges` | A relationship `forwarding_edge` resolves `forwarder_ref` to a unique node-hosted or scenario-level runtime forwarding agent; the edge `target_listener_role`/`protocol` must agree with at least one of that agent's ship targets. |
 | `verify_relationship_service_integrations` | A relationship `service_integration` resolves `consumer_ref`/`engine_ref` to platform applications and `auth_principal_ref` to a principal in the engine application's referenced authorization store when `authorization_ref` is set. |
@@ -64,7 +64,7 @@ no longer a "references undefined metric/evaluation/TLO/goal" validation error;
 | `verify_runtime_orchestration_authorities` | Runtime orchestration authorities resolve a non-empty, non-variable `control_interface_ref` to a `RuntimeControlInterface` declared in the same node's `runtime.local_control_interfaces` (by `control_interface_id`); for a `host_root_equivalent` privilege class the referenced interface must additionally be a read-write docker socket (access `read_write`, kind `unix_socket`, path ending in `docker.sock`), with `${var}` interface access/kind/path permissive. The model-local `require_profile_for_privilege_class` guard fails a `host_root_equivalent` authority that carries no concrete `control_interface_ref`. |
 | `verify_runtime_mail_services` | Runtime mail services and listeners resolve optional same-node `Node.services` refs. Listener component refs, mailbox domain/store refs, alias target refs, routing source/target refs, and setting component refs resolve inside the owning mail service. Mailbox account refs resolve to top-level accounts, local-user refs resolve to `runtime.local_identity` when present, and setting source paths resolve to observed runtime filesystem entries when the node has file inventory. |
 | `verify_relationship_mail_access` | A relationship with `mail_access` must target a runtime mail service. Concrete `listener_ref`, `mailbox_ref`, and `domain_ref` values resolve within that target service, while protocol, auth-mechanism, and TLS-mode fields are structurally normalized by the `RelationshipMailAccess` model. |
-| `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. Interactive-access targets resolve to VMs; optional accounts resolve to the same VM and participant starting accounts; concrete target/channel pairs are unique per participant. |
+| `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to compute nodes. Initial-knowledge services exist in `nodes.*.services[].name`. Interactive-access targets resolve to compute nodes; optional accounts resolve to the same compute node and participant starting accounts; concrete target/channel pairs are unique per participant. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared `conditions` (observable state only, per [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)). Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
 | `verify_workflows` | Workflow `start` and every referenced step must exist. `objective`/`retry` steps must reference declared objectives. Predicate refs must resolve to declared `conditions`/`objectives` (the scoring surfaces were removed per [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)), and step-state refs must resolve to prior executable steps whose state is guaranteed to be known before the predicate runs. Workflow graphs must be acyclic and fully reachable from `start`. Parallel joins must be explicit barriers, every explicit branch path must converge on the declared join, branch-local state remains scoped until the join, and post-join predicates may inspect only branch steps guaranteed on every path within their branch before the join. |
@@ -72,7 +72,7 @@ no longer a "references undefined metric/evaluation/TLO/goal" validation error;
 | `verify_variables` | Checks that full-value `${var}` placeholders and embedded `${var}` tokens reference declared variables. Structural validation of variable declaration names, typed defaults, and `allowed_values` still happens in the model/schema layer. |
 
 Pydantic structural validation also enforces model-local node rules before
-these semantic passes run. Switch nodes reject VM-only fields, including
+these semantic passes run. Switch nodes reject compute-only fields, including
 `runtime`. Runtime mount, dependency-manifest, and software-component manifest
 paths must be absolute paths or variable references. Runtime software-component
 `installed_paths`, filesystem inventory paths, container masked paths,
@@ -521,7 +521,7 @@ Successful parses may still carry non-fatal advisories on `Scenario.advisories`.
 
 Current advisory coverage:
 
-- VM nodes without `resources` are allowed, but emit an advisory because some deployment backends may not be able to instantiate them without explicit sizing defaults.
+- compute nodes without `resources` are allowed, but emit an advisory because some deployment backends may not be able to instantiate them without explicit sizing defaults.
 
 ## Error Reporting
 

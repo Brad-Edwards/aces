@@ -31,7 +31,7 @@ def _node_resource(
         payload={
             "name": name,
             "node_name": name,
-            "node_type": "vm",
+            "node_kind": "compute",
             "os_family": os_family,
             "network_namespace_target": network_namespace_target,
             "spec": {

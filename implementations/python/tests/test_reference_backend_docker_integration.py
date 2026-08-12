@@ -32,7 +32,7 @@ _SCENARIO = f"""
 name: ref-docker
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     source: {_IMAGE}
     resources: {{ram: 1 gib, cpu: 1}}

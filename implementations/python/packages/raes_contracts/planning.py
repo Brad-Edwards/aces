@@ -15,6 +15,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from raes_contracts.addressing import require_compiled_address
+from raes_contracts.bounded_domains import DomainDescriptor
+from raes_contracts.compute_substrate import validate_compute_substrate_constraint
 from raes_contracts.diagnostics import Diagnostic
 
 if TYPE_CHECKING:
@@ -195,6 +197,27 @@ class ProvisionOp(PlanOperation):
     """Provisioning reconciliation operation."""
 
 
+@dataclass(frozen=True)
+class PlannedRealizationConstraint:
+    """Value-bearing author demand carried separately from apparatus choice."""
+
+    address: str
+    field_path: str
+    concern: str
+    posture: str
+    value_domain: DomainDescriptor | None
+    governing_scope: str
+    provenance: str
+
+    def __post_init__(self) -> None:
+        require_compiled_address(self.address)
+        if self.concern != "compute-substrate":
+            raise ValueError("planned realization constraint concern is unsupported")
+        if self.posture not in {"open", "constrained", "exact"}:
+            raise ValueError("planned realization constraint posture is invalid")
+        validate_compute_substrate_constraint(self.posture, self.value_domain)
+
+
 class OrchestrationOp(PlanOperation):
     """Orchestration reconciliation operation."""
 
@@ -211,9 +234,16 @@ class ProvisioningPlan:
     operations: list[ProvisionOp] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
+    realization_constraints: tuple[PlannedRealizationConstraint, ...] = ()
+    operation_id: str | None = None
 
     def __post_init__(self) -> None:
+        if self.operation_id is not None and not self.operation_id.strip():
+            raise ValueError("ProvisioningPlan operation_id must be non-empty when present")
         _validate_plan_addresses(self.resources, self.operations, domain=RuntimeDomain.PROVISIONING)
+        identities = [(item.address, item.concern) for item in self.realization_constraints]
+        if len(identities) != len(set(identities)):
+            raise ValueError("Provisioning plan realization constraints must identify unique concerns")
 
     @property
     def actionable_operations(self) -> list[ProvisionOp]:

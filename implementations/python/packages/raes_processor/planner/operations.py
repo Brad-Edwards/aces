@@ -8,6 +8,7 @@ from ..models import (
     EvaluationPlan,
     OrchestrationOp,
     OrchestrationPlan,
+    PlannedRealizationConstraint,
     PlannedResource,
     ProvisioningPlan,
     ProvisionOp,
@@ -44,6 +45,7 @@ def _build_provisioning_plan(
     actions: dict[str, ChangeAction],
     deleted_entries: dict[str, SnapshotEntry],
     manifest: BackendManifest,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
 ) -> ProvisioningPlan:
     provisioning_resources = {
         address: resource for address, resource in resources.items() if resource.domain == RuntimeDomain.PROVISIONING
@@ -80,6 +82,19 @@ def _build_provisioning_plan(
         operations=ops,
         realization_envelope=(
             manifest.realization_envelope.identity if manifest.realization_envelope is not None else None
+        ),
+        realization_constraints=tuple(
+            PlannedRealizationConstraint(
+                address=requirement.address,
+                field_path=requirement.field_path,
+                concern=requirement.requirement_kind,
+                posture=requirement.explicitness.value,
+                value_domain=requirement.value_domain,
+                governing_scope=requirement.governing_scope or "#/",
+                provenance=requirement.constraint_provenance or "author-declared",
+            )
+            for requirement in realization_requirements
+            if requirement.requirement_kind == "compute-substrate" and requirement.explicitness is not None
         ),
     )
 

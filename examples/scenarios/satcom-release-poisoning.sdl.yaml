@@ -30,7 +30,7 @@ nodes:
     type: switch
     description: Monitoring and response systems
   git-forge:
-    type: vm
+    type: compute
     source:
       name: git-forge
       version: '*'
@@ -53,7 +53,7 @@ nodes:
     - port: 22
       name: forge-ssh
   ci-runner:
-    type: vm
+    type: compute
     source:
       name: ci-runner
       version: '*'
@@ -75,7 +75,7 @@ nodes:
     - port: 2222
       name: ci-ssh
   artifact-registry:
-    type: vm
+    type: compute
     source:
       name: artifact-registry
       version: '*'
@@ -99,7 +99,7 @@ nodes:
     - port: 443
       name: registry-ui
   signing-hsm:
-    type: vm
+    type: compute
     source:
       name: signing-service
       version: '*'
@@ -118,7 +118,7 @@ nodes:
     - port: 8443
       name: signing-api
   control-api:
-    type: vm
+    type: compute
     source:
       name: satcom-control-plane
       version: '*'
@@ -145,7 +145,7 @@ nodes:
       integrity: critical
       availability: critical
   edge-gateway-east:
-    type: vm
+    type: compute
     source:
       name: satcom-edge
       version: '*'
@@ -165,7 +165,7 @@ nodes:
     - port: 443
       name: edge-east-api
   edge-gateway-west:
-    type: vm
+    type: compute
     source:
       name: satcom-edge
       version: '*'
@@ -185,7 +185,7 @@ nodes:
     - port: 443
       name: edge-west-api
   telemetry-broker:
-    type: vm
+    type: compute
     source:
       name: kafka-broker
       version: '*'
@@ -206,7 +206,7 @@ nodes:
     - port: 443
       name: telemetry-ui
   analytics-lake:
-    type: vm
+    type: compute
     source:
       name: analytics-lake
       version: '*'
@@ -225,7 +225,7 @@ nodes:
     - port: 443
       name: analytics-ui
   customer-portal:
-    type: vm
+    type: compute
     source:
       name: customer-portal
       version: '*'
@@ -247,7 +247,7 @@ nodes:
     - port: 443
       name: portal-https
   support-bastion:
-    type: vm
+    type: compute
     source:
       name: support-bastion
       version: '*'
@@ -268,7 +268,7 @@ nodes:
     - port: 443
       name: bastion-web
   siem01:
-    type: vm
+    type: compute
     source:
       name: siem-stack
       version: '*'
@@ -291,7 +291,7 @@ nodes:
     - port: 5601
       name: release-soc-ui
   vendor-idp:
-    type: vm
+    type: compute
     source:
       name: vendor-idp
       version: '*'
@@ -310,7 +310,7 @@ nodes:
     - port: 443
       name: vendor-idp-https
   customer-idp:
-    type: vm
+    type: compute
     source:
       name: customer-idp
       version: '*'

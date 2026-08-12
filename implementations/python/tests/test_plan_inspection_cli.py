@@ -80,7 +80,7 @@ def test_plan_accepts_supplied_backend_manifest(tmp_path: Path) -> None:
 
 def test_plan_emits_full_json_and_nonzero_exit_on_error_diagnostics(tmp_path: Path) -> None:
     payload = backend_manifest_payload(create_stub_manifest())
-    # A manifest that cannot provision VMs turns the scenario's VM nodes into a
+    # A manifest that cannot provision compute resources turns its compute nodes into a
     # capability gap: the planner reports error diagnostics rather than raising.
     payload["capabilities"]["provisioner"]["supported_node_types"] = ["switch"]
     manifest_file = tmp_path / "no-vm-manifest.json"

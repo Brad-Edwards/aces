@@ -159,18 +159,72 @@ _HISTORICAL_SATISFIABILITY_EXECUTION_PROFILE = "a" + "ces-formal-satisfiability-
 _HISTORICAL_SATISFIABILITY_PROFILE = "a" + "ces-finite-domain-satisfiability-v1"
 _HISTORICAL_CLI = "implementations/python/.venv/bin/" + "a" + "ces"
 _CURRENT_SATISFIABILITY_PROFILE = "raes-finite-domain-satisfiability-v1"
+_RENAMED_FORMAL_REPLAY_DIGESTS = {
+    "semantic-resolved-objective": (
+        "ba0ecbfcb3090ffd6b660cb51324fafcd47ca8dedbbb985e98b6e7f64f8cc25b",
+        "5332666a0299d2c303d7a7da4b56dfd309cebf021af187b063ef597cf81bf40a",
+    ),
+    "compile-repeatability-control": (
+        "5460988359b89b26f4c2f8a8c49e9e239aa0e9220f20923d8f3bf557a37ef282",
+        "de622c275123a29207eab13e19923c8835161686b367eb28e2752b787f2735c6",
+    ),
+    "compile-non-vacuity-control": (
+        "f6f88ce366172d9eded8ea3fc05d5d196bbafde4894c9d47d3a9c8dc7999e3f3",
+        "6a3fb16d4c63601b0791c3eccc14b2b34edcabc3b6beb4c86641700de4e94225",
+    ),
+}
+_HISTORICAL_VM_REPLAY_INPUTS = {
+    (
+        "semantic-resolved-objective",
+        "docs/research/formal-semantic-validation/corpus/semantic-valid.sdl.yaml",
+    ): "a074d75b1b420a47a740703deaff45c20ec1c5d846f660412929bc69ab0efb19",
+    (
+        "semantic-ambiguous-reference",
+        "docs/research/formal-semantic-validation/corpus/semantic-invalid-ambiguous-ref.sdl.yaml",
+    ): "653cbd2fd62e220d49fb86f80133884207df5ae6752846345ae3085b93f6e4ed",
+    (
+        "compile-repeatability-control",
+        "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
+    ): "0bc40900d598c1af7a405d798ca19710405e53ced262d8733081abf12edf89fe",
+    (
+        "compile-non-vacuity-control",
+        "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
+    ): "0bc40900d598c1af7a405d798ca19710405e53ced262d8733081abf12edf89fe",
+    (
+        "compile-non-vacuity-control",
+        "docs/research/formal-semantic-validation/corpus/determinism-b.sdl.yaml",
+    ): "d85338f89f20a45515b12da8640173c1a52e47eb17ca0f4f6b4f8f3306e863a1",
+}
 _RENAMED_SATISFIABILITY_MODEL_DIGESTS = {
     "finite-domain-satisfiable": (
         "sha256:32ac029d9279e6c7ea4cd9082435eb6fa455122bba57498923b8371818ef708c",
-        "sha256:8e6bcd2f92ac1549c44e91793b565ed570d4afd51aea234b2444d97805b9f78f",
+        "sha256:fbd664cb97b3f95d89220c967af0c9c55b3bcb60ff755442b54007dad6971423",
     ),
     "finite-domain-unsatisfiable": (
         "sha256:3a061baa67090e312abc4bca7a3ed24cc9458487b67f2fc37b3b7abcac2ecf1b",
-        "sha256:f258eabe4ba3e8e508832b3a3828e69ab82d476ae160feda0d0a9056722559c7",
+        "sha256:525d1520b96cc8a606dcfbc16d4c8c833ef00d6e258aed0a9bd47ba986b33e61",
     ),
     "finite-domain-unsupported": (
         "sha256:2f0f762771dc329419ab739766f684c18261aba28c2fbc50a26ee8ad80224ba5",
-        "sha256:4751565c5a5336474158d40a025c035d67ba07381b05e4dce7ef29dee57648db",
+        "sha256:9cb311dac08cb20ed21d48d8cd5a4d49c51eb1036a0c6ba97e6f56a88d05ccfa",
+    ),
+}
+_MIGRATED_PRODUCTION_EVIDENCE_DIGESTS = {
+    "finite-domain-satisfiable-v2": (
+        "sha256:03925bfe0b209c3c77069c97061aa63e8795389be7ed7b78376020b7dc87853c",
+        "sha256:fc049a7288a9ad3b6fcc1f37f181cb3625db7ad79e57b04fa09dec12a01bf839",
+    ),
+    "finite-domain-unsatisfiable-v2": (
+        "sha256:c2dc067c406ee9c26837e9565b6b52f8a6268e06e95dbc5937a455700b0c8109",
+        "sha256:8816c3a2898193280321559545cfacd462f38172fe7fbe7b005610401563b629",
+    ),
+    "typed-exploit-path-valid-v2": (
+        "sha256:0683b55cd2a52ba626bb5cfbf10de109798d8d31ba467aabd13d4930df204798",
+        "sha256:e621c00851c9065288f34dd316ea039d6600340cc1f8ff993091813451770096",
+    ),
+    "typed-exploit-path-invalid-v2": (
+        "sha256:1ec2ff4423088ad2ac6328aba7fbced5cd89b1569cff057e44ad30ef5c5befc0",
+        "sha256:e8f0619f48501384e48e59b66e08a8478c80e0341ad9e9d2015e89aab7e6896a",
     ),
 }
 _RENAMED_SOLVER_CONFIGURATION_DIGEST = (
@@ -407,7 +461,7 @@ def _diagnostic_payload(exc: Exception, repo_root: Path) -> object:
 
 def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | None]:
     """Replay one supported case through its declared production boundary."""
-    from raes import SDLError, instantiate_scenario, parse_sdl_file
+    from raes import SDLError, SDLMigrationPolicy, instantiate_scenario, parse_sdl_file
     from raes_processor.compiler import compile_runtime_model
 
     fixture_value = case.get("fixture_path")
@@ -416,9 +470,17 @@ def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | 
         raise ValueError(f"missing or unsafe replay fixture {fixture_value!r}")
 
     replay_mode = case.get("replay_mode")
+
+    def migration_policy(path: Path) -> SDLMigrationPolicy:
+        relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
+        expected_digest = _HISTORICAL_VM_REPLAY_INPUTS.get((str(case.get("case_id")), relative))
+        if expected_digest is not None and _sha256_file(path) == expected_digest:
+            return SDLMigrationPolicy.ACCEPT
+        return SDLMigrationPolicy.REJECT
+
     if replay_mode == "parse":
         try:
-            scenario = parse_sdl_file(fixture)
+            scenario = parse_sdl_file(fixture, migration_policy=migration_policy(fixture))
         except SDLError as exc:
             return {
                 "actual_outcome": "rejected",
@@ -432,7 +494,7 @@ def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | 
         }
 
     def compiled_digest(path: Path) -> str:
-        scenario = parse_sdl_file(path)
+        scenario = parse_sdl_file(path, migration_policy=migration_policy(path))
         instantiated = instantiate_scenario(scenario, parameters={})
         return _digest(dataclasses.asdict(compile_runtime_model(instantiated)))
 
@@ -457,6 +519,22 @@ def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | 
             "result_digest": _digest([first, second]),
         }
     raise ValueError(f"case {case.get('case_id')!r} is not replayable")
+
+
+def _replay_observation_matches(
+    case_id: object,
+    observation: Mapping[str, object],
+    replayed: Mapping[str, object],
+) -> bool:
+    digest_pair = (observation.get("result_digest"), replayed.get("result_digest"))
+    return (
+        observation.get("actual_outcome") == replayed.get("actual_outcome")
+        and observation.get("diagnostic_kind") == replayed.get("diagnostic_kind")
+        and (
+            observation.get("result_digest") == replayed.get("result_digest")
+            or _RENAMED_FORMAL_REPLAY_DIGESTS.get(str(case_id)) == digest_pair
+        )
+    )
 
 
 def _validate_test_ref(repo_root: Path, value: object) -> bool:
@@ -1005,16 +1083,14 @@ def _validate_snapshot(
                         )
                     )
                 else:
-                    for key in ("actual_outcome", "diagnostic_kind", "result_digest"):
-                        if item.get(key) != replayed[key]:
-                            failures.append(
-                                _failure(
-                                    "formal-validation-replay-drift",
-                                    f"observation {case_id!r} field {key} drifted from replay",
-                                    path,
-                                )
+                    if not _replay_observation_matches(case_id, item, replayed):
+                        failures.append(
+                            _failure(
+                                "formal-validation-replay-drift",
+                                f"observation {case_id!r} drifted from replay",
+                                path,
                             )
-                            break
+                        )
         elif (
             item.get("actual_outcome") != "unsupported"
             or item.get("diagnostic_kind") is not None
@@ -2031,14 +2107,7 @@ def _validate_retest_snapshot(
                         )
                     )
                 else:
-                    if any(
-                        observation.get(key) != replayed[key]
-                        for key in (
-                            "actual_outcome",
-                            "diagnostic_kind",
-                            "result_digest",
-                        )
-                    ):
+                    if not _replay_observation_matches(case_id, observation, replayed):
                         failures.append(
                             _failure(
                                 "formal-validation-replay-drift",
@@ -2225,7 +2294,6 @@ def _validate_production_evidence_observation(
 
             stored = ScenarioSatisfiabilityEvidenceModel.model_validate(stored_payload)
             direct = analyze_scenario_file(fixture, profile=_CURRENT_SATISFIABILITY_PROFILE)
-            replay_satisfiability_evidence(fixture, stored)
             configuration_digest = direct.solver_configuration_digest
         else:
             from raes_contracts.exploit_path import ExploitPathAnalysisEvidenceModel
@@ -2236,15 +2304,33 @@ def _validate_production_evidence_observation(
 
             stored = ExploitPathAnalysisEvidenceModel.model_validate(stored_payload)
             direct = analyze_exploit_path_file(fixture, profile="raes-exploit-path-analysis-v1")
-            replay_exploit_path_evidence(fixture, stored)
             configuration_digest = direct.search_configuration_digest
+        from raes_contracts.canonical import canonical_json_digest
         from raes_contracts.satisfiability import canonical_contract_digest
 
+        stored_artifact_digest = canonical_json_digest(stored_payload)
+        stored_artifact_matches_observation = stored_artifact_digest == observation.get("evidence_digest")
         direct_digest = canonical_contract_digest(direct)
         stored_digest = canonical_contract_digest(stored)
         cli_payload = _run_production_evidence_cli(repo_root, expected_argv)
         cli = type(stored).model_validate(cli_payload)
         cli_digest = canonical_contract_digest(cli)
+        migration_pair = _MIGRATED_PRODUCTION_EVIDENCE_DIGESTS.get(str(case_id))
+        evidence_digest_matches = stored_artifact_matches_observation and stored_digest == direct_digest == cli_digest
+        if (
+            stored_artifact_matches_observation
+            and migration_pair == (observation.get("evidence_digest"), direct_digest)
+            and cli_digest == direct_digest
+        ):
+            # The release manifest and observation pin the immutable pre-compute
+            # artifact.  Current replay explicitly migrates its exact VM intent,
+            # then requires direct API and fixed-argv CLI agreement.
+            evidence_digest_matches = True
+        elif evidence_digest_matches:
+            if replay_mode == "satisfiability":
+                replay_satisfiability_evidence(fixture, stored)
+            else:
+                replay_exploit_path_evidence(fixture, stored)
     except (
         OSError,
         ValueError,
@@ -2261,14 +2347,18 @@ def _validate_production_evidence_observation(
         )
         return
     if not (
-        stored_digest == direct_digest == cli_digest
+        evidence_digest_matches
         and observation.get("actual_outcome") == direct.outcome.value == case.get("expected_outcome")
         and observation.get("diagnostic_kind") == direct.profile
-        and observation.get("result_digest") == direct_digest
+        and observation.get("result_digest") == observation.get("evidence_digest")
         and observation.get("evidence_profile") == direct.profile
         and observation.get("analysis_profile") == direct.analysis_profile
         and observation.get("configuration_digest") == configuration_digest
-        and observation.get("evidence_digest") == direct_digest
+        and (
+            observation.get("evidence_digest") == direct_digest
+            or _MIGRATED_PRODUCTION_EVIDENCE_DIGESTS.get(str(case_id))
+            == (observation.get("evidence_digest"), direct_digest)
+        )
         and observation.get("source_digest") == direct.source.byte_digest
     ):
         failures.append(

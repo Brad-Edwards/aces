@@ -209,7 +209,7 @@ def _security_manager(**overrides) -> dict:
 
 def _manager_node(manager: dict | None = None) -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "2 gib", "cpu": 2},
         "services": [
             {"port": 1514, "protocol": "tcp", "name": "wazuh-agent-events"},
@@ -238,7 +238,7 @@ def test_security_monitoring_surface_is_node_scoped_not_top_level() -> None:
 
 
 def test_vm_runtime_security_monitoring_manager_inventory() -> None:
-    node = Node(type="vm", runtime={"security_monitoring_managers": [_security_manager()]})
+    node = Node(type="compute", runtime={"security_monitoring_managers": [_security_manager()]})
 
     manager = node.runtime.security_monitoring_managers[0]
     assert manager.security_monitoring_manager_id == "techvault-wazuh"
@@ -297,7 +297,7 @@ def test_parser_accepts_canonical_runtime_security_monitoring_managers() -> None
         name: security-monitoring-parser
         nodes:
           siem:
-            type: vm
+            type: compute
             resources: {ram: 2 gib, cpu: 2}
             services:
               - {port: 55000, name: wazuh-api}
@@ -416,7 +416,7 @@ class TestRuntimeSecurityMonitoringSemanticValidation:
             nodes={
                 "siem": _manager_node(manager),
                 "other": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 55000, "name": "wazuh-api"}],
                 },
@@ -509,7 +509,7 @@ class TestRuntimeSecurityMonitoringSemanticValidation:
             name="security-monitoring",
             nodes={
                 "siem": _manager_node(),
-                "client": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "client": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             relationships={
                 "client-to-siem": {

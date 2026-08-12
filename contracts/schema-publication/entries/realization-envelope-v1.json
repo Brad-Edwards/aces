@@ -2,9 +2,9 @@
   "contract_id": "realization-envelope-v1",
   "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "e2ed2f29ca31b1cfe71298989943d6bbf3078b34d696466d3d0e8dcc383ac7d9",
+  "content_hash": "ee120d70afef4ebbd3e63a3a9b39e966986f4cf7a42cf30339848c78de003396",
   "last_change": {
-    "summary": "Bound typed process-resource-limit capability domains to the selected material backend configuration for issue #1066.",
-    "content_hash": "e2ed2f29ca31b1cfe71298989943d6bbf3078b34d696466d3d0e8dcc383ac7d9"
+    "summary": "Added governed compute-substrate claims and observation capability binding to selected material configurations for issue #1076.",
+    "content_hash": "ee120d70afef4ebbd3e63a3a9b39e966986f4cf7a42cf30339848c78de003396"
   }
 }

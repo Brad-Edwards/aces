@@ -29,10 +29,10 @@ def _sharing_scenario(*, target: str = "owner", sharing_infra: str = "") -> str:
 name: shared-network-namespace
 nodes:
   owner:
-    type: vm
+    type: compute
     os: linux
   capture:
-    type: vm
+    type: compute
     os: linux
     runtime:
       container:
@@ -84,14 +84,14 @@ def test_network_namespace_target_must_resolve_to_another_node(target: str, mess
 
 
 def test_network_namespace_target_must_be_a_vm_node() -> None:
-    with pytest.raises(SDLValidationError, match="must reference a VM node"):
+    with pytest.raises(SDLValidationError, match="must reference a compute node"):
         _scenario(
             """
             name: invalid-network-namespace-owner-type
             nodes:
               owner: {type: switch}
               capture:
-                type: vm
+                type: compute
                 os: linux
                 runtime:
                   container:
@@ -107,16 +107,16 @@ def test_network_namespace_target_cannot_chain() -> None:
             """
             name: chained-network-namespace
             nodes:
-              owner: {type: vm, os: linux}
+              owner: {type: compute, os: linux}
               middle:
-                type: vm
+                type: compute
                 os: linux
                 runtime:
                   container:
                     namespaces:
                       network: {target_node_ref: owner}
               capture:
-                type: vm
+                type: compute
                 os: linux
                 runtime:
                   container:
@@ -201,9 +201,9 @@ def test_instantiation_revalidates_network_namespace_target() -> None:
                 type: string
                 required: true
             nodes:
-              owner: {type: vm, os: linux}
+              owner: {type: compute, os: linux}
               capture:
-                type: vm
+                type: compute
                 os: linux
                 runtime:
                   container:
@@ -266,9 +266,9 @@ def test_composition_rewrites_network_namespace_target(tmp_path: Path) -> None:
               exports:
                 nodes: [owner, capture]
             nodes:
-              owner: {type: vm, os: linux}
+              owner: {type: compute, os: linux}
               capture:
-                type: vm
+                type: compute
                 os: linux
                 runtime:
                   container:

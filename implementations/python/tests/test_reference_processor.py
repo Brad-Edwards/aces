@@ -43,7 +43,7 @@ _SCENARIO = dedent(
     name: reference-processor
     nodes:
       vm1:
-        type: vm
+        type: compute
         os: linux
         resources: {ram: 1 gib, cpu: 1}
         conditions: {health: ops}
@@ -80,7 +80,7 @@ _PARAM_SCENARIO = dedent(
       cpu_count: {type: integer, default: 1}
     nodes:
       vm1:
-        type: vm
+        type: compute
         os: linux
         resources:
           ram: 1 gib

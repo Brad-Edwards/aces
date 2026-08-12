@@ -75,7 +75,7 @@ def _raw_scenario():
                 default: 1
             nodes:
               {NODE_NAME}:
-                type: vm
+                type: compute
                 os: ${{os_kind}}
                 resources:
                   ram: 1 gib
@@ -407,7 +407,7 @@ class TestRun300Lifecycle:
                     type: string
                 nodes:
                   vm1:
-                    type: vm
+                    type: compute
                     os: ${os_kind}
                     resources: {ram: 1 gib, cpu: 1}
                 """

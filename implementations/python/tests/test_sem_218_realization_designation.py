@@ -63,6 +63,10 @@ def _open_node_realization_fields(node_name: str) -> set[str]:
     return {f"nodes.{node_name}.{suffix}" for suffix in _OPEN_NODE_REALIZATION_SUFFIXES}
 
 
+def _open_compute_substrate_fields(*node_names: str) -> set[str]:
+    return {f"nodes.{node_name}.realization.compute-substrate" for node_name in node_names}
+
+
 def _scenario(realization: str = "", *, web_os: str = ""):
     realization_block = textwrap.dedent(realization).strip()
     web_os_line = f"    {web_os}\n" if web_os else ""
@@ -71,11 +75,11 @@ def _scenario(realization: str = "", *, web_os: str = ""):
         f"{realization_block + chr(10) if realization_block else ''}"
         "nodes:\n"
         "  web:\n"
-        "    type: vm\n"
+        "    type: compute\n"
         f"{web_os_line}"
         "    resources: {ram: 1 gib, cpu: 1}\n"
         "  worker:\n"
-        "    type: vm\n"
+        "    type: compute\n"
         "    resources: {ram: 1 gib, cpu: 1}\n"
     )
 
@@ -112,7 +116,7 @@ def _manifest(mode: RealizationSupportMode) -> BackendManifest:
         concept_bindings=(ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),),
         provisioner=ProvisionerCapabilities(
             name="designation-test",
-            supported_node_types=frozenset({"vm"}),
+            supported_node_types=frozenset({"compute"}),
             supported_os_families=frozenset({"linux"}),
         ),
         realization_envelope=_envelope_with_process_limit_capability(envelope, capability),
@@ -210,7 +214,7 @@ def test_most_specific_scopes_override_in_both_directions_and_ignore_order():
         requirement.field_path
         for requirement in first.realization_requirements
         if requirement.explicitness is ExplicitnessClass.OPEN
-    } == _open_node_realization_fields("worker")
+    } == _open_node_realization_fields("worker") | _open_compute_substrate_fields("web", "worker")
     assert first.realization_requirements == second.realization_requirements
 
     closed_then_open = """realization:
@@ -226,7 +230,7 @@ def test_most_specific_scopes_override_in_both_directions_and_ignore_order():
         requirement.field_path
         for requirement in model.realization_requirements
         if requirement.explicitness is ExplicitnessClass.OPEN
-    } == _open_node_realization_fields("worker")
+    } == _open_node_realization_fields("worker") | _open_compute_substrate_fields("web", "worker")
 
 
 def test_explicit_leaf_wins_over_inherited_open_posture():
@@ -315,7 +319,7 @@ def test_imported_scope_is_qualified_and_does_not_leak_to_host_or_sibling(tmp_pa
               scopes:
                 - {field_pointer: /nodes/vm, posture: open}
             nodes:
-              vm: {type: vm, resources: {ram: 1 gib, cpu: 1}}
+              vm: {type: compute, resources: {ram: 1 gib, cpu: 1}}
             """
         ).strip()
         + "\n",
@@ -331,7 +335,7 @@ def test_imported_scope_is_qualified_and_does_not_leak_to_host_or_sibling(tmp_pa
               version: 1.0.0
               exports: {nodes: [vm]}
             nodes:
-              vm: {type: vm, resources: {ram: 1 gib, cpu: 1}}
+              vm: {type: compute, resources: {ram: 1 gib, cpu: 1}}
             """
         ).strip()
         + "\n",
@@ -346,7 +350,7 @@ def test_imported_scope_is_qualified_and_does_not_leak_to_host_or_sibling(tmp_pa
               - {source: local:open-module.yaml, namespace: openmod}
               - {source: local:closed-module.yaml, namespace: closedmod}
             nodes:
-              host: {type: vm, resources: {ram: 1 gib, cpu: 1}}
+              host: {type: compute, resources: {ram: 1 gib, cpu: 1}}
             """
         ).strip()
         + "\n",
@@ -362,7 +366,9 @@ def test_imported_scope_is_qualified_and_does_not_leak_to_host_or_sibling(tmp_pa
         requirement.field_path
         for requirement in model.realization_requirements
         if requirement.explicitness is ExplicitnessClass.OPEN
-    } == _open_node_realization_fields("openmod.vm")
+    } == _open_node_realization_fields("openmod.vm") | _open_compute_substrate_fields(
+        "openmod.vm", "closedmod.vm", "host"
+    )
 
 
 def test_open_demand_is_rejected_without_open_realization_support():
@@ -419,7 +425,7 @@ def test_delegated_open_posture_is_materialized_through_runtime_disclosure():
     }
 
     diagnostics, provenance = realization_disclosure(
-        execution.model.realization_requirements,
+        (requirement,),
         execution.provisioning,
         RuntimeSnapshot(entries=entries),
     )
@@ -465,7 +471,7 @@ def test_backend_realized_open_slot_discloses_governing_scope_through_api():
                 action=ChangeAction.CREATE,
                 address=requirement.address,
                 resource_type="node",
-                payload={"node_type": "vm"},
+                payload={"node_kind": "compute"},
             )
         ]
     )
@@ -475,7 +481,7 @@ def test_backend_realized_open_slot_discloses_governing_scope_through_api():
                 address=requirement.address,
                 domain=RuntimeDomain.PROVISIONING,
                 resource_type="node",
-                payload={"node_type": "vm", "os_family": "linux"},
+                payload={"node_kind": "compute", "os_family": "linux"},
             )
         }
     )

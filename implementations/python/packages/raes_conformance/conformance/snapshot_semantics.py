@@ -126,6 +126,13 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
                 requirement_kind=entry.requirement_kind,
                 verification_scope=entry.verification_scope,
                 observation_strength=entry.observation_strength,
+                observed_value=entry.observed_value,
+                operation_id=entry.operation_id,
+                envelope_digest=entry.envelope_digest,
+                configuration_digest=entry.configuration_digest,
+                observer_version=entry.observer_version,
+                sequence=entry.sequence,
+                binding_verified=entry.binding_verified,
             )
             for entry in validated.realization_observations
         ),

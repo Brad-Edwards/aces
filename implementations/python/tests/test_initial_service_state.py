@@ -31,7 +31,7 @@ def _scenario(*replacements: tuple[str, str]):
 name: initial-service-state
 nodes:
   app:
-    type: vm
+    type: compute
     os: linux
     resources:
       ram: 1 gib
@@ -40,7 +40,7 @@ nodes:
       - name: mail
         port: 143
   other:
-    type: vm
+    type: compute
     os: linux
     resources:
       ram: 1 gib
@@ -568,7 +568,7 @@ def test_service_materialization_readback_refs_fail_closed(
 
 
 def test_service_materialization_requires_a_named_service_target() -> None:
-    with pytest.raises(SDLValidationError, match="must resolve to a named VM service"):
+    with pytest.raises(SDLValidationError, match="must resolve to a named compute service"):
         _scenario(
             (
                 "target_service_ref: nodes.app.services.mail",

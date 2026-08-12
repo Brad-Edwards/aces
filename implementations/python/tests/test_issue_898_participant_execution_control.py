@@ -175,7 +175,7 @@ def test_compiler_preserves_exact_action_to_target_execution_binding() -> None:
 
 def test_autonomous_manifest_requires_execution_control_and_relational_bindings() -> None:
     runtime_model, policy = _compiled()
-    manifest = _autonomous_manifest(runtime_model)
+    manifest = _autonomous_manifest(runtime_model, with_realization_envelope=False)
     capability = manifest.participant_runtime
 
     assert capability is not None

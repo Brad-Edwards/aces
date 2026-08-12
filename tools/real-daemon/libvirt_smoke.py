@@ -322,7 +322,7 @@ def t_partial_create_rollback():
 
 
 def _node_payload(addr_tail: str, *, source: str | None = None, networks=()):
-    node = {"type": "vm", "resources": {"ram": 268435456, "cpu": 1}}
+    node = {"type": "compute", "resources": {"ram": 268435456, "cpu": 1}}
     if source is not None:
         node["source"] = {"name": source}
     spec = {"node": node, "infrastructure": {"networks": list(networks)}}

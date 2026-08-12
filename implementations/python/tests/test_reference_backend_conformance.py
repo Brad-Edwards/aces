@@ -40,7 +40,7 @@ def test_reference_target_drives_full_participant_probe_case_set():
             )
 
 
-def test_positive_reference_declaration_is_stricter_than_stub_nonclaim():
+def test_reference_and_stub_realization_declarations_both_fail_closed_when_non_constructive():
     from raes_backend_stubs.stubs import create_stub_target
 
     reference_report = run_target_conformance(create_reference_backend_target())
@@ -48,7 +48,8 @@ def test_positive_reference_declaration_is_stricter_than_stub_nonclaim():
 
     assert reference_report.profile == stub_report.profile
     assert reference_report.passed is False
-    assert stub_report.passed is True
+    assert stub_report.passed is False
+    assert any(case.name == "realization-envelope-constructive" for case in stub_report.cases)
     assert {case.name for case in reference_report.cases} - {case.name for case in stub_report.cases} == {
         "participant-opacity-backend-not-executed"
     }

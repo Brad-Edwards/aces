@@ -9,7 +9,7 @@ from .value_parsing import WholeFieldVariableReference, parse_enum_or_var
 
 
 class EndpointPersona(str, Enum):
-    """Scenario function of a VM endpoint, separate from login/participant roles."""
+    """Scenario function of a compute endpoint, separate from login/participant roles."""
 
     WORKFORCE = "workforce"
     ENGINEERING = "engineering"

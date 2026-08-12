@@ -11,6 +11,8 @@ from typing import cast
 
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from raes_contracts.realization_observation import RealizationObservation
 
 from raes_backend_libvirt.driver import (
     DomainHandle,
@@ -20,6 +22,7 @@ from raes_backend_libvirt.driver import (
     NetworkSpec,
 )
 
+from ...envelopes import load_libvirt_realization_envelope
 from .._libvirt_xml import _domain_xml, _network_xml, _nwfilter_xml
 from ..seed import _SEED_DIR_MODE, GenisoimageSeedBuilder, SeedBuilder, write_seed_files
 from ._native import (
@@ -86,6 +89,7 @@ class LibvirtDeploymentDriver:
         diagnostics: list[Diagnostic] = []
         network_handles: list[NetworkHandle] = []
         domain_handles: list[DomainHandle] = []
+        observations: list[RealizationObservation] = []
         # Addresses this call newly created (no owned object pre-existed). Only
         # these are rolled back on failure — never a pre-existing resource an
         # UPDATE converged, whose destruction would contradict the baseline
@@ -110,6 +114,15 @@ class LibvirtDeploymentDriver:
                 diagnostics.append(failure)
             else:
                 domain_handles.append(DomainHandle(address=spec.address, realized=True))
+                observation = self._compute_substrate_observation(
+                    connection,
+                    spec.address,
+                    sequence=len(observations),
+                )
+                if observation is None:
+                    diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
+                else:
+                    observations.append(observation)
 
         if diagnostics:
             # Roll back only newly-created objects — including a domain whose XML was
@@ -120,7 +133,72 @@ class LibvirtDeploymentDriver:
             # ownership-safe, so a never-defined address is a harmless no-op.
             self._rollback(created_networks, created_domains)
             return DriverResult(diagnostics=tuple(diagnostics))
-        return DriverResult(networks=tuple(network_handles), domains=tuple(domain_handles))
+        return DriverResult(
+            networks=tuple(network_handles),
+            domains=tuple(domain_handles),
+            observations=tuple(observations),
+        )
+
+    def _compute_substrate_observation(
+        self,
+        connection: object,
+        address: str,
+        *,
+        sequence: int,
+    ) -> RealizationObservation | None:
+        """Read the current owned domain back from libvirt after realization."""
+
+        lookup = getattr(connection, "lookupByName", None)
+        if not callable(lookup):
+            return None
+        try:
+            native = lookup(self._name_for(address))
+            active = getattr(native, "isActive", None)
+            if _existing_uuid(native) != _raes_uuid(address) or not callable(active) or active() != 1:
+                return None
+        except Exception:
+            return None
+        envelope = load_libvirt_realization_envelope(self.driver_mode)
+        return RealizationObservation(
+            address=address,
+            field_path="compute-substrate",
+            concern=RealizationConcern.COMPUTE_SUBSTRATE,
+            source=ObservationStrength.DAEMON_OBSERVED,
+            value="virtual-machine",
+            envelope_digest=envelope.digest,
+            configuration_digest=envelope.configuration.configuration_digest,
+            observer_version="libvirt-domain-readback/v1",
+            sequence=sequence,
+            binding_verified=True,
+        )
+
+    def observe(self, *, domains: tuple[DomainSpec, ...]) -> DriverResult:
+        """Read current owned domains without converging or restarting them."""
+
+        try:
+            connection = self._conn()
+        except Exception:
+            return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
+        observations: list[RealizationObservation] = []
+        diagnostics: list[Diagnostic] = []
+        handles: list[DomainHandle] = []
+        for spec in domains:
+            observation = self._compute_substrate_observation(
+                connection,
+                spec.address,
+                sequence=len(observations),
+            )
+            if observation is None:
+                diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
+                continue
+            self._realized.add(spec.address)
+            handles.append(DomainHandle(address=spec.address, realized=True))
+            observations.append(observation)
+        return DriverResult(
+            domains=tuple(handles),
+            diagnostics=tuple(diagnostics),
+            observations=tuple(observations),
+        )
 
     def _realize_network(self, connection: object, spec: NetworkSpec, created: list[str]) -> Diagnostic | None:
         """Realize one network, or return a redacted failure diagnostic.

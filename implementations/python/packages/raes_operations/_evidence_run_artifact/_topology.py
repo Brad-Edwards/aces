@@ -146,7 +146,7 @@ def _topology_section(
             "source": "planned",
             "address": node.address,
             "name": node.name,
-            "node_type": getattr(node, "node_type", None),
+            "node_kind": getattr(node, "node_kind", None),
             "os_family": getattr(node, "os_family", None),
             "services": _node_services(node),
             "networks": _node_network_links(node),

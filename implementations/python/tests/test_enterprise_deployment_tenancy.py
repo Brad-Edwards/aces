@@ -27,29 +27,29 @@ def _valid_payload() -> dict[str, object]:
         "name": "enterprise-lab",
         "nodes": {
             "dc": {
-                "type": "vm",
+                "type": "compute",
                 "os": "windows",
                 "endpoint_persona": "service",
                 "services": [{"name": "ldap", "port": 389}],
             },
             "idp": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "endpoint_persona": "service",
                 "services": [{"name": "oidc", "port": 8443}],
             },
             "carrier": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "endpoint_persona": "carrier",
             },
             "workstation": {
-                "type": "vm",
+                "type": "compute",
                 "os": "windows",
                 "endpoint_persona": "workforce",
             },
             "inference": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "endpoint_persona": "service",
                 "services": [
@@ -268,7 +268,7 @@ def test_identity_facade_must_reference_a_named_vm_service() -> None:
     payload = _valid_payload()
     payload["identity_facades"]["workforce-oidc"]["service_ref"] = "idp"
 
-    with pytest.raises(SDLValidationError, match="service_ref 'idp'.*named VM service"):
+    with pytest.raises(SDLValidationError, match="service_ref 'idp'.*named compute service"):
         _parse_payload(payload)
 
 
@@ -294,8 +294,8 @@ def test_existing_generic_trust_and_federation_relationships_remain_compatible()
             """
             name: generic-relationships
             nodes:
-              source: {type: vm}
-              target: {type: vm}
+              source: {type: compute}
+              target: {type: compute}
             relationships:
               generic-trust:
                 type: trusts
@@ -313,14 +313,14 @@ def test_existing_generic_trust_and_federation_relationships_remain_compatible()
     assert scenario.relationships["generic-federation"].identity_federation is None
 
 
-def test_endpoint_persona_is_vm_only() -> None:
+def test_endpoint_persona_is_compute_only() -> None:
     payload = _valid_payload()
     payload["nodes"]["workstation"] = {
         "type": "switch",
         "endpoint_persona": "workforce",
     }
 
-    with pytest.raises(SDLParseError, match="Switch nodes cannot have VM-only fields.*endpoint_persona"):
+    with pytest.raises(SDLParseError, match="Switch nodes cannot have compute-only fields.*endpoint_persona"):
         _parse_payload(payload)
 
 
@@ -359,7 +359,7 @@ def test_all_vm_nodes_require_cell_membership_when_tenancy_is_declared() -> None
         "name": "standalone-vm",
         "nodes": {
             "standalone": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
             }
         },
@@ -369,7 +369,7 @@ def test_all_vm_nodes_require_cell_membership_when_tenancy_is_declared() -> None
     payload = _valid_payload()
     payload["deployment_cells"]["range-a-cell"]["node_refs"].remove("workstation")
 
-    with pytest.raises(SDLValidationError, match="VM node 'workstation'.*exactly one deployment cell"):
+    with pytest.raises(SDLValidationError, match="Compute node 'workstation'.*exactly one deployment cell"):
         _parse_payload(payload)
 
 
@@ -385,7 +385,7 @@ def test_carrier_placement_must_stay_in_one_deployment_cell() -> None:
 def test_nested_carrier_placement_is_rejected_without_a_cycle() -> None:
     payload = _valid_payload()
     payload["nodes"]["outer-carrier"] = {
-        "type": "vm",
+        "type": "compute",
         "os": "linux",
         "endpoint_persona": "carrier",
     }

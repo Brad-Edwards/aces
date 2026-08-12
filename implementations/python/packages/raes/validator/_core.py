@@ -35,15 +35,15 @@ class _ValidatorCore:
     def _is_unresolved_var(value: object) -> bool:
         return is_variable_ref(value)
 
-    def _node_type(self, node_name: str) -> NodeType | None:
+    def _node_kind(self, node_name: str) -> NodeType | None:
         node = self._s.nodes.get(node_name)
         return node.type if node is not None else None
 
     def _is_switch_node(self, node_name: str) -> bool:
-        return self._node_type(node_name) == NodeType.SWITCH
+        return self._node_kind(node_name) == NodeType.SWITCH
 
-    def _is_vm_node(self, node_name: str) -> bool:
-        return self._node_type(node_name) == NodeType.VM
+    def _is_compute_node(self, node_name: str) -> bool:
+        return self._node_kind(node_name) == NodeType.COMPUTE
 
     def _all_entity_names(self) -> set[str]:
         return set(flatten_entities(self._s.entities).keys())
@@ -86,11 +86,11 @@ class _ValidatorCore:
         hosts, services, and content (and content items). The split here
         mirrors the pre-existing scope-validation patterns:
 
-        - hosts come from ``nodes.*`` but only VM nodes (matches
+        - hosts come from ``nodes.*`` but only compute nodes (matches
           ``initial_knowledge.hosts``).
         - subnets come from ``infrastructure.*`` but only switch-backed
           entries (matches ``allowed_subnets``).
-        - services come from declared services on VM nodes.
+        - services come from declared services on compute nodes.
         - content references stay open across content sections and items.
 
         Non-spatial, non-resource elements (conditions, accounts,
@@ -99,19 +99,19 @@ class _ValidatorCore:
         """
         index: dict[str, set[str]] = defaultdict(set)
 
-        # Hosts: VM nodes only. Both bare (`vm`) and qualified (`nodes.vm`)
+        # Hosts: compute nodes only. Both bare and qualified references
         # aliases are accepted. Switch nodes go through the subnets path,
         # never the host path.
         for node_name, node in self._s.nodes.items():
-            if node.type != NodeType.VM:
+            if node.type != NodeType.COMPUTE:
                 continue
             canonical = f"nodes.{node_name}"
             index[node_name].add(canonical)
             index[canonical].add(canonical)
 
         # Subnets: switch-backed infrastructure only. Both bare and
-        # qualified aliases. VM-backed infrastructure entries (which
-        # mirror VM nodes' names) go through the host path's `nodes.*`
+        # qualified aliases. Compute-backed infrastructure entries (which
+        # mirror compute nodes' names) go through the host path's `nodes.*`
         # alias, not here.
         for infra_name, _infra in self._s.infrastructure.items():
             if not self._is_switch_node(infra_name):
@@ -128,7 +128,7 @@ class _ValidatorCore:
     def _add_operating_scope_service_aliases(self, index: dict[str, set[str]]) -> None:
         # Services: qualified `nodes.<vm>.services.<svc>` refs plus bare
         # service names. The service-ref helper only emits names declared
-        # on VM nodes (a service on a switch is meaningless), so no extra
+        # on compute nodes (a service on a switch is meaningless), so no extra
         # filtering is needed here.
         for node_name, node in self._s.nodes.items():
             for service in node.services:
@@ -266,11 +266,11 @@ class _ValidatorCore:
 
     def _warn_missing_vm_resources(self) -> None:
         for name, node in self._s.nodes.items():
-            if node.type != NodeType.VM:
+            if node.type != NodeType.COMPUTE:
                 continue
             if node.resources is None:
                 self._warn(
-                    f"Node '{name}' is a VM without 'resources'. This is "
+                    f"Node '{name}' is compute without 'resources'. This is "
                     "valid SDL, but may be undeployable unless the backend "
                     "supplies defaults."
                 )

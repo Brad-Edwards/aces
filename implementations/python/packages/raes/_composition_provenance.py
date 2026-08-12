@@ -13,7 +13,7 @@ from .phase_contracts import (
     ExplicitnessProvenanceRecord,
     ResolvedImportProvenance,
 )
-from .realization_designation import RealizationDesignationRecord
+from .realization_designation import RealizationConstraintRecord, RealizationDesignationRecord
 from .scenario import ImportDecl, ScenarioContent
 
 
@@ -112,6 +112,30 @@ def prefixed_realization_designation(
         namespace=(namespace, *record.namespace),
         field_pointer="/".join(parts),
         posture=record.posture,
+    )
+
+
+def prefixed_realization_constraint(
+    record: RealizationConstraintRecord,
+    *,
+    namespace: str,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> RealizationConstraintRecord:
+    """Qualify one imported addressed realization constraint."""
+
+    parts = record.field_pointer.split("/")
+    if len(parts) >= 3:
+        section_symbols = symbols.get(_decode_pointer_segment(parts[1]))
+        declaration_name = _decode_pointer_segment(parts[2])
+        if isinstance(section_symbols, Mapping) and declaration_name in section_symbols:
+            parts[2] = _encode_pointer_segment(section_symbols[declaration_name])
+    return RealizationConstraintRecord(
+        namespace=(namespace, *record.namespace),
+        field_pointer="/".join(parts),
+        concern=record.concern,
+        posture=record.posture,
+        domain=record.domain,
+        provenance=record.provenance,
     )
 
 

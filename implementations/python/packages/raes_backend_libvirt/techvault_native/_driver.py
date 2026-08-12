@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast
 from urllib.parse import urlsplit
@@ -68,7 +68,9 @@ from ..techvault_matrix import (
 from ..techvault_observation import (
     canonical_digest,
     file_digest,
+    native_active,
     snapshot_from_observations,
+    substrate_observation,
 )
 from ._define import define_domain, define_domains, define_network, define_networks
 
@@ -185,6 +187,16 @@ class TechVaultNativeLibvirtDriver:
     ) -> DriverResult:
         networks, domains = specs
         network_handles, domain_handles = handles
+        observations = tuple(
+            replace(
+                observation,
+                envelope_digest=envelope_digest,
+                configuration_digest=configuration_digest,
+            )
+            if observation.concern.value == "compute-substrate"
+            else observation
+            for observation in observations
+        )
         diagnostics = techvault_observation_diagnostics(
             networks=networks,
             domains=domains,
@@ -311,6 +323,51 @@ class TechVaultNativeLibvirtDriver:
             networks=tuple(network_handles),
             domains=tuple(domain_handles),
             diagnostics=tuple(diagnostics),
+        )
+
+    def observe(self, *, domains: tuple[DomainSpec, ...]) -> DriverResult:
+        """Read current owned domains without defining or restarting them."""
+
+        try:
+            connection = self._conn()
+        except Exception:
+            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
+        envelope = load_libvirt_realization_envelope(self.driver_mode)
+        observations: list[RealizationObservation] = []
+        handles: list[DomainHandle] = []
+        diagnostics: list[Diagnostic] = []
+        for spec in domains:
+            try:
+                resolved = _resolve_native(
+                    connection,
+                    "lookupByName",
+                    "listAllDomains",
+                    spec.address,
+                    known_name=self._names.get(spec.address),
+                    name_prefix=self.name_prefix,
+                )
+                native = None if resolved is None else resolved.native
+                if native is None or _existing_uuid(native) != _raes_uuid(spec.address) or not native_active(native):
+                    raise ValueError("owned active domain not observed")
+            except Exception:
+                diagnostics.append(_diagnostic(_CODE_OPERATION_FAILED, spec.address))
+                continue
+            if resolved is not None and resolved.name is not None:
+                self._names[spec.address] = resolved.name
+            self._realized.add(spec.address)
+            handles.append(DomainHandle(address=spec.address, realized=True))
+            observations.append(
+                replace(
+                    substrate_observation(spec.address),
+                    envelope_digest=envelope.digest,
+                    configuration_digest=envelope.configuration.configuration_digest,
+                    sequence=len(observations),
+                )
+            )
+        return DriverResult(
+            domains=tuple(handles),
+            diagnostics=tuple(diagnostics),
+            observations=tuple(observations),
         )
 
     def realized_addresses(self) -> frozenset[str]:

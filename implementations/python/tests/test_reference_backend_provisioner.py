@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+from dataclasses import replace
 
 import pytest
 from raes import parse_sdl
@@ -26,7 +27,7 @@ _SCENARIO = """
 name: ref-provisioner
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 """
@@ -76,6 +77,7 @@ def test_apply_handles_delete_and_unchanged():
     plan = _provisioning_plan(target)
     control_plane = RuntimeControlPlane(target)
     control_plane.submit_provisioning(plan)
+    assert control_plane.snapshot.realization_observations
 
     # Now submit a DELETE for the realized node.
     delete_plan = ProvisioningPlan(
@@ -93,6 +95,7 @@ def test_apply_handles_delete_and_unchanged():
 
     assert status is not None and status.state.value == "succeeded"
     assert "provision.node.web" not in control_plane.snapshot.entries
+    assert control_plane.snapshot.realization_observations == ()
     destroyed = [op for op in driver.recorded_ops if op.verb == "destroy" and op.kind == "container"]
     assert any(op.address == "provision.node.web" for op in destroyed)
 
@@ -106,7 +109,7 @@ def test_unchanged_op_keeps_entry_without_driver_realize():
                 address="provision.node.web",
                 domain=RuntimeDomain.PROVISIONING,
                 resource_type="node",
-                payload={"name": "web", "node_type": "vm", "os_family": "linux"},
+                payload={"name": "web", "node_kind": "compute", "os_family": "linux"},
             )
         },
         operations=[
@@ -114,7 +117,7 @@ def test_unchanged_op_keeps_entry_without_driver_realize():
                 action=ChangeAction.UNCHANGED,
                 address="provision.node.web",
                 resource_type="node",
-                payload={"name": "web", "node_type": "vm", "os_family": "linux"},
+                payload={"name": "web", "node_kind": "compute", "os_family": "linux"},
             )
         ],
     )
@@ -124,6 +127,26 @@ def test_unchanged_op_keeps_entry_without_driver_realize():
     entry = control_plane.snapshot.entries["provision.node.web"]
     assert entry.status == "unchanged"
     assert not [op for op in driver.recorded_ops if op.verb == "realize"]
+
+
+def test_unchanged_compute_bootstraps_missing_substrate_evidence_with_readback() -> None:
+    driver = InProcessDriver()
+    target = _target_with_driver(driver)
+    scenario = parse_sdl(textwrap.dedent(_SCENARIO))
+    create_plan = RuntimeManager(target).plan(scenario).provisioning
+    first = RuntimeControlPlane(target)
+    first.submit_provisioning(create_plan)
+    legacy_snapshot = replace(first.snapshot, realization_observations=())
+    realizes_before = tuple(op for op in driver.recorded_ops if op.verb == "realize")
+    unchanged_plan = RuntimeManager(target).plan(scenario, legacy_snapshot).provisioning
+    assert all(operation.action is ChangeAction.UNCHANGED for operation in unchanged_plan.operations)
+
+    upgraded = RuntimeControlPlane(target, initial_snapshot=legacy_snapshot)
+    receipt = upgraded.submit_provisioning(unchanged_plan)
+
+    assert upgraded.get_operation(receipt.operation_id).state.value == "succeeded"
+    assert upgraded.snapshot.realization_observations
+    assert tuple(op for op in driver.recorded_ops if op.verb == "realize") == realizes_before
 
 
 def test_snapshot_payload_carries_only_portable_facts():

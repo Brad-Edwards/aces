@@ -239,6 +239,7 @@ def execute_operation(
         snapshot,
         address=request.address,
         snapshot=snapshot,
+        operation_id=operation_id,
         information_state_context_resolver=getattr(
             control_plane,
             "_information_state_context_resolver",

@@ -47,7 +47,7 @@ def _compile_content_placements(
             domain="provisioning",
             code_prefix="provisioning.content-target-ref",
             node_label="content target",
-            required_type=NodeType.VM,
+            required_type=NodeType.COMPUTE,
         )
         diagnostics.extend(target_diagnostics)
         if target_address is None:
@@ -197,7 +197,7 @@ def _compile_account_placements(
             domain="provisioning",
             code_prefix="provisioning.account-node-ref",
             node_label="account node",
-            required_type=NodeType.VM,
+            required_type=NodeType.COMPUTE,
         )
         diagnostics.extend(target_diagnostics)
         if target_address is None:

@@ -54,11 +54,11 @@ HISTORICAL_IMPLEMENTATION_SURFACE_PATHS = {
 RENAMED_ARTIFACT_DIGESTS = {
     "examples/scenarios/enterprise-participant-evidence-loop.sdl.yaml": (
         "54ba1a60220e27a55da9cd2a407d7d3ab836fa54460d0b0c6cad87c2e744ddbb",
-        "80e0b07898c0a9829220e1246f531a67c8d1cd64c388a7953ede5f513ab81b58",
+        "ddbf98aa964f548a10bbd73e8750a9508cd28f074f0dd45e175f62b4da5f828b",
     ),
     "examples/scenarios/port-authority-surge-response.sdl.yaml": (
         "c7f9374d87490145425e9ee3916d799ffac1b6a30fb97f50f7241f7ff9b6f21a",
-        "e0c55d9fd6017de38dc52a600ae97d530cae87f714512be53edf06e08c0ef0d4",
+        "e126e678f9289635b40a2cc1a5b9773385bc46bed1c637a57ed50e9a0c45957e",
     ),
     "contracts/fixtures/experiment-core/experiment-task-v1/valid/reference.json": (
         "21952a752f4e8581a9fc3b872e4bc308150548170d38bcfc83dbbe35ff5e0b9f",

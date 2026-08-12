@@ -6,6 +6,16 @@ from raes_backend_protocols.capabilities import BackendManifest
 from raes_backend_protocols.participant_runtime_base import BaseParticipantRuntime
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ChangeAction, EvaluationPlan, OrchestrationPlan, ProvisioningPlan, RuntimeDomain
+from raes_contracts.realization_envelope import (
+    BackendRealizationEnvelopeModel,
+    ObservationStrength,
+    RealizationConcern,
+)
+from raes_contracts.realization_observation import (
+    RealizationObservation,
+    bind_compute_substrate_observations,
+    compute_substrate_readback_addresses,
+)
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 from raes_runtime.registry import ReferenceTimeRuntime, RuntimeTarget, RuntimeTargetComponents
 
@@ -36,6 +46,9 @@ __all__ = [
 class StubProvisioner:
     """In-memory provisioner."""
 
+    def __init__(self, realization_envelope: BackendRealizationEnvelopeModel | None = None) -> None:
+        self._realization_envelope = realization_envelope
+
     def validate(self, plan: ProvisioningPlan) -> list[Diagnostic]:
         return []
 
@@ -44,6 +57,23 @@ class StubProvisioner:
         plan: ProvisioningPlan,
         snapshot: RuntimeSnapshot,
     ) -> ApplyResult:
+        if (
+            self._realization_envelope is not None
+            and plan.realization_constraints
+            and (plan.operation_id is None or plan.realization_envelope != self._realization_envelope.identity)
+        ):
+            return ApplyResult(
+                success=False,
+                snapshot=snapshot,
+                diagnostics=[
+                    Diagnostic(
+                        code="stub-backend.realization-envelope.mismatch",
+                        domain="runtime",
+                        address="runtime.stub.provisioning",
+                        message="Provisioning plan does not match the selected stub realization envelope.",
+                    )
+                ],
+            )
         entries = dict(snapshot.entries)
         changed_addresses: list[str] = []
         for op in plan.operations:
@@ -64,9 +94,48 @@ class StubProvisioner:
             if op.action != ChangeAction.UNCHANGED:
                 changed_addresses.append(op.address)
 
+        if self._realization_envelope is None:
+            return ApplyResult(
+                success=True,
+                snapshot=snapshot.with_entries(entries),
+                changed_addresses=changed_addresses,
+            )
+        readback_addresses = set(
+            compute_substrate_readback_addresses(
+                plan=plan,
+                envelope=self._realization_envelope,
+                previous=snapshot.realization_observations,
+            )
+        )
+        observations = tuple(
+            RealizationObservation(
+                address=constraint.address,
+                field_path=constraint.field_path,
+                concern=RealizationConcern.COMPUTE_SUBSTRATE,
+                source=ObservationStrength.DRIVER_REPORTED,
+                value="x-openrae:in-process-emulation",
+                envelope_digest=self._realization_envelope.digest,
+                configuration_digest=self._realization_envelope.configuration.configuration_digest,
+                observer_version="stub-in-process/v1",
+                sequence=index,
+                binding_verified=True,
+            )
+            for index, constraint in enumerate(plan.realization_constraints)
+            if constraint.address in readback_addresses and constraint.concern == "compute-substrate"
+        )
+        observation_disclosures = bind_compute_substrate_observations(
+            plan=plan,
+            observations=observations,
+            envelope=self._realization_envelope,
+            previous=snapshot.realization_observations,
+        )
         return ApplyResult(
             success=True,
-            snapshot=snapshot.with_entries(entries),
+            snapshot=snapshot.with_entries(
+                entries,
+                realization_observations=observation_disclosures,
+                realization_envelope=self._realization_envelope.identity,
+            ),
             changed_addresses=changed_addresses,
         )
 
@@ -284,7 +353,7 @@ def create_stub_components(
 
     del config
     return RuntimeTargetComponents(
-        provisioner=StubProvisioner(),
+        provisioner=StubProvisioner(manifest.realization_envelope),
         orchestrator=StubOrchestrator(),
         evaluator=StubEvaluator(),
         participant_runtime=StubParticipantRuntime() if manifest.has_participant_runtime else None,
@@ -296,6 +365,7 @@ def create_stub_target(**config) -> RuntimeTarget:
     """Convenience helper returning the fully configured stub target."""
 
     config.setdefault("with_time", True)
+    config.setdefault("with_realization_envelope", True)
     manifest = create_stub_manifest(**config)
     components = create_stub_components(manifest=manifest, **config)
     return RuntimeTarget(

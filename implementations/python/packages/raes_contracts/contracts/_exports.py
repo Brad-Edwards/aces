@@ -349,6 +349,7 @@ PUBLIC_EXPORTS = [
     "ProcessorCapabilitiesV2Model",
     "ProvisionerCapabilitiesModel",
     "ProvisioningPlanModel",
+    "PlannedRealizationConstraintModel",
     "RANDOM_STREAM_DRAW_PURPOSE_SCOPE",
     "RANDOM_STREAM_PROFILE_SCHEMA_VERSION",
     "RANDOM_STREAM_VECTOR_SCHEMA_VERSION",

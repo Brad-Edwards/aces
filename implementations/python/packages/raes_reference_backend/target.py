@@ -13,6 +13,7 @@ from raes_runtime.registry import BackendRegistry, ReferenceTimeRuntime, Runtime
 
 from .driver import DeploymentDriver
 from .drivers.inprocess import InProcessDriver
+from .envelopes import ReferenceDriverMode
 from .evaluator import ReferenceEvaluator
 from .manifest import REFERENCE_BACKEND_NAME, create_reference_backend_manifest
 from .orchestrator import ReferenceOrchestrator
@@ -34,8 +35,12 @@ def create_reference_backend_components(
 
     del config
     deployment_driver = driver if driver is not None else InProcessDriver()
+    mode = ReferenceDriverMode(getattr(deployment_driver, "driver_mode", ""))
+    envelope = manifest.realization_envelope
+    if envelope is None or envelope.configuration.mode != mode.value:
+        raise ValueError("reference manifest realization envelope does not match deployment driver mode")
     return RuntimeTargetComponents(
-        provisioner=ReferenceProvisioner(deployment_driver),
+        provisioner=ReferenceProvisioner(deployment_driver, envelope),
         orchestrator=ReferenceOrchestrator() if manifest.has_orchestrator else None,
         evaluator=ReferenceEvaluator() if manifest.has_evaluator else None,
         participant_runtime=ReferenceParticipantRuntime() if manifest.has_participant_runtime else None,

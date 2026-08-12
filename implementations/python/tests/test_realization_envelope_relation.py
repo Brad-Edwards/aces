@@ -64,12 +64,12 @@ def _web_envelope(
         scope=EnvelopeScope.SCENARIO,
         domains={
             "scenario_name": ExactDomain(value=name),
-            "node_type": ExactDomain(value="vm"),
+            "node_kind": ExactDomain(value="compute"),
             "os": EnumDomain(values=list(os_values)),
         },
         bindings=[
             EnvelopeBinding(path="name", scope=EnvelopeScope.SCENARIO, posture=Posture.EXACT, domain="scenario_name"),
-            EnvelopeBinding(path="nodes.web.type", scope=EnvelopeScope.NODE, posture=Posture.EXACT, domain="node_type"),
+            EnvelopeBinding(path="nodes.web.type", scope=EnvelopeScope.NODE, posture=Posture.EXACT, domain="node_kind"),
             EnvelopeBinding(path="nodes.web.os", scope=EnvelopeScope.FIELD, posture=Posture.CONSTRAINED, domain="os"),
         ],
         closure=(
@@ -159,13 +159,13 @@ def test_contract_rejects_arbitrary_predicate_domain() -> None:
 
 def test_member_accepts_in_envelope_instance() -> None:
     env = _web_envelope()
-    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: vm\n    os: linux\n")
+    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: compute\n    os: linux\n")
     assert member(inst, env).holds
 
 
 def test_member_rejects_out_of_domain_value() -> None:
     env = _web_envelope(os_values=("linux",))
-    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: vm\n    os: windows\n")
+    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: compute\n    os: windows\n")
     result = member(inst, env)
     assert not result.holds
     assert any(d.code == "realization-envelope.membership.domain-mismatch" for d in result.diagnostics)
@@ -174,13 +174,13 @@ def test_member_rejects_out_of_domain_value() -> None:
 
 def test_member_rejects_wrong_exact_name() -> None:
     env = _web_envelope()
-    inst = _instantiate("name: other\nnodes:\n  web:\n    type: vm\n    os: linux\n")
+    inst = _instantiate("name: other\nnodes:\n  web:\n    type: compute\n    os: linux\n")
     assert not member(inst, env).holds
 
 
 def test_member_reports_absent_constrained_path() -> None:
     env = _web_envelope()
-    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: vm\n")
+    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: compute\n")
     result = member(inst, env)
     assert not result.holds
     assert any(d.code == "realization-envelope.membership.path-absent" for d in result.diagnostics)
@@ -188,9 +188,9 @@ def test_member_reports_absent_constrained_path() -> None:
 
 def test_member_closed_world_rejects_unspecified_dimension() -> None:
     env = _web_envelope(closed=True)
-    ok = _instantiate("name: web-family\nnodes:\n  web:\n    type: vm\n    os: linux\n")
+    ok = _instantiate("name: web-family\nnodes:\n  web:\n    type: compute\n    os: linux\n")
     assert member(ok, env).holds
-    extra = _instantiate('name: web-family\nversion: "2.0"\nnodes:\n  web:\n    type: vm\n    os: linux\n')
+    extra = _instantiate('name: web-family\nversion: "2.0"\nnodes:\n  web:\n    type: compute\n    os: linux\n')
     result = member(extra, env)
     assert not result.holds
     assert any(d.code == "realization-envelope.membership.closed-world-extra" for d in result.diagnostics)
@@ -198,7 +198,7 @@ def test_member_closed_world_rejects_unspecified_dimension() -> None:
 
 def test_member_diagnostics_are_secret_free() -> None:
     env = _web_envelope(os_values=("linux",))
-    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: vm\n    os: windows\n")
+    inst = _instantiate("name: web-family\nnodes:\n  web:\n    type: compute\n    os: windows\n")
     for diagnostic in member(inst, env).diagnostics:
         # Diagnostics name paths, ids, and domain kinds — never raw values (R8).
         assert "windows" not in diagnostic.message
@@ -211,7 +211,7 @@ def test_member_governed_reference_and_numeric_interval() -> None:
         scope=EnvelopeScope.NODE,
         domains={
             "name": ExactDomain(value="s"),
-            "vm": ExactDomain(value="vm"),
+            "vm": ExactDomain(value="compute"),
             "cpu": NumericIntervalDomain(numeric_type=NumericType.INTEGER, lower=1, upper=4),
         },
         bindings=[
@@ -222,8 +222,8 @@ def test_member_governed_reference_and_numeric_interval() -> None:
             ),
         ],
     )
-    within = _instantiate("name: s\nnodes:\n  h:\n    type: vm\n    resources:\n      ram: 2048\n      cpu: 2\n")
-    outside = _instantiate("name: s\nnodes:\n  h:\n    type: vm\n    resources:\n      ram: 2048\n      cpu: 9\n")
+    within = _instantiate("name: s\nnodes:\n  h:\n    type: compute\n    resources:\n      ram: 2048\n      cpu: 2\n")
+    outside = _instantiate("name: s\nnodes:\n  h:\n    type: compute\n    resources:\n      ram: 2048\n      cpu: 9\n")
     assert member(within, env).holds
     assert not member(outside, env).holds
 
@@ -367,7 +367,7 @@ def test_positive_probes_cover_safe_integer_interval_boundaries() -> None:
         scope=EnvelopeScope.SCENARIO,
         domains={
             "name": ExactDomain(value="bounded"),
-            "vm": ExactDomain(value="vm"),
+            "vm": ExactDomain(value="compute"),
             "linux": ExactDomain(value="linux"),
             "ram": ExactDomain(value=1024),
             "cpu": NumericIntervalDomain(numeric_type=NumericType.INTEGER, lower=1, upper=4),
@@ -529,9 +529,9 @@ def _record_node_envelope(*, open_os: bool = False, record_overrideable: bool = 
         scope=EnvelopeScope.SCENARIO,
         domains={
             "name": ExactDomain(value="rec"),
-            "vm": ExactDomain(value="vm"),
+            "compute": ExactDomain(value="compute"),
             "os": EnumDomain(values=["linux", "windows"]),
-            "node": RecordDomain(fields={"type": "vm", "os": "os"}, extra=False),
+            "node": RecordDomain(fields={"type": "compute", "os": "os"}, extra=False),
         },
         bindings=bindings,
     )
@@ -543,7 +543,7 @@ def test_record_domain_membership_and_witness() -> None:
     assert result.scenario is not None
     assert member(result.scenario, env).holds
     # A closed record rejects an undeclared field on the node.
-    extra = _instantiate('name: rec\nnodes:\n  web:\n    type: vm\n    os: linux\n    os_version: "9"\n')
+    extra = _instantiate('name: rec\nnodes:\n  web:\n    type: compute\n    os: linux\n    os_version: "9"\n')
     rejected = member(extra, env)
     assert not rejected.holds
     assert any(d.code == "realization-envelope.membership.closed-world-extra" for d in rejected.diagnostics)
@@ -553,8 +553,8 @@ def test_open_posture_widens_overrideable_record_leaf() -> None:
     # The record binding is marked overrideable, so opening os at the field scope
     # legally widens the record's os constraint (most-specific-wins, R2).
     env = _record_node_envelope(open_os=True, record_overrideable=True)
-    linux = _instantiate("name: rec\nnodes:\n  web:\n    type: vm\n    os: linux\n")
-    windows = _instantiate("name: rec\nnodes:\n  web:\n    type: vm\n    os: windows\n")
+    linux = _instantiate("name: rec\nnodes:\n  web:\n    type: compute\n    os: linux\n")
+    windows = _instantiate("name: rec\nnodes:\n  web:\n    type: compute\n    os: windows\n")
     assert member(linux, env).holds
     assert member(windows, env).holds
 
@@ -584,8 +584,8 @@ def test_binding_scope_breaks_equal_path_ties_independent_of_list_order() -> Non
         posture=Posture.EXACT,
         domain="linux",
     )
-    windows = _instantiate("name: scope-order\nnodes:\n  web: {type: vm, os: windows}\n")
-    linux = _instantiate("name: scope-order\nnodes:\n  web: {type: vm, os: linux}\n")
+    windows = _instantiate("name: scope-order\nnodes:\n  web: {type: compute, os: windows}\n")
+    linux = _instantiate("name: scope-order\nnodes:\n  web: {type: compute, os: linux}\n")
 
     for bindings in ([outer, leaf], [leaf, outer]):
         env = envelope(bindings)
@@ -649,8 +649,8 @@ def test_open_world_overlay_removes_inherited_closed_state() -> None:
         id="open-overlay",
         scope=EnvelopeScope.SCENARIO,
         domains={
-            "node": RecordDomain(fields={"type": "vm"}, extra=False),
-            "vm": ExactDomain(value="vm"),
+            "node": RecordDomain(fields={"type": "compute"}, extra=False),
+            "compute": ExactDomain(value="compute"),
         },
         bindings=[
             EnvelopeBinding(
@@ -668,7 +668,7 @@ def test_open_world_overlay_removes_inherited_closed_state() -> None:
             )
         ],
     )
-    instance = _instantiate('name: open-overlay\nnodes:\n  web: {type: vm, os: linux, os_version: "9"}\n')
+    instance = _instantiate('name: open-overlay\nnodes:\n  web: {type: compute, os: linux, os_version: "9"}\n')
 
     assert member(instance, env).holds
 
@@ -691,11 +691,13 @@ def test_open_descendant_shadows_closed_root_without_opening_siblings() -> None:
             ClosureOverlay(path="nodes.web", scope=EnvelopeScope.NODE, closure=Closure.OPEN_WORLD),
         ],
     )
-    web_only = _instantiate("name: scoped\nnodes:\n  web: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}\n")
+    web_only = _instantiate(
+        "name: scoped\nnodes:\n  web: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}\n"
+    )
     with_sibling = _instantiate(
         "name: scoped\nnodes:\n"
-        "  web: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}\n"
-        "  worker: {type: vm, resources: {ram: 1 gib, cpu: 1}}\n"
+        "  web: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}\n"
+        "  worker: {type: compute, resources: {ram: 1 gib, cpu: 1}}\n"
     )
 
     assert member(web_only, env).holds
@@ -738,7 +740,7 @@ def test_widening_non_overrideable_inherited_value_is_invalid() -> None:
     # Same shape but the record is NOT overrideable: opening os would widen a fixed
     # inherited value, which R2 makes an ill-formed envelope. The relation denies.
     env = _record_node_envelope(open_os=True, record_overrideable=False)
-    linux = _instantiate("name: rec\nnodes:\n  web:\n    type: vm\n    os: linux\n")
+    linux = _instantiate("name: rec\nnodes:\n  web:\n    type: compute\n    os: linux\n")
     result = member(linux, env)
     assert not result.holds
     assert any(d.code == "realization-envelope.invalid.non-overrideable-widen" for d in result.diagnostics)

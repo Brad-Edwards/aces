@@ -10,7 +10,7 @@ nodes:
     description: SOC and security tooling network.
 
   wazuh-manager:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
@@ -19,33 +19,33 @@ nodes:
       - {name: syslog, port: 514, protocol: udp}
     conditions: {wazuh-manager-health: ""}
   wazuh-indexer:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: indexer-api, port: 9200, protocol: tcp}
   wazuh-dashboard:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: dashboard, port: 5601, protocol: tcp}
 
   aptl-otel-collector:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: otlp-grpc, port: 4317, protocol: tcp}
       - {name: otlp-http, port: 4318, protocol: tcp}
   aptl-tempo:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: tempo-http, port: 3200, protocol: tcp}
   aptl-grafana-otel:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:

@@ -64,7 +64,7 @@ def _scenario(process_limits: str, *, variables: str = "", realization: str = ""
     return f"""{prefix}
 nodes:
   worker:
-    type: vm
+    type: compute
     os: linux
     resources: {{ram: 1 gib, cpu: 1}}
     runtime:
@@ -315,7 +315,7 @@ def test_compiler_preserves_exact_empty_and_constrained_process_limit_posture() 
 name: issue-1066-absent-process-limits
 nodes:
   worker:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     runtime:

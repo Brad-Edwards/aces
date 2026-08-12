@@ -109,6 +109,10 @@ class LibvirtDriver(Protocol):
         """Destroy resources by RAES address."""
         ...
 
+    def observe(self, *, domains: tuple[DomainSpec, ...]) -> DriverResult:
+        """Read existing domains without mutating their native state."""
+        ...
+
     def realized_addresses(self) -> frozenset[str]:
         """Return RAES addresses currently known as realized."""
         ...

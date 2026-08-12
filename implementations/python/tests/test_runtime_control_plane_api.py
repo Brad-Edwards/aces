@@ -158,7 +158,7 @@ def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -241,7 +241,7 @@ def test_control_plane_api_exposes_operational_apparatus_summary_to_auditors():
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -396,7 +396,7 @@ def test_control_plane_api_persists_operations_and_snapshot(tmp_path: Path):
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 """)
@@ -590,7 +590,7 @@ def test_control_plane_api_cancels_workflow_runs():
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -672,7 +672,7 @@ def test_control_plane_api_reconciles_workflow_timeouts():
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -765,7 +765,7 @@ def test_control_plane_api_cancellation_triggers_compensation_history():
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -891,7 +891,7 @@ def test_control_plane_api_timeout_triggers_compensation_history():
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}

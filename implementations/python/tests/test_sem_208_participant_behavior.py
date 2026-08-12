@@ -117,7 +117,7 @@ def _scenario_yaml(*, actions: str = "[scan]", boundaries: str = "[red-view]") -
         name: sem-208
         nodes:
           web:
-            type: VM
+            type: compute
             resources: {{ram: 1 GiB, cpu: 1}}
             services: [{{port: 80, name: http}}]
         entities:
@@ -294,7 +294,7 @@ def _act607_authority_scope_scenario_yaml() -> str:
           net:
             type: switch
           web:
-            type: VM
+            type: compute
             resources: {ram: 1 GiB, cpu: 1}
             services: [{port: 80, name: http}]
         infrastructure:
@@ -409,7 +409,7 @@ def _act607_typed_ref_collision_scenario_yaml() -> str:
         name: act-607-typed-ref-collisions
         nodes:
           web:
-            type: VM
+            type: compute
             resources: {ram: 1 GiB, cpu: 1}
             services: [{port: 80, name: http}]
         entities:
@@ -1118,7 +1118,7 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
                 path: /opt/raes/tools/scanner
             nodes:
               web:
-                type: VM
+                type: compute
                 resources: {ram: 1 GiB, cpu: 1}
             action_contracts:
               scan:

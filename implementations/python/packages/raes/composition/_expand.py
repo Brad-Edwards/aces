@@ -24,6 +24,9 @@ from .._composition_provenance import (
     prefixed_import_record as _prefixed_import_record,
 )
 from .._composition_provenance import (
+    prefixed_realization_constraint as _prefixed_realization_constraint,
+)
+from .._composition_provenance import (
     prefixed_realization_designation as _prefixed_realization_designation,
 )
 from .._composition_provenance import (
@@ -57,7 +60,13 @@ from ..phase_contracts import (
     ExplicitnessProvenanceRecord,
     ResolvedImportProvenance,
 )
-from ..realization_designation import RealizationDesignation, RealizationDesignationRecord, designation_records
+from ..realization_designation import (
+    RealizationConstraintRecord,
+    RealizationDesignation,
+    RealizationDesignationRecord,
+    constraint_records,
+    designation_records,
+)
 from ..scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, ScenarioContent
 from ._behavior import _behavior_reference_maps, _rewrite_agent_sections, _rewrite_behavior_sections
 from ._references import _rewrite_variable_tokens
@@ -202,6 +211,7 @@ def _expand_one_import(
     list[CapabilityConstraint],
     list[ExplicitnessProvenanceRecord],
     list[RealizationDesignationRecord],
+    list[RealizationConstraintRecord],
 ]:
     """Resolve, expand, namespace, and merge a single import; return provenance additions."""
 
@@ -288,7 +298,18 @@ def _expand_one_import(
         _prefixed_realization_designation(record, namespace=namespace, symbols=symbols)
         for record in inner_provenance.realization_designations
     ]
-    return merged, import_records, capability_constraints, explicitness_records, realization_records
+    realization_constraints = [
+        _prefixed_realization_constraint(record, namespace=namespace, symbols=symbols)
+        for record in inner_provenance.realization_constraints
+    ]
+    return (
+        merged,
+        import_records,
+        capability_constraints,
+        explicitness_records,
+        realization_records,
+        realization_constraints,
+    )
 
 
 def expand_sdl_modules(
@@ -323,10 +344,13 @@ def expand_sdl_modules(
     capability_constraints: list[CapabilityConstraint] = []
     explicitness_records: list[ExplicitnessProvenanceRecord] = []
     realization_records: list[RealizationDesignationRecord] = []
+    realization_constraints: list[RealizationConstraintRecord] = []
     raw_designation = merged.get("realization")
     if raw_designation is not None:
         try:
-            realization_records.extend(designation_records(RealizationDesignation.model_validate(raw_designation)))
+            typed_designation = RealizationDesignation.model_validate(raw_designation)
+            realization_records.extend(designation_records(typed_designation))
+            realization_constraints.extend(constraint_records(typed_designation))
         except ValidationError as exc:
             raise SDLParseError("Realization designation is structurally invalid", path=path) from exc
     lockfile = load_lockfile(resolved_path.parent)
@@ -345,19 +369,21 @@ def expand_sdl_modules(
     )
 
     for raw_import in merged.get("imports", []):
-        merged, import_add, capability_add, explicitness_add, realization_add = _expand_one_import(
+        merged, import_add, capability_add, explicitness_add, realization_add, constraint_add = _expand_one_import(
             raw_import, merged, context
         )
         import_records.extend(import_add)
         capability_constraints.extend(capability_add)
         explicitness_records.extend(explicitness_add)
         realization_records.extend(realization_add)
+        realization_constraints.extend(constraint_add)
 
     provenance = ExpansionProvenance(
         imports=tuple(import_records),
         capability_constraints=tuple(capability_constraints),
         explicitness=tuple(explicitness_records),
         realization_designations=tuple(realization_records),
+        realization_constraints=tuple(realization_constraints),
     )
     merged.pop("imports", None)
     merged.pop("module", None)

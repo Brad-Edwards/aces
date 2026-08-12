@@ -183,7 +183,7 @@ def _record_node_runtime(
         address=_node_address(node_name),
         name=node_name,
         node_name=node_name,
-        node_type=node_spec.get("type", ""),
+        node_kind=node_spec.get("type", ""),
         os_family=node_spec.get("os", "") or "",
         architecture=node_spec.get("architecture", "") or "",
         count=infra_spec.get("count"),
@@ -240,7 +240,7 @@ def _compile_feature_bindings(
 ) -> dict[str, FeatureBinding]:
     feature_bindings: dict[str, FeatureBinding] = {}
     for node_name, node in scenario.nodes.items():
-        if node.type != NodeType.VM:
+        if node.type != NodeType.COMPUTE:
             continue
         node_addr = _node_address(node_name)
         for feature_name, role_name in node.features.items():

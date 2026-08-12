@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from libvirt_conformance_fixtures import daemon_compute_substrate_observations
 from paths import EXAMPLES_DIR
 from raes import parse_sdl
 from raes_backend_libvirt import create_libvirt_target
@@ -35,6 +36,7 @@ class _RecordingLibvirtDriver:
         return DriverResult(
             networks=tuple(NetworkHandle(address=spec.address) for spec in networks),
             domains=tuple(DomainHandle(address=spec.address) for spec in domains),
+            observations=daemon_compute_substrate_observations(domains),
         )
 
     def destroy(self, *, networks, domains):

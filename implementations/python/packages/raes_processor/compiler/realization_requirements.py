@@ -3,7 +3,7 @@
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from raes.identifiers import QualifiedName
 from raes.nodes import NodeType
-from raes.realization_designation import resolve_realization_designation
+from raes.realization_designation import RealizationConstraintPosture, resolve_realization_designation
 from raes.runtime_resource_limits import (
     RuntimeProcessResourceLimit,
     process_resource_limit_identity_digest,
@@ -12,7 +12,7 @@ from raes.scenario import InstantiatedScenario
 from raes.semantics.domain_topology import (
     DomainTopologyAnalysis,
 )
-from raes_contracts.vocabulary import ProcessResourceLimitScope
+from raes_contracts.vocabulary import ObservationStrength, ProcessResourceLimitScope, RealizationVerificationScope
 
 from ..semantics.realization import (
     REALIZATION_DOMAIN,
@@ -403,6 +403,7 @@ def _compile_realization_requirements(
     """
 
     requirements: list[CompiledRealizationRequirement] = []
+    _append_compute_substrate_requirements(requirements, scenario)
     for registered in registered_realization_concern_descriptors(
         declaration_names={"nodes": scenario.nodes, "content": scenario.content}
     ):
@@ -414,3 +415,48 @@ def _compile_realization_requirements(
     _append_service_materialization_requirements(requirements, scenario)
     _append_source_artifact_requirements(requirements, scenario)
     return tuple(requirements)
+
+
+def _append_compute_substrate_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
+    """Lower addressed substrate intent independently of structural node kind."""
+
+    explicitness_by_posture = {
+        RealizationConstraintPosture.EXACT: ExplicitnessClass.EXACT,
+        RealizationConstraintPosture.CONSTRAINED: ExplicitnessClass.CONSTRAINED,
+        RealizationConstraintPosture.OPEN: ExplicitnessClass.OPEN,
+    }
+    records_by_pointer = {
+        record.field_pointer: record
+        for record in scenario.instantiation_provenance.realization_constraints
+        if record.concern.value == "compute-substrate"
+    }
+    for node_name, node in scenario.nodes.items():
+        if node.type is NodeType.SWITCH:
+            continue
+        pointer_name = node_name.replace("~", "~0").replace("/", "~1")
+        field_pointer = f"/nodes/{pointer_name}"
+        record = records_by_pointer.get(field_pointer)
+        posture = record.posture if record is not None else RealizationConstraintPosture.OPEN
+        required_strength = (
+            ObservationStrength.DRIVER_REPORTED
+            if posture is RealizationConstraintPosture.OPEN
+            else ObservationStrength.DAEMON_OBSERVED
+        )
+        requirements.append(
+            CompiledRealizationRequirement(
+                field_path=f"nodes.{node_name}.realization.compute-substrate",
+                address=_node_address(node_name),
+                domain=REALIZATION_DOMAIN,
+                requirement_kind="compute-substrate",
+                explicitness=explicitness_by_posture[posture],
+                provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                governing_scope=record.governing_scope if record is not None else f"#{field_pointer}",
+                verification_scope=RealizationVerificationScope.PRESENCE,
+                required_observation_strength=required_strength,
+                value_domain=record.domain if record is not None else None,
+                constraint_provenance=record.provenance if record is not None else "author-declared",
+            )
+        )

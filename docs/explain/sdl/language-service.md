@@ -79,7 +79,7 @@ Example MCP call:
 
 ```json
 {
-  "sdl_content": "name: demo\nfeatures:\n  app: {type: Service, source: webapp}\nnodes:\n  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}}\n",
+  "sdl_content": "name: demo\nfeatures:\n  app: {type: Service, source: webapp}\nnodes:\n  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}}\n",
   "cursor_path": "/nodes/web/features",
   "prefix": "a"
 }

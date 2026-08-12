@@ -116,7 +116,7 @@
     },
     "Account": {
       "additionalProperties": false,
-      "description": "A user account on a scenario node.\n\nDistinct from OCR's ``Role`` model: roles map exercise participants\nto VM logins for exercise access. Accounts describe the environment\nstate \u2014 what accounts attackers will encounter or exploit.",
+      "description": "A user account on a scenario node.\n\nDistinct from OCR's ``Role`` model: roles map exercise participants\nto compute-node logins for exercise access. Accounts describe the environment\nstate \u2014 what accounts attackers will encounter or exploit.",
       "properties": {
         "auth_method": {
           "anyOf": [
@@ -423,7 +423,7 @@
     },
     "Agent": {
       "additionalProperties": false,
-      "description": "A role-neutral participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_assertions`` links to precondition assertions, giving the\n  authoring surface a declarative hook for participant-relevant starting\n  state without equating a probe implementation with truth (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)\n- ``interactive_access`` declares the VM/channel pairs that may be offered\n  to this participant, without inferring a listener, locator, credential,\n  operating scope, action authority, or successful realization (DSL-117)\n\nPer ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;\nit was an unbound, unvalidated string and graded reward lives in the\nexperiment/evaluator plane (ADR-055/064/069).",
+      "description": "A role-neutral participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_assertions`` links to precondition assertions, giving the\n  authoring surface a declarative hook for participant-relevant starting\n  state without equating a probe implementation with truth (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)\n- ``interactive_access`` declares the compute-node/channel pairs that may be offered\n  to this participant, without inferring a listener, locator, credential,\n  operating scope, action authority, or successful realization (DSL-117)\n\nPer ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;\nit was an unbound, unvalidated string and graded reward lives in the\nexperiment/evaluator plane (ADR-055/064/069).",
       "properties": {
         "actions": {
           "items": {
@@ -1300,6 +1300,32 @@
       "title": "BindingOrigin",
       "type": "string"
     },
+    "BooleanDomain": {
+      "additionalProperties": false,
+      "description": "Booleans: both ``true``/``false``, or an exact boolean when ``value`` set.",
+      "properties": {
+        "kind": {
+          "const": "boolean",
+          "default": "boolean",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "BooleanDomain",
+      "type": "object"
+    },
     "BooleanPredicate": {
       "additionalProperties": false,
       "description": "Compare a governed Boolean property with an expected Boolean.",
@@ -1504,9 +1530,17 @@
       "title": "ClockMonotonicity",
       "type": "string"
     },
+    "ComputeRealizationConcern": {
+      "description": "Portable compute concerns whose mechanisms remain backend-selected.",
+      "enum": [
+        "compute-substrate"
+      ],
+      "title": "ComputeRealizationConcern",
+      "type": "string"
+    },
     "Condition": {
       "additionalProperties": false,
-      "description": "A probe implementation deployed to a VM.\n\nEither ``command`` + ``interval`` or ``source`` must be set, not both.",
+      "description": "A probe implementation deployed to a compute node.\n\nEither ``command`` + ``interval`` or ``source`` must be set, not both.",
       "properties": {
         "command": {
           "anyOf": [
@@ -3705,7 +3739,7 @@
       "type": "string"
     },
     "EndpointPersona": {
-      "description": "Scenario function of a VM endpoint, separate from login/participant roles.",
+      "description": "Scenario function of a compute endpoint, separate from login/participant roles.",
       "enum": [
         "workforce",
         "engineering",
@@ -3821,6 +3855,47 @@
         }
       },
       "title": "Entity",
+      "type": "object"
+    },
+    "EnumDomain": {
+      "additionalProperties": false,
+      "description": "A finite value set: values equal to one listed member.",
+      "properties": {
+        "kind": {
+          "const": "enum",
+          "default": "enum",
+          "title": "Kind",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "not": {
+                  "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+                },
+                "type": "string"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "EnumDomain",
       "type": "object"
     },
     "Event": {
@@ -4203,6 +4278,43 @@
       "title": "EvidenceRetentionExpectation",
       "type": "string"
     },
+    "ExactDomain": {
+      "additionalProperties": false,
+      "description": "A singleton value set: values equal to ``value``.",
+      "properties": {
+        "kind": {
+          "const": "exact",
+          "default": "exact",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "ExactDomain",
+      "type": "object"
+    },
     "ExactRatio": {
       "additionalProperties": false,
       "description": "Reduced positive rational value.",
@@ -4361,7 +4473,7 @@
     },
     "Feature": {
       "additionalProperties": false,
-      "description": "A software artifact, service, or configuration deployed to a VM.",
+      "description": "A software artifact, service, or configuration deployed to a compute node.",
       "properties": {
         "dependencies": {
           "items": {
@@ -4439,7 +4551,7 @@
       "type": "object"
     },
     "FeatureType": {
-      "description": "Kind of feature deployed to a VM.",
+      "description": "Kind of feature deployed to a compute node.",
       "enum": [
         "service",
         "configuration",
@@ -4681,6 +4793,44 @@
       ],
       "title": "GeneratedArtifactOutputDisposition",
       "type": "string"
+    },
+    "GovernedReferenceDomain": {
+      "additionalProperties": false,
+      "description": "References in a finite governed set under a named authority.",
+      "properties": {
+        "allowed_refs": {
+          "items": {
+            "minLength": 1,
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Refs",
+          "type": "array"
+        },
+        "authority": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Authority",
+          "type": "string"
+        },
+        "kind": {
+          "const": "governed-reference",
+          "default": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority",
+        "allowed_refs"
+      ],
+      "title": "GovernedReferenceDomain",
+      "type": "object"
     },
     "IdentityDomain": {
       "additionalProperties": false,
@@ -5476,6 +5626,14 @@
           "title": "Imports",
           "type": "array"
         },
+        "realization_constraints": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RealizationConstraintRecord"
+          },
+          "title": "Realization Constraints",
+          "type": "array"
+        },
         "realization_designations": {
           "default": [],
           "items": {
@@ -5928,7 +6086,7 @@
     },
     "Node": {
       "additionalProperties": false,
-      "description": "A scenario node \u2014 either a VM or a Switch.\n\nThe ``type`` field determines which variant is active. VM fields\nare only valid when type is VM; Switch nodes carry no extra data.",
+      "description": "A scenario node \u2014 either a compute endpoint or a strict switch.\n\nThe ``type`` field determines which structural variant is active. Compute\nfields are only valid for compute nodes; switches carry no extra data.",
       "properties": {
         "architecture": {
           "anyOf": [
@@ -6128,13 +6286,53 @@
       "type": "string"
     },
     "NodeType": {
-      "description": "Whether a node is a virtual machine or network switch.",
+      "description": "Structural resource kind, independent of its realization mechanism.",
       "enum": [
-        "vm",
+        "compute",
         "switch"
       ],
       "title": "NodeType",
       "type": "string"
+    },
+    "NumericIntervalDomain": {
+      "additionalProperties": false,
+      "description": "Numbers of ``numeric_type`` inside a bounded interval.\n\nBoth endpoints are required (the fragment admits only *bounded* intervals,\n``envelope-semantics.md`` R3). An integer interval requires integral\nendpoints. Empty intervals are rejected at construction.",
+      "properties": {
+        "kind": {
+          "const": "numeric-interval",
+          "default": "numeric-interval",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lower": {
+          "title": "Lower",
+          "type": "number"
+        },
+        "lower_closed": {
+          "default": true,
+          "title": "Lower Closed",
+          "type": "boolean"
+        },
+        "numeric_type": {
+          "$ref": "#/$defs/NumericType"
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number"
+        },
+        "upper_closed": {
+          "default": true,
+          "title": "Upper Closed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "numeric_type",
+        "lower",
+        "upper"
+      ],
+      "title": "NumericIntervalDomain",
+      "type": "object"
     },
     "NumericPredicate": {
       "additionalProperties": false,
@@ -6220,6 +6418,15 @@
       ],
       "title": "NumericPredicate",
       "type": "object"
+    },
+    "NumericType": {
+      "description": "Declared numeric type for a numeric-interval domain.",
+      "enum": [
+        "integer",
+        "number"
+      ],
+      "title": "NumericType",
+      "type": "string"
     },
     "OSFamily": {
       "description": "Operating system family. Vocabulary from OCSF Device.os.",
@@ -8732,7 +8939,7 @@
     },
     "ParticipantInteractiveAccess": {
       "additionalProperties": false,
-      "description": "One authored participant-to-VM interactive-access binding.\n\nThis record carries portable intent only. It is not a host locator, port,\ncredential, portal session, listener observation, or realization claim.",
+      "description": "One authored participant-to-compute-node interactive-access binding.\n\nThis record carries portable intent only. It is not a host locator, port,\ncredential, portal session, listener observation, or realization claim.",
       "properties": {
         "account_ref": {
           "anyOf": [
@@ -10000,6 +10207,118 @@
       "title": "PropositionBasis",
       "type": "string"
     },
+    "RealizationConstraintPosture": {
+      "description": "Exact, finite-constrained, or delegated author mechanism intent.",
+      "enum": [
+        "open",
+        "constrained",
+        "exact"
+      ],
+      "title": "RealizationConstraintPosture",
+      "type": "string"
+    },
+    "RealizationConstraintRecord": {
+      "additionalProperties": false,
+      "description": "Portable addressed author constraint carried across SDL phases.",
+      "properties": {
+        "concern": {
+          "$ref": "#/$defs/ComputeRealizationConcern"
+        },
+        "domain": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "boolean": "#/$defs/BooleanDomain",
+                  "enum": "#/$defs/EnumDomain",
+                  "exact": "#/$defs/ExactDomain",
+                  "governed-reference": "#/$defs/GovernedReferenceDomain",
+                  "numeric-interval": "#/$defs/NumericIntervalDomain",
+                  "record": "#/$defs/RecordDomain"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ExactDomain"
+                },
+                {
+                  "$ref": "#/$defs/EnumDomain"
+                },
+                {
+                  "$ref": "#/$defs/BooleanDomain"
+                },
+                {
+                  "$ref": "#/$defs/NumericIntervalDomain"
+                },
+                {
+                  "$ref": "#/$defs/GovernedReferenceDomain"
+                },
+                {
+                  "$ref": "#/$defs/RecordDomain"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Domain"
+        },
+        "field_pointer": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Field Pointer",
+          "type": "string"
+        },
+        "namespace": {
+          "default": [],
+          "items": {
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+                }
+              }
+            ],
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 31,
+          "title": "Namespace",
+          "type": "array"
+        },
+        "posture": {
+          "$ref": "#/$defs/RealizationConstraintPosture"
+        },
+        "provenance": {
+          "default": "author-declared",
+          "enum": [
+            "author-declared",
+            "legacy-node-type-vm"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field_pointer",
+        "concern",
+        "posture"
+      ],
+      "title": "RealizationConstraintRecord",
+      "type": "object"
+    },
     "RealizationDesignationRecord": {
       "additionalProperties": false,
       "description": "Portable authored designation carried across SDL document phases.",
@@ -10044,6 +10363,43 @@
         "posture"
       ],
       "title": "RealizationDesignationRecord",
+      "type": "object"
+    },
+    "RecordDomain": {
+      "additionalProperties": false,
+      "description": "Product structure: each declared field references another named domain.\n\n``extra`` controls undeclared fields: ``False`` (closed) rejects any field not\nnamed in ``fields``; ``True`` (open) admits them. Field values reference domain\nnames resolved against the envelope's ``domains`` map, keeping the structure\nacyclic and free of inline recursion.",
+      "properties": {
+        "extra": {
+          "default": false,
+          "title": "Extra",
+          "type": "boolean"
+        },
+        "fields": {
+          "additionalProperties": {
+            "minLength": 1,
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Fields",
+          "type": "object"
+        },
+        "kind": {
+          "const": "record",
+          "default": "record",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "RecordDomain",
       "type": "object"
     },
     "Relationship": {
@@ -10941,7 +11297,7 @@
     },
     "Resources": {
       "additionalProperties": false,
-      "description": "Compute resources for a VM node.",
+      "description": "Compute resources for a compute node.",
       "properties": {
         "cpu": {
           "anyOf": [
@@ -10983,7 +11339,7 @@
     },
     "Role": {
       "additionalProperties": false,
-      "description": "A named role on a VM with optional entity assignments.\n\nShorthand: ``admin: \"username\"`` (just the username string).\nLonghand: ``admin: {username: \"admin\", entities: [\"blue-team.bob\"]}``.",
+      "description": "A named role on a compute node with optional entity assignments.\n\nShorthand: ``admin: \"username\"`` (just the username string).\nLonghand: ``admin: {username: \"admin\", entities: [\"blue-team.bob\"]}``.",
       "properties": {
         "entities": {
           "items": {
@@ -12240,7 +12596,7 @@
     },
     "RuntimeConfiguration": {
       "additionalProperties": false,
-      "description": "Declarative runtime state required by a VM node.\n\nCaptured observations remain in evidence records unless an author\ndeliberately promotes the fact to one of these contract fields.",
+      "description": "Declarative runtime state required by a compute node.\n\nCaptured observations remain in evidence records unless an author\ndeliberately promotes the fact to one of these contract fields.",
       "properties": {
         "app_authorizations": {
           "items": {

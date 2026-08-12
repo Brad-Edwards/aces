@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "0dc5926aa421eac52576a6ad7235b2fc99a62466a023ac1e4524aacab5a84417",
+  "content_hash": "cdb549ce727995c8e14775096bfc927e34fb22a639b83a85be5f115069d11073",
   "last_change": {
-    "summary": "Added value-free realization observation disclosures for issue #1043.",
-    "content_hash": "0dc5926aa421eac52576a6ad7235b2fc99a62466a023ac1e4524aacab5a84417"
+    "summary": "Added value-bearing compute-substrate observations bound to operation, envelope, configuration, observer, and sequence for issue #1076.",
+    "content_hash": "cdb549ce727995c8e14775096bfc927e34fb22a639b83a85be5f115069d11073"
   }
 }

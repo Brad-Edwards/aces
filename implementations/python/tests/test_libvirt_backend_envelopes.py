@@ -163,7 +163,7 @@ def _scenario():
             name: envelope-test
             nodes:
               vm:
-                type: vm
+                type: compute
                 os: linux
                 resources: {ram: 1 gib, cpu: 1}
             """

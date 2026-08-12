@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "bfa5f234107e53a793331905e9da9476a3ebd00fdca4621f2226523fdddd68b4",
+  "content_hash": "69ba9eca79c570c38f98777640054fbde37a704d8caa9896cee053fcda5ad1c6",
   "last_change": {
-    "summary": "Added structured portable process-resource limits with soft/hard values, structural process selectors, and process/subtree scope for issue #1066; removed the superseded scalar open_files authority.",
-    "content_hash": "bfa5f234107e53a793331905e9da9476a3ebd00fdca4621f2226523fdddd68b4"
+    "summary": "Replaced the mechanism-specific vm node kind with portable compute and added addressed compute-substrate constraints for issue #1076.",
+    "content_hash": "69ba9eca79c570c38f98777640054fbde37a704d8caa9896cee053fcda5ad1c6"
   }
 }

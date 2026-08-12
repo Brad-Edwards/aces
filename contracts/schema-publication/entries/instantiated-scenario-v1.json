@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "df5b9a814ba23fe16c35f5499b30ee533ef0236a8f93549f4fd868c700003635",
+  "content_hash": "e0b0ff3c896785ff8932cef60beb48e47e193a4856bb0f6eb5fac50c1bf51f92",
   "last_change": {
-    "summary": "Propagated concrete structured portable process-resource limits into the instantiated scenario model for issue #1066 and removed the superseded scalar open_files authority.",
-    "content_hash": "df5b9a814ba23fe16c35f5499b30ee533ef0236a8f93549f4fd868c700003635"
+    "summary": "Added canonical compute node kind and portable compute-substrate constraint provenance for issue #1076.",
+    "content_hash": "e0b0ff3c896785ff8932cef60beb48e47e193a4856bb0f6eb5fac50c1bf51f92"
   }
 }

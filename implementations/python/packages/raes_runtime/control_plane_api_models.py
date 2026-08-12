@@ -74,6 +74,8 @@ def _diagnostic_from_mapping(payload: dict[str, Any]) -> Diagnostic:
 
 
 def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
+    from raes_contracts.planning import PlannedRealizationConstraint
+
     return ProvisioningPlan(
         operations=[
             ProvisionOp(
@@ -88,6 +90,19 @@ def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
         ],
         diagnostics=[_diagnostic_from_mapping(payload) for payload in model.diagnostics],
         realization_envelope=model.realization_envelope,
+        realization_constraints=tuple(
+            PlannedRealizationConstraint(
+                address=item.address,
+                field_path=item.field_path,
+                concern=item.concern,
+                posture=item.posture,
+                value_domain=item.value_domain,
+                governing_scope=item.governing_scope,
+                provenance=item.provenance,
+            )
+            for item in model.realization_constraints
+        ),
+        operation_id=model.operation_id,
     )
 
 
@@ -206,6 +221,19 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
                 "requirement_kind": entry.requirement_kind,
                 "verification_scope": entry.verification_scope.value,
                 "observation_strength": entry.observation_strength.value,
+                **(
+                    {
+                        "observed_value": entry.observed_value,
+                        "operation_id": entry.operation_id,
+                        "envelope_digest": entry.envelope_digest,
+                        "configuration_digest": entry.configuration_digest,
+                        "observer_version": entry.observer_version,
+                        "sequence": entry.sequence,
+                        "binding_verified": entry.binding_verified,
+                    }
+                    if entry.requirement_kind == "compute-substrate"
+                    else {}
+                ),
             }
             for entry in snapshot.realization_observations
         ],

@@ -254,6 +254,19 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
                 "requirement_kind": entry.requirement_kind,
                 "verification_scope": entry.verification_scope.value,
                 "observation_strength": entry.observation_strength.value,
+                **(
+                    {
+                        "observed_value": entry.observed_value,
+                        "operation_id": entry.operation_id,
+                        "envelope_digest": entry.envelope_digest,
+                        "configuration_digest": entry.configuration_digest,
+                        "observer_version": entry.observer_version,
+                        "sequence": entry.sequence,
+                        "binding_verified": entry.binding_verified,
+                    }
+                    if entry.requirement_kind == "compute-substrate"
+                    else {}
+                ),
             }
             for entry in snapshot.realization_observations
         ],
@@ -377,6 +390,13 @@ def _realization_observation_from_payload(payload: dict[str, Any]) -> Realizatio
         requirement_kind=model.requirement_kind,
         verification_scope=RealizationVerificationScope(model.verification_scope),
         observation_strength=ObservationStrength(model.observation_strength),
+        observed_value=model.observed_value,
+        operation_id=model.operation_id,
+        envelope_digest=model.envelope_digest,
+        configuration_digest=model.configuration_digest,
+        observer_version=model.observer_version,
+        sequence=model.sequence,
+        binding_verified=model.binding_verified,
     )
 
 

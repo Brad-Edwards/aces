@@ -44,7 +44,7 @@ _SCENARIO = """\
 name: honesty
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
 """
 
@@ -55,7 +55,7 @@ def _constructive_expression() -> RealizationEnvelopeModel:
         scope=EnvelopeScope.SCENARIO,
         domains={
             "name": ExactDomain(value="honesty"),
-            "type": ExactDomain(value="vm"),
+            "type": ExactDomain(value="compute"),
             "os": EnumDomain(values=["linux"]),
         },
         bindings=[

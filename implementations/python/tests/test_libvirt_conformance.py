@@ -6,9 +6,9 @@ Acceptance bar:
    ``unsupported-capability-claim`` / ``unsupported-contract-declaration``
    diagnostics (covered by ``test_backend_conformance_cli.py`` /
    ``run_fixture_suite`` -- asserted green here for the libvirt-relevant profile).
-2. ``run_target_conformance`` refuses realization certification while the
-   published libvirt envelope is non-constructive. It never promotes the old
-   daemon-free reference scenario into envelope or native evidence.
+2. ``run_target_conformance`` keeps ordinary target conformance distinct from
+   the constructive-envelope certification that the published libvirt envelope
+   still cannot satisfy without native ASR-519 probes.
 3. A conformance report is captured and committed (drift-guarded here).
 
 The direct control-plane tests still exercise the real ``LibvirtProvisioner``
@@ -19,6 +19,7 @@ is hermetic adapter evidence only.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from textwrap import dedent
 
@@ -34,6 +35,7 @@ from raes_conformance.conformance import (
 from raes_contracts.planning import RuntimeDomain
 from raes_processor.reference import run_reference_processor
 from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.manager import RuntimeManager
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 COMMITTED_REPORT = REPO_ROOT / "docs" / "conformance" / "libvirt-qemu.provisioning-only.report.json"
@@ -43,7 +45,7 @@ _PROVISIONING_SCENARIO = dedent(
     name: libvirt-conformance
     nodes:
       vm:
-        type: vm
+        type: compute
         os: linux
         resources: {ram: 1 gib, cpu: 1}
     """
@@ -105,11 +107,11 @@ def test_provisioning_only_fixture_suite_has_no_unsupported_diagnostics():
 
 
 # ---------------------------------------------------------------------------
-# AC2: non-constructive envelope refusal + hermetic adapter mutation
+# AC2: target conformance remains separate from constructive-envelope refusal
 # ---------------------------------------------------------------------------
 
 
-def test_provisioning_only_conformance_refuses_non_constructive_envelope():
+def test_provisioning_only_conformance_reports_non_constructive_envelope_separately():
     report = _libvirt_conformance_report()
 
     assert report.profile == BackendCapabilityProfile.PROVISIONING_ONLY
@@ -119,7 +121,8 @@ def test_provisioning_only_conformance_refuses_non_constructive_envelope():
 
     case_names = {case.name for case in report.cases}
     assert "target-manifest" in case_names
-    assert "target-provisioning" not in case_names
+    assert "target-provisioning" in case_names
+    assert "target-snapshot" in case_names
     constructive = next(case for case in report.cases if case.name == "realization-envelope-constructive")
     assert constructive.outcome == "unsupported"
     assert constructive.passed is False
@@ -147,11 +150,29 @@ def test_libvirt_provisioning_mutates_snapshot():
     assert provisioned & set(driver.realized_addresses())
 
 
+def test_libvirt_conformance_driver_bootstraps_missing_noop_substrate_evidence():
+    driver = RecordingLibvirtDriver()
+    target = create_libvirt_target(driver=driver)
+    scenario = parse_sdl(_PROVISIONING_SCENARIO)
+    first = RuntimeControlPlane(target)
+    first.submit_provisioning(_provisioning_plan(target))
+    legacy_snapshot = replace(first.snapshot, realization_observations=())
+    unchanged = RuntimeManager(target, initial_snapshot=legacy_snapshot).plan(scenario).provisioning
+    assert all(operation.action.value == "unchanged" for operation in unchanged.operations)
+
+    upgraded = RuntimeControlPlane(target, initial_snapshot=legacy_snapshot)
+    receipt = upgraded.submit_provisioning(unchanged)
+
+    assert upgraded.get_operation(receipt.operation_id).state.value == "succeeded"
+    assert upgraded.snapshot.realization_observations
+    assert any(operation.verb == "observe" for operation in driver.recorded_ops)
+
+
 def test_provisioning_only_conformance_requires_confirmed_realization():
     """A driver that does not confirm realization fails the ordinary adapter boundary.
 
-    This remains a direct hermetic adapter test; the realization-envelope
-    conformance path deliberately refuses to reuse it as certification evidence.
+    This remains a direct hermetic adapter test; passing target conformance does
+    not replace constructive-envelope certification evidence.
     """
 
     target = create_libvirt_target(driver=NullLibvirtDriver())

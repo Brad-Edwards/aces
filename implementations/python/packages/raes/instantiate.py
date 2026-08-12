@@ -30,7 +30,12 @@ from .phase_contracts import (
     SemanticDigest,
     TrialInstantiationProvenance,
 )
-from .realization_designation import RealizationDesignationRecord, designation_records
+from .realization_designation import (
+    RealizationConstraintRecord,
+    RealizationDesignationRecord,
+    constraint_records,
+    designation_records,
+)
 from .scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
 from .validator import SemanticValidator
 from .variables import Variable, VariableType
@@ -56,6 +61,7 @@ class _BoundScenarioResult:
     capability_constraints: tuple[CapabilityConstraint, ...]
     explicitness: tuple[ExplicitnessProvenanceRecord, ...]
     realization_designations: tuple[RealizationDesignationRecord, ...]
+    realization_constraints: tuple[RealizationConstraintRecord, ...]
 
 
 def _matches_value_type(value: object, variable: Variable) -> bool:
@@ -231,7 +237,11 @@ def _merge_expanded_provenance(
     scenario: ExpandedScenario,
     local_constraints: tuple[CapabilityConstraint, ...],
     explicitness_by_path: dict[str, ExplicitnessProvenanceRecord],
-) -> tuple[tuple[CapabilityConstraint, ...], tuple[RealizationDesignationRecord, ...]]:
+) -> tuple[
+    tuple[CapabilityConstraint, ...],
+    tuple[RealizationDesignationRecord, ...],
+    tuple[RealizationConstraintRecord, ...],
+]:
     constraints = (*scenario.expansion_provenance.capability_constraints, *local_constraints)
     imported_prefixes = _imported_declaration_prefixes(scenario)
     portable_paths = {record.model_path for record in scenario.expansion_provenance.explicitness}
@@ -243,7 +253,11 @@ def _merge_expanded_provenance(
     for model_path in stale_paths:
         del explicitness_by_path[model_path]
     explicitness_by_path.update({record.model_path: record for record in scenario.expansion_provenance.explicitness})
-    return constraints, scenario.expansion_provenance.realization_designations
+    return (
+        constraints,
+        scenario.expansion_provenance.realization_designations,
+        scenario.expansion_provenance.realization_constraints,
+    )
 
 
 def _bind_scenario_content(
@@ -315,8 +329,13 @@ def _bind_scenario_content(
         if isinstance(raw_scenario, Scenario) and raw_scenario.realization is not None
         else ()
     )
+    realization_constraints = (
+        constraint_records(raw_scenario.realization)
+        if isinstance(raw_scenario, Scenario) and raw_scenario.realization is not None
+        else ()
+    )
     if isinstance(raw_scenario, ExpandedScenario):
-        constraints, realization_designations = _merge_expanded_provenance(
+        constraints, realization_designations, realization_constraints = _merge_expanded_provenance(
             raw_scenario,
             local_constraints,
             explicitness_by_path,
@@ -335,6 +354,7 @@ def _bind_scenario_content(
         capability_constraints=constraints,
         explicitness=tuple(explicitness_by_path.values()),
         realization_designations=realization_designations,
+        realization_constraints=realization_constraints,
     )
 
 
@@ -402,6 +422,7 @@ def instantiate_scenario(
         capability_constraints=bound.capability_constraints,
         explicitness=bound.explicitness,
         realization_designations=bound.realization_designations,
+        realization_constraints=bound.realization_constraints,
         trial=trial_provenance,
     )
     payload = bound.content.model_dump(mode="python", by_alias=True)

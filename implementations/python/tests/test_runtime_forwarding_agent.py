@@ -379,7 +379,7 @@ def _validate(scenario: Scenario) -> list[str]:
 
 def _manager_node() -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "2 gib", "cpu": 2},
         "services": [{"port": 1514, "protocol": "tcp", "name": "wazuh-agent-events"}],
     }
@@ -387,7 +387,7 @@ def _manager_node() -> dict:
 
 def _sensor_node(agent: dict) -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "1 gib", "cpu": 1},
         "services": [{"port": 80, "protocol": "tcp", "name": "suricata"}],
         "runtime": {"forwarding_agents": [agent]},
@@ -498,7 +498,7 @@ def test_forwarding_edge_resolves_scenario_level_forwarder() -> None:
         name="forwarding",
         nodes={
             "db": {
-                "type": "vm",
+                "type": "compute",
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "services": [{"port": 5432, "protocol": "tcp", "name": "postgres"}],
             },
@@ -527,7 +527,7 @@ def test_forwarding_edge_missing_forwarder_reports_combined_resolution_scope() -
         name="forwarding",
         nodes={
             "db": {
-                "type": "vm",
+                "type": "compute",
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "services": [{"port": 5432, "protocol": "tcp", "name": "postgres"}],
             },

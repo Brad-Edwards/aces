@@ -28,6 +28,7 @@ from dataclasses import dataclass
 
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.realization_observation import RealizationObservation
 
 from raes_reference_backend.driver import (
     ContainerHandle,
@@ -36,6 +37,7 @@ from raes_reference_backend.driver import (
     NetworkHandle,
     NetworkSpec,
 )
+from raes_reference_backend.drivers.oci_observation import substrate_observations
 
 _DOMAIN = "runtime"
 _ALLOWED_RUNTIMES = frozenset({"docker", "podman"})
@@ -102,6 +104,8 @@ _DEFAULT_IMAGE_POLICY = ImageTrustPolicy()
 
 class OciDeploymentDriver:
     """Realize portable specs against a real container runtime."""
+
+    driver_mode = "oci-container"
 
     def __init__(
         self,
@@ -185,10 +189,12 @@ class OciDeploymentDriver:
             return DriverResult(diagnostics=tuple(diagnostics))
         network_handles = self._realize_networks(networks, diagnostics)
         container_handles = self._realize_containers(containers, diagnostics)
+        observations = self._substrate_observations(container_handles, diagnostics) if not diagnostics else ()
         result = DriverResult(
             networks=tuple(network_handles),
             containers=tuple(container_handles),
             diagnostics=tuple(diagnostics),
+            observations=observations,
         )
         # Transactional boundary: if any resource failed, roll back the ones
         # that succeeded so a partial realize never leaves an orphan runtime
@@ -197,6 +203,34 @@ class OciDeploymentDriver:
             self._rollback(network_handles, container_handles)
             return DriverResult(diagnostics=result.diagnostics)
         return result
+
+    def _substrate_observations(
+        self,
+        handles: list[ContainerHandle],
+        diagnostics: list[Diagnostic],
+        *,
+        allow_rehydrate: bool = False,
+    ) -> tuple[RealizationObservation, ...]:
+        ownership_readback = self._readback_owned_container if allow_rehydrate else self._is_current_owned_container
+        observations, observation_diagnostics = substrate_observations(
+            handles,
+            runtime=self._runtime,
+            ownership_readback=ownership_readback,
+        )
+        diagnostics.extend(observation_diagnostics)
+        return observations
+
+    def observe(self, *, containers: tuple[ContainerSpec, ...]) -> DriverResult:
+        """Inspect existing owned containers without invoking create or update."""
+
+        diagnostics: list[Diagnostic] = []
+        handles = [ContainerHandle(address=spec.address, realized=True) for spec in containers]
+        observations = self._substrate_observations(handles, diagnostics, allow_rehydrate=True)
+        return DriverResult(
+            containers=tuple(handle for handle in handles if handle.address in self._realized),
+            diagnostics=tuple(diagnostics),
+            observations=observations,
+        )
 
     def _realize_networks(
         self,
@@ -312,10 +346,16 @@ class OciDeploymentDriver:
         return diagnostics
 
     def _is_current_owned_container(self, address: str) -> bool:
+        return self._owned_container_readback(address, require_known_native_id=True)
+
+    def _readback_owned_container(self, address: str) -> bool:
+        return self._owned_container_readback(address, require_known_native_id=False)
+
+    def _owned_container_readback(self, address: str, *, require_known_native_id: bool) -> bool:
         expected_native_id = self._native_ids.get(address)
-        expected_name = self._names.get(address)
+        expected_name = self._name_for(address)
         current_and_owned = False
-        if expected_native_id and expected_name:
+        if expected_name and (expected_native_id or not require_known_native_id):
             ok, _kind, stdout = self._invoke(
                 [
                     self._runtime,
@@ -329,11 +369,16 @@ class OciDeploymentDriver:
             if ok and len(fields) == 4:
                 native_id, workspace, owned_address, native_name = fields
                 current_and_owned = (
-                    native_id == expected_native_id
+                    bool(native_id)
+                    and (expected_native_id is None or native_id == expected_native_id)
                     and workspace == self._workspace
                     and owned_address == address
                     and native_name.removeprefix("/") == expected_name
                 )
+                if current_and_owned:
+                    self._native_ids[address] = native_id
+                    self._names[address] = expected_name
+                    self._realized.add(address)
         return current_and_owned
 
     @staticmethod
