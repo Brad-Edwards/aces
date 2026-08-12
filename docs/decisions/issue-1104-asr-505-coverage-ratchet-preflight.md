@@ -37,7 +37,11 @@ padding. The checked-in Coverage.py configuration is itself validated: source
 roots and non-source omissions are fixed, path aliases are forbidden, and no
 custom partial-branch or exclusion rule may suppress the changed-code gate.
 Existing explicit exclusions retain their separately documented integration
-rationale.
+rationale. An inline coverage pragma is rejected whenever its semantic
+statement owns changed code, even when the pragma's physical line is unchanged.
+Coverage.py's structural `TYPE_CHECKING` and `Protocol` exclusions are accepted
+only for canonical, unshadowed imports from `typing`; runtime-evaluated defaults
+and decorators remain coverage obligations.
 
 ## Diff And Branch Semantics
 
@@ -49,8 +53,11 @@ changed line is covered only when Coverage.py reports it executed. Physical
 changes inside a multiline expression are mapped to the owning Coverage.py
 statement; multiline branch headers are also mapped to their branch source.
 This prevents a continuation-line edit from disappearing between Git's physical
-line model and Coverage.py's executable-line model. When a changed executable
-line is a branch source, no missing destination from that source is allowed.
+line model and Coverage.py's executable-line model. A deletion-only hunk that
+removes semantic content is anchored to its surviving destination neighbors,
+so removing one line from a multiline condition cannot produce an empty change
+set. When a changed executable line is a branch source, no missing destination
+from that source is allowed.
 
 Files outside the measured OpenRAE source/tool roots do not enter the changed
 coverage gate. New and renamed files use their destination path; a rename is
@@ -65,6 +72,7 @@ Unit tests cover diff ranges, new and renamed files, path normalization,
 comments, multiline statements and branch headers, missing source records,
 missing lines, missing branches, configuration suppression attempts, ratchet
 relocation/deletion, acquired-cache isolation, branch-data absence, and invalid
-base revisions. Canonical verification must publish XML and JSON, enforce the
-aggregate ratchet, and run the changed-code gate with the same base SHA used by
-repository policy.
+base revisions. Canonical verification must produce distinct, non-empty unit
+and integration data files before combining them, publish XML and JSON, enforce
+the aggregate ratchet, and run the changed-code gate with the same base SHA used
+by repository policy.

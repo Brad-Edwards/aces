@@ -105,6 +105,41 @@ def test_added_lines_from_zero_context_patch() -> None:
     assert coverage_policy.added_lines_from_patch("not a patch") == set()
 
 
+def test_deletion_anchors_ignore_nonsemantic_base_lines() -> None:
+    patch = """@@ -4 +3,0 @@
+-    and second
+@@ -8 +6,0 @@
+-    # explanation
+"""
+    assert coverage_policy.deletion_anchor_lines_from_patch(
+        patch,
+        base_semantic_lines={4},
+        current_semantic_lines={1, 2, 3, 4, 5, 6},
+    ) == {3, 4}
+
+
+@pytest.mark.parametrize(
+    ("patch", "current_lines", "expected"),
+    [
+        ("@@ -1 +0,0 @@\n-old\n", {2, 3}, {2}),
+        ("@@ -9 +8,0 @@\n-old\n", {1, 2}, {2}),
+    ],
+)
+def test_deletion_anchors_use_the_available_surviving_neighbor(
+    patch: str,
+    current_lines: set[int],
+    expected: set[int],
+) -> None:
+    assert (
+        coverage_policy.deletion_anchor_lines_from_patch(
+            patch,
+            base_semantic_lines={1, 9},
+            current_semantic_lines=current_lines,
+        )
+        == expected
+    )
+
+
 def test_changed_python_lines_reads_committed_and_worktree_changes(tmp_path: Path) -> None:
     repo, base = _repository(tmp_path)
     source = repo / "implementations" / "python" / "packages" / "demo.py"
@@ -135,6 +170,72 @@ def test_changed_python_lines_checks_every_line_of_renamed_destinations(tmp_path
     assert coverage_policy.changed_python_lines(repo, base) == {
         "implementations/python/packages/renamed.py": {1, 2, 3, 4, 5, 6}
     }
+
+
+def test_changed_python_lines_maps_deletion_only_multiline_semantics(tmp_path: Path) -> None:
+    repo, _ = _repository(tmp_path)
+    source = repo / "implementations" / "python" / "packages" / "demo.py"
+    source.write_text(
+        """def choose(first: bool, second: bool) -> int:
+    if (
+        first
+        and second
+    ):
+        return 1
+    return 0
+""",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add multiline branch")
+    base = _git(repo, "rev-parse", "HEAD")
+    source.write_text(
+        """def choose(first: bool, second: bool) -> int:
+    if (
+        first
+    ):
+        return 1
+    return 0
+""",
+        encoding="utf-8",
+    )
+
+    path = "implementations/python/packages/demo.py"
+    changed = coverage_policy.changed_python_lines(repo, base)
+    assert changed == {path: {3, 4}}
+    assert coverage_policy.changed_coverage_failures(
+        changed,
+        {
+            path: {
+                "executed_lines": [1, 2, 3, 5],
+                "missing_lines": [6],
+                "executed_branches": [[2, 5]],
+                "missing_branches": [[2, 6]],
+            }
+        },
+        repo_root=repo,
+    ) == [f"{path}:2->6: changed branch exit is not covered"]
+
+
+def test_changed_python_lines_ignores_deletion_only_comments(tmp_path: Path) -> None:
+    repo, _ = _repository(tmp_path)
+    source = repo / "implementations" / "python" / "packages" / "demo.py"
+    source.write_text("value = (\n    # explanation\n    1\n)\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add comment")
+    base = _git(repo, "rev-parse", "HEAD")
+    source.write_text("value = (\n    1\n)\n", encoding="utf-8")
+
+    assert coverage_policy.changed_python_lines(repo, base) == {"implementations/python/packages/demo.py": set()}
+
+
+def test_changed_python_lines_rejects_undecodable_current_source(tmp_path: Path) -> None:
+    repo, base = _repository(tmp_path)
+    source = repo / "implementations" / "python" / "packages" / "demo.py"
+    source.write_bytes(b"\xff")
+
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="could not inspect changed Python source"):
+        coverage_policy.changed_python_lines(repo, base)
 
 
 def test_changed_python_lines_rejects_unknown_and_nonancestor_bases(tmp_path: Path) -> None:
@@ -431,6 +532,124 @@ def test_changed_coverage_maps_multiline_loop_iterable_to_branch_owner(tmp_path:
     ) == [f"{path}:1->-1: changed branch exit is not covered"]
 
 
+def test_changed_coverage_maps_multiline_match_subject_to_case_branches(tmp_path: Path) -> None:
+    path = "tools/multiline_match.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """match (
+    value
+):
+    case 1:
+        consume_one()
+    case _:
+        consume_other()
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {2}},
+        {
+            path: {
+                "executed_lines": [1, 4, 5],
+                "missing_lines": [6, 7],
+                "executed_branches": [[4, 5]],
+                "missing_branches": [[4, 6]],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [f"{path}:4->6: changed branch exit is not covered"]
+
+
+def test_changed_coverage_maps_multiline_match_guard_to_case_branch(tmp_path: Path) -> None:
+    path = "tools/multiline_match_guard.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """match value:
+    case int() if (
+        positive(value)
+    ):
+        consume_positive()
+    case _:
+        consume_other()
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {3}},
+        {
+            path: {
+                "executed_lines": [1, 2, 5],
+                "missing_lines": [6, 7],
+                "executed_branches": [[2, 5]],
+                "missing_branches": [[2, 6]],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [f"{path}:2->6: changed branch exit is not covered"]
+
+
+def test_changed_coverage_maps_comprehension_changes_when_reported_as_branches(tmp_path: Path) -> None:
+    path = "tools/multiline_comprehension.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """result = [
+    normalize(value)
+    for value in values
+]
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {2}},
+        {
+            path: {
+                "executed_lines": [1, 2, 3],
+                "missing_lines": [],
+                "executed_branches": [[3, 2]],
+                "missing_branches": [[3, -1]],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [f"{path}:3->-1: changed branch exit is not covered"]
+
+
+def test_changed_coverage_does_not_map_unrelated_code_to_comprehension_branch(tmp_path: Path) -> None:
+    path = "tools/unrelated_comprehension.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """result = [
+    normalize(value)
+    for value in values
+]
+unrelated = updated_value()
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {5}},
+            {
+                path: {
+                    "executed_lines": [1, 2, 3, 5],
+                    "missing_lines": [],
+                    "executed_branches": [[3, 2]],
+                    "missing_branches": [[3, -1]],
+                }
+            },
+            repo_root=tmp_path,
+        )
+        == []
+    )
+
+
 def test_changed_coverage_maps_multiline_expression_changes_to_statement_owner(tmp_path: Path) -> None:
     path = "tools/multiline_expression.py"
     source = tmp_path / path
@@ -558,7 +777,7 @@ class Concrete:
     ) == [f"{path}:15: changed line is excluded from coverage"]
 
 
-def test_changed_coverage_recognizes_qualified_and_generic_protocols(tmp_path: Path) -> None:
+def test_changed_coverage_rejects_untrusted_type_checking_and_recognizes_generic_protocols(tmp_path: Path) -> None:
     path = "implementations/python/packages/qualified_declarations.py"
     source = tmp_path / path
     source.parent.mkdir(parents=True)
@@ -578,7 +797,7 @@ class Store(Protocol[Model]):
     def implemented(self) -> None:
         return None
 
-class Derived(Store, Protocol):
+class Derived(Store, typing.Protocol):
     async def save(self) -> None: ...
 
 class Generated(factory()):
@@ -588,17 +807,207 @@ class Generated(factory()):
     )
     structural_lines = {4, 5, 8, 9, 10, 11, 17}
 
+    assert coverage_policy.changed_coverage_failures(
+        {path: structural_lines},
+        {
+            path: {
+                "executed_lines": [],
+                "missing_lines": [],
+                "excluded_lines": sorted(structural_lines),
+                "missing_branches": [],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [
+        f"{path}:4: changed line is excluded from coverage",
+        f"{path}:5: changed line is excluded from coverage",
+        f"{path}:8: changed line is excluded from coverage",
+        f"{path}:17: changed line is excluded from coverage",
+    ]
+
+
+@pytest.mark.parametrize(
+    "prelude",
+    [
+        "TYPE_CHECKING = True\n",
+        "from other_module import TYPE_CHECKING\n",
+        "from typing import TYPE_CHECKING as TYPE_CHECKING\n",
+        "from typing import TYPE_CHECKING\nTYPE_CHECKING = runtime_flag\n",
+        "from typing import TYPE_CHECKING\nmodule.TYPE_CHECKING = runtime_flag\n",
+        'from typing import TYPE_CHECKING\nglobals()["TYPE_CHECKING"] = True\n',
+        "from typing import TYPE_CHECKING\nglobals().update(TYPE_CHECKING=True)\n",
+        'from typing import TYPE_CHECKING\nsetattr(module, "TYPE_CHECKING", True)\n',
+    ],
+)
+def test_changed_coverage_rejects_spoofed_or_rebound_type_checking(
+    tmp_path: Path,
+    prelude: str,
+) -> None:
+    path = "tools/spoofed_type_checking.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(f"{prelude}if TYPE_CHECKING:\n    hidden_runtime = 1\n", encoding="utf-8")
+    if_line = len(prelude.splitlines()) + 1
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {if_line, if_line + 1}},
+        {
+            path: {
+                "executed_lines": [],
+                "missing_lines": [],
+                "excluded_lines": [if_line, if_line + 1],
+                "missing_branches": [],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [
+        f"{path}:{if_line}: changed line is excluded from coverage",
+        f"{path}:{if_line + 1}: changed line is excluded from coverage",
+    ]
+
+
+def test_changed_coverage_allows_read_only_globals_lookup_of_type_checking(tmp_path: Path) -> None:
+    path = "tools/read_type_checking.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        'from typing import TYPE_CHECKING\nglobals().get("TYPE_CHECKING")\nif TYPE_CHECKING:\n    from demo import Model\n',
+        encoding="utf-8",
+    )
+
     assert (
         coverage_policy.changed_coverage_failures(
-            {path: structural_lines},
-            {
-                path: {
-                    "executed_lines": [],
-                    "missing_lines": [],
-                    "excluded_lines": sorted(structural_lines),
-                    "missing_branches": [],
-                }
-            },
+            {path: {3, 4}},
+            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4]}},
+            repo_root=tmp_path,
+        )
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    "prelude",
+    [
+        "Protocol = runtime_base\n",
+        "from other_module import Protocol\n",
+        "from typing import Protocol as Protocol\n",
+        'from typing import Protocol\nglobals()["Protocol"] = runtime_base\n',
+    ],
+)
+def test_changed_coverage_rejects_spoofed_or_rebound_protocol(tmp_path: Path, prelude: str) -> None:
+    path = "tools/spoofed_protocol.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(f"{prelude}class Hidden(Protocol):\n    def runtime(self) -> None: ...\n", encoding="utf-8")
+    class_line = len(prelude.splitlines()) + 1
+    method_line = class_line + 1
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {class_line, method_line}},
+        {
+            path: {
+                "executed_lines": [],
+                "missing_lines": [],
+                "excluded_lines": [class_line, method_line],
+                "missing_branches": [],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [
+        f"{path}:{class_line}: changed line is excluded from coverage",
+        f"{path}:{method_line}: changed line is excluded from coverage",
+    ]
+
+
+def test_changed_coverage_rejects_runtime_protocol_default_expression(tmp_path: Path) -> None:
+    path = "tools/protocol_default.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """from typing import Protocol
+
+class Store(Protocol):
+    def load(
+        self,
+        default: int = runtime_default(),
+    ) -> int: ...
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {6}},
+        {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4, 5, 6, 7]}},
+        repo_root=tmp_path,
+    ) == [f"{path}:6: changed line is excluded from coverage"]
+
+
+def test_changed_coverage_rejects_runtime_protocol_decorator_and_class_base(tmp_path: Path) -> None:
+    path = "tools/protocol_runtime_headers.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """from typing import Protocol
+
+class Store(runtime_base(), Protocol):
+    @runtime_decorator()
+    def load(self) -> int: ...
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {3, 4}},
+        {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4, 5]}},
+        repo_root=tmp_path,
+    ) == [
+        f"{path}:3: changed line is excluded from coverage",
+        f"{path}:4: changed line is excluded from coverage",
+    ]
+
+
+def test_changed_coverage_allows_literal_protocol_default_declaration(tmp_path: Path) -> None:
+    path = "tools/protocol_literal_default.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """from typing import Protocol
+
+class Reader(Protocol):
+    def read(self, size: int = ...) -> bytes: ...
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {4}},
+            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4]}},
+            repo_root=tmp_path,
+        )
+        == []
+    )
+
+
+def test_changed_coverage_allows_protocol_class_docstring(tmp_path: Path) -> None:
+    path = "tools/documented_protocol.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """from typing import Protocol
+
+class Reader(Protocol):
+    \"\"\"Read bytes.\"\"\"
+
+    def read(self) -> bytes: ...
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {6}},
+            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4, 6]}},
             repo_root=tmp_path,
         )
         == []
@@ -631,7 +1040,83 @@ def test_changed_coverage_forbids_explicit_pragmas_on_changed_lines(tmp_path: Pa
             }
         },
         repo_root=tmp_path,
-    ) == [f"{path}:2: explicit coverage exclusion pragma is forbidden on changed code"]
+    ) == [f"{path}:2: coverage exclusion pragma governs changed executable code"]
+
+
+def test_changed_coverage_rejects_unchanged_pragma_that_governs_changed_header(tmp_path: Path) -> None:
+    path = "tools/suppressed_branch.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """if (
+    enabled
+):  # pragma: no branch
+    run()
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {2}},
+        {path: {"executed_lines": [1, 4], "missing_lines": [], "missing_branches": []}},
+        repo_root=tmp_path,
+    ) == [f"{path}:3: coverage exclusion pragma governs changed executable code"]
+
+
+def test_changed_coverage_rejects_pragma_that_governs_changed_match_guard(tmp_path: Path) -> None:
+    path = "tools/suppressed_match.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """match value:
+    case int() if (
+        positive(value)
+    ):  # pragma: no branch
+        consume_positive()
+    case _:
+        consume_other()
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {3}},
+        {path: {"executed_lines": [1, 2, 5], "missing_lines": [6, 7], "missing_branches": []}},
+        repo_root=tmp_path,
+    ) == [f"{path}:4: coverage exclusion pragma governs changed executable code"]
+
+
+def test_changed_coverage_allows_unrelated_change_beside_legacy_pragma(tmp_path: Path) -> None:
+    path = "tools/legacy_pragma.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """def guarded() -> None:
+    try:
+        optional_import()
+    except ImportError:  # pragma: no cover
+        explain_missing_dependency()
+
+unrelated = updated_value()
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {7}},
+            {
+                path: {
+                    "executed_lines": [1, 2, 3, 7],
+                    "missing_lines": [],
+                    "excluded_lines": [4, 5],
+                    "missing_branches": [],
+                }
+            },
+            repo_root=tmp_path,
+        )
+        == []
+    )
 
 
 @pytest.mark.parametrize(

@@ -57,6 +57,7 @@ OSV_REPORT_PATH = PROJECT_ROOT / "osv-scanner-report.json"
 COVERAGE_JSON_PATH = PROJECT_ROOT / "coverage.json"
 COVERAGE_CONFIG_PATH = PROJECT_ROOT / "pyproject.toml"
 COVERAGE_RATCHET_PATH = REPO_ROOT / "tools" / "coverage_ratchet.json"
+PARALLEL_COVERAGE_ARTIFACTS = (".coverage.unit", ".coverage.integration")
 TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_repo_policy_tools.py",
     "implementations/python/tests/test_requirement_governance.py",
@@ -890,9 +891,18 @@ def _write_and_check_coverage(
         str(COVERAGE_JSON_PATH),
         env=coverage_env,
     )
-    _run(session, "uv", "run", "--frozen", "coverage", "report", "--format=total", env=coverage_env)
+    _run(
+        session,
+        "uv",
+        "run",
+        "--frozen",
+        "coverage",
+        "report",
+        "--format=total",
+        env=coverage_env,
+    )
     command = [
-        "tools/check_changed_coverage.py",
+        str(REPO_ROOT / "tools" / "check_changed_coverage.py"),
         "--coverage-json",
         str(COVERAGE_JSON_PATH),
         "--coverage-config",
@@ -910,6 +920,20 @@ def _write_and_check_coverage(
 
 
 def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path, *, base_rev: str) -> None:
+    identities: set[tuple[int, int]] = set()
+    for artifact_name in PARALLEL_COVERAGE_ARTIFACTS:
+        artifact = coverage_dir / artifact_name
+        try:
+            artifact_stat = artifact.stat()
+        except OSError as exc:
+            raise RuntimeError(f"required coverage artifact is missing: {artifact_name}") from exc
+        if not artifact.is_file() or artifact_stat.st_size == 0:
+            raise RuntimeError(f"required coverage artifact is not a non-empty file: {artifact_name}")
+        identity = (artifact_stat.st_dev, artifact_stat.st_ino)
+        if identity in identities:
+            raise RuntimeError("unit and integration coverage artifacts must be distinct files")
+        identities.add(identity)
+
     coverage_file = coverage_dir / ".coverage"
     coverage_env = {"COVERAGE_FILE": str(coverage_file)}
     with session.chdir(PROJECT_ROOT):

@@ -10,7 +10,7 @@ import sys
 import threading
 import tomllib
 import types
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -147,9 +147,9 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
     assert coverage_commands[1][0][5:] == ("-o", str(noxfile.COVERAGE_JSON_PATH))
     assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
-    policy_command = next(
-        command for command, _options in session.commands if "tools/check_changed_coverage.py" in command
-    )
+    policy_script = str(noxfile.REPO_ROOT / "tools" / "check_changed_coverage.py")
+    policy_command = next(command for command, _options in session.commands if policy_script in command)
+    assert Path(policy_script).is_absolute()
     config_index = policy_command.index("--coverage-config")
     assert policy_command[config_index + 1] == str(noxfile.COVERAGE_CONFIG_PATH)
     assert "--base-rev" not in policy_command
@@ -306,6 +306,8 @@ def test_parallel_coverage_is_combined_before_reporting(
             return nullcontext()
 
     session = FakeSession()
+    for artifact_name in noxfile.PARALLEL_COVERAGE_ARTIFACTS:
+        (tmp_path / artifact_name).write_bytes(b"coverage data")
     noxfile._finalize_parallel_coverage(session, tmp_path, base_rev="base-sha")
 
     coverage_commands = [
@@ -320,12 +322,76 @@ def test_parallel_coverage_is_combined_before_reporting(
     assert all(
         options["env"] == {"COVERAGE_FILE": str(tmp_path / ".coverage")} for _command, options in coverage_commands
     )
-    policy_command = next(
-        command for command, _options in session.commands if "tools/check_changed_coverage.py" in command
-    )
+    policy_script = str(noxfile.REPO_ROOT / "tools" / "check_changed_coverage.py")
+    policy_command = next(command for command, _options in session.commands if policy_script in command)
+    assert Path(policy_script).is_absolute()
     config_index = policy_command.index("--coverage-config")
     assert policy_command[config_index + 1] == str(noxfile.COVERAGE_CONFIG_PATH)
     assert policy_command[-2:] == ("--base-rev", "base-sha")
+
+
+@pytest.mark.parametrize("missing", [".coverage.unit", ".coverage.integration"])
+def test_parallel_coverage_requires_both_nonempty_lane_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    missing: str,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    for artifact_name in noxfile.PARALLEL_COVERAGE_ARTIFACTS:
+        if artifact_name != missing:
+            (tmp_path / artifact_name).write_bytes(b"coverage data")
+
+    with pytest.raises(RuntimeError, match=f"required coverage artifact is missing: {missing}"):
+        noxfile._finalize_parallel_coverage(types.SimpleNamespace(), tmp_path, base_rev="base-sha")
+
+
+def test_parallel_coverage_rejects_empty_or_aliased_lane_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    unit = tmp_path / ".coverage.unit"
+    integration = tmp_path / ".coverage.integration"
+    unit.write_bytes(b"coverage data")
+    integration.touch()
+
+    with pytest.raises(RuntimeError, match="not a non-empty file: .coverage.integration"):
+        noxfile._finalize_parallel_coverage(types.SimpleNamespace(), tmp_path, base_rev="base-sha")
+
+    integration.unlink()
+    integration.hardlink_to(unit)
+    with pytest.raises(RuntimeError, match="must be distinct files"):
+        noxfile._finalize_parallel_coverage(types.SimpleNamespace(), tmp_path, base_rev="base-sha")
+
+
+def test_parallel_coverage_policy_script_resolves_from_real_project_cwd(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    for artifact_name in noxfile.PARALLEL_COVERAGE_ARTIFACTS:
+        (tmp_path / artifact_name).write_bytes(b"coverage data")
+    invocations: list[tuple[Path, Path]] = []
+
+    class FakeSession:
+        @contextmanager
+        def chdir(self, path: Path):
+            previous = Path.cwd()
+            os.chdir(path)
+            try:
+                yield
+            finally:
+                os.chdir(previous)
+
+        def run(self, *args: str, **_kwargs: Any) -> None:
+            scripts = [Path(arg) for arg in args if arg.endswith("check_changed_coverage.py")]
+            if scripts:
+                invocations.append((Path.cwd(), scripts[0]))
+
+    noxfile._finalize_parallel_coverage(FakeSession(), tmp_path, base_rev="base-sha")
+
+    assert invocations == [(noxfile.PROJECT_ROOT, noxfile.REPO_ROOT / "tools" / "check_changed_coverage.py")]
+    assert invocations[0][1].is_file()
 
 
 def test_coverage_base_revision_defaults_and_validates_values(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -15,7 +15,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-_HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(?P<start>\d+)(?:,(?P<count>\d+))? @@", re.MULTILINE)
+_HUNK = re.compile(
+    r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? "
+    r"\+(?P<start>\d+)(?:,(?P<count>\d+))? @@",
+    re.MULTILINE,
+)
 _FORBIDDEN_COVERAGE_PRAGMA = re.compile(r"#\s*pragma\s*:?\s*no\s+(?:cover|branch)\b", re.IGNORECASE)
 _MEASURED_PREFIXES = ("implementations/python/packages/", "tools/")
 _MEASURED_FILES = frozenset({"noxfile.py", "implementations/python/hatch_build.py"})
@@ -99,6 +103,37 @@ def added_lines_from_patch(patch: str) -> set[int]:
     return lines
 
 
+def deletion_anchor_lines_from_patch(
+    patch: str,
+    *,
+    base_semantic_lines: set[int],
+    current_semantic_lines: set[int],
+) -> set[int]:
+    """Map semantic deletion-only hunks to surviving destination neighbors."""
+
+    anchors: set[int] = set()
+    for match in _HUNK.finditer(patch):
+        old_start = int(match.group("old_start"))
+        old_count = int(match.group("old_count") or "1")
+        new_start = int(match.group("start"))
+        new_count = int(match.group("count") or "1")
+        if new_count != 0 or not set(range(old_start, old_start + old_count)) & base_semantic_lines:
+            continue
+        before = [line for line in current_semantic_lines if line <= max(1, new_start)]
+        after = [line for line in current_semantic_lines if line >= max(1, new_start + 1)]
+        if before:
+            anchors.add(max(before))
+        if after:
+            anchors.add(min(after))
+    return anchors
+
+
+def _semantic_physical_lines(source: str, *, path: str) -> set[int]:
+    tree = _parse_source(source, path=path)
+    tokens = tuple(tokenize.generate_tokens(io.StringIO(source).readline))
+    return _significant_source_lines(tokens) - _docstring_lines(tree)
+
+
 def changed_python_lines(repo_root: Path, base_rev: str) -> dict[str, set[int]]:
     """Return changed measured Python destination lines since an exact ancestor."""
 
@@ -133,7 +168,22 @@ def changed_python_lines(repo_root: Path, base_rev: str) -> dict[str, set[int]]:
                 "--",
                 path,
             ).stdout.decode("utf-8", errors="replace")
-            changed[path] = added_lines_from_patch(patch)
+            destination_lines = added_lines_from_patch(patch)
+            base_source = _git(repo_root, "show", f"{base_rev}:{path}", check=False)
+            if base_source.returncode == 0:
+                try:
+                    before = base_source.stdout.decode("utf-8")
+                    after = (repo_root / path).read_text(encoding="utf-8")
+                except (OSError, UnicodeError) as exc:
+                    raise CoveragePolicyError(f"could not inspect changed Python source {path}: {exc}") from exc
+                destination_lines.update(
+                    deletion_anchor_lines_from_patch(
+                        patch,
+                        base_semantic_lines=_semantic_physical_lines(before, path=path),
+                        current_semantic_lines=_semantic_physical_lines(after, path=path),
+                    )
+                )
+            changed[path] = destination_lines
         else:
             changed[path] = set(range(1, len((repo_root / path).read_bytes().splitlines()) + 1))
     return changed
@@ -238,16 +288,6 @@ def validate_coverage_config(config: Mapping[str, Any]) -> None:
         raise CoveragePolicyError(f"coverage config report option can suppress measurement: {forbidden_report[0]}")
 
 
-def _terminal_name(node: ast.expr) -> str | None:
-    while isinstance(node, ast.Subscript):
-        node = node.value
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        return node.attr
-    return None
-
-
 def _is_ellipsis_declaration(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     body = node.body
     if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
@@ -259,6 +299,25 @@ def _is_ellipsis_declaration(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bo
         and isinstance(body[0].value, ast.Constant)
         and body[0].value.value is Ellipsis
     )
+
+
+def _literal_expression(node: ast.expr) -> bool:
+    try:
+        ast.literal_eval(node)
+    except (ValueError, TypeError):
+        return False
+    return True
+
+
+def _protocol_declaration_lines(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
+    lines = set(range(node.lineno, (node.end_lineno or node.lineno) + 1))
+    unsafe_defaults = [default for default in node.args.defaults if not _literal_expression(default)]
+    unsafe_defaults.extend(
+        default for default in node.args.kw_defaults if default is not None and not _literal_expression(default)
+    )
+    for default in unsafe_defaults:
+        lines.difference_update(range(default.lineno, (default.end_lineno or default.lineno) + 1))
+    return lines
 
 
 def _is_declaration_only_protocol(node: ast.ClassDef) -> bool:
@@ -277,6 +336,95 @@ def _is_declaration_only_protocol(node: ast.ClassDef) -> bool:
     )
 
 
+def _namespace_mapping_call(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in {"globals", "locals", "vars"}
+        and not node.args
+        and not node.keywords
+    )
+
+
+def _dynamic_symbol_rebinding(node: ast.AST, symbol: str) -> bool:
+    if (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.ctx, (ast.Store, ast.Del))
+        and _namespace_mapping_call(node.value)
+        and isinstance(node.slice, ast.Constant)
+        and node.slice.value == symbol
+    ):
+        return True
+    if not isinstance(node, ast.Call):
+        return False
+    if (
+        isinstance(node.func, ast.Name)
+        and node.func.id in {"setattr", "delattr"}
+        and len(node.args) >= 2
+        and isinstance(node.args[1], ast.Constant)
+        and node.args[1].value == symbol
+    ):
+        return True
+    if not isinstance(node.func, ast.Attribute) or not _namespace_mapping_call(node.func.value):
+        return False
+    if node.func.attr not in {"__setitem__", "pop", "setdefault", "update"}:
+        return False
+    return any(
+        isinstance(candidate, ast.Constant) and candidate.value == symbol
+        for argument in node.args
+        for candidate in ast.walk(argument)
+    ) or any(keyword.arg == symbol for keyword in node.keywords)
+
+
+def _rebinds_imported_symbol(node: ast.AST, symbol: str) -> bool:
+    return (
+        isinstance(node, ast.Name)
+        and node.id == symbol
+        and isinstance(node.ctx, (ast.Store, ast.Del))
+        or isinstance(node, ast.Attribute)
+        and node.attr == symbol
+        and isinstance(node.ctx, (ast.Store, ast.Del))
+        or isinstance(node, ast.arg)
+        and node.arg == symbol
+        or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and node.name == symbol
+        or isinstance(node, ast.ExceptHandler)
+        and node.name == symbol
+        or isinstance(node, (ast.MatchAs, ast.MatchStar))
+        and node.name == symbol
+        or isinstance(node, ast.MatchMapping)
+        and node.rest == symbol
+        or _dynamic_symbol_rebinding(node, symbol)
+    )
+
+
+def _trusted_typing_import_lines(tree: ast.Module, symbol: str) -> tuple[int, ...]:
+    canonical_aliases: set[int] = set()
+    import_lines: list[int] = []
+    for statement in tree.body:
+        if not isinstance(statement, ast.ImportFrom) or statement.level != 0 or statement.module != "typing":
+            continue
+        for alias in statement.names:
+            if alias.name == symbol and alias.asname is None:
+                canonical_aliases.add(id(alias))
+                import_lines.append(statement.lineno)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.alias):
+            bound_name = node.asname or node.name.split(".", maxsplit=1)[0]
+            if bound_name == symbol and id(node) not in canonical_aliases:
+                return ()
+        elif _rebinds_imported_symbol(node, symbol):
+            return ()
+    return tuple(import_lines)
+
+
+def _canonical_typing_reference(node: ast.expr, symbol: str) -> bool:
+    while isinstance(node, ast.Subscript):
+        node = node.value
+    return isinstance(node, ast.Name) and node.id == symbol
+
+
 def _parse_source(source: str, *, path: str) -> ast.Module:
     try:
         return ast.parse(source, filename=path)
@@ -284,35 +432,40 @@ def _parse_source(source: str, *, path: str) -> ast.Module:
         raise CoveragePolicyError(f"could not parse changed Python source {path}: {exc.msg}") from exc
 
 
-def _structural_exclusion_lines(source: str, tree: ast.Module) -> set[int]:
-    source_lines = source.splitlines()
+def _structural_exclusion_lines(tree: ast.Module) -> set[int]:
     structural: set[int] = set()
+    type_checking_import_lines = _trusted_typing_import_lines(tree, "TYPE_CHECKING")
+    protocol_import_lines = _trusted_typing_import_lines(tree, "Protocol")
     for node in ast.walk(tree):
-        if isinstance(node, ast.If) and _terminal_name(node.test) == "TYPE_CHECKING":
+        if (
+            isinstance(node, ast.If)
+            and isinstance(node.test, ast.Name)
+            and node.test.id == "TYPE_CHECKING"
+            and any(line < node.lineno for line in type_checking_import_lines)
+        ):
             first_body_line = min(statement.lineno for statement in node.body)
             structural.update(range(node.lineno, first_body_line))
             for statement in node.body:
                 structural.update(range(statement.lineno, (statement.end_lineno or statement.lineno) + 1))
 
     for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef) or not any(_terminal_name(base) == "Protocol" for base in node.bases):
+        if (
+            not isinstance(node, ast.ClassDef)
+            or not any(_canonical_typing_reference(base, "Protocol") for base in node.bases)
+            or not any(line < node.lineno for line in protocol_import_lines)
+        ):
             continue
         if _is_declaration_only_protocol(node):
-            end = node.end_lineno or node.lineno
-            while end < len(source_lines) and not source_lines[end].strip():
-                end += 1
-            structural.update(range(node.lineno, end + 1))
+            for declaration in node.body:
+                if isinstance(declaration, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    structural.update(_protocol_declaration_lines(declaration))
             continue
         for declaration in node.body:
             if not isinstance(declaration, (ast.FunctionDef, ast.AsyncFunctionDef)) or not _is_ellipsis_declaration(
                 declaration
             ):
                 continue
-            start = min(
-                (decorator.lineno for decorator in declaration.decorator_list),
-                default=declaration.lineno,
-            )
-            structural.update(range(start, (declaration.end_lineno or declaration.lineno) + 1))
+            structural.update(_protocol_declaration_lines(declaration))
     return structural
 
 
@@ -364,11 +517,73 @@ def _branch_header_owners(tree: ast.Module, physical_line: int, branch_sources: 
             header_nodes = (node.test,)
         elif isinstance(node, (ast.For, ast.AsyncFor)):
             header_nodes = (node.target, node.iter)
+        elif isinstance(node, ast.Match):
+            case_sources = {case.pattern.lineno for case in node.cases if case.pattern.lineno in branch_sources}
+            if _contains_line(node.subject, physical_line):
+                owners.update(case_sources)
+            for case in node.cases:
+                source = case.pattern.lineno
+                case_header = (case.pattern,) if case.guard is None else (case.pattern, case.guard)
+                if source in branch_sources and any(_contains_line(part, physical_line) for part in case_header):
+                    owners.add(source)
+            continue
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
+            if _contains_line(node, physical_line):
+                start = node.lineno
+                end = node.end_lineno or start
+                owners.update(source for source in branch_sources if start <= source <= end)
+            continue
         else:
             continue
         if node.lineno in branch_sources and any(_contains_line(header, physical_line) for header in header_nodes):
             owners.add(node.lineno)
     return owners
+
+
+def _semantic_owner_spans(tree: ast.Module) -> tuple[tuple[int, int], ...]:
+    """Return statement-like spans to which an inline coverage pragma can apply."""
+
+    spans: set[tuple[int, int]] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.stmt, ast.ExceptHandler)):
+            continue
+        start = node.lineno
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            start = min((decorator.lineno for decorator in node.decorator_list), default=start)
+        spans.add((start, node.end_lineno or node.lineno))
+        if isinstance(node, ast.Match):
+            for case in node.cases:
+                case_end = max(
+                    (statement.end_lineno or statement.lineno for statement in case.body),
+                    default=case.pattern.end_lineno or case.pattern.lineno,
+                )
+                spans.add((case.pattern.lineno, case_end))
+    return tuple(sorted(spans, key=lambda span: (span[1] - span[0], span[0], span[1])))
+
+
+def _governing_coverage_pragmas(
+    tokens: Sequence[tokenize.TokenInfo],
+    *,
+    tree: ast.Module,
+    significant_changed: set[int],
+    significant_lines: set[int],
+) -> set[int]:
+    """Return pragma lines whose semantic statement owns changed code."""
+
+    owner_spans = _semantic_owner_spans(tree)
+    governed: set[int] = set()
+    for token in tokens:
+        pragma_line = token.start[0]
+        if (
+            token.type != tokenize.COMMENT
+            or pragma_line not in significant_lines
+            or not _FORBIDDEN_COVERAGE_PRAGMA.search(token.string)
+        ):
+            continue
+        owner = next((span for span in owner_spans if span[0] <= pragma_line <= span[1]), None)
+        if owner is not None and any(owner[0] <= line <= owner[1] for line in significant_changed):
+            governed.add(pragma_line)
+    return governed
 
 
 def _branch_edges(record: Mapping[str, Any], key: str) -> set[tuple[int, int]]:
@@ -396,9 +611,9 @@ def _expanded_execution_lines(
         if destination > 0:
             coverage_lines.add(destination)
 
-    expanded = set(changed_lines)
-    unmapped: set[int] = set()
     significant_changed = (changed_lines & significant_lines) - _docstring_lines(tree)
+    expanded = set(significant_changed)
+    unmapped: set[int] = set()
     for physical_line in significant_changed:
         expanded.update(_branch_header_owners(tree, physical_line, branch_sources))
     candidates = significant_changed - coverage_lines
@@ -423,15 +638,16 @@ def _source_coverage_policy(
         raise CoveragePolicyError(f"could not inspect changed Python source {path}: {exc}") from exc
     tree = _parse_source(source, path=path)
     tokens = tuple(tokenize.generate_tokens(io.StringIO(source).readline))
-    structural = _structural_exclusion_lines(source, tree)
-    forbidden = {
-        token.start[0]
-        for token in tokens
-        if token.type == tokenize.COMMENT
-        and token.start[0] in changed_lines
-        and _FORBIDDEN_COVERAGE_PRAGMA.search(token.string)
-    }
-    return tree, structural, forbidden, _significant_source_lines(tokens)
+    structural = _structural_exclusion_lines(tree)
+    significant_lines = _significant_source_lines(tokens)
+    significant_changed = (changed_lines & significant_lines) - _docstring_lines(tree)
+    forbidden = _governing_coverage_pragmas(
+        tokens,
+        tree=tree,
+        significant_changed=significant_changed,
+        significant_lines=significant_lines,
+    )
+    return tree, structural, forbidden, significant_lines
 
 
 def changed_coverage_failures(
@@ -448,7 +664,7 @@ def changed_coverage_failures(
             repo_root, path, changed_lines
         )
         for line in sorted(forbidden_pragmas):
-            failures.append(f"{path}:{line}: explicit coverage exclusion pragma is forbidden on changed code")
+            failures.append(f"{path}:{line}: coverage exclusion pragma governs changed executable code")
         record = records.get(path)
         if record is None:
             failures.append(f"{path}: changed measured Python file is absent from coverage data")
@@ -547,7 +763,10 @@ def ratchet_regression_failures(
     if previous is None:
         return []
     failures: list[str] = []
-    for key, label in (("minimum_line_percent", "line"), ("minimum_branch_percent", "branch")):
+    for key, label in (
+        ("minimum_line_percent", "line"),
+        ("minimum_branch_percent", "branch"),
+    ):
         current_minimum = _minimum_percent(current, key)
         previous_minimum = _minimum_percent(previous, key)
         if current_minimum + 1e-12 < previous_minimum:
