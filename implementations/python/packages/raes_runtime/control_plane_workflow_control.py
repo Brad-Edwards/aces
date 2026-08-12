@@ -30,6 +30,7 @@ from .control_plane_execution import (
     _utc_now,
     persist_succeeded_operation,
 )
+from .control_plane_lifecycle import runtime_owned
 from .control_plane_store import ControlPlaneOperationRecord
 from .control_plane_timeouts import _reconciliation_clock, workflow_timeout_update
 from .control_plane_workflows import maybe_apply_compensation
@@ -45,6 +46,7 @@ _TERMINAL_WORKFLOW_STATUSES = {
 class WorkflowControlMixin:
     """Workflow cancellation and timeout reconciliation operations."""
 
+    @runtime_owned
     def cancel_workflow(
         self,
         workflow_address: str,
@@ -53,6 +55,24 @@ class WorkflowControlMixin:
         reason: str = "cancelled by operator",
         idempotency_key: str = "",
         request_fingerprint: str = "",
+    ) -> OperationReceipt:
+        with self._operation_lock:
+            return self._cancel_workflow_locked(
+                workflow_address,
+                run_id=run_id,
+                reason=reason,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+
+    def _cancel_workflow_locked(
+        self,
+        workflow_address: str,
+        *,
+        run_id: str | None,
+        reason: str,
+        idempotency_key: str,
+        request_fingerprint: str,
     ) -> OperationReceipt:
         existing = self._idempotent_receipt(
             idempotency_key=idempotency_key,
@@ -159,7 +179,7 @@ class WorkflowControlMixin:
             history=history,
             submitted_at=submitted_at,
         )
-        self._snapshot = self._snapshot.with_entries(
+        next_snapshot = self._snapshot.with_entries(
             dict(self._snapshot.entries),
             orchestration_results={
                 **self._snapshot.orchestration_results,
@@ -170,7 +190,6 @@ class WorkflowControlMixin:
                 workflow_address: history,
             },
         )
-        self._store.save_snapshot(self._snapshot)
         receipt = OperationReceipt(
             operation_id=operation_id,
             domain=RuntimeDomain.ORCHESTRATION,
@@ -185,22 +204,38 @@ class WorkflowControlMixin:
             updated_at=submitted_at,
             changed_addresses=[workflow_address],
         )
-        self._persist_record(
+        self._commit_terminal_operation(
+            next_snapshot,
             ControlPlaneOperationRecord(
                 receipt=receipt,
                 status=status,
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
-            )
+            ),
         )
         return receipt
 
+    @runtime_owned
     def reconcile_workflow_timeouts(
         self,
         *,
         now: str | None = None,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+    ) -> OperationReceipt:
+        with self._operation_lock:
+            return self._reconcile_workflow_timeouts_locked(
+                now=now,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+
+    def _reconcile_workflow_timeouts_locked(
+        self,
+        *,
+        now: str | None,
+        idempotency_key: str,
+        request_fingerprint: str,
     ) -> OperationReceipt:
         existing = self._idempotent_receipt(
             idempotency_key=idempotency_key,
@@ -231,12 +266,11 @@ class WorkflowControlMixin:
             orchestration_history[workflow_address] = timed_out[1]
             changed.append(workflow_address)
         operation_id = str(uuid4())
-        self._snapshot = self._snapshot.with_entries(
+        next_snapshot = self._snapshot.with_entries(
             dict(self._snapshot.entries),
             orchestration_results=orchestration_results,
             orchestration_history=orchestration_history,
         )
-        self._store.save_snapshot(self._snapshot)
         receipt = OperationReceipt(
             operation_id=operation_id,
             domain=RuntimeDomain.ORCHESTRATION,
@@ -251,12 +285,13 @@ class WorkflowControlMixin:
             updated_at=submitted_at,
             changed_addresses=changed,
         )
-        self._persist_record(
+        self._commit_terminal_operation(
+            next_snapshot,
             ControlPlaneOperationRecord(
                 receipt=receipt,
                 status=status,
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
-            )
+            ),
         )
         return receipt

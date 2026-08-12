@@ -19,6 +19,7 @@ from raes_contracts.runtime_state import OperationReceipt, OperationState
 from raes_processor.models import ParticipantBehaviorRuntime
 
 from .control_plane_execution import apply_authorized_participant_action
+from .control_plane_lifecycle import runtime_owned
 from .control_plane_security import ControlPlaneIdentity
 from .participant_control_intents import ParticipantControlIntent, ParticipantControlIntentBase
 from .participant_control_mediation import (
@@ -60,6 +61,7 @@ _CONTROL_INTERACTIONS = {
 class ParticipantCrossingControlIngressMixin:
     """Own one RUN-319 decision and RUN-310 transition under one state cut."""
 
+    @runtime_owned
     def record_participant_control(
         self,
         participant_address: str,

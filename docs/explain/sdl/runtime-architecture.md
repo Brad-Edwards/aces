@@ -484,6 +484,42 @@ header identity must pass an explicit `ControlPlaneSecurityConfig`, set
 `trust_proxy_identity_headers=True`, and only trust those headers behind an
 authenticated proxy that strips caller-supplied identity headers.
 
+The local control-plane store persists snapshots, operations, idempotency
+claims, and audit events in a single SQLite WAL database. Full synchronous
+transactions and a unique idempotency index make concurrent same-host writers
+and participant transition commits atomic. A backend claim is stored before
+execution, and its resulting snapshot and terminal operation record commit in
+one transaction. Startup marks an orphaned non-terminal record `FAILED` with
+an explicit indeterminate-outcome diagnostic and never replays it; retaining
+the idempotency claim prevents a retry from blindly repeating backend effects.
+On first use, legacy JSON state is imported without deleting its source and is
+copied to a timestamped backup. Payload digests and SQLite integrity checks
+detect accidental durable-state corruption. Owned POSIX store directories are
+created or migrated to `0700` and the main SQLite database to `0600`. SQLite
+alone owns descriptors for the main database, WAL, shared-memory, and rollback
+journal. OpenRÆ uses descriptor-free metadata inspection and path-based mode
+tightening for type, owner, private-mode, and main-database same-file checks,
+so an independent `close()` cannot cancel SQLite's POSIX locks. Existing opens
+use URI `mode=rw`; only first creation uses
+`mode=rwc`, preventing a disappeared database from being silently recreated.
+Unsafe symlink, reparse, type, owner, mode, or identity changes fail closed.
+
+Built-in stores use the complete crash-atomic commit capability. Existing 3.x
+custom `ControlPlaneStore` adapters remain accepted when they implement the
+pre-atomic structural contract: a centralized compatibility seam warns once per
+runtime and uses lookup-then-save claims, ordered snapshot/record writes, and
+per-record recovery. This mode preserves legacy behavior but has documented
+claim and terminal-write race/crash windows and is scheduled for removal in
+version 4; custom adapters should implement `claim_record` and both atomic
+terminal/recovery methods before upgrading.
+
+The local runtime is deliberately single-process. Its cached snapshot does not
+yet implement cross-process compare-and-swap, so a non-blocking filesystem
+lease admits one `RuntimeControlPlane` owner and rejects another, including
+inherited post-fork use. Run one ASGI worker with reload disabled. This is a
+single-host reference boundary, not a distributed queue, replication, or
+multi-host availability claim.
+
 ## Current Scope
 
 The current runtime scope includes:

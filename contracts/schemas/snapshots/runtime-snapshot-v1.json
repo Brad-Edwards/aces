@@ -11558,6 +11558,17 @@
       "title": "Participant Crossing History",
       "type": "object"
     },
+    "participant_episode_closure_records": {
+      "additionalProperties": {
+        "items": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "title": "Participant Episode Closure Records",
+      "type": "object"
+    },
     "participant_episode_history": {
       "additionalProperties": {
         "items": {

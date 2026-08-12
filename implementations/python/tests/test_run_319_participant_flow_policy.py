@@ -438,6 +438,7 @@ def test_crossing_history_restarts_and_operation_replays_idempotently(tmp_path: 
     store_path = tmp_path / "control-plane"
     first = action_plane(resolver, store=LocalControlPlaneStore(store_path))
     receipt = admit(first, idempotency_key="restart-crossing")
+    first.close()
 
     restarted_resolver = StaticCrossingResolver()
     restarted_resolver.subjects = list(resolver.subjects)
@@ -452,6 +453,7 @@ def test_crossing_history_restarts_and_operation_replays_idempotently(tmp_path: 
 
     assert retry.operation_id == receipt.operation_id
     assert len(restarted.snapshot.participant_crossing_history[PARTICIPANT]) == 2
+    restarted.close()
 
 
 class _FailingCommitStore(InMemoryControlPlaneStore):
