@@ -901,7 +901,7 @@ def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path) -> Non
 def _run_docker_integration_tests(session: nox.Session, reporter: SessionReporter) -> None:
     reporter.run(
         "tests / pytest docker integration",
-        lambda: _run_pytest(session, "-m", "docker", "-v"),
+        lambda: _run_pytest(session, "-m", "docker", "-v", *session.posargs),
     )
 
 
@@ -1127,8 +1127,10 @@ def integration_docker(session: nox.Session) -> None:
     """Run the opt-in container-runtime integration tests (`docker` marker).
 
     Requires a real container runtime (docker/podman). The tests self-skip
-    cleanly when no runtime is available. This session is intentionally NOT
-    wired into `verify`, so the canonical verification graph stays hermetic.
+    cleanly when no runtime is available unless
+    `RAES_DOCKER_INTEGRATION_REQUIRED=1` selects the fail-closed release mode.
+    This session is intentionally NOT wired into `verify`, so the canonical
+    verification graph stays hermetic.
     """
     reporter = SessionReporter(session, "integration_docker")
     try:

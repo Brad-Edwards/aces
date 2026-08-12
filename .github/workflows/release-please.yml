@@ -4,16 +4,19 @@ name: Release Please
 # it maintains a release PR ("chore(main): release X.Y.Z") that bumps the version
 # (in implementations/python/packages/raes/_version.py via extra-files) and updates the
 # repo-root CHANGELOG.md from the Conventional Commits since the last release.
-# Merging that PR tags `vX.Y.Z` and cuts the GitHub Release; the publish job then
-# builds the corpus-bundled wheel/sdist (#537) and publishes to PyPI over OIDC
-# trusted publishing.
+# Merging that PR tags `vX.Y.Z` and creates a draft GitHub Release. The release
+# commit is then resolved once to an exact SHA, passed through the same canonical
+# verifier as CI, and only then built and published to PyPI over OIDC trusted
+# publishing. Tested artifacts are attached before the draft is made public.
+# The artifact still carries the corpus-bundling guarantee (#537).
 #
 # Feature PRs never touch CHANGELOG.md (release-please owns it) — no fragment
 # collisions. The version literal is in the dedicated RAES package version file;
 # `raes.__version__` derives from the installed distribution metadata.
 #
 # Caveat: the release PR is opened by GITHUB_TOKEN, so required CI checks do not
-# auto-run on it — admin-merge it, or give release-please a PAT so checks run.
+# auto-run on it. Exact-SHA verification below is therefore the non-bypassable
+# publication gate even when a maintainer admin-merges that PR.
 # First release + PyPI setup: docs/explain/releasing.md.
 on:
   push:
@@ -42,6 +45,7 @@ jobs:
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
+      sha: ${{ steps.rp.outputs.sha }}
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: rp
@@ -50,34 +54,209 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  publish:
+  resolve-release:
     needs: release-please
     if: >-
       always()
-      && (needs.release-please.outputs.release_created == 'true'
+      && ((github.event_name == 'push'
+      && needs.release-please.result == 'success'
+      && needs.release-please.outputs.release_created == 'true')
       || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
-      contents: write   # upload the built distributions to the Release
-      id-token: write   # OIDC trusted publishing to PyPI (no stored token)
+      contents: read
+    outputs:
+      release_sha: ${{ steps.resolve.outputs.release_sha }}
+      base_sha: ${{ steps.resolve.outputs.base_sha }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      release_id: ${{ steps.resolve.outputs.release_id }}
+      release_is_draft: ${{ steps.resolve.outputs.release_is_draft }}
     steps:
-      - name: Validate manual release tag
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-        run: |
-          case "${TAG}" in
-            v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "Expected a release tag such as v1.0.0, got '${TAG}'" >&2; exit 1 ;;
-          esac
-          gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+
+      - name: Resolve and bind the immutable release commit
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RELEASE_PLEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+          RELEASE_PLEASE_SHA: ${{ needs.release-please.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            tag="${INPUT_TAG}"
+            expected_sha=""
+          else
+            tag="${RELEASE_PLEASE_TAG}"
+            expected_sha="${RELEASE_PLEASE_SHA}"
+          fi
+
+          if [[ ! "${tag}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable SemVer release tag such as v1.0.0, got '${tag}'" >&2
+            exit 1
+          fi
+
+          release_json="$(
+            gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" \
+              --json databaseId,isDraft,tagName
+          )"
+          release_id="$(jq -r '.databaseId' <<<"${release_json}")"
+          release_is_draft="$(jq -r '.isDraft' <<<"${release_json}")"
+          release_tag="$(jq -r '.tagName' <<<"${release_json}")"
+          if ! printf '%s\n' "${release_id}" | grep -Eq '^[1-9][0-9]*$'; then
+            echo "Release '${tag}' has malformed database id '${release_id}'" >&2
+            exit 1
+          fi
+          if [ "${release_tag}" != "${tag}" ]; then
+            echo "Release lookup mismatch: expected tag ${tag}, got ${release_tag}" >&2
+            exit 1
+          fi
+          if [ "${release_is_draft}" != "true" ] && [ "${release_is_draft}" != "false" ]; then
+            echo "Release '${tag}' has malformed draft state '${release_is_draft}'" >&2
+            exit 1
+          fi
+          if [ "${EVENT_NAME}" != "workflow_dispatch" ] && [ "${release_is_draft}" != "true" ]; then
+            echo "Release Please must create '${tag}' as a draft before verification" >&2
+            exit 1
+          fi
+
+          git fetch --force --tags origin
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+
+          if ! tag_sha="$(git rev-parse --verify "${tag}^{commit}")"; then
+            echo "Release tag '${tag}' does not resolve to a commit" >&2
+            exit 1
+          fi
+          if ! printf '%s\n' "${tag_sha}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Release tag '${tag}' resolved to malformed SHA '${tag_sha}'" >&2
+            exit 1
+          fi
+
+          if [ -n "${expected_sha}" ]; then
+            if ! printf '%s\n' "${expected_sha}" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "Release Please emitted malformed release SHA '${expected_sha}'" >&2
+              exit 1
+            fi
+            if [ "${tag_sha}" != "${expected_sha}" ]; then
+              echo "Release Please SHA/tag mismatch: ${expected_sha} != ${tag_sha}" >&2
+              exit 1
+            fi
+          fi
+
+          if ! git merge-base --is-ancestor "${tag_sha}" origin/main; then
+            echo "Release commit ${tag_sha} is not reachable from origin/main" >&2
+            exit 1
+          fi
+          if ! base_sha="$(git rev-parse "${tag_sha}^")"; then
+            echo "Release commit ${tag_sha} has no policy base" >&2
+            exit 1
+          fi
+
+          echo "Resolved ${tag} to immutable release commit ${tag_sha}"
+          echo "release_sha=${tag_sha}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=${base_sha}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "release_id=${release_id}" >> "${GITHUB_OUTPUT}"
+          echo "release_is_draft=${release_is_draft}" >> "${GITHUB_OUTPUT}"
+
+  verify-release:
+    needs: resolve-release
+    if: needs.resolve-release.result == 'success'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/canonical-verification.yml
+    with:
+      ref: ${{ needs.resolve-release.outputs.release_sha }}
+      base-rev: ${{ needs.resolve-release.outputs.base_sha }}
+
+  integration-docker-release:
+    needs: [resolve-release, verify-release]
+    if: >-
+      always()
+      && needs.resolve-release.result == 'success'
+      && needs.verify-release.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve-release.outputs.release_sha }}
+
+      - name: Bind real-container testing to the exact release commit
+        env:
+          EXPECTED_SHA: ${{ needs.resolve-release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s\n' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Container integration requires a full lowercase commit SHA, got '${EXPECTED_SHA}'" >&2
+            exit 1
+          fi
+          actual_sha="$(git rev-parse HEAD)"
+          if [ "${actual_sha}" != "${EXPECTED_SHA}" ]; then
+            echo "Container integration checkout mismatch: expected ${EXPECTED_SHA}, got ${actual_sha}" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v8
+
+      - name: Require real-container release integration
+        env:
+          RAES_DOCKER_INTEGRATION_REQUIRED: "1"
+          DOCKER_JUNIT: ${{ runner.temp }}/raes-release-docker-junit.xml
+        run: |
+          set -euo pipefail
+          uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py \
+            -s integration_docker -- --junitxml="${DOCKER_JUNIT}"
+          python - "${DOCKER_JUNIT}" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          report = ET.parse(sys.argv[1]).getroot()
+          cases = report.findall(".//testcase")
+          skipped = [case for case in cases if case.find("skipped") is not None]
+          if not cases:
+              raise SystemExit("required Docker integration collected zero tests")
+          if skipped:
+              names = [f"{case.get('classname', '')}.{case.get('name', '')}" for case in skipped]
+              raise SystemExit(f"required Docker integration skipped tests: {names}")
+          print(f"required Docker integration passed {len(cases)} real-container tests without skips")
+          PY
+
+  build-release:
+    needs: [resolve-release, verify-release, integration-docker-release]
+    if: >-
+      always()
+      && needs.resolve-release.result == 'success'
+      && needs.verify-release.result == 'success'
+      && needs.integration-docker-release.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve-release.outputs.release_sha }}
+
+      - name: Reconfirm the exact verified release checkout
+        env:
+          EXPECTED_SHA: ${{ needs.resolve-release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [ "${actual_sha}" != "${EXPECTED_SHA}" ]; then
+            echo "Publish checkout mismatch: expected ${EXPECTED_SHA}, got ${actual_sha}" >&2
+            exit 1
+          fi
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -89,39 +268,374 @@ jobs:
       - name: Build the corpus-bundled wheel + sdist
         run: uv build --out-dir dist implementations/python
 
-      - name: Verify the contract corpus is bundled in the wheel (#537)
+      - name: Verify the contract corpus is bundled in both distributions (#537)
         run: |
           python - <<'PY'
           import glob
           import sys
+          import tarfile
           import zipfile
 
           wheels = glob.glob("dist/raes-*.whl")
+          sdists = glob.glob("dist/raes-*.tar.gz")
           if len(wheels) != 1:
               sys.exit(f"expected exactly one wheel, found {wheels}")
-          names = zipfile.ZipFile(wheels[0]).namelist()
-          required = [
+          if len(sdists) != 1:
+              sys.exit(f"expected exactly one sdist, found {sdists}")
+          expected_files = {wheels[0], sdists[0]}
+          unexpected = sorted(set(glob.glob("dist/*")) - expected_files)
+          if unexpected:
+              sys.exit(f"unexpected release distributions: {unexpected}")
+
+          wheel_names = zipfile.ZipFile(wheels[0]).namelist()
+          required_wheel = [
               "raes_contracts/_corpus/profiles/backend/provisioning-only.json",
               "raes_contracts/_corpus/fixtures/",
               "raes_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
               "raes_contracts/_corpus/schemas/",
           ]
-          missing = [r for r in required if not any(n == r or n.startswith(r) for n in names)]
-          if missing:
-              sys.exit(f"wheel is missing corpus payload: {missing}")
-          print(f"corpus payload present: {sum(n.startswith('raes_contracts/_corpus/') for n in names)} files")
+          missing_wheel = [
+              required
+              for required in required_wheel
+              if not any(name == required or name.startswith(required) for name in wheel_names)
+          ]
+          if missing_wheel:
+              sys.exit(f"wheel is missing corpus payload: {missing_wheel}")
+
+          with tarfile.open(sdists[0], mode="r:gz") as archive:
+              sdist_names = archive.getnames()
+          required_sdist = [
+              "/_corpus/profiles/backend/provisioning-only.json",
+              "/_corpus/fixtures/",
+              "/_corpus/concept-authority/controlled-vocabularies-v1.json",
+              "/_corpus/schemas/",
+          ]
+          missing_sdist = [
+              required
+              for required in required_sdist
+              if not any(
+                  name.endswith(required.rstrip("/")) or f"{required.rstrip('/')}/" in name
+                  for name in sdist_names
+              )
+          ]
+          if missing_sdist:
+              sys.exit(f"sdist is missing corpus payload: {missing_sdist}")
+
+          print(
+              "corpus payload present in wheel "
+              f"({sum(name.startswith('raes_contracts/_corpus/') for name in wheel_names)} files) "
+              "and sdist "
+              f"({sum('/_corpus/' in name for name in sdist_names)} files)"
+          )
           PY
+
+      - name: Smoke-test the installed release wheel (#537)
+        env:
+          SMOKE_VENV: ${{ runner.temp }}/raes-release-smoke
+          EXPECTED_TAG: ${{ needs.resolve-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          wheels=(dist/raes-*.whl)
+          if [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ]; then
+            echo "Expected exactly one release wheel, found: ${wheels[*]}" >&2
+            exit 1
+          fi
+
+          uv venv "${SMOKE_VENV}"
+          uv pip install --python "${SMOKE_VENV}/bin/python" "${wheels[0]}"
+          smoke_home="$(mktemp -d "${RUNNER_TEMP}/raes-release-smoke-cwd.XXXXXX")"
+          report_path="${smoke_home}/conformance.json"
+          (
+            cd "${smoke_home}"
+            env -u PYTHONPATH -u PYTHONHOME HOME="${smoke_home}" \
+              "${SMOKE_VENV}/bin/raes" conformance backend --profile provisioning-only > "${report_path}"
+          )
+          EXPECTED_VERSION="${EXPECTED_TAG#v}" REPORT_PATH="${report_path}" \
+            "${SMOKE_VENV}/bin/python" - <<'PY'
+          import json
+          import os
+          from importlib.metadata import version
+          from pathlib import Path
+
+          report = json.loads(Path(os.environ["REPORT_PATH"]).read_text(encoding="utf-8"))
+          installed_version = version("raes")
+          if installed_version != os.environ["EXPECTED_VERSION"]:
+              raise SystemExit(
+                  f"installed release version {installed_version!r} does not match tag {os.environ['EXPECTED_VERSION']!r}"
+              )
+          if report.get("profile") != "provisioning-only":
+              raise SystemExit(f"unexpected conformance profile: {report.get('profile')!r}")
+          if report.get("passed") is not True:
+              raise SystemExit("installed release wheel failed backend conformance")
+          if not report.get("cases"):
+              raise SystemExit("installed release wheel ran zero conformance cases")
+          print(f"installed release wheel passed {len(report['cases'])} conformance cases")
+          PY
+
+      - name: Smoke-test the installed release sdist (#537)
+        env:
+          SMOKE_VENV: ${{ runner.temp }}/raes-release-sdist-smoke
+          EXPECTED_TAG: ${{ needs.resolve-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          sdists=(dist/raes-*.tar.gz)
+          if [ "${#sdists[@]}" -ne 1 ] || [ ! -f "${sdists[0]}" ]; then
+            echo "Expected exactly one release sdist, found: ${sdists[*]}" >&2
+            exit 1
+          fi
+
+          uv venv "${SMOKE_VENV}"
+          uv pip install --no-cache --python "${SMOKE_VENV}/bin/python" "${sdists[0]}"
+          smoke_home="$(mktemp -d "${RUNNER_TEMP}/raes-release-sdist-smoke-cwd.XXXXXX")"
+          report_path="${smoke_home}/conformance.json"
+          (
+            cd "${smoke_home}"
+            env -u PYTHONPATH -u PYTHONHOME HOME="${smoke_home}" \
+              "${SMOKE_VENV}/bin/raes" conformance backend --profile provisioning-only > "${report_path}"
+          )
+          EXPECTED_VERSION="${EXPECTED_TAG#v}" REPORT_PATH="${report_path}" \
+            "${SMOKE_VENV}/bin/python" - <<'PY'
+          import json
+          import os
+          from importlib.metadata import version
+          from pathlib import Path
+
+          report = json.loads(Path(os.environ["REPORT_PATH"]).read_text(encoding="utf-8"))
+          installed_version = version("raes")
+          if installed_version != os.environ["EXPECTED_VERSION"]:
+              raise SystemExit(
+                  f"installed sdist version {installed_version!r} does not match tag {os.environ['EXPECTED_VERSION']!r}"
+              )
+          if report.get("profile") != "provisioning-only":
+              raise SystemExit(f"unexpected conformance profile: {report.get('profile')!r}")
+          if report.get("passed") is not True:
+              raise SystemExit("installed release sdist failed backend conformance")
+          if not report.get("cases"):
+              raise SystemExit("installed release sdist ran zero conformance cases")
+          print(f"installed release sdist passed {len(report['cases'])} conformance cases")
+          PY
+
+      - name: Upload the tested release distributions
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-distributions-${{ needs.resolve-release.outputs.release_sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-pypi:
+    needs: [resolve-release, verify-release, integration-docker-release, build-release]
+    if: >-
+      always()
+      && needs.resolve-release.result == 'success'
+      && needs.verify-release.result == 'success'
+      && needs.integration-docker-release.result == 'success'
+      && needs.build-release.result == 'success'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write   # OIDC trusted publishing to PyPI (no stored token)
+    steps:
+      - name: Download the tested release distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions-${{ needs.resolve-release.outputs.release_sha }}
+          path: dist/
+
+      - name: Revalidate release identity immediately before PyPI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.resolve-release.outputs.release_sha }}
+          EXPECTED_TAG: ${{ needs.resolve-release.outputs.tag }}
+          EXPECTED_RELEASE_ID: ${{ needs.resolve-release.outputs.release_id }}
+          EXPECTED_DRAFT: ${{ needs.resolve-release.outputs.release_is_draft }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${EXPECTED_TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable SemVer release tag, got '${EXPECTED_TAG}'" >&2
+            exit 1
+          fi
+          if ! printf '%s\n' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Expected a full lowercase release SHA, got '${EXPECTED_SHA}'" >&2
+            exit 1
+          fi
+          if ! printf '%s\n' "${EXPECTED_RELEASE_ID}" | grep -Eq '^[1-9][0-9]*$'; then
+            echo "Expected a numeric release id, got '${EXPECTED_RELEASE_ID}'" >&2
+            exit 1
+          fi
+          if [ "${EXPECTED_DRAFT}" != "true" ] && [ "${EXPECTED_DRAFT}" != "false" ]; then
+            echo "Expected a boolean release draft state, got '${EXPECTED_DRAFT}'" >&2
+            exit 1
+          fi
+
+          release_json="$(
+            gh release view "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --json databaseId,isDraft,tagName
+          )"
+          current_release_id="$(jq -er '.databaseId | tostring' <<<"${release_json}")"
+          current_draft="$(jq -er '.isDraft | tostring' <<<"${release_json}")"
+          current_tag="$(jq -er '.tagName' <<<"${release_json}")"
+          if [ "${current_release_id}" != "${EXPECTED_RELEASE_ID}" ]; then
+            echo "Release object changed: expected id ${EXPECTED_RELEASE_ID}, got ${current_release_id}" >&2
+            exit 1
+          fi
+          if [ "${current_tag}" != "${EXPECTED_TAG}" ]; then
+            echo "Release tag changed: expected ${EXPECTED_TAG}, got ${current_tag}" >&2
+            exit 1
+          fi
+          if [ "${current_draft}" != "${EXPECTED_DRAFT}" ]; then
+            echo "Release draft state changed: expected ${EXPECTED_DRAFT}, got ${current_draft}" >&2
+            exit 1
+          fi
+
+          ref_json="$(
+            gh api --method GET \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "repos/${GITHUB_REPOSITORY}/git/ref/tags/${EXPECTED_TAG}"
+          )"
+          current_ref="$(jq -er '.ref' <<<"${ref_json}")"
+          current_type="$(jq -er '.object.type' <<<"${ref_json}")"
+          current_sha="$(jq -er '.object.sha' <<<"${ref_json}")"
+          if [ "${current_ref}" != "refs/tags/${EXPECTED_TAG}" ]; then
+            echo "Tag ref lookup changed: expected refs/tags/${EXPECTED_TAG}, got ${current_ref}" >&2
+            exit 1
+          fi
+
+          dereference_depth=0
+          while [ "${current_type}" = "tag" ]; do
+            dereference_depth=$((dereference_depth + 1))
+            if [ "${dereference_depth}" -gt 16 ]; then
+              echo "Release tag exceeded the bounded annotated-tag dereference depth" >&2
+              exit 1
+            fi
+            if ! printf '%s\n' "${current_sha}" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "Annotated release tag resolved to malformed object SHA '${current_sha}'" >&2
+              exit 1
+            fi
+            tag_json="$(
+              gh api --method GET \
+                -H 'Accept: application/vnd.github+json' \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "repos/${GITHUB_REPOSITORY}/git/tags/${current_sha}"
+            )"
+            current_type="$(jq -er '.object.type' <<<"${tag_json}")"
+            current_sha="$(jq -er '.object.sha' <<<"${tag_json}")"
+          done
+          if [ "${current_type}" != "commit" ]; then
+            echo "Release tag resolved to unsupported object type '${current_type}'" >&2
+            exit 1
+          fi
+          if ! printf '%s\n' "${current_sha}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Release tag resolved to malformed commit SHA '${current_sha}'" >&2
+            exit 1
+          fi
+          if [ "${current_sha}" != "${EXPECTED_SHA}" ]; then
+            echo "Release tag moved: expected ${EXPECTED_SHA}, got ${current_sha}" >&2
+            exit 1
+          fi
+          echo "Revalidated Release ${EXPECTED_RELEASE_ID}, ${EXPECTED_TAG}, and ${EXPECTED_SHA} immediately before PyPI"
 
       - name: Publish to PyPI (OIDC trusted publishing)
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         with:
           packages-dir: dist
 
-      - name: Attach the distributions to the GitHub Release
+  publish-github:
+    needs: [resolve-release, verify-release, build-release, publish-pypi]
+    if: >-
+      always()
+      && needs.resolve-release.result == 'success'
+      && needs.verify-release.result == 'success'
+      && needs.build-release.result == 'success'
+      && needs.publish-pypi.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve-release.outputs.release_sha }}
+
+      - name: Download the tested release distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions-${{ needs.resolve-release.outputs.release_sha }}
+          path: dist/
+
+      - name: Revalidate, attach, and publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
-        run: gh release upload "${TAG}" dist/* --clobber
+          EXPECTED_SHA: ${{ needs.resolve-release.outputs.release_sha }}
+          EXPECTED_TAG: ${{ needs.resolve-release.outputs.tag }}
+          EXPECTED_RELEASE_ID: ${{ needs.resolve-release.outputs.release_id }}
+          EXPECTED_DRAFT: ${{ needs.resolve-release.outputs.release_is_draft }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [ "${actual_sha}" != "${EXPECTED_SHA}" ]; then
+            echo "Release attachment checkout mismatch: expected ${EXPECTED_SHA}, got ${actual_sha}" >&2
+            exit 1
+          fi
+
+          release_json="$(
+            gh release view "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --json databaseId,isDraft,tagName
+          )"
+          current_release_id="$(jq -r '.databaseId' <<<"${release_json}")"
+          current_draft="$(jq -r '.isDraft' <<<"${release_json}")"
+          current_tag="$(jq -r '.tagName' <<<"${release_json}")"
+          if [ "${current_release_id}" != "${EXPECTED_RELEASE_ID}" ]; then
+            echo "Release object changed: expected id ${EXPECTED_RELEASE_ID}, got ${current_release_id}" >&2
+            exit 1
+          fi
+          if [ "${current_tag}" != "${EXPECTED_TAG}" ]; then
+            echo "Release tag changed: expected ${EXPECTED_TAG}, got ${current_tag}" >&2
+            exit 1
+          fi
+          if [ "${current_draft}" != "${EXPECTED_DRAFT}" ]; then
+            echo "Release draft state changed: expected ${EXPECTED_DRAFT}, got ${current_draft}" >&2
+            exit 1
+          fi
+
+          git fetch --force --tags origin
+          current_tag_sha="$(git rev-parse --verify "${EXPECTED_TAG}^{commit}")"
+          if [ "${current_tag_sha}" != "${EXPECTED_SHA}" ]; then
+            echo "Release tag moved: expected ${EXPECTED_SHA}, got ${current_tag_sha}" >&2
+            exit 1
+          fi
+
+          wheels=(dist/raes-*.whl)
+          sdists=(dist/raes-*.tar.gz)
+          if [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ] \
+            || [ "${#sdists[@]}" -ne 1 ] || [ ! -f "${sdists[0]}" ]; then
+            echo "Expected one tested wheel and sdist before attachment" >&2
+            exit 1
+          fi
+          gh release upload "${EXPECTED_TAG}" "${wheels[0]}" "${sdists[0]}" --clobber
+
+          git fetch --force --tags origin
+          current_tag_sha="$(git rev-parse --verify "${EXPECTED_TAG}^{commit}")"
+          if [ "${current_tag_sha}" != "${EXPECTED_SHA}" ]; then
+            echo "Release tag moved during attachment: expected ${EXPECTED_SHA}, got ${current_tag_sha}" >&2
+            exit 1
+          fi
+          if [ "${EXPECTED_DRAFT}" = "true" ]; then
+            gh release edit "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" --draft=false --verify-tag
+          fi
+
+          final_json="$(
+            gh release view "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --json databaseId,isDraft,tagName
+          )"
+          if [ "$(jq -r '.databaseId' <<<"${final_json}")" != "${EXPECTED_RELEASE_ID}" ] \
+            || [ "$(jq -r '.tagName' <<<"${final_json}")" != "${EXPECTED_TAG}" ] \
+            || [ "$(jq -r '.isDraft' <<<"${final_json}")" != "false" ]; then
+            echo "GitHub Release finalization did not preserve the verified release identity" >&2
+            exit 1
+          fi
 
   # After a release is cut, the version bump + CHANGELOG land on `main`, so `dev`
   # falls one release commit behind. Open a back-merge PR so `dev` is resynced.
@@ -130,8 +644,10 @@ jobs:
   # does not trigger, and repo auto-merge is off — merge it yourself (admin
   # override; enforce_admins is false).
   sync-dev:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: [release-please, publish-github]
+    if: >-
+      needs.release-please.outputs.release_created == 'true'
+      && needs.publish-github.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
