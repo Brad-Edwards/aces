@@ -72,35 +72,44 @@ class RealizationObservationDisclosure:
         if self.observation_strength is ObservationStrength.NONE:
             raise ValueError("realization observation disclosure must provide non-none evidence")
         if self.requirement_kind == "compute-substrate":
-            if self.observed_value is None:
-                raise ValueError("compute-substrate disclosure must carry its governed observed value")
-            validate_controlled_vocabulary_value("compute-substrates", self.observed_value)
-            for field_name in ("operation_id", "envelope_digest", "configuration_digest", "observer_version"):
-                value = getattr(self, field_name)
-                if value is None or not value.strip():
-                    raise ValueError(f"compute-substrate disclosure must carry {field_name}")
-            for field_name in ("envelope_digest", "configuration_digest"):
-                if re.fullmatch(r"sha256:[a-f0-9]{64}", getattr(self, field_name)) is None:
-                    raise ValueError(f"compute-substrate disclosure {field_name} must be a sha256 digest")
-            if self.sequence is None or self.sequence < 0:
-                raise ValueError("compute-substrate disclosure sequence must be non-negative")
-            if not self.binding_verified:
-                raise ValueError("compute-substrate disclosure must carry a verified execution binding")
-        elif (
-            any(
-                value is not None
-                for value in (
-                    self.observed_value,
-                    self.operation_id,
-                    self.envelope_digest,
-                    self.configuration_digest,
-                    self.observer_version,
-                    self.sequence,
-                )
-            )
-            or self.binding_verified
-        ):
+            self._validate_compute_substrate_binding()
+        elif self._has_execution_binding():
             raise ValueError("value-bearing execution bindings are reserved for compute-substrate disclosures")
+
+    def _validate_compute_substrate_binding(self) -> None:
+        if self.observed_value is None:
+            raise ValueError("compute-substrate disclosure must carry its governed observed value")
+        validate_controlled_vocabulary_value("compute-substrates", self.observed_value)
+        self._validate_binding_text_fields()
+        self._validate_binding_digests()
+        if self.sequence is None or self.sequence < 0:
+            raise ValueError("compute-substrate disclosure sequence must be non-negative")
+        if not self.binding_verified:
+            raise ValueError("compute-substrate disclosure must carry a verified execution binding")
+
+    def _validate_binding_text_fields(self) -> None:
+        for field_name in ("operation_id", "envelope_digest", "configuration_digest", "observer_version"):
+            value = getattr(self, field_name)
+            if value is None or not value.strip():
+                raise ValueError(f"compute-substrate disclosure must carry {field_name}")
+
+    def _validate_binding_digests(self) -> None:
+        for field_name in ("envelope_digest", "configuration_digest"):
+            if re.fullmatch(r"sha256:[a-f0-9]{64}", getattr(self, field_name)) is None:
+                raise ValueError(f"compute-substrate disclosure {field_name} must be a sha256 digest")
+
+    def _has_execution_binding(self) -> bool:
+        return self.binding_verified or any(
+            value is not None
+            for value in (
+                self.observed_value,
+                self.operation_id,
+                self.envelope_digest,
+                self.configuration_digest,
+                self.observer_version,
+                self.sequence,
+            )
+        )
 
 
 def bind_compute_substrate_observations(
@@ -117,42 +126,83 @@ def bind_compute_substrate_observations(
     cannot produce a disclosure.
     """
 
-    from raes_contracts.planning import ChangeAction, ProvisioningPlan
-    from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
-
-    if not isinstance(plan, ProvisioningPlan) or not isinstance(envelope, BackendRealizationEnvelopeModel):
-        raise TypeError("substrate observation binding requires typed plan and envelope")
+    _require_binding_inputs(plan, envelope, "substrate observation binding")
     non_substrate = tuple(item for item in previous if item.requirement_kind != "compute-substrate")
     if not plan.realization_constraints:
         return non_substrate
     if plan.operation_id is None or plan.realization_envelope != envelope.identity:
         raise ValueError("substrate observation binding requires matching operation and envelope identity")
     operations = {operation.address: operation for operation in plan.operations}
-    native_by_address = {
-        observation.address: observation
-        for observation in observations
-        if observation.concern is RealizationConcern.COMPUTE_SUBSTRATE
-    }
-    if len(native_by_address) != sum(
-        observation.concern is RealizationConcern.COMPUTE_SUBSTRATE for observation in observations
-    ):
-        raise ValueError("compute-substrate observations must identify unique addresses")
+    native_by_address = _native_observations_by_address(observations)
     previous_by_address = {item.address: item for item in previous if item.requirement_kind == "compute-substrate"}
-    disclosures: list[RealizationObservationDisclosure] = []
-    for constraint in plan.realization_constraints:
-        operation = operations.get(constraint.address)
-        if operation is None or operation.action is ChangeAction.DELETE:
-            continue
-        if operation.action is ChangeAction.UNCHANGED:
-            prior = previous_by_address.get(constraint.address)
-            if prior is not None and _prior_disclosure_reusable(prior, constraint, envelope):
-                disclosures.append(prior)
-                continue
-        native = native_by_address.get(constraint.address)
-        if native is None or not _native_compute_substrate_observation_valid(native, envelope):
-            continue
-        disclosures.append(
-            RealizationObservationDisclosure(
+    disclosures = tuple(
+        disclosure
+        for constraint in plan.realization_constraints
+        if (
+            disclosure := _bound_compute_substrate_disclosure(
+                constraint=constraint,
+                operation=operations.get(constraint.address),
+                native=native_by_address.get(constraint.address),
+                prior=previous_by_address.get(constraint.address),
+                plan=plan,
+                envelope=envelope,
+            )
+        )
+        is not None
+    )
+    return (*non_substrate, *disclosures)
+
+
+def _native_observations_by_address(
+    observations: Sequence[RealizationObservation],
+) -> dict[str, RealizationObservation]:
+    native = tuple(
+        observation for observation in observations if observation.concern is RealizationConcern.COMPUTE_SUBSTRATE
+    )
+    by_address = {observation.address: observation for observation in native}
+    if len(by_address) != len(native):
+        raise ValueError("compute-substrate observations must identify unique addresses")
+    return by_address
+
+
+def _require_binding_inputs(plan: object, envelope: object, boundary: str) -> None:
+    from raes_contracts.planning import ProvisioningPlan
+    from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
+
+    if not isinstance(plan, ProvisioningPlan) or not isinstance(envelope, BackendRealizationEnvelopeModel):
+        raise TypeError(f"{boundary} requires typed plan and envelope")
+
+
+def _bound_compute_substrate_disclosure(
+    *,
+    constraint: object,
+    operation: object,
+    native: RealizationObservation | None,
+    prior: RealizationObservationDisclosure | None,
+    plan: object,
+    envelope: object,
+) -> RealizationObservationDisclosure | None:
+    from raes_contracts.planning import ChangeAction, PlannedRealizationConstraint, PlanOperation, ProvisioningPlan
+    from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
+
+    typed = all(
+        (
+            isinstance(constraint, PlannedRealizationConstraint),
+            isinstance(operation, PlanOperation),
+            isinstance(plan, ProvisioningPlan),
+            isinstance(envelope, BackendRealizationEnvelopeModel),
+        )
+    )
+    disclosure = None
+    if typed and operation.action is not ChangeAction.DELETE:
+        if (
+            operation.action is ChangeAction.UNCHANGED
+            and prior is not None
+            and _prior_disclosure_reusable(prior, constraint, envelope)
+        ):
+            disclosure = prior
+        elif native is not None and _native_compute_substrate_observation_valid(native, envelope):
+            disclosure = RealizationObservationDisclosure(
                 address=constraint.address,
                 field_path=constraint.field_path,
                 domain="runtime-realization",
@@ -167,8 +217,7 @@ def bind_compute_substrate_observations(
                 sequence=native.sequence,
                 binding_verified=True,
             )
-        )
-    return (*non_substrate, *disclosures)
+    return disclosure
 
 
 def compute_substrate_readback_addresses(
@@ -179,26 +228,35 @@ def compute_substrate_readback_addresses(
 ) -> tuple[str, ...]:
     """Return addresses that require fresh native substrate observation."""
 
-    from raes_contracts.planning import ChangeAction, ProvisioningPlan
-    from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
-
-    if not isinstance(plan, ProvisioningPlan) or not isinstance(envelope, BackendRealizationEnvelopeModel):
-        raise TypeError("substrate readback selection requires typed plan and envelope")
+    _require_binding_inputs(plan, envelope, "substrate readback selection")
     operations = {operation.address: operation for operation in plan.operations}
     previous_by_address = {item.address: item for item in previous if item.requirement_kind == "compute-substrate"}
     addresses: list[str] = []
     for constraint in plan.realization_constraints:
         operation = operations.get(constraint.address)
-        if operation is None or operation.action is ChangeAction.DELETE:
-            continue
-        prior = previous_by_address.get(constraint.address)
-        if (
-            operation.action is not ChangeAction.UNCHANGED
-            or prior is None
-            or not _prior_disclosure_reusable(prior, constraint, envelope)
+        if _requires_compute_substrate_readback(
+            operation,
+            previous_by_address.get(constraint.address),
+            constraint,
+            envelope,
         ):
             addresses.append(constraint.address)
     return tuple(addresses)
+
+
+def _requires_compute_substrate_readback(
+    operation: object,
+    prior: RealizationObservationDisclosure | None,
+    constraint: object,
+    envelope: object,
+) -> bool:
+    from raes_contracts.planning import ChangeAction, PlanOperation
+
+    if not isinstance(operation, PlanOperation) or operation.action is ChangeAction.DELETE:
+        return False
+    if operation.action is not ChangeAction.UNCHANGED or prior is None:
+        return True
+    return not _prior_disclosure_reusable(prior, constraint, envelope)
 
 
 def missing_compute_substrate_readbacks(

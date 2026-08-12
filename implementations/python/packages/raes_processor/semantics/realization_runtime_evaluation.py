@@ -254,25 +254,21 @@ def _process_limit_projection_maps(
     realized_projection: object,
 ) -> tuple[Diagnostic | None, dict[str, dict[str, object]], dict[str, dict[str, object]]]:
     diagnostic: Diagnostic | None = None
-    declared: dict[str, dict[str, object]] = {}
-    realized: dict[str, dict[str, object]] = {}
     if not isinstance(declared_projection, list) or not isinstance(realized_projection, list):
+        return silent_approximation_diagnostic(requirement), {}, {}
+    try:
+        declared = _process_limit_projection_map(declared_projection)
+        realized = _process_limit_projection_map(realized_projection)
+    except (TypeError, ValueError):
+        return invalid_observation_diagnostic(requirement), {}, {}
+    diagnostic = None
+    if declared.keys() != realized.keys():
         diagnostic = silent_approximation_diagnostic(requirement)
-    else:
-        try:
-            declared = {
-                process_resource_limit_identity_digest(item): cast(dict[str, object], item)
-                for item in declared_projection
-            }
-            realized = {
-                process_resource_limit_identity_digest(item): cast(dict[str, object], item)
-                for item in realized_projection
-            }
-        except (TypeError, ValueError):
-            diagnostic = invalid_observation_diagnostic(requirement)
-        if diagnostic is None and declared.keys() != realized.keys():
-            diagnostic = silent_approximation_diagnostic(requirement)
     return diagnostic, declared, realized
+
+
+def _process_limit_projection_map(projection: list[object]) -> dict[str, dict[str, object]]:
+    return {process_resource_limit_identity_digest(item): cast(dict[str, object], item) for item in projection}
 
 
 def _constrained_process_limit_values_admitted(

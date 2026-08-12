@@ -36,21 +36,34 @@ def evaluate_compute_substrate(
 ) -> tuple[Diagnostic | None, RealizationProvenanceEntry | None]:
     """Validate the observed substrate without consulting planned payload values."""
 
-    op = next((item for item in declared_plan.operations if item.address == requirement.address), None)
-    if op is None or op.action is ChangeAction.DELETE:
-        return None, None
-    if manifest is None or manifest.realization_envelope is None:
-        return _evidence_diagnostic(requirement), None
+    result: tuple[Diagnostic | None, RealizationProvenanceEntry | None] = (None, None)
+    if _requires_compute_substrate_evaluation(requirement, declared_plan):
+        if manifest is None or manifest.realization_envelope is None:
+            result = (_evidence_diagnostic(requirement), None)
+        else:
+            result = _evaluate_compute_substrate_observation(
+                requirement,
+                declared_plan,
+                returned_snapshot,
+                manifest,
+            )
+    return result
+
+
+def _evaluate_compute_substrate_observation(
+    requirement: CompiledRealizationRequirement,
+    declared_plan: ProvisioningPlan,
+    returned_snapshot: RuntimeSnapshot,
+    manifest: BackendManifest,
+) -> tuple[Diagnostic | None, RealizationProvenanceEntry | None]:
     observation = matching_observation(requirement, returned_snapshot)
-    if observation is None or not _binding_matches(observation, declared_plan, returned_snapshot, manifest):
-        return _evidence_diagnostic(requirement), None
-    if (
-        requirement.required_observation_strength is not None
-        and not observation_strength_satisfies(
-            observation.observation_strength,
-            requirement.required_observation_strength,
-        )
-    ) or not manifest_corroborates(requirement, observation, manifest):
+    if observation is None or not _observation_admitted(
+        requirement,
+        observation,
+        declared_plan,
+        returned_snapshot,
+        manifest,
+    ):
         return _evidence_diagnostic(requirement), None
     if requirement.value_domain is not None and not scalar_in_domain(
         observation.observed_value,
@@ -61,7 +74,44 @@ def evaluate_compute_substrate(
     return None, realization_provenance_entry(requirement, honoured)
 
 
+def _requires_compute_substrate_evaluation(
+    requirement: CompiledRealizationRequirement,
+    plan: ProvisioningPlan,
+) -> bool:
+    operation = next((item for item in plan.operations if item.address == requirement.address), None)
+    return operation is not None and operation.action is not ChangeAction.DELETE
+
+
+def _observation_admitted(
+    requirement: CompiledRealizationRequirement,
+    observation: RealizationObservationDisclosure,
+    declared_plan: ProvisioningPlan,
+    returned_snapshot: RuntimeSnapshot,
+    manifest: BackendManifest,
+) -> bool:
+    strength_admitted = requirement.required_observation_strength is None or observation_strength_satisfies(
+        observation.observation_strength,
+        requirement.required_observation_strength,
+    )
+    return (
+        strength_admitted
+        and manifest_corroborates(requirement, observation, manifest)
+        and _binding_matches(observation, declared_plan, returned_snapshot, manifest)
+    )
+
+
 def _binding_matches(
+    observation: RealizationObservationDisclosure,
+    declared_plan: ProvisioningPlan,
+    returned_snapshot: RuntimeSnapshot,
+    manifest: BackendManifest,
+) -> bool:
+    return _envelope_binding_matches(observation, declared_plan, returned_snapshot, manifest) and (
+        _operation_binding_matches(observation, declared_plan)
+    )
+
+
+def _envelope_binding_matches(
     observation: RealizationObservationDisclosure,
     declared_plan: ProvisioningPlan,
     returned_snapshot: RuntimeSnapshot,
@@ -77,10 +127,6 @@ def _binding_matches(
         if carrier is not None
         else None
     )
-    operation = next(
-        (item for item in declared_plan.operations if item.address == observation.address),
-        None,
-    )
     return bool(
         identity is not None
         and returned_snapshot.realization_envelope == identity
@@ -88,14 +134,26 @@ def _binding_matches(
         and carrier.identity == identity
         and claim is not None
         and claim.mechanism == observation.observed_value
-        and operation is not None
+        and observation.envelope_digest == identity.digest
+        and observation.configuration_digest == identity.configuration_digest
+        and observation.binding_verified
+    )
+
+
+def _operation_binding_matches(
+    observation: RealizationObservationDisclosure,
+    declared_plan: ProvisioningPlan,
+) -> bool:
+    operation = next(
+        (item for item in declared_plan.operations if item.address == observation.address),
+        None,
+    )
+    return bool(
+        operation is not None
         and (
             operation.action is ChangeAction.UNCHANGED
             or (declared_plan.operation_id is not None and observation.operation_id == declared_plan.operation_id)
         )
-        and observation.envelope_digest == identity.digest
-        and observation.configuration_digest == identity.configuration_digest
-        and observation.binding_verified
     )
 
 

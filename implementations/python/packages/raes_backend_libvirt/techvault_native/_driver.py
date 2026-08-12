@@ -47,6 +47,7 @@ from ..techvault_concerns import techvault_observation_diagnostics, techvault_sp
 from ..techvault_lifecycle import (
     NativeOwnershipConflict as _OwnershipConflict,
 )
+from ..techvault_lifecycle import NativeResolution as _NativeResolution
 from ..techvault_lifecycle import (
     deactivate_and_undefine as _deactivate_and_undefine,
 )
@@ -337,22 +338,11 @@ class TechVaultNativeLibvirtDriver:
         handles: list[DomainHandle] = []
         diagnostics: list[Diagnostic] = []
         for spec in domains:
-            try:
-                resolved = _resolve_native(
-                    connection,
-                    "lookupByName",
-                    "listAllDomains",
-                    spec.address,
-                    known_name=self._names.get(spec.address),
-                    name_prefix=self.name_prefix,
-                )
-                native = None if resolved is None else resolved.native
-                if native is None or _existing_uuid(native) != _raes_uuid(spec.address) or not native_active(native):
-                    raise ValueError("owned active domain not observed")
-            except Exception:
+            resolved = self._observed_domain(connection, spec.address)
+            if resolved is None:
                 diagnostics.append(_diagnostic(_CODE_OPERATION_FAILED, spec.address))
                 continue
-            if resolved is not None and resolved.name is not None:
+            if resolved.name is not None:
                 self._names[spec.address] = resolved.name
             self._realized.add(spec.address)
             handles.append(DomainHandle(address=spec.address, realized=True))
@@ -369,6 +359,23 @@ class TechVaultNativeLibvirtDriver:
             diagnostics=tuple(diagnostics),
             observations=tuple(observations),
         )
+
+    def _observed_domain(self, connection: object, address: str) -> _NativeResolution | None:
+        try:
+            resolved = _resolve_native(
+                connection,
+                "lookupByName",
+                "listAllDomains",
+                address,
+                known_name=self._names.get(address),
+                name_prefix=self.name_prefix,
+            )
+            native = None if resolved is None else resolved.native
+            if native is None or _existing_uuid(native) != _raes_uuid(address) or not native_active(native):
+                return None
+        except Exception:
+            return None
+        return resolved
 
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)

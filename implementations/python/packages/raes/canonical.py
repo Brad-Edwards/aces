@@ -97,21 +97,33 @@ def migrate_legacy_instantiated_snapshot_payload(value: object) -> tuple[object,
     resource kind meant both compute and an exact virtual-machine substrate.
     """
 
-    if not isinstance(value, Mapping) or value.get("profile") != INSTANTIATED_SNAPSHOT_PROFILE:
-        return value, False
-    scenario_value = value.get("scenario")
-    if not isinstance(scenario_value, Mapping):
-        return value, False
-    nodes_value = scenario_value.get("nodes")
-    if not isinstance(nodes_value, Mapping):
-        return value, False
-    legacy_names = sorted(
-        str(name) for name, node in nodes_value.items() if isinstance(node, Mapping) and node.get("type") == "vm"
-    )
+    legacy_names = _legacy_snapshot_vm_names(value)
     if not legacy_names:
         return value, False
 
+    if not isinstance(value, Mapping):
+        raise TypeError("legacy snapshot migration requires a mapping")
     migrated: dict[str, Any] = deepcopy(dict(value))
+    nodes, existing = _legacy_snapshot_migration_surfaces(migrated)
+
+    for name in legacy_names:
+        _migrate_legacy_snapshot_vm(name, nodes, existing)
+    return migrated, True
+
+
+def _legacy_snapshot_vm_names(value: object) -> list[str]:
+    if not isinstance(value, Mapping) or value.get("profile") != INSTANTIATED_SNAPSHOT_PROFILE:
+        return []
+    scenario = value.get("scenario")
+    nodes = scenario.get("nodes") if isinstance(scenario, Mapping) else None
+    if not isinstance(nodes, Mapping):
+        return []
+    return sorted(str(name) for name, node in nodes.items() if isinstance(node, Mapping) and node.get("type") == "vm")
+
+
+def _legacy_snapshot_migration_surfaces(
+    migrated: dict[str, Any],
+) -> tuple[dict[str, Any], list[object]]:
     scenario = migrated["scenario"]
     nodes = scenario["nodes"]
     provenance = scenario.get("instantiation_provenance")
@@ -120,29 +132,35 @@ def migrate_legacy_instantiated_snapshot_payload(value: object) -> tuple[object,
     existing = provenance.setdefault("realization_constraints", [])
     if not isinstance(existing, list):
         raise ValueError("legacy instantiated VM migration requires a realization constraint list")
+    return nodes, existing
 
-    for name in legacy_names:
-        pointer = f"/nodes/{_pointer_token(name)}"
-        if any(
-            isinstance(record, Mapping)
-            and not record.get("namespace")
-            and record.get("field_pointer") == pointer
-            and record.get("concern") == "compute-substrate"
-            for record in existing
-        ):
-            raise ValueError("legacy instantiated VM migration collides with a compute-substrate constraint")
-        nodes[name]["type"] = "compute"
-        existing.append(
-            {
-                "namespace": [],
-                "field_pointer": pointer,
-                "concern": "compute-substrate",
-                "posture": "exact",
-                "domain": {"kind": "exact", "value": "virtual-machine"},
-                "provenance": "legacy-node-type-vm",
-            }
-        )
-    return migrated, True
+
+def _migrate_legacy_snapshot_vm(
+    name: str,
+    nodes: dict[str, Any],
+    existing: list[object],
+) -> None:
+    pointer = f"/nodes/{_pointer_token(name)}"
+    collision = any(
+        isinstance(record, Mapping)
+        and not record.get("namespace")
+        and record.get("field_pointer") == pointer
+        and record.get("concern") == "compute-substrate"
+        for record in existing
+    )
+    if collision:
+        raise ValueError("legacy instantiated VM migration collides with a compute-substrate constraint")
+    nodes[name]["type"] = "compute"
+    existing.append(
+        {
+            "namespace": [],
+            "field_pointer": pointer,
+            "concern": "compute-substrate",
+            "posture": "exact",
+            "domain": {"kind": "exact", "value": "virtual-machine"},
+            "provenance": "legacy-node-type-vm",
+        }
+    )
 
 
 def migrate_legacy_instantiated_snapshot_join(
@@ -164,7 +182,8 @@ def migrate_legacy_instantiated_snapshot_join(
         raw_digest = "sha256:" + hashlib.sha256(rfc8785.dumps(value)).hexdigest()
     except rfc8785.CanonicalizationError as exc:
         raise ValueError(f"legacy instantiated snapshot canonicalization failed: {exc}") from exc
-    assert isinstance(value, Mapping)
+    if not isinstance(value, Mapping):
+        raise TypeError("legacy snapshot migration requires a mapping")
     historical_digest = _legacy_instantiated_snapshot_projection_digest(value)
     if submitted_digest not in {raw_digest, historical_digest}:
         raise ValueError("legacy snapshot_digest must bind the submitted immutable snapshot")

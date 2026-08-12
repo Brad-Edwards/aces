@@ -39,6 +39,10 @@ class CompiledRealizationRequirement:
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address)
+        self._validate_authority_metadata()
+        self._validate_requirement_metadata()
+
+    def _validate_authority_metadata(self) -> None:
         if self.delegated != (self.explicitness is None):
             raise ValueError("delegated realization requirements must carry unresolved explicitness")
         if self.verification_scope is not None and not isinstance(
@@ -51,19 +55,31 @@ class CompiledRealizationRequirement:
             ObservationStrength,
         ):
             raise TypeError("required_observation_strength must be ObservationStrength")
+
+    def _validate_requirement_metadata(self) -> None:
+        self._validate_process_limit_metadata()
+        self._validate_constraint_metadata()
+        self._validate_artifact_metadata()
+
+    def _validate_process_limit_metadata(self) -> None:
         if self.requirement_kind != "process-resource-limits" and (
             self.value_constraints or self.process_resource_limits
         ):
             raise ValueError("process-limit realization metadata requires process-resource-limits")
+
+    def _validate_constraint_metadata(self) -> None:
         if self.requirement_kind == "compute-substrate":
             validate_compute_substrate_constraint(self.explicitness, self.value_domain)
         elif self.value_domain is not None or self.constraint_provenance is not None:
             raise ValueError("constraint domain metadata requires compute-substrate")
-        if self.artifact_requirement is not None:
-            if self.requirement_kind != "source-artifact":
-                raise ValueError("artifact_requirement requires requirement_kind='source-artifact'")
-            if self.explicitness is not self.artifact_requirement.explicitness:
-                raise ValueError("compiled artifact requirement explicitness must match its source contract")
+
+    def _validate_artifact_metadata(self) -> None:
+        if self.artifact_requirement is None:
+            return
+        if self.requirement_kind != "source-artifact":
+            raise ValueError("artifact_requirement requires requirement_kind='source-artifact'")
+        if self.explicitness is not self.artifact_requirement.explicitness:
+            raise ValueError("compiled artifact requirement explicitness must match its source contract")
 
 
 __all__ = ["CompiledRealizationRequirement"]

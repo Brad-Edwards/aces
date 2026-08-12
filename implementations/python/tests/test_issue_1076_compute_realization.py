@@ -268,7 +268,7 @@ def test_legacy_exploit_snapshot_migration_rejects_a_forged_matching_digest_pair
     ],
 )
 def test_compute_substrate_domain_is_governed_and_concern_specific(domain: str) -> None:
-    with pytest.raises((SDLParseError, SDLValidationError)):
+    with pytest.raises(SDLParseError):
         _parse(
             f"""
             name: invalid-substrate-domain

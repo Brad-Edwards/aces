@@ -37,7 +37,7 @@ from raes_reference_backend.driver import (
     NetworkHandle,
     NetworkSpec,
 )
-from raes_reference_backend.drivers.oci_observation import substrate_observations
+from raes_reference_backend.drivers.oci_observation import ownership_fields_match, substrate_observations
 
 _DOMAIN = "runtime"
 _ALLOWED_RUNTIMES = frozenset({"docker", "podman"})
@@ -354,32 +354,35 @@ class OciDeploymentDriver:
     def _owned_container_readback(self, address: str, *, require_known_native_id: bool) -> bool:
         expected_native_id = self._native_ids.get(address)
         expected_name = self._name_for(address)
-        current_and_owned = False
-        if expected_name and (expected_native_id or not require_known_native_id):
-            ok, _kind, stdout = self._invoke(
-                [
-                    self._runtime,
-                    "inspect",
-                    "--format",
-                    _OWNERSHIP_INSPECT_FORMAT,
-                    expected_name,
-                ]
-            )
-            fields = stdout.rstrip("\n").split("\n")
-            if ok and len(fields) == 4:
-                native_id, workspace, owned_address, native_name = fields
-                current_and_owned = (
-                    bool(native_id)
-                    and (expected_native_id is None or native_id == expected_native_id)
-                    and workspace == self._workspace
-                    and owned_address == address
-                    and native_name.removeprefix("/") == expected_name
-                )
-                if current_and_owned:
-                    self._native_ids[address] = native_id
-                    self._names[address] = expected_name
-                    self._realized.add(address)
-        return current_and_owned
+        if not expected_name or (expected_native_id is None and require_known_native_id):
+            return False
+        fields = self._inspect_container_ownership(expected_name)
+        if fields is None or not ownership_fields_match(
+            fields,
+            address=address,
+            expected_name=expected_name,
+            expected_native_id=expected_native_id,
+            workspace=self._workspace,
+        ):
+            return False
+        native_id = fields[0]
+        self._native_ids[address] = native_id
+        self._names[address] = expected_name
+        self._realized.add(address)
+        return True
+
+    def _inspect_container_ownership(self, expected_name: str) -> list[str] | None:
+        ok, _kind, stdout = self._invoke(
+            [
+                self._runtime,
+                "inspect",
+                "--format",
+                _OWNERSHIP_INSPECT_FORMAT,
+                expected_name,
+            ]
+        )
+        fields = stdout.rstrip("\n").split("\n")
+        return fields if ok and len(fields) == 4 else None
 
     @staticmethod
     def _ordered_containers(containers: tuple[ContainerSpec, ...]) -> tuple[ContainerSpec, ...]:

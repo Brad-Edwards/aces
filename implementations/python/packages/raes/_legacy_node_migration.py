@@ -45,6 +45,74 @@ def _legacy_vm_diagnostic(
     )
 
 
+def _reject_processor_owned_constraint_provenance(
+    data: dict[str, Any],
+    *,
+    path: Path | None,
+) -> None:
+    realization = data.get("realization")
+    if not isinstance(realization, dict):
+        return
+    constraints = realization.get("constraints")
+    if isinstance(constraints, list) and any(
+        isinstance(constraint, dict) and "provenance" in constraint for constraint in constraints
+    ):
+        raise SDLParseError("Realization constraint provenance is processor-owned.", path=path)
+
+
+def _legacy_vm_nodes(data: dict[str, Any]) -> list[tuple[object, dict[str, Any]]]:
+    nodes = data.get("nodes")
+    if not isinstance(nodes, dict):
+        return []
+    return [
+        (name, node)
+        for name, node in nodes.items()
+        if isinstance(node, dict) and isinstance(node.get("type"), str) and node["type"].casefold() == "vm"
+    ]
+
+
+def _realization_constraints(data: dict[str, Any], *, path: Path | None) -> list[object]:
+    realization = data.setdefault("realization", {})
+    if not isinstance(realization, dict):
+        raise SDLParseError("Legacy vm migration requires realization to be a mapping.", path=path)
+    constraints = realization.setdefault("constraints", [])
+    if not isinstance(constraints, list):
+        raise SDLParseError("Legacy vm migration requires realization.constraints to be a sequence.", path=path)
+    return constraints
+
+
+def _migrate_legacy_vm_node(
+    name: object,
+    node: dict[str, Any],
+    constraints: list[object],
+    *,
+    path: Path | None,
+) -> None:
+    field_pointer = f"/nodes/{_pointer_token(name)}"
+    collision = any(
+        isinstance(authored, dict)
+        and authored.get("field_pointer") == field_pointer
+        and authored.get("concern") == "compute-substrate"
+        and not authored.get("namespace")
+        for authored in constraints
+    )
+    if collision:
+        raise SDLParseError(
+            f"Legacy vm constraint for '{field_pointer}' collides with an authored compute-substrate constraint.",
+            path=path,
+        )
+    node["type"] = "compute"
+    constraints.append(
+        {
+            "field_pointer": field_pointer,
+            "concern": "compute-substrate",
+            "posture": "exact",
+            "domain": {"kind": "exact", "value": "virtual-machine"},
+            "provenance": "legacy-node-type-vm",
+        }
+    )
+
+
 def migrate_legacy_vm_nodes(
     data: dict[str, Any],
     *,
@@ -55,23 +123,9 @@ def migrate_legacy_vm_nodes(
 ) -> None:
     """Normalize legacy VM syntax once without weakening its exact meaning."""
 
-    realization_value = data.get("realization")
-    if isinstance(realization_value, dict):
-        authored_constraints = realization_value.get("constraints")
-        if isinstance(authored_constraints, list) and any(
-            isinstance(authored, dict) and "provenance" in authored for authored in authored_constraints
-        ):
-            raise SDLParseError("Realization constraint provenance is processor-owned.", path=path)
-
-    nodes = data.get("nodes")
-    if not isinstance(nodes, dict):
-        return
+    _reject_processor_owned_constraint_provenance(data, path=path)
     policy = SDLMigrationPolicy(migration_policy)
-    legacy = [
-        (name, node)
-        for name, node in nodes.items()
-        if isinstance(node, dict) and isinstance(node.get("type"), str) and node["type"].casefold() == "vm"
-    ]
+    legacy = _legacy_vm_nodes(data)
     if not legacy:
         return
     diagnostics = [
@@ -90,36 +144,9 @@ def migrate_legacy_vm_nodes(
             diagnostics=diagnostics,
         )
 
-    realization = data.setdefault("realization", {})
-    if not isinstance(realization, dict):
-        raise SDLParseError("Legacy vm migration requires realization to be a mapping.", path=path)
-    constraints = realization.setdefault("constraints", [])
-    if not isinstance(constraints, list):
-        raise SDLParseError("Legacy vm migration requires realization.constraints to be a sequence.", path=path)
+    constraints = _realization_constraints(data, path=path)
     for name, node in legacy:
-        field_pointer = f"/nodes/{_pointer_token(name)}"
-        collision = any(
-            isinstance(authored, dict)
-            and authored.get("field_pointer") == field_pointer
-            and authored.get("concern") == "compute-substrate"
-            and not authored.get("namespace")
-            for authored in constraints
-        )
-        if collision:
-            raise SDLParseError(
-                f"Legacy vm constraint for '{field_pointer}' collides with an authored compute-substrate constraint.",
-                path=path,
-            )
-        node["type"] = "compute"
-        constraints.append(
-            {
-                "field_pointer": field_pointer,
-                "concern": "compute-substrate",
-                "posture": "exact",
-                "domain": {"kind": "exact", "value": "virtual-machine"},
-                "provenance": "legacy-node-type-vm",
-            }
-        )
+        _migrate_legacy_vm_node(name, node, constraints, path=path)
     if source_diagnostics is not None:
         source_diagnostics.extend(diagnostics)
 

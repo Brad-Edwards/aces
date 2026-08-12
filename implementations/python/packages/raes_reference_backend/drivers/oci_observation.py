@@ -15,6 +15,26 @@ _DOMAIN = "runtime"
 _CODE_SUBSTRATE_UNOBSERVED = "reference-backend.driver.compute-substrate-unobserved"
 
 
+def ownership_fields_match(
+    fields: list[str],
+    *,
+    address: str,
+    expected_name: str,
+    expected_native_id: str | None,
+    workspace: str,
+) -> bool:
+    """Return whether bounded inspect fields prove current run ownership."""
+
+    native_id, observed_workspace, owned_address, native_name = fields
+    return bool(
+        native_id
+        and (expected_native_id is None or native_id == expected_native_id)
+        and observed_workspace == workspace
+        and owned_address == address
+        and native_name.removeprefix("/") == expected_name
+    )
+
+
 def substrate_observations(
     handles: Sequence[ContainerHandle],
     *,
@@ -55,4 +75,4 @@ def substrate_observations(
     return tuple(observations), tuple(diagnostics)
 
 
-__all__ = ["substrate_observations"]
+__all__ = ["ownership_fields_match", "substrate_observations"]

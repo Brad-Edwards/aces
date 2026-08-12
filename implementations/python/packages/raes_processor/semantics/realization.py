@@ -24,6 +24,7 @@ from raes_contracts.realization_envelope import (
     EnvelopeBinding,
     EnvelopeScope,
     Posture,
+    RealizationConcernDisclosureModel,
     RealizationEnvelopeModel,
 )
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
@@ -297,20 +298,7 @@ def _compute_substrate_envelope_diagnostics(
     for requirement in requirements:
         if requirement.requirement_kind != "compute-substrate":
             continue
-        admitted = (
-            claim is not None
-            and claim.disposition.value != "unsupported"
-            and claim.mechanism is not None
-            and (requirement.value_domain is None or scalar_in_domain(claim.mechanism, requirement.value_domain))
-            and (
-                requirement.required_observation_strength is None
-                or observation_strength_satisfies(
-                    claim.observation_strength,
-                    requirement.required_observation_strength,
-                )
-            )
-        )
-        if not admitted:
+        if not _compute_substrate_claim_admits(requirement, claim):
             diagnostics.append(
                 Diagnostic(
                     code="realization.compute-substrate-not-admitted",
@@ -324,6 +312,20 @@ def _compute_substrate_envelope_diagnostics(
                 )
             )
     return diagnostics
+
+
+def _compute_substrate_claim_admits(
+    requirement: CompiledRealizationRequirement,
+    claim: RealizationConcernDisclosureModel | None,
+) -> bool:
+    if claim is None or claim.disposition.value == "unsupported" or claim.mechanism is None:
+        return False
+    domain_admitted = requirement.value_domain is None or scalar_in_domain(claim.mechanism, requirement.value_domain)
+    strength_admitted = requirement.required_observation_strength is None or observation_strength_satisfies(
+        claim.observation_strength,
+        requirement.required_observation_strength,
+    )
+    return domain_admitted and strength_admitted
 
 
 def _open_request_envelope(paths: tuple[str, ...]) -> RealizationEnvelopeModel:
