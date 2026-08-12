@@ -70,9 +70,11 @@ def _http_scope() -> Scope:
 
 def test_request_size_middleware_rejects_nonpositive_limit() -> None:
     control_plane = RuntimeControlPlane(create_stub_target())
+    app = _accepted_app([])
+
     with pytest.raises(ValueError, match="max_request_bytes must be positive"):
         RequestSizeLimitMiddleware(
-            _accepted_app([]),
+            app,
             control_plane=control_plane,
             max_request_bytes=0,
         )

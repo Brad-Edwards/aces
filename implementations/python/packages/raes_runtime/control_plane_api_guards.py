@@ -91,8 +91,10 @@ class RequestSizeLimitMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self._app(scope, receive, send)
-            return
+        else:
+            await self._handle_http(scope, receive, send)
 
+    async def _handle_http(self, scope: Scope, receive: Receive, send: Send) -> None:
         try:
             content_length = _declared_content_length(scope.get("headers", ()))
         except ValueError:
@@ -161,7 +163,7 @@ def _declared_content_length(headers: Sequence[tuple[bytes, bytes]]) -> int | No
         raise ValueError("content-length must appear at most once")
     try:
         value = int(values[0].decode("ascii"))
-    except (UnicodeDecodeError, ValueError) as exc:
+    except ValueError as exc:
         raise ValueError("content-length must be a non-negative integer") from exc
     if value < 0:
         raise ValueError("content-length must be a non-negative integer")

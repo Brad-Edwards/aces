@@ -29,8 +29,8 @@ class _ControlPlaneCallExecutor:
         self._max_pending_mutations = max_pending_mutations
         self._pending_mutations = 0
 
+    @staticmethod
     async def run(
-        self,
         call: Callable[_P, _T],
         /,
         *args: _P.args,
