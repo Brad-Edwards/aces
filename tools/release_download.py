@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import http.client as http_client
 import io
 import re
+import ssl
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC
 from email.utils import parsedate_to_datetime
+from functools import partial
 from http.client import IncompleteRead, RemoteDisconnected
 from typing import BinaryIO
 from urllib.error import HTTPError, URLError
 from urllib.parse import SplitResult, urlsplit
-from urllib.request import HTTPRedirectHandler, build_opener
+from urllib.request import HTTPHandler, HTTPRedirectHandler, HTTPSHandler, build_opener
 
 _APPROVED_RELEASE_PATH_PREFIXES = (
     "/errata-ai/vale/releases/download/",
@@ -63,9 +66,7 @@ class ReleaseRetryPolicy:
             self.maximum_response_bytes,
         )
         if any(value <= 0 for value in positive_values):
-            raise ValueError(
-                "request, total-time, and response bounds must be positive"
-            )
+            raise ValueError("request, total-time, and response bounds must be positive")
         delay_values = (
             self.initial_backoff_seconds,
             self.maximum_backoff_seconds,
@@ -117,6 +118,193 @@ class _NoRedirectHandler(HTTPRedirectHandler):
     http_error_308 = _return_response
 
 
+class _DeadlineRawReader(io.RawIOBase):
+    """Apply the absolute acquisition deadline to every socket-buffer refill."""
+
+    def __init__(
+        self,
+        raw: BinaryIO,
+        transport: object,
+        *,
+        deadline: float,
+        request_timeout: float,
+    ) -> None:
+        self._raw = raw
+        self._sock = transport
+        self._deadline = deadline
+        self._request_timeout = request_timeout
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, buffer: object) -> int | None:
+        timeout = _remaining_timeout(
+            deadline=self._deadline,
+            request_timeout=self._request_timeout,
+        )
+        setter = getattr(self._sock, "settimeout", None)
+        if not callable(setter):
+            raise ReleaseDownloadError("release response transport cannot enforce the download deadline")
+        setter(timeout)
+        readinto = getattr(self._raw, "readinto", None)
+        if not callable(readinto):
+            raise ReleaseDownloadError("release response transport is not readable")
+        count = readinto(buffer)
+        _remaining_timeout(
+            deadline=self._deadline,
+            request_timeout=self._request_timeout,
+        )
+        if count is not None and not isinstance(count, int):
+            raise ReleaseDownloadError("release response transport returned an invalid byte count")
+        return count
+
+    def fileno(self) -> int:
+        return self._raw.fileno()
+
+    def close(self) -> None:
+        if self.closed:
+            return
+        try:
+            self._raw.close()
+        finally:
+            super().close()
+
+
+class _DeadlineSocket:
+    """Delegate socket operations while governing every response-file read."""
+
+    def __init__(
+        self,
+        transport: object,
+        *,
+        deadline: float,
+        request_timeout: float,
+    ) -> None:
+        self._transport = transport
+        self._deadline = deadline
+        self._request_timeout = request_timeout
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._transport, name)
+
+    def makefile(
+        self,
+        mode: str = "r",
+        buffering: int | None = None,
+        **kwargs: object,
+    ) -> BinaryIO:
+        makefile = self._transport.makefile
+        if mode != "rb" or kwargs:
+            return makefile(mode, buffering, **kwargs)
+        raw = makefile(mode, buffering=0)
+        deadline_raw = _DeadlineRawReader(
+            raw,
+            self._transport,
+            deadline=self._deadline,
+            request_timeout=self._request_timeout,
+        )
+        if buffering == 0:
+            return deadline_raw
+        buffer_size = io.DEFAULT_BUFFER_SIZE if buffering is None or buffering < 0 else buffering
+        return io.BufferedReader(deadline_raw, buffer_size)
+
+
+class _DeadlineHTTPConnection(http_client.HTTPConnection):
+    """HTTP connection whose status, header, and framing reads share one deadline."""
+
+    def __init__(
+        self,
+        host: str,
+        *,
+        deadline: float,
+        request_timeout: float,
+        **kwargs: object,
+    ) -> None:
+        self._download_deadline = deadline
+        self._download_request_timeout = request_timeout
+        super().__init__(host, **kwargs)
+
+    def connect(self) -> None:
+        super().connect()
+        if self.sock is not None:
+            self.sock = _DeadlineSocket(
+                self.sock,
+                deadline=self._download_deadline,
+                request_timeout=self._download_request_timeout,
+            )
+
+
+class _DeadlineHTTPSConnection(http_client.HTTPSConnection):
+    """HTTPS connection with deadline-aware proxy and origin response parsing."""
+
+    def __init__(
+        self,
+        host: str,
+        *,
+        deadline: float,
+        request_timeout: float,
+        **kwargs: object,
+    ) -> None:
+        self._download_deadline = deadline
+        self._download_request_timeout = request_timeout
+        super().__init__(host, **kwargs)
+
+    def _deadline_socket(self, transport: object) -> _DeadlineSocket:
+        return _DeadlineSocket(
+            transport,
+            deadline=self._download_deadline,
+            request_timeout=self._download_request_timeout,
+        )
+
+    def _tunnel(self) -> None:
+        transport = self.sock
+        if transport is None:
+            super()._tunnel()
+            return
+        wrapped = self._deadline_socket(transport)
+        self.sock = wrapped
+        try:
+            super()._tunnel()
+        finally:
+            if self.sock is wrapped:
+                self.sock = transport
+
+    def connect(self) -> None:
+        super().connect()
+        if self.sock is not None:
+            self.sock = self._deadline_socket(self.sock)
+
+
+class _DeadlineHTTPHandler(HTTPHandler):
+    def __init__(self, *, deadline: float, request_timeout: float) -> None:
+        super().__init__()
+        self._deadline = deadline
+        self._request_timeout = request_timeout
+
+    def http_open(self, request: object) -> BinaryIO:
+        connection = partial(
+            _DeadlineHTTPConnection,
+            deadline=self._deadline,
+            request_timeout=self._request_timeout,
+        )
+        return self.do_open(connection, request)
+
+
+class _DeadlineHTTPSHandler(HTTPSHandler):
+    def __init__(self, *, deadline: float, request_timeout: float) -> None:
+        super().__init__()
+        self._deadline = deadline
+        self._request_timeout = request_timeout
+
+    def https_open(self, request: object) -> BinaryIO:
+        connection = partial(
+            _DeadlineHTTPSConnection,
+            deadline=self._deadline,
+            request_timeout=self._request_timeout,
+        )
+        return self.do_open(connection, request, context=self._context)
+
+
 @dataclass(frozen=True)
 class _AttemptFailure:
     kind: str
@@ -125,11 +313,7 @@ class _AttemptFailure:
 
 
 def _parsed_url_with_port(url: str) -> tuple[SplitResult, int | None] | None:
-    if (
-        not isinstance(url, str)
-        or len(url) > _MAX_REDIRECT_LOCATION_CHARS
-        or any(ord(char) < 32 for char in url)
-    ):
+    if not isinstance(url, str) or len(url) > _MAX_REDIRECT_LOCATION_CHARS or any(ord(char) < 32 for char in url):
         return None
     try:
         parsed = urlsplit(url)
@@ -154,17 +338,11 @@ def _approved_authority(parsed: SplitResult, port: int | None) -> bool:
 def _safe_release_path(path: str) -> bool:
     path_parts = path.split("/")
     normalized_path = path.lower()
-    return (
-        "\\" not in path
-        and "%" not in normalized_path
-        and all(part not in {".", ".."} for part in path_parts)
-    )
+    return "\\" not in path and "%" not in normalized_path and all(part not in {".", ".."} for part in path_parts)
 
 
 def _approved_release_path(path: str) -> bool:
-    return _safe_release_path(path) and any(
-        path.startswith(prefix) for prefix in _APPROVED_RELEASE_PATH_PREFIXES
-    )
+    return _safe_release_path(path) and any(path.startswith(prefix) for prefix in _APPROVED_RELEASE_PATH_PREFIXES)
 
 
 def _approved_url(url: str) -> bool:
@@ -217,9 +395,7 @@ def _approved_vale_relocation(source_url: str, target_url: str) -> bool:
 def _approved_redirect(source_url: str, target_url: str) -> bool:
     if _approved_vale_relocation(source_url, target_url):
         return True
-    source_is_github_release = _approved_url(
-        source_url
-    ) or _approved_canonical_vale_url(source_url)
+    source_is_github_release = _approved_url(source_url) or _approved_canonical_vale_url(source_url)
     return source_is_github_release and _approved_release_asset_url(target_url)
 
 
@@ -293,7 +469,7 @@ def _is_retryable(exc: BaseException) -> bool:
     reason = _transport_reason(exc)
     return isinstance(
         reason,
-        (TimeoutError, ConnectionError, IncompleteRead),
+        (TimeoutError, ConnectionError, IncompleteRead, ssl.SSLEOFError),
     )
 
 
@@ -308,7 +484,7 @@ def _failure_kind(exc: BaseException) -> str:
             kind = "transport timeout"
         elif isinstance(reason, RemoteDisconnected):
             kind = "remote disconnect"
-        elif isinstance(reason, IncompleteRead):
+        elif isinstance(reason, (IncompleteRead, ssl.SSLEOFError)):
             kind = "incomplete response"
         elif isinstance(reason, ConnectionError):
             kind = "connection failure"
@@ -319,9 +495,7 @@ def _failure_kind(exc: BaseException) -> str:
 
 def _classified_failure(exc: BaseException) -> _AttemptFailure:
     headers = _http_headers(exc)
-    retry_after = (
-        None if headers is None else _retry_after_seconds(headers, now=_wall_time())
-    )
+    retry_after = None if headers is None else _retry_after_seconds(headers, now=_wall_time())
     return _AttemptFailure(
         kind=_failure_kind(exc),
         retryable=_is_retryable(exc),
@@ -329,17 +503,33 @@ def _classified_failure(exc: BaseException) -> _AttemptFailure:
     )
 
 
-def _retry_delay(
-    failure: _AttemptFailure, *, failed_attempt: int, policy: ReleaseRetryPolicy
-) -> float:
+def _retry_delay(failure: _AttemptFailure, *, failed_attempt: int, policy: ReleaseRetryPolicy) -> float:
     if failure.retry_after_seconds is not None:
         return min(failure.retry_after_seconds, policy.maximum_retry_after_seconds)
     exponential = policy.initial_backoff_seconds * (2 ** (failed_attempt - 1))
     return min(exponential, policy.maximum_backoff_seconds)
 
 
-def _stdlib_open(url: str, *, timeout: float) -> BinaryIO:
-    return build_opener(_NoRedirectHandler()).open(url, timeout=timeout)
+def _stdlib_open(
+    url: str,
+    *,
+    timeout: float,
+    deadline: float | None = None,
+    request_timeout: float | None = None,
+) -> BinaryIO:
+    active_deadline = _monotonic() + timeout if deadline is None else deadline
+    active_request_timeout = timeout if request_timeout is None else request_timeout
+    return build_opener(
+        _NoRedirectHandler(),
+        _DeadlineHTTPHandler(
+            deadline=active_deadline,
+            request_timeout=active_request_timeout,
+        ),
+        _DeadlineHTTPSHandler(
+            deadline=active_deadline,
+            request_timeout=active_request_timeout,
+        ),
+    ).open(url, timeout=timeout)
 
 
 def _remaining_timeout(*, deadline: float, request_timeout: float) -> float:
@@ -359,38 +549,25 @@ def _header_values(headers: object, name: str) -> tuple[str, ...]:
 
 
 def _declared_content_length(headers: object) -> int | None:
-    tokens = tuple(
-        token.strip()
-        for value in _header_values(headers, "Content-Length")
-        for token in value.split(",")
-    )
+    tokens = tuple(token.strip() for value in _header_values(headers, "Content-Length") for token in value.split(","))
     if not tokens:
         return None
-    if any(
-        len(token) > 20 or not token.isascii() or not token.isdecimal()
-        for token in tokens
-    ):
+    if any(len(token) > 20 or not token.isascii() or not token.isdecimal() for token in tokens):
         raise ReleaseDownloadError("release response has an invalid Content-Length")
     lengths = {int(token) for token in tokens}
     if len(lengths) != 1:
-        raise ReleaseDownloadError(
-            "release response has conflicting Content-Length values"
-        )
+        raise ReleaseDownloadError("release response has conflicting Content-Length values")
     return lengths.pop()
 
 
 def _validate_transfer_encoding(headers: object, declared_length: int | None) -> None:
     tokens = tuple(
-        token.strip().lower()
-        for value in _header_values(headers, "Transfer-Encoding")
-        for token in value.split(",")
+        token.strip().lower() for value in _header_values(headers, "Transfer-Encoding") for token in value.split(",")
     )
     if not tokens:
         return
     if tokens != ("chunked",) or declared_length is not None:
-        raise ReleaseDownloadError(
-            "release response has an unsupported transfer framing"
-        )
+        raise ReleaseDownloadError("release response has an unsupported transfer framing")
 
 
 def _response_timeout_setter(response: object) -> Callable[[float], object] | None:
@@ -407,9 +584,7 @@ def _response_timeout_setter(response: object) -> Callable[[float], object] | No
 def _set_response_timeout(response: object, timeout: float) -> None:
     setter = _response_timeout_setter(response)
     if setter is None:
-        raise ReleaseDownloadError(
-            "release response transport cannot enforce the download deadline"
-        )
+        raise ReleaseDownloadError("release response transport cannot enforce the download deadline")
     setter(timeout)
 
 
@@ -423,15 +598,11 @@ def _read_chunk(response: object, size: int) -> bytes:
     if not isinstance(chunk, bytes):
         raise ReleaseDownloadError("release response body did not return bytes")
     if len(chunk) > size:
-        raise ReleaseDownloadError(
-            "release response body exceeded its requested read bound"
-        )
+        raise ReleaseDownloadError("release response body exceeded its requested read bound")
     return chunk
 
 
-def _next_read_size(
-    *, payload_size: int, declared_length: int | None, maximum_bytes: int
-) -> int:
+def _next_read_size(*, payload_size: int, declared_length: int | None, maximum_bytes: int) -> int:
     remaining_capacity = maximum_bytes - payload_size
     if declared_length is None:
         return min(_READ_CHUNK_BYTES, remaining_capacity + 1)
@@ -468,9 +639,7 @@ def _read_response_body(
             break
         payload.extend(chunk)
         if len(payload) > maximum_bytes:
-            raise ReleaseDownloadSizeError(
-                f"release response exceeded the {maximum_bytes}-byte response limit"
-            )
+            raise ReleaseDownloadSizeError(f"release response exceeded the {maximum_bytes}-byte response limit")
 
     if declared_length is not None and len(payload) != declared_length:
         raise IncompleteRead(bytes(payload), declared_length - len(payload))
@@ -485,20 +654,21 @@ def _request_hop(
     maximum_bytes: int,
 ) -> bytes | _RedirectHop:
     timeout = _remaining_timeout(deadline=deadline, request_timeout=request_timeout)
-    with _stdlib_open(url, timeout=timeout) as response:
+    with _stdlib_open(
+        url,
+        timeout=timeout,
+        deadline=deadline,
+        request_timeout=request_timeout,
+    ) as response:
         _remaining_timeout(deadline=deadline, request_timeout=request_timeout)
         status = _response_status(response)
         if status in _REDIRECT_STATUSES:
             locations = _header_values(getattr(response, "headers", {}), "Location")
             if len(locations) != 1:
-                raise ReleaseDownloadError(
-                    "release redirect has a missing or ambiguous Location header"
-                )
+                raise ReleaseDownloadError("release redirect has a missing or ambiguous Location header")
             return _RedirectHop(locations[0])
         if status is not None and 300 <= status <= 399:
-            raise ReleaseDownloadError(
-                f"release response used unsupported redirect status {status}"
-            )
+            raise ReleaseDownloadError(f"release response used unsupported redirect status {status}")
         if status is not None and status >= 400:
             raise _ReturnedHttpError(status, getattr(response, "headers", {}))
         return _read_response_body(
@@ -529,16 +699,12 @@ def _download_once(
         if isinstance(outcome, bytes):
             return outcome
         if redirects_followed >= policy.maximum_redirects:
-            raise ReleaseDownloadError(
-                "release download exceeded the approved redirect-hop limit"
-            )
+            raise ReleaseDownloadError("release download exceeded the approved redirect-hop limit")
         target_url = outcome.location
         if target_url in visited:
             raise ReleaseDownloadError("release download encountered a redirect cycle")
         if not _approved_redirect(current_url, target_url):
-            raise ReleaseDownloadError(
-                "release download encountered an unapproved redirect target"
-            )
+            raise ReleaseDownloadError("release download encountered an unapproved redirect target")
         visited.add(target_url)
         current_url = target_url
         redirects_followed += 1
@@ -563,12 +729,15 @@ def _download_attempt(
         TimeoutError,
         ConnectionError,
         IncompleteRead,
+        ssl.SSLEOFError,
         _ReturnedHttpError,
     ) as exc:
         failure = _classified_failure(exc)
         if isinstance(exc, HTTPError):
             exc.close()
         return failure
+    except (http_client.HTTPException, OSError):
+        raise ReleaseDownloadError("release transport returned an invalid HTTP response") from None
 
 
 def _wait_for_retry(
@@ -599,9 +768,7 @@ def retrying_urlopen(
     """
 
     if not _approved_url(url):
-        raise ReleaseDownloadError(
-            "release download URL is not an approved pinned-tool origin"
-        )
+        raise ReleaseDownloadError("release download URL is not an approved pinned-tool origin")
     request_timeout = policy.request_timeout_seconds if timeout is None else timeout
     if request_timeout <= 0:
         raise ValueError("timeout must be positive")

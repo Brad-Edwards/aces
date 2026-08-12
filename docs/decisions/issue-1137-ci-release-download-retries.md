@@ -59,12 +59,14 @@ bodies are closed without being read.
 The helper performs at most three attempts. Every connection hop and every
 bounded body read receives a finite 60-second socket timeout capped by the
 remaining 190-second total deadline. Exponential delays are deterministic and
-capped, and no read, redirect hop, sleep, or new attempt may continue after the
-deadline. Declared response lengths are checked before and after streaming;
-ambiguous framing and oversized bodies fail immediately, while an early EOF is
-classified as a retryable incomplete transfer. Each response is bounded to
-256 MiB before it is returned to an installer. There is no jitter, alternate
-mirror, unpinned version, credential, or redirect-selection fallback.
+capped, and a deadline-aware socket reader reapplies the remaining bound to
+every status-line, header, chunk-framing, and body buffer fill. No read,
+redirect hop, sleep, or new attempt may continue after the deadline. Declared
+response lengths are checked before and after streaming; ambiguous framing and
+oversized bodies fail immediately, while an early EOF is classified as a
+retryable incomplete transfer. Each response is bounded to 256 MiB before it
+is returned to an installer. There is no jitter, alternate mirror, unpinned
+version, credential, or redirect-selection fallback.
 
 Only these failures are retryable:
 
@@ -76,7 +78,9 @@ Only these failures are retryable:
 value is capped at ten seconds and can never extend the total deadline. All
 other HTTP and URL failures stop after the first attempt. Final diagnostics
 include only the approved URL path, attempt count, and stable failure class;
-they omit response bodies and exception text.
+they omit response bodies and exception text. Malformed HTTP status, header,
+and framing exceptions are normalized to one non-retryable diagnostic rather
+than reflecting upstream text.
 
 The helper buffers a successful bounded response and then returns control to
 the owning installer. Consequently, checksum mismatch, signature failure,
@@ -111,9 +115,11 @@ exhaustion, non-retryable HTTP and URL failures, response-size rejection,
 sanitized diagnostics, and no second request after checksum or archive-type
 failure. Local scripted HTTP servers verify that an early EOF never returns
 partial bytes, redirect bodies are not drained, and a trickling body cannot
-extend the total deadline. A binding test ensures all four installers continue
-to share the helper, and clean-cache smoke tests exercise the live current
-GitHub redirect chain for all four pinned tools.
+extend the total deadline. The same scripted transport verifies that trickled
+redirect headers and chunk trailers cannot extend that deadline and that a
+malformed status line cannot leak upstream text. A binding test ensures all
+four installers continue to share the helper, and clean-cache smoke tests
+exercise the live current GitHub redirect chain for all four pinned tools.
 
 This policy does not make GitHub availability hermetic, validate remote bytes,
 or replace the installers' pins, checksums, signatures, archive rules, cache

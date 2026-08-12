@@ -20,7 +20,6 @@ from types import ModuleType
 from urllib.error import HTTPError, URLError
 
 import pytest
-
 import tools.gitleaks_tool as gitleaks_tool
 import tools.osv_scanner_tool as osv_scanner_tool
 import tools.policy.conftest_tool as conftest_tool
@@ -78,7 +77,15 @@ class SequenceOpener:
         self.results = list(results)
         self.calls: list[tuple[str, float | None]] = []
 
-    def __call__(self, url: str, *, timeout: float | None = None) -> DownloadResponse:
+    def __call__(
+        self,
+        url: str,
+        *,
+        timeout: float | None = None,
+        deadline: float | None = None,
+        request_timeout: float | None = None,
+    ) -> DownloadResponse:
+        del deadline, request_timeout
         self.calls.append((url, timeout))
         result = self.results.pop(0)
         if isinstance(result, BaseException):
@@ -307,13 +314,15 @@ def test_success_uses_one_finite_request_and_returns_a_context_response(
     assert clock.sleeps == []
 
 
-def test_stdlib_open_uses_a_default_redirect_capable_opener(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_stdlib_open_installs_deadline_handlers_and_disables_automatic_redirects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     response = DownloadResponse(b"payload")
     observed: dict[str, object] = {}
 
     class FakeOpener:
-        def __init__(self, *_handlers: object) -> None:
-            pass
+        def __init__(self, *handlers: object) -> None:
+            observed["handlers"] = tuple(type(handler).__name__ for handler in handlers)
 
         def open(self, url: str, *, timeout: float) -> DownloadResponse:
             observed.update(url=url, timeout=timeout)
@@ -322,7 +331,11 @@ def test_stdlib_open_uses_a_default_redirect_capable_opener(monkeypatch: pytest.
     monkeypatch.setattr(release_download, "build_opener", FakeOpener)
 
     assert release_download._stdlib_open(RELEASE_URL, timeout=12) is response
-    assert observed == {"url": RELEASE_URL, "timeout": 12}
+    assert observed == {
+        "handlers": ("_NoRedirectHandler", "_DeadlineHTTPHandler", "_DeadlineHTTPSHandler"),
+        "url": RELEASE_URL,
+        "timeout": 12,
+    }
 
 
 def test_http_408_429_and_5xx_retry_with_retry_after_then_backoff(
@@ -608,6 +621,226 @@ def test_response_without_deadline_capable_transport_fails_closed() -> None:
         )
 
 
+def test_deadline_raw_reader_enforces_transport_contract_and_cleanup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clock = FakeClock()
+    monkeypatch.setattr(release_download, "_monotonic", clock.monotonic)
+
+    class Raw:
+        def __init__(self, result: object = 2) -> None:
+            self.result = result
+            self.closed = False
+
+        def readinto(self, buffer: bytearray) -> object:
+            buffer[:2] = b"ok"
+            return self.result
+
+        def fileno(self) -> int:
+            return 17
+
+        def close(self) -> None:
+            self.closed = True
+
+    class Transport:
+        def __init__(self) -> None:
+            self.timeouts: list[float] = []
+
+        def settimeout(self, timeout: float) -> None:
+            self.timeouts.append(timeout)
+
+    raw = Raw()
+    transport = Transport()
+    reader = release_download._DeadlineRawReader(
+        raw,
+        transport,
+        deadline=1,
+        request_timeout=0.5,
+    )
+    buffer = bytearray(2)
+
+    assert reader.readable()
+    assert reader.readinto(buffer) == 2
+    assert buffer == b"ok"
+    assert reader.fileno() == 17
+    assert transport.timeouts == [0.5]
+    reader.close()
+    reader.close()
+    assert raw.closed
+
+    without_timeout = release_download._DeadlineRawReader(
+        Raw(),
+        object(),
+        deadline=1,
+        request_timeout=0.5,
+    )
+    with pytest.raises(release_download.ReleaseDownloadError, match="cannot enforce"):
+        without_timeout.readinto(bytearray(2))
+
+    class NoReader:
+        def close(self) -> None:
+            pass
+
+    without_reader = release_download._DeadlineRawReader(
+        NoReader(),
+        Transport(),
+        deadline=1,
+        request_timeout=0.5,
+    )
+    with pytest.raises(release_download.ReleaseDownloadError, match="not readable"):
+        without_reader.readinto(bytearray(2))
+
+    invalid_count = release_download._DeadlineRawReader(
+        Raw("invalid"),
+        Transport(),
+        deadline=1,
+        request_timeout=0.5,
+    )
+    with pytest.raises(release_download.ReleaseDownloadError, match="invalid byte count"):
+        invalid_count.readinto(bytearray(2))
+
+
+def test_deadline_socket_wraps_binary_readers_and_delegates_other_files(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clock = FakeClock()
+    monkeypatch.setattr(release_download, "_monotonic", clock.monotonic)
+
+    class Raw(io.RawIOBase):
+        def readable(self) -> bool:
+            return True
+
+        def readinto(self, _buffer: object) -> int:
+            return 0
+
+    class Transport:
+        marker = "delegated"
+
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, int | None, dict[str, object]]] = []
+
+        def makefile(
+            self,
+            mode: str,
+            buffering: int | None = None,
+            **kwargs: object,
+        ) -> object:
+            self.calls.append((mode, buffering, kwargs))
+            return Raw() if mode == "rb" else io.BytesIO()
+
+        def settimeout(self, _timeout: float) -> None:
+            pass
+
+    transport = Transport()
+    wrapped = release_download._DeadlineSocket(
+        transport,
+        deadline=1,
+        request_timeout=0.5,
+    )
+
+    assert wrapped.marker == "delegated"
+    delegated = wrapped.makefile("wb", 8)
+    assert isinstance(delegated, io.BytesIO)
+    unbuffered = wrapped.makefile("rb", 0)
+    assert isinstance(unbuffered, release_download._DeadlineRawReader)
+    unbuffered.close()
+    buffered = wrapped.makefile("rb", 16)
+    assert isinstance(buffered, io.BufferedReader)
+    buffered.close()
+    assert transport.calls == [
+        ("wb", 8, {}),
+        ("rb", 0, {}),
+        ("rb", 0, {}),
+    ]
+
+
+def test_deadline_connections_cover_empty_sockets_tunnels_and_https_handler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Transport:
+        def close(self) -> None:
+            pass
+
+    http_connection = release_download._DeadlineHTTPConnection(
+        "example.test",
+        deadline=1,
+        request_timeout=0.5,
+    )
+    monkeypatch.setattr(
+        release_download.http_client.HTTPConnection,
+        "connect",
+        lambda connection: setattr(connection, "sock", None),
+    )
+    http_connection.connect()
+    assert http_connection.sock is None
+
+    https_connection = release_download._DeadlineHTTPSConnection(
+        "example.test",
+        deadline=1,
+        request_timeout=0.5,
+    )
+    tunnel_sockets: list[object] = []
+
+    def observe_tunnel(connection: object) -> None:
+        tunnel_sockets.append(connection.sock)
+
+    monkeypatch.setattr(
+        release_download.http_client.HTTPSConnection,
+        "_tunnel",
+        observe_tunnel,
+    )
+    https_connection.sock = None
+    https_connection._tunnel()
+    transport = Transport()
+    https_connection.sock = transport
+    https_connection._tunnel()
+    assert isinstance(tunnel_sockets[1], release_download._DeadlineSocket)
+    assert https_connection.sock is transport
+
+    def close_tunnel(connection: object) -> None:
+        connection.sock = None
+
+    monkeypatch.setattr(
+        release_download.http_client.HTTPSConnection,
+        "_tunnel",
+        close_tunnel,
+    )
+    https_connection.sock = transport
+    https_connection._tunnel()
+    assert https_connection.sock is None
+
+    monkeypatch.setattr(
+        release_download.http_client.HTTPSConnection,
+        "connect",
+        lambda connection: setattr(connection, "sock", transport),
+    )
+    https_connection.connect()
+    assert isinstance(https_connection.sock, release_download._DeadlineSocket)
+    monkeypatch.setattr(
+        release_download.http_client.HTTPSConnection,
+        "connect",
+        lambda connection: setattr(connection, "sock", None),
+    )
+    https_connection.connect()
+    assert https_connection.sock is None
+
+    handler = release_download._DeadlineHTTPSHandler(deadline=1, request_timeout=0.5)
+    response = DownloadResponse(b"")
+    observed: dict[str, object] = {}
+
+    def fake_do_open(factory: object, request: object, **kwargs: object) -> DownloadResponse:
+        observed.update(factory=factory, request=request, kwargs=kwargs)
+        connection = factory("example.test", timeout=0.5)
+        assert isinstance(connection, release_download._DeadlineHTTPSConnection)
+        return response
+
+    monkeypatch.setattr(handler, "do_open", fake_do_open)
+    request = object()
+    assert handler.https_open(request) is response
+    assert observed["request"] is request
+    assert observed["kwargs"] == {"context": handler._context}
+
+
 def test_bounded_reader_falls_back_to_read_and_rejects_invalid_readers() -> None:
     class ReadOnly:
         def read(self, _size: int) -> bytes:
@@ -672,8 +905,20 @@ def test_header_read_cannot_cross_the_total_deadline_and_follow_redirect(
     )
 
     class DelayedOpener(SequenceOpener):
-        def __call__(self, url: str, *, timeout: float | None = None) -> DownloadResponse:
-            result = super().__call__(url, timeout=timeout)
+        def __call__(
+            self,
+            url: str,
+            *,
+            timeout: float | None = None,
+            deadline: float | None = None,
+            request_timeout: float | None = None,
+        ) -> DownloadResponse:
+            result = super().__call__(
+                url,
+                timeout=timeout,
+                deadline=deadline,
+                request_timeout=request_timeout,
+            )
             clock.elapsed += 0.11
             return result
 
@@ -755,6 +1000,83 @@ def test_local_server_trickle_read_is_cut_off_by_total_deadline(
         with pytest.raises(release_download.ReleaseDownloadError, match="transport timeout"):
             release_download.retrying_urlopen(f"{server.base_url}/trickle", policy=policy)
 
+        assert server.server.requests == 1
+
+
+def test_local_server_trickled_redirect_headers_are_cut_off_by_total_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with ScriptedReleaseServer() as server:
+        _admit_local_server(monkeypatch, server)
+        final_url = f"{server.base_url}/final"
+        response = _local_response(
+            b"",
+            status="302 Found",
+            location=final_url,
+        )
+        pieces = [response[index : index + 10] for index in range(0, len(response), 10)]
+        server.enqueue(*((0 if index == 0 else 0.04, piece) for index, piece in enumerate(pieces)))
+        policy = release_download.ReleaseRetryPolicy(
+            max_attempts=1,
+            request_timeout_seconds=0.08,
+            total_timeout_seconds=0.12,
+        )
+
+        started = time.monotonic()
+        with pytest.raises(release_download.ReleaseDownloadError, match="transport timeout"):
+            release_download.retrying_urlopen(f"{server.base_url}/redirect", policy=policy)
+        elapsed = time.monotonic() - started
+
+        assert elapsed < 0.3
+        assert server.server.requests == 1
+
+
+def test_local_server_trickled_chunk_trailer_is_cut_off_by_total_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with ScriptedReleaseServer() as server:
+        _admit_local_server(monkeypatch, server)
+        prefix = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n1\r\na\r\n0\r\n"
+        trailer = b"X-Review: " + (b"x" * 80) + b"\r\n\r\n"
+        trailer_pieces = [trailer[index : index + 10] for index in range(0, len(trailer), 10)]
+        server.enqueue(
+            (0, prefix),
+            *((0.04, piece) for piece in trailer_pieces),
+        )
+        policy = release_download.ReleaseRetryPolicy(
+            max_attempts=1,
+            request_timeout_seconds=0.08,
+            total_timeout_seconds=0.12,
+        )
+
+        started = time.monotonic()
+        with pytest.raises(release_download.ReleaseDownloadError, match="transport timeout"):
+            release_download.retrying_urlopen(f"{server.base_url}/chunked", policy=policy)
+        elapsed = time.monotonic() - started
+
+        assert elapsed < 0.3
+        assert server.server.requests == 1
+
+
+def test_malformed_status_line_is_sanitized_without_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with ScriptedReleaseServer() as server:
+        _admit_local_server(monkeypatch, server)
+        server.enqueue((0, b"credential=do-not-log\r\n\r\n"))
+        policy = release_download.ReleaseRetryPolicy(
+            max_attempts=2,
+            request_timeout_seconds=0.5,
+            total_timeout_seconds=1,
+        )
+
+        with pytest.raises(
+            release_download.ReleaseDownloadError,
+            match="invalid HTTP response",
+        ) as raised:
+            release_download.retrying_urlopen(f"{server.base_url}/malformed", policy=policy)
+
+        assert "credential" not in str(raised.value)
         assert server.server.requests == 1
 
 
