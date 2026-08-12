@@ -40,8 +40,11 @@ Existing explicit exclusions retain their separately documented integration
 rationale. An inline coverage pragma is rejected whenever its semantic
 statement owns changed code, even when the pragma's physical line is unchanged.
 Coverage.py's structural `TYPE_CHECKING` and `Protocol` exclusions are accepted
-only for canonical, unshadowed imports from `typing`; runtime-evaluated defaults
-and decorators remain coverage obligations.
+only for canonical, unshadowed imports from `typing`; runtime-evaluated defaults,
+class bases, and class/function decorators remain coverage obligations. Dynamic
+annotation expressions are obligations when Python evaluates them eagerly; the
+same syntax remains structural when `from __future__ import annotations`
+postpones it.
 
 ## Diff And Branch Semantics
 

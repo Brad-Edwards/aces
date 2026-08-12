@@ -309,14 +309,59 @@ def _literal_expression(node: ast.expr) -> bool:
     return True
 
 
-def _protocol_declaration_lines(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
+def _annotation_expressions(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[ast.expr, ...]:
+    arguments = (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+    annotations = [argument.annotation for argument in arguments if argument.annotation is not None]
+    for variadic in (node.args.vararg, node.args.kwarg):
+        if variadic is not None and variadic.annotation is not None:
+            annotations.append(variadic.annotation)
+    if node.returns is not None:
+        annotations.append(node.returns)
+    return tuple(annotations)
+
+
+def _has_dynamic_eager_evaluation(node: ast.expr) -> bool:
+    dynamic_nodes = (
+        ast.Await,
+        ast.Call,
+        ast.DictComp,
+        ast.GeneratorExp,
+        ast.Lambda,
+        ast.ListComp,
+        ast.NamedExpr,
+        ast.SetComp,
+        ast.Yield,
+        ast.YieldFrom,
+    )
+    return any(isinstance(candidate, dynamic_nodes) for candidate in ast.walk(node))
+
+
+def _postpones_annotations(tree: ast.Module) -> bool:
+    return any(
+        isinstance(statement, ast.ImportFrom)
+        and statement.module == "__future__"
+        and any(alias.name == "annotations" for alias in statement.names)
+        for statement in tree.body
+    )
+
+
+def _protocol_declaration_lines(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    *,
+    annotations_postponed: bool,
+) -> set[int]:
     lines = set(range(node.lineno, (node.end_lineno or node.lineno) + 1))
     unsafe_defaults = [default for default in node.args.defaults if not _literal_expression(default)]
     unsafe_defaults.extend(
         default for default in node.args.kw_defaults if default is not None and not _literal_expression(default)
     )
-    for default in unsafe_defaults:
-        lines.difference_update(range(default.lineno, (default.end_lineno or default.lineno) + 1))
+    runtime_expressions = list(unsafe_defaults)
+    if not annotations_postponed:
+        runtime_expressions.extend(
+            annotation for annotation in _annotation_expressions(node) if _has_dynamic_eager_evaluation(annotation)
+        )
+    for expression in runtime_expressions:
+        lines.difference_update(range(expression.lineno, (expression.end_lineno or expression.lineno) + 1))
     return lines
 
 
@@ -436,6 +481,7 @@ def _structural_exclusion_lines(tree: ast.Module) -> set[int]:
     structural: set[int] = set()
     type_checking_import_lines = _trusted_typing_import_lines(tree, "TYPE_CHECKING")
     protocol_import_lines = _trusted_typing_import_lines(tree, "Protocol")
+    annotations_postponed = _postpones_annotations(tree)
     for node in ast.walk(tree):
         if (
             isinstance(node, ast.If)
@@ -458,14 +504,24 @@ def _structural_exclusion_lines(tree: ast.Module) -> set[int]:
         if _is_declaration_only_protocol(node):
             for declaration in node.body:
                 if isinstance(declaration, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    structural.update(_protocol_declaration_lines(declaration))
+                    structural.update(
+                        _protocol_declaration_lines(
+                            declaration,
+                            annotations_postponed=annotations_postponed,
+                        )
+                    )
             continue
         for declaration in node.body:
             if not isinstance(declaration, (ast.FunctionDef, ast.AsyncFunctionDef)) or not _is_ellipsis_declaration(
                 declaration
             ):
                 continue
-            structural.update(_protocol_declaration_lines(declaration))
+            structural.update(
+                _protocol_declaration_lines(
+                    declaration,
+                    annotations_postponed=annotations_postponed,
+                )
+            )
     return structural
 
 

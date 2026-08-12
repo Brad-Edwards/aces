@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from coverage import Coverage
+
 from tools import check_changed_coverage as coverage_policy
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -940,6 +941,64 @@ class Store(Protocol):
         {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4, 5, 6, 7]}},
         repo_root=tmp_path,
     ) == [f"{path}:6: changed line is excluded from coverage"]
+
+
+def test_changed_coverage_rejects_runtime_protocol_annotation_expression(tmp_path: Path) -> None:
+    path = "tools/protocol_annotation.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """from typing import Protocol
+
+class Store(Protocol):
+    def load(
+        self,
+        *args: runtime_args(),
+        key: runtime_annotation(),
+        **kwargs: runtime_kwargs(),
+    ) -> str: ...
+
+    def close(self): ...
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {6, 7, 8}},
+        {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [3, 4, 5, 6, 7, 8, 9, 11]}},
+        repo_root=tmp_path,
+    ) == [
+        f"{path}:6: changed line is excluded from coverage",
+        f"{path}:7: changed line is excluded from coverage",
+        f"{path}:8: changed line is excluded from coverage",
+    ]
+
+
+def test_changed_coverage_allows_postponed_protocol_annotation_expression(tmp_path: Path) -> None:
+    path = "tools/postponed_protocol_annotation.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """from __future__ import annotations
+from typing import Protocol
+
+class Store(Protocol):
+    def load(
+        self,
+        key: runtime_annotation(),
+    ) -> str: ...
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {7}},
+            {path: {"executed_lines": [], "missing_lines": [], "excluded_lines": [4, 5, 6, 7, 8]}},
+            repo_root=tmp_path,
+        )
+        == []
+    )
 
 
 def test_changed_coverage_rejects_runtime_protocol_decorator_and_class_base(tmp_path: Path) -> None:
