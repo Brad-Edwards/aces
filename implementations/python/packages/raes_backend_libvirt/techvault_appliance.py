@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import gzip
+import ipaddress
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -91,22 +93,20 @@ def _init_script(domain: Mapping[str, object]) -> str:
     for interface in _as_sequence(domain.get("interfaces")):
         if not isinstance(interface, Mapping):
             continue
-        lines.extend(
-            [
-                f"    {interface.get('mac')})",
-                f'      ip addr add {interface.get("ip")}/{interface.get("cidr_prefix")} dev "$iface"',
-                "      ;;",
-            ]
-        )
+        lines.extend(_interface_case_lines(interface))
     lines.extend(["  esac", "done"])
     lines.extend(["while true; do sleep 3600; done", ""])
     return "\n".join(lines)
 
 
 def _cpio_newc(root: Path) -> bytes:
+    paths = _cpio_paths(root)
+    for path in paths:
+        if "\n" in path:
+            raise ValueError(f"initramfs member path contains a newline: {path!r}")
     proc = subprocess.run(
         ["cpio", "-o", "-H", "newc", "--quiet"],
-        input=("\n".join(_cpio_paths(root)) + "\n").encode(),
+        input=("\n".join(paths) + "\n").encode(),
         cwd=root,
         capture_output=True,
         check=False,
@@ -122,6 +122,56 @@ def _cpio_paths(root: Path) -> list[str]:
 
 def _as_sequence(value: object) -> Sequence[object]:
     return value if isinstance(value, list | tuple) else ()
+
+
+_MAC_RE = re.compile(r"\A[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\Z")
+
+
+def _interface_case_lines(interface: Mapping[str, object]) -> list[str]:
+    """Render one shell-safe ``case`` arm configuring an interface address.
+
+    ``mac``/``ip``/``cidr_prefix`` are interpolated into a root-run guest init
+    script. Each is validated to its structural shape and rejected when
+    malformed, then quoted as defense in depth: a field that is not the shape it
+    claims to be (a ``mac`` that is not a MAC) is a bug in the plan, not text to
+    escape into a command.
+    """
+
+    mac = _validated_mac(interface.get("mac"))
+    address = _validated_interface_address(interface.get("ip"), interface.get("cidr_prefix"))
+    return [
+        f"    {_shell_quote(mac)})",
+        f'      ip addr add {_shell_quote(address)} dev "$iface"',
+        "      ;;",
+    ]
+
+
+def _validated_mac(value: object) -> str:
+    if isinstance(value, str) and _MAC_RE.match(value):
+        return value
+    raise ValueError(f"interface mac is not a MAC address: {value!r}")
+
+
+def _validated_interface_address(ip: object, cidr_prefix: object) -> str:
+    if not isinstance(ip, str):
+        raise ValueError(f"interface ip is not an IP address: {ip!r}")
+    try:
+        parsed = ipaddress.ip_address(ip)
+    except ValueError as error:
+        raise ValueError(f"interface ip is not an IP address: {ip!r}") from error
+    return f"{ip}/{_validated_cidr_prefix(cidr_prefix, parsed.max_prefixlen)}"
+
+
+def _validated_cidr_prefix(value: object, max_prefix: int) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"interface cidr_prefix is not an integer: {value!r}")
+    if isinstance(value, str) and value.isdigit():
+        value = int(value)
+    if not isinstance(value, int):
+        raise ValueError(f"interface cidr_prefix is not an integer: {value!r}")
+    if not 0 <= value <= max_prefix:
+        raise ValueError(f"interface cidr_prefix is out of range 0..{max_prefix}: {value!r}")
+    return value
 
 
 def _shell_quote(value: str) -> str:

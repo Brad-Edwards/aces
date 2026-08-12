@@ -19,7 +19,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from .techvault_appliance import _cpio_newc, _shell_quote
+from .techvault_appliance import _cpio_newc, _interface_case_lines, _shell_quote
 
 _APPLETS = (
     "sh", "mount", "mdev", "ip", "ifconfig", "sleep", "cat", "hostname", "printf", "echo",
@@ -132,13 +132,7 @@ def _init_script(domain: Mapping[str, object]) -> str:
     for interface in _as_sequence(domain.get("interfaces")):
         if not isinstance(interface, Mapping):
             continue
-        lines.extend(
-            [
-                f"    {interface.get('mac')})",
-                f'      ip addr add {interface.get("ip")}/{interface.get("cidr_prefix")} dev "$iface"',
-                "      ;;",
-            ]
-        )
+        lines.extend(_interface_case_lines(interface))
     lines.extend(["  esac", "done"])
     lines.extend(_REALIZE_SNIPPET)
     lines.append("sleep 1")

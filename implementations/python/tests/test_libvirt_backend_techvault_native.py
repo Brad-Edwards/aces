@@ -15,6 +15,7 @@ from raes_backend_libvirt import create_libvirt_target
 from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
 from raes_backend_libvirt.envelopes import load_libvirt_realization_envelope
+from raes_backend_libvirt.techvault_appliance import _cpio_newc, _init_script
 from raes_backend_libvirt.techvault_native import (
     BusyboxInitramfsBuilder,
     ProbeResult,
@@ -923,3 +924,45 @@ def test_busybox_initramfs_builder_writes_gzip_cpio(tmp_path):
     assert target.read_bytes().startswith(b"\x1f\x8b")
     assert target.stat().st_size > 1000
     assert b"httpd -p" not in gzip.decompress(target.read_bytes())
+
+
+_VALID_INTERFACE = {"mac": "52:54:00:00:00:01", "ip": "192.0.2.10", "cidr_prefix": 24}
+
+
+def _domain_with_interface(**interface: object) -> dict[str, object]:
+    return {"name": "webapp", "interfaces": [interface]}
+
+
+def test_init_script_quotes_valid_interface_addressing():
+    script = _init_script(_domain_with_interface(**_VALID_INTERFACE))
+
+    assert "    '52:54:00:00:00:01')" in script
+    assert "ip addr add '192.0.2.10/24' dev \"$iface\"" in script
+
+
+@pytest.mark.parametrize(
+    ("interface", "match"),
+    (
+        (
+            {**_VALID_INTERFACE, "mac": "aa:bb:cc:dd:ee:ff) ; rm -rf /outside #"},
+            "mac is not a MAC",
+        ),
+        ({**_VALID_INTERFACE, "ip": "192.0.2.10$(touch /pwned)"}, "ip is not an IP"),
+        ({**_VALID_INTERFACE, "ip": "`reboot`"}, "ip is not an IP"),
+        ({**_VALID_INTERFACE, "cidr_prefix": "24; rm -rf /"}, "cidr_prefix is not an integer"),
+        ({**_VALID_INTERFACE, "cidr_prefix": 33}, "cidr_prefix is out of range"),
+    ),
+)
+def test_init_script_rejects_hostile_interface_fields_before_scripting(interface, match):
+    # A field that is not the shape it claims to be aborts script generation, so
+    # no attacker-controlled shell can reach the root-run guest init script.
+    with pytest.raises(ValueError, match=match):
+        _init_script(_domain_with_interface(**interface))
+
+
+def test_cpio_newc_rejects_newline_in_member_path(tmp_path):
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "evil\nname").write_text("payload", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="newline"):
+        _cpio_newc(tmp_path)
