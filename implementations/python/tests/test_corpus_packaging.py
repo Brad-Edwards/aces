@@ -124,6 +124,42 @@ def test_installed_wheel_hard_cuts_sdl_import_namespace(installed_python: Path, 
 
 
 @requires_uv
+def test_installed_wheel_version_entrypoint_stays_lazy(installed_python: Path, tmp_path: Path):
+    """The generated console script must retain the exact-version import boundary."""
+
+    environment = _sanitized_runtime_env(tmp_path)
+    raes = installed_python.parent / ("raes.exe" if sys.platform == "win32" else "raes")
+    expected = _run(
+        [
+            str(installed_python),
+            "-c",
+            "from importlib.metadata import version; print(f\"raes {version('raes')}\")",
+        ],
+        cwd=tmp_path,
+        env=environment,
+    )
+    result = _run([str(raes), "--version"], cwd=tmp_path, env=environment)
+
+    assert expected.returncode == 0, expected.stderr
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == expected.stdout
+
+    inspection = """
+import sys
+from importlib.metadata import entry_points
+
+entrypoint = next(item for item in entry_points(group="console_scripts") if item.name == "raes")
+assert entrypoint.value == "raes_cli.entrypoint:main", entrypoint.value
+sys.argv = ["raes", "-V"]
+entrypoint.load()()
+assert "raes_cli.main" not in sys.modules
+assert not any(name == "raes_contracts" or name.startswith("raes_contracts.") for name in sys.modules)
+"""
+    inspected = _run([str(installed_python), "-c", inspection], cwd=tmp_path, env=environment)
+    assert inspected.returncode == 0, f"installed entry-point check failed:\n{inspected.stdout}\n{inspected.stderr}"
+
+
+@requires_uv
 def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(installed_python: Path, tmp_path: Path):
     """Acceptance: the corpus is discoverable via ``importlib.resources`` from
     the installed distribution, resolved out of site-packages — NOT the repo

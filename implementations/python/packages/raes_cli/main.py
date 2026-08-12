@@ -1,10 +1,9 @@
-"""Main entry point for the RAES CLI."""
-
-from importlib.metadata import PackageNotFoundError, version
+"""Typer application and command registry for the RAES CLI."""
 
 import typer
 
 from raes_cli import conformance, corpus, libvirt, processor, sdl, semantic
+from raes_cli.entrypoint import _distribution_version
 
 app = typer.Typer(
     name="raes",
@@ -22,13 +21,7 @@ app.add_typer(corpus.app, name="corpus")
 
 def _version_callback(value: bool) -> None:
     if value:
-        try:
-            current_version = version("raes")
-        except PackageNotFoundError:
-            # Honest PEP 440 not-installed sentinel (GOV-901): do not report a
-            # plausible-looking release when the distribution is absent.
-            current_version = "0.0.0+unknown"
-        typer.echo(f"raes {current_version}")
+        typer.echo(f"raes {_distribution_version()}")
         raise typer.Exit()
 
 
