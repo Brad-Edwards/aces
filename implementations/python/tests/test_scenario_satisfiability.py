@@ -7,6 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+import z3
 from pydantic import ValidationError
 from raes_contracts.satisfiability import (
     SatisfiabilityOutcome,
@@ -14,9 +15,11 @@ from raes_contracts.satisfiability import (
 )
 from raes_processor.satisfiability import (
     SatisfiabilityEvidenceError,
+    SatisfiabilityOperationalError,
     analyze_scenario_file,
     replay_satisfiability_evidence,
 )
+from raes_processor.satisfiability._solver import SolverOperationalError, solve_model
 
 _SATISFIABLE = """\
 name: satisfiable-control
@@ -61,6 +64,21 @@ nodes:
     resources:
       ram: 1 gib
       cpu: ${cpu_count}
+"""
+
+_EMPTY_TARGET_DOMAIN = """\
+name: empty-target-domain
+variables:
+  copies:
+    type: integer
+    allowed_values: [0]
+    required: true
+nodes:
+  target:
+    type: vm
+infrastructure:
+  target:
+    count: ${copies}
 """
 
 
@@ -313,3 +331,69 @@ def test_published_valid_and_invalid_fixtures_enforce_outcome_joins() -> None:
         ScenarioSatisfiabilityEvidenceModel.model_validate_json(invalid_payload)
 
     assert "outcome must select exactly one matching payload" in str(exc_info.value)
+
+
+def _force_unknown_on_call(monkeypatch: pytest.MonkeyPatch, target_call: int) -> None:
+    """Make the ``target_call``-th z3 check report ``unknown`` (a timeout proxy)."""
+
+    original = z3.Solver.check
+    state = {"calls": 0}
+
+    def patched(self: z3.Solver, *assumptions: object) -> z3.CheckSatResult:
+        state["calls"] += 1
+        if state["calls"] == target_call:
+            return z3.unknown
+        return original(self, *assumptions)
+
+    monkeypatch.setattr(z3.Solver, "check", patched)
+
+
+def test_unknown_during_core_reduction_fails_loudly_without_forging_minimality(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _write(tmp_path, "unsatisfiable.sdl.yaml", _UNSATISFIABLE)
+    # Call one is the decisive UNSAT check; call two is the first deletion probe,
+    # where an undetected timeout would silently retain a droppable clause and
+    # publish a core claiming subset-minimality it never established.
+    _force_unknown_on_call(monkeypatch, target_call=2)
+
+    with pytest.raises(SatisfiabilityOperationalError):
+        analyze_scenario_file(source)
+
+
+def test_unknown_during_witness_selection_fails_loudly_without_forging_canonicality(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _write(tmp_path, "satisfiable.sdl.yaml", _SATISFIABLE)
+    # Call one decides SAT; call two probes the canonical first domain value,
+    # where an undetected timeout would skip it and forge a non-lexicographic
+    # witness while still claiming canonical-lexicographic selection.
+    _force_unknown_on_call(monkeypatch, target_call=2)
+
+    with pytest.raises(SatisfiabilityOperationalError):
+        analyze_scenario_file(source)
+
+
+def test_duplicate_clause_ids_rejected_at_solver_boundary(tmp_path: Path) -> None:
+    source = _write(tmp_path, "satisfiable.sdl.yaml", _SATISFIABLE)
+    model = analyze_scenario_file(source).normalized_model
+    # ``model_copy`` bypasses contract validation to inject a collapsed clause
+    # id; the solver must reject it rather than track the assumption twice.
+    duplicated = model.model_copy(update={"clauses": model.clauses + (model.clauses[0],)})
+
+    with pytest.raises(SolverOperationalError, match="duplicate clause ids"):
+        solve_model(duplicated)
+
+
+def test_empty_target_domain_is_unsatisfiable(tmp_path: Path) -> None:
+    source = _write(tmp_path, "empty-target-domain.sdl.yaml", _EMPTY_TARGET_DOMAIN)
+
+    evidence = analyze_scenario_file(source)
+
+    assert evidence.outcome is SatisfiabilityOutcome.UNSATISFIABLE
+    assert evidence.unsat_core is not None
+    # The count target admits only values >= 1, so a {0} domain produces an empty
+    # membership clause that must resolve to false, not a bare zero-argument Or.
+    assert any(clause.allowed_values == () for clause in evidence.normalized_model.clauses)

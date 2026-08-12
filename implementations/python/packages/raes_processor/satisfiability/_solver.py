@@ -22,19 +22,32 @@ class SolverResult:
 def solve_model(model: NormalizedConstraintModel) -> SolverResult:
     """Solve one normalized model and select deterministic portable evidence."""
 
+    _require_unique_clause_ids(model)
     all_clause_ids = tuple(clause.clause_id for clause in model.clauses)
-    status = _check(model, all_clause_ids, {})
-    if status == z3.sat:
+    # ``_check`` fails loudly on ``z3.unknown``, so a non-satisfiable decision
+    # here is decisively unsatisfiable rather than an incomplete timeout.
+    if _check(model, all_clause_ids, {}) == z3.sat:
         return SolverResult(
             outcome=SatisfiabilityOutcome.SATISFIABLE,
             assignment=_select_witness(model, all_clause_ids),
         )
-    if status == z3.unsat:
-        return SolverResult(
-            outcome=SatisfiabilityOutcome.UNSATISFIABLE,
-            core=_reduce_unsat_core(model, all_clause_ids),
-        )
-    raise SolverOperationalError("solver returned an incomplete result")
+    return SolverResult(
+        outcome=SatisfiabilityOutcome.UNSATISFIABLE,
+        core=_reduce_unsat_core(model, all_clause_ids),
+    )
+
+
+def _require_unique_clause_ids(model: NormalizedConstraintModel) -> None:
+    """Reject collapsed clause identity before it can corrupt tracked evidence.
+
+    ``_check`` tracks each clause by a name derived from its id; duplicate ids
+    collapse in the lookup table while z3 rejects the repeated assumption, so the
+    invariant is enforced explicitly at the solver boundary rather than silently.
+    """
+
+    clause_ids = [clause.clause_id for clause in model.clauses]
+    if len(set(clause_ids)) != len(clause_ids):
+        raise SolverOperationalError("normalized model contains duplicate clause ids")
 
 
 def _select_witness(
@@ -93,11 +106,20 @@ def _check(
             for index, value in enumerate(symbol.domain)
             if any(_scalar_equal(value, allowed) for allowed in clause.allowed_values)
         ]
-        expression = z3.Or(*(variables[symbol.symbol_id] == index for index in indexes))
+        # An empty allowed set is an unsatisfiable membership; assert false
+        # explicitly instead of depending on a zero-argument ``z3.Or``.
+        expression = (
+            z3.Or(*(variables[symbol.symbol_id] == index for index in indexes)) if indexes else z3.BoolVal(False)
+        )
         solver.assert_and_track(expression, z3.Bool(_z3_name(clause_id)))
     for symbol_id, index in fixed.items():
         solver.add(variables[symbol_id] == index)
-    return solver.check()
+    result = solver.check()
+    if result == z3.unknown:
+        # A per-call timeout returns unknown; treating it as a decisive answer
+        # would silently break unsat-core minimality or witness canonicality.
+        raise SolverOperationalError(f"solver returned unknown: {solver.reason_unknown()}")
+    return result
 
 
 def _scalar_equal(left: object, right: object) -> bool:
