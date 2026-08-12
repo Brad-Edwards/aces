@@ -23,6 +23,7 @@ from ._initramfs import InitramfsPreflight, atomic_write, deterministic_gzip, re
 from .techvault_appliance import _cpio_newc, _interface_case_lines, _shell_quote
 
 _BOOT_ARTIFACT_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+_PRIVATE_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR
 
 _APPLETS = (
     "sh", "mount", "mdev", "ip", "ifconfig", "sleep", "cat", "hostname", "printf", "echo",
@@ -130,7 +131,7 @@ def _write_placement_specs(guest_dir: Path, files_dir: Path, domain: Mapping[str
 
 def _write_text(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
-    os.chmod(path, 0o644)
+    os.chmod(path, _PRIVATE_FILE_MODE)
 
 
 def _init_script(domain: Mapping[str, object]) -> str:

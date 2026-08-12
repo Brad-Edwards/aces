@@ -151,19 +151,24 @@ def test_failed_preflight_and_invalid_builder_preflight_are_typed() -> None:
 
     with pytest.raises(InitramfsToolchainError, match="not-found") as raised:
         failure.require_executable()
+    invalid_builder = type("InvalidBuilder", (), {"preflight": lambda self: "ready"})()
     with pytest.raises(TypeError, match="InitramfsPreflight"):
-        builder_preflight(type("InvalidBuilder", (), {"preflight": lambda self: "ready"})())
+        builder_preflight(invalid_builder)
 
     assert raised.value.preflight is failure
 
 
-@pytest.mark.parametrize("kind", ("invalid-ident", "invalid-class", "missing-program-header", "truncated"))
+@pytest.mark.parametrize(
+    "kind", ("invalid-ident", "invalid-class", "truncated-header", "missing-program-header", "truncated")
+)
 def test_malformed_elf_program_tables_are_rejected(tmp_path: Path, kind: str) -> None:
     path = tmp_path / kind
     if kind == "invalid-ident":
         path.write_bytes(b"x" * 64)
     elif kind == "invalid-class":
         path.write_bytes(b"\x7fELF" + bytes((0, 1, 1, 0)) + b"\0" * 56)
+    elif kind == "truncated-header":
+        path.write_bytes(b"\x7fELF" + bytes((2, 1, 1, 0)) + b"\0" * 44)
     else:
         identity = b"\x7fELF" + bytes((2, 1, 1, 0)) + b"\0" * 8
         phnum = 0 if kind == "missing-program-header" else 1
@@ -224,7 +229,9 @@ def test_guest_initramfs_skips_malformed_content_entries(tmp_path: Path) -> None
     by_name = {str(entry["name"]): entry for entry in entries}
 
     assert by_name["etc/raes/guest/files/1"]["content"] == b"ok"
+    assert stat.S_IMODE(int(by_name["etc/raes/guest/files/1"]["mode"])) == 0o600
     assert by_name["etc/raes/guest/content"]["content"] == b"/etc/marker|0644|1\n"
+    assert stat.S_IMODE(int(by_name["etc/raes/guest/content"]["mode"])) == 0o600
 
 
 def test_newc_encoder_rejects_non_root_and_special_members(tmp_path: Path) -> None:

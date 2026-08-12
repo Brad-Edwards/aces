@@ -12,6 +12,7 @@ import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import BinaryIO
 
 _NEWC_MAGIC = b"070701"
 _NEWC_TRAILER = "TRAILER!!!"
@@ -57,6 +58,15 @@ class InitramfsToolchainError(RuntimeError):
         super().__init__(f"initramfs toolchain preflight failed: {preflight.code.value}")
 
 
+@dataclass(frozen=True)
+class _ElfProgramHeaders:
+    offset: int
+    entry_size: int
+    count: int
+    minimum_entry_size: int
+    byte_order: str
+
+
 def resolve_static_busybox(
     configured: Path | None,
     *,
@@ -65,27 +75,42 @@ def resolve_static_busybox(
 ) -> InitramfsPreflight:
     """Resolve an injected or PATH-discovered static target BusyBox executable."""
 
+    candidate, code = _busybox_candidate(configured, search_path=search_path)
+    if candidate is not None:
+        try:
+            candidate = candidate.resolve(strict=True)
+        except OSError:
+            code = InitramfsPreflightCode.NOT_FOUND
+        else:
+            code = _busybox_file_preflight(candidate, expected_elf_machine=expected_elf_machine)
+    executable = candidate if code is InitramfsPreflightCode.READY else None
+    assert code is not None
+    return InitramfsPreflight(code, executable)
+
+
+def _busybox_candidate(
+    configured: Path | None, *, search_path: str | None
+) -> tuple[Path | None, InitramfsPreflightCode | None]:
     if configured is None:
         discovered = shutil.which("busybox", path=search_path)
-        if discovered is None:
-            return InitramfsPreflight(InitramfsPreflightCode.NOT_FOUND)
-        candidate = Path(discovered)
+        candidate = Path(discovered) if discovered is not None else None
+        code = None if candidate is not None else InitramfsPreflightCode.NOT_FOUND
     else:
         candidate = Path(configured)
-        if not candidate.is_absolute():
-            return InitramfsPreflight(InitramfsPreflightCode.NOT_ABSOLUTE)
-    try:
-        candidate = candidate.resolve(strict=True)
-    except OSError:
-        return InitramfsPreflight(InitramfsPreflightCode.NOT_FOUND)
+        code = None if candidate.is_absolute() else InitramfsPreflightCode.NOT_ABSOLUTE
+        if code is not None:
+            candidate = None
+    return candidate, code
+
+
+def _busybox_file_preflight(candidate: Path, *, expected_elf_machine: int) -> InitramfsPreflightCode:
     if not candidate.is_file():
-        return InitramfsPreflight(InitramfsPreflightCode.NOT_REGULAR)
-    if not os.access(candidate, os.R_OK | os.X_OK):
-        return InitramfsPreflight(InitramfsPreflightCode.NOT_EXECUTABLE)
-    elf_code = _static_elf_preflight(candidate, expected_machine=expected_elf_machine)
-    if elf_code is not InitramfsPreflightCode.READY:
-        return InitramfsPreflight(elf_code)
-    return InitramfsPreflight(InitramfsPreflightCode.READY, candidate)
+        code = InitramfsPreflightCode.NOT_REGULAR
+    elif not os.access(candidate, os.R_OK | os.X_OK):
+        code = InitramfsPreflightCode.NOT_EXECUTABLE
+    else:
+        code = _static_elf_preflight(candidate, expected_machine=expected_elf_machine)
+    return code
 
 
 def builder_preflight(builder: object) -> InitramfsPreflight:
@@ -192,38 +217,71 @@ def _static_elf_preflight(path: Path, *, expected_machine: int) -> InitramfsPref
     try:
         with path.open("rb") as stream:
             header = stream.read(64)
-            if len(header) < 52 or header[:4] != b"\x7fELF" or header[6] != 1:
-                return InitramfsPreflightCode.NOT_ELF
-            elf_class = header[4]
-            byte_order = header[5]
-            if elf_class not in {1, 2} or byte_order not in {1, 2}:
-                return InitramfsPreflightCode.NOT_ELF
+            layout, code = _elf_program_headers(header, expected_machine=expected_machine)
+            if layout is not None:
+                code = _program_header_preflight(stream, layout)
+    except OSError:
+        code = InitramfsPreflightCode.NOT_FOUND
+    assert code is not None
+    return code
+
+
+def _elf_program_headers(
+    header: bytes, *, expected_machine: int
+) -> tuple[_ElfProgramHeaders | None, InitramfsPreflightCode | None]:
+    layout = None
+    code = None
+    if len(header) < 52 or header[:4] != b"\x7fELF" or header[6] != 1:
+        code = InitramfsPreflightCode.NOT_ELF
+    else:
+        elf_class = header[4]
+        byte_order = header[5]
+        if elf_class not in {1, 2} or byte_order not in {1, 2} or (elf_class == 2 and len(header) < 58):
+            code = InitramfsPreflightCode.NOT_ELF
+        else:
             endian = "<" if byte_order == 1 else ">"
             machine = struct.unpack_from(f"{endian}H", header, 18)[0]
             if machine != expected_machine:
-                return InitramfsPreflightCode.WRONG_ARCHITECTURE
-            if elf_class == 1:
-                phoff = struct.unpack_from(f"{endian}I", header, 28)[0]
-                phentsize = struct.unpack_from(f"{endian}H", header, 42)[0]
-                phnum = struct.unpack_from(f"{endian}H", header, 44)[0]
-                minimum_entry_size = 32
+                code = InitramfsPreflightCode.WRONG_ARCHITECTURE
             else:
-                phoff = struct.unpack_from(f"{endian}Q", header, 32)[0]
-                phentsize = struct.unpack_from(f"{endian}H", header, 54)[0]
-                phnum = struct.unpack_from(f"{endian}H", header, 56)[0]
-                minimum_entry_size = 56
-            if phnum < 1 or phnum > 1024 or phentsize < minimum_entry_size:
-                return InitramfsPreflightCode.NOT_ELF
-            stream.seek(phoff)
-            for _ in range(phnum):
-                entry = stream.read(phentsize)
-                if len(entry) != phentsize:
-                    return InitramfsPreflightCode.NOT_ELF
-                if struct.unpack_from(f"{endian}I", entry)[0] == _PT_INTERP:
-                    return InitramfsPreflightCode.NOT_STATIC
-    except OSError:
-        return InitramfsPreflightCode.NOT_FOUND
-    return InitramfsPreflightCode.READY
+                layout = _program_header_layout(header, elf_class=elf_class, byte_order=endian)
+    return layout, code
+
+
+def _program_header_layout(header: bytes, *, elf_class: int, byte_order: str) -> _ElfProgramHeaders:
+    if elf_class == 1:
+        offset = struct.unpack_from(f"{byte_order}I", header, 28)[0]
+        entry_size = struct.unpack_from(f"{byte_order}H", header, 42)[0]
+        count = struct.unpack_from(f"{byte_order}H", header, 44)[0]
+        minimum_entry_size = 32
+    else:
+        offset = struct.unpack_from(f"{byte_order}Q", header, 32)[0]
+        entry_size = struct.unpack_from(f"{byte_order}H", header, 54)[0]
+        count = struct.unpack_from(f"{byte_order}H", header, 56)[0]
+        minimum_entry_size = 56
+    return _ElfProgramHeaders(
+        offset=offset,
+        entry_size=entry_size,
+        count=count,
+        minimum_entry_size=minimum_entry_size,
+        byte_order=byte_order,
+    )
+
+
+def _program_header_preflight(stream: BinaryIO, layout: _ElfProgramHeaders) -> InitramfsPreflightCode:
+    if layout.count < 1 or layout.count > 1024 or layout.entry_size < layout.minimum_entry_size:
+        return InitramfsPreflightCode.NOT_ELF
+    stream.seek(layout.offset)
+    code = InitramfsPreflightCode.READY
+    for _ in range(layout.count):
+        entry = stream.read(layout.entry_size)
+        if len(entry) != layout.entry_size:
+            code = InitramfsPreflightCode.NOT_ELF
+            break
+        if struct.unpack_from(f"{layout.byte_order}I", entry)[0] == _PT_INTERP:
+            code = InitramfsPreflightCode.NOT_STATIC
+            break
+    return code
 
 
 def _file_digest(path: Path) -> str:

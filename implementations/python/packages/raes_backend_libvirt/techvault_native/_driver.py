@@ -114,29 +114,32 @@ class TechVaultNativeLibvirtDriver:
     ) -> DriverResult:
         self._begin_operation()
         envelope = load_libvirt_realization_envelope(self.driver_mode)
-        spec_diagnostics = self._admission_diagnostics(networks, domains, envelope)
-        if spec_diagnostics:
-            return DriverResult(diagnostics=tuple(spec_diagnostics))
-        artifact_diagnostics = self._artifact_preflight_diagnostics(domains)
-        if artifact_diagnostics:
-            return DriverResult(diagnostics=tuple(artifact_diagnostics))
-        matrix = self._build_matrix(networks, domains)
-        self.state_dir.mkdir(parents=True, exist_ok=True)
-        preparation_diagnostics = self._prepare_operation(matrix)
-        if preparation_diagnostics:
-            return DriverResult(diagnostics=tuple(preparation_diagnostics))
-        try:
-            connection = self._conn()
-        except Exception:
-            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
-        return self._realize_matrix(
-            connection,
-            matrix,
-            networks=networks,
-            domains=domains,
-            envelope_digest=envelope.digest,
-            configuration_digest=envelope.configuration.configuration_digest,
-        )
+        diagnostics = self._admission_diagnostics(networks, domains, envelope)
+        if not diagnostics:
+            diagnostics = self._artifact_preflight_diagnostics(domains)
+        if diagnostics:
+            result = DriverResult(diagnostics=tuple(diagnostics))
+        else:
+            matrix = self._build_matrix(networks, domains)
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            diagnostics = self._prepare_operation(matrix)
+            if diagnostics:
+                result = DriverResult(diagnostics=tuple(diagnostics))
+            else:
+                try:
+                    connection = self._conn()
+                except Exception:
+                    result = DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
+                else:
+                    result = self._realize_matrix(
+                        connection,
+                        matrix,
+                        networks=networks,
+                        domains=domains,
+                        envelope_digest=envelope.digest,
+                        configuration_digest=envelope.configuration.configuration_digest,
+                    )
+        return result
 
     def _realize_matrix(
         self,

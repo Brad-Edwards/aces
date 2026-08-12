@@ -51,15 +51,16 @@ def artifact_preflight_diagnostics(
 ) -> list[Diagnostic]:
     """Reject missing boot inputs before opening libvirt or mutating networks."""
 
-    if not domains:
-        return []
-    assert kernel_path is not None
-    if not kernel_path.is_file() or not os.access(kernel_path, os.R_OK):
-        return [_diagnostic(_CODE_KERNEL_UNAVAILABLE, "runtime.libvirt.kernel")]
-    try:
-        toolchain = builder_preflight(initramfs_builder)
-    except Exception:
-        return [_diagnostic(_CODE_TOOLCHAIN_UNAVAILABLE, "runtime.libvirt.initramfs")]
-    if not toolchain.ready:
-        return [_diagnostic(_CODE_TOOLCHAIN_UNAVAILABLE, "runtime.libvirt.initramfs")]
-    return []
+    diagnostic = None
+    if domains:
+        assert kernel_path is not None
+        if not kernel_path.is_file() or not os.access(kernel_path, os.R_OK):
+            diagnostic = _diagnostic(_CODE_KERNEL_UNAVAILABLE, "runtime.libvirt.kernel")
+        else:
+            try:
+                toolchain = builder_preflight(initramfs_builder)
+            except Exception:
+                toolchain = None
+            if toolchain is None or not toolchain.ready:
+                diagnostic = _diagnostic(_CODE_TOOLCHAIN_UNAVAILABLE, "runtime.libvirt.initramfs")
+    return [diagnostic] if diagnostic is not None else []

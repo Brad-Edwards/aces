@@ -321,6 +321,26 @@ def test_native_artifact_preflight_normalizes_builder_exception(tmp_path: Path) 
     ]
 
 
+def test_native_driver_normalizes_connection_failure(tmp_path: Path) -> None:
+    def unavailable_connector(_uri: str) -> object:
+        raise RuntimeError("host-specific connection detail")
+
+    kernel = tmp_path / "vmlinuz"
+    kernel.write_bytes(b"kernel")
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connector=unavailable_connector,
+        kernel_path=kernel,
+        initramfs_builder=_Builder(),
+    )
+    network, domain = _bounded_specs()
+
+    result = driver.realize(networks=(network,), domains=(domain,))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["libvirt-backend.techvault-native.unavailable"]
+    assert result.diagnostics[0].address == "runtime.libvirt.connection"
+
+
 def _submit_native_scenario(path: Path, tmp_path: Path):
     connection = _FakeConnection()
     kernel = tmp_path / "vmlinuz"
@@ -1019,8 +1039,10 @@ def test_init_script_quotes_valid_interface_addressing():
 
 @pytest.mark.parametrize(("interface", "match"), HOSTILE_INTERFACE_CASES)
 def test_init_script_rejects_hostile_interface_fields_before_scripting(interface, match):
+    domain = domain_with_interface(**interface)
+
     with pytest.raises(ValueError, match=match):
-        _init_script(domain_with_interface(**interface))
+        _init_script(domain)
 
 
 def test_init_script_skips_a_malformed_interface_entry_and_renders_the_rest():

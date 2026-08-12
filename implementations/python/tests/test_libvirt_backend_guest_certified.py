@@ -305,15 +305,16 @@ def test_default_challenge_factory_and_invalid_factory_are_explicit(tmp_path: Pa
     )
 
     assert len(driver.challenge_factory()) == 32
+    invalid_driver = {
+        "state_dir": tmp_path / "bad-state",
+        "connection": _FakeConnection(),
+        "kernel_path": tmp_path / "kernel",
+        "initramfs_builder": _FakeBuilder(),
+        "guest_transport": _StubTransport(facts_by_address={}),
+        "challenge_factory": None,
+    }
     with pytest.raises(ValueError, match="must be callable"):
-        GuestCertifiedLibvirtDriver(
-            state_dir=tmp_path / "bad-state",
-            connection=_FakeConnection(),
-            kernel_path=tmp_path / "kernel",
-            initramfs_builder=_FakeBuilder(),
-            guest_transport=_StubTransport(facts_by_address={}),
-            challenge_factory=None,  # type: ignore[arg-type]
-        )
+        GuestCertifiedLibvirtDriver(**invalid_driver)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

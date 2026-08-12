@@ -35,6 +35,7 @@ from .techvault_matrix import native_matrix as _native_matrix
 from .techvault_native import DriverResult, TechVaultNativeLibvirtDriver, _artifact_token
 
 _SAFE_CHALLENGE_RE = re.compile(r"^[a-f0-9]{16,64}$")
+_GUEST_FACTS_ADDRESS = "runtime.libvirt.guest-facts"
 
 
 def _fresh_challenge() -> str:
@@ -94,16 +95,27 @@ class GuestCertifiedLibvirtDriver(TechVaultNativeLibvirtDriver):
         """Rotate freshness state and remove every prior fact before libvirt I/O."""
 
         self._begin_operation()
+        diagnostics: list[Diagnostic] = []
         try:
             candidate = self.challenge_factory()
         except Exception:
-            return [_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, "runtime.libvirt.guest-facts")]
+            candidate = None
         if (
             not isinstance(candidate, str)
             or not _SAFE_CHALLENGE_RE.match(candidate)
             or candidate in self._used_challenges
         ):
-            return [_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, "runtime.libvirt.guest-facts")]
+            diagnostics.append(_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, _GUEST_FACTS_ADDRESS))
+        else:
+            diagnostics.extend(self._clear_prior_fact_channels(matrix))
+        if not diagnostics:
+            assert isinstance(candidate, str)
+            self.challenge = candidate
+            self._used_challenges.add(candidate)
+        return diagnostics
+
+    def _clear_prior_fact_channels(self, matrix: Mapping[str, object]) -> list[Diagnostic]:
+        diagnostics: list[Diagnostic] = []
         for domain in matrix.get("domains", ()):
             if not isinstance(domain, Mapping):
                 continue
@@ -113,12 +125,12 @@ class GuestCertifiedLibvirtDriver(TechVaultNativeLibvirtDriver):
                 if channel.is_symlink() or (channel.exists() and not channel.is_dir()):
                     channel.unlink()
                 elif channel.exists():
-                    return [_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, "runtime.libvirt.guest-facts")]
+                    diagnostics.append(_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, _GUEST_FACTS_ADDRESS))
+                    break
             except OSError:
-                return [_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, "runtime.libvirt.guest-facts")]
-        self.challenge = candidate
-        self._used_challenges.add(candidate)
-        return []
+                diagnostics.append(_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, _GUEST_FACTS_ADDRESS))
+                break
+        return diagnostics
 
     def _begin_operation(self) -> None:
         """Prevent prior guest evidence from surviving into a new attempt."""
