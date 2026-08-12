@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pytest
 from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.planning import RuntimeDomain
@@ -11,11 +13,13 @@ from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_timeouts import (
     INVALID_RECONCILIATION_CLOCK,
     INVALID_TIMEOUT_CONFIGURATION,
+    INVALID_WORKFLOW_STATE,
     INVALID_WORKFLOW_TIMESTAMP,
     NON_MONOTONIC_WORKFLOW_CLOCK,
     TIMED_OUT_REASON,
     workflow_timeout_update,
 )
+from raes_runtime.control_plane_workflows import parse_timestamp
 
 _WORKFLOW_ADDRESS = "orchestration.workflow.response"
 
@@ -218,6 +222,81 @@ def test_unparseable_reconciliation_clock_is_raised_not_swallowed():
 def test_naive_reconciliation_clock_is_rejected():
     with pytest.raises(ValueError, match=INVALID_RECONCILIATION_CLOCK):
         _reconcile("2000-01-01T00:00:00Z", "2000-01-01T00:00:01")
+
+
+def test_explicit_naive_reconciliation_clock_is_rejected_before_state_mutation() -> None:
+    history: dict[str, list[dict[str, object]]] = {}
+
+    with pytest.raises(ValueError, match=INVALID_RECONCILIATION_CLOCK):
+        workflow_timeout_update(
+            RuntimeSnapshot(),
+            _WORKFLOW_ADDRESS,
+            _workflow_entry(),
+            {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")},
+            history,
+            "2000-01-01T00:00:01Z",
+            reconciliation_clock=datetime(2000, 1, 1, 0, 0, 1),
+        )
+
+    assert history == {}
+
+
+@pytest.mark.parametrize("persisted", [[], {"workflow_status": "running"}])
+def test_malformed_persisted_workflow_state_fails_closed(persisted: object) -> None:
+    with pytest.raises(ValueError, match=INVALID_WORKFLOW_STATE):
+        workflow_timeout_update(
+            RuntimeSnapshot(),
+            _WORKFLOW_ADDRESS,
+            _workflow_entry(),
+            {_WORKFLOW_ADDRESS: persisted},  # type: ignore[dict-item]
+            {},
+            "2000-01-01T00:00:01Z",
+        )
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_error"),
+    [
+        ([], INVALID_TIMEOUT_CONFIGURATION),
+        ({"execution_contract": None}, None),
+        ({"execution_contract": []}, INVALID_TIMEOUT_CONFIGURATION),
+    ],
+)
+def test_persisted_workflow_timeout_shape_is_validated(
+    payload: object,
+    expected_error: str | None,
+) -> None:
+    entry = _workflow_entry()
+    object.__setattr__(entry, "payload", payload)
+
+    if expected_error is None:
+        assert (
+            workflow_timeout_update(
+                RuntimeSnapshot(),
+                _WORKFLOW_ADDRESS,
+                entry,
+                {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")},
+                {},
+                "2000-01-01T00:00:01Z",
+            )
+            is None
+        )
+    else:
+        with pytest.raises(ValueError, match=expected_error):
+            workflow_timeout_update(
+                RuntimeSnapshot(),
+                _WORKFLOW_ADDRESS,
+                entry,
+                {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")},
+                {},
+                "2000-01-01T00:00:01Z",
+            )
+
+
+@pytest.mark.parametrize("raw", ["", None])
+def test_timestamp_parser_rejects_empty_and_non_string_inputs(raw: object) -> None:
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        parse_timestamp(raw)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("timeout_seconds", [-1, 0, True, 1.5, "1", "bogus"])
