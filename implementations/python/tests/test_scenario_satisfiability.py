@@ -378,7 +378,8 @@ def test_unknown_during_initial_decision_fails_without_evidence(
     error = exc_info.value
     assert error.solver_phase == "initial-decision"
     assert error.solver_check_count == 1
-    assert error.solver_check_budget is not None and error.solver_check_budget >= 1
+    assert error.solver_check_budget is not None
+    assert error.solver_check_budget >= 1
 
 
 def test_unknown_during_core_reduction_fails_loudly_with_budget_context(
@@ -396,7 +397,8 @@ def test_unknown_during_core_reduction_fails_loudly_with_budget_context(
     error = exc_info.value
     assert error.solver_phase == "core-reduction"
     assert error.solver_check_count == 2
-    assert error.solver_check_budget is not None and error.solver_check_budget >= 2
+    assert error.solver_check_budget is not None
+    assert error.solver_check_budget >= 2
     assert error.solver_timeout_ms == SOLVER_TIMEOUT_MS
     assert error.solver_reason
 
@@ -417,7 +419,8 @@ def test_unknown_during_witness_selection_fails_loudly_with_budget_context(
     error = exc_info.value
     assert error.solver_phase == "witness-selection"
     assert error.solver_check_count == 2
-    assert error.solver_check_budget is not None and error.solver_check_budget >= 2
+    assert error.solver_check_budget is not None
+    assert error.solver_check_budget >= 2
     assert error.solver_timeout_ms == SOLVER_TIMEOUT_MS
     assert error.solver_reason is not None
     assert len(error.solver_reason) == 256
@@ -490,13 +493,16 @@ def test_empty_target_domain_is_explicitly_unsatisfiable(tmp_path: Path) -> None
 def test_derived_solver_check_budget_fails_closed_before_extra_check(tmp_path: Path) -> None:
     source = _write(tmp_path, "satisfiable.sdl.yaml", _SATISFIABLE)
     model = analyze_scenario_file(source).normalized_model
+    clause_ids = tuple(clause.clause_id for clause in model.clauses)
+    fixed_indexes: dict[str, int] = {}
+    budget = _CheckBudget(max_checks=0)
 
     with pytest.raises(SolverOperationalError, match="check budget exhausted") as exc_info:
         _check(
             model,
-            tuple(clause.clause_id for clause in model.clauses),
-            {},
-            budget=_CheckBudget(max_checks=0),
+            clause_ids,
+            fixed_indexes,
+            budget=budget,
             phase="test-probe",
         )
 
@@ -651,9 +657,10 @@ def test_published_maximum_witness_shape_has_a_finite_derived_budget() -> None:
 def test_operation_deadline_covers_model_construction(monkeypatch: pytest.MonkeyPatch) -> None:
     clock = iter((0, SOLVER_TIMEOUT_MS * 1_000_000))
     monkeypatch.setattr(solver_adapter.time, "monotonic_ns", clock.__next__)
+    model = _normalized_model([1], [[]])
 
     with pytest.raises(SolverOperationalError, match="operation deadline exhausted") as raised:
-        solve_model(_normalized_model([1], [[]]))
+        solve_model(model)
 
     assert raised.value.phase == "model-construction"
     assert raised.value.check_count == 0
@@ -671,9 +678,10 @@ def test_result_returned_after_operation_deadline_is_rejected(monkeypatch: pytes
 
     monkeypatch.setattr(solver_adapter.time, "monotonic_ns", lambda: clock["now"])
     monkeypatch.setattr(z3.Solver, "check", complete_after_deadline)
+    model = _normalized_model([1], [[]])
 
     with pytest.raises(SolverOperationalError, match="operation deadline exhausted") as raised:
-        solve_model(_normalized_model([1], [[]]))
+        solve_model(model)
 
     assert raised.value.phase == "initial-decision"
     assert raised.value.check_count == 1
