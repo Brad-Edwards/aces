@@ -14,7 +14,7 @@ import threading
 import time
 from collections.abc import Iterator
 from pathlib import Path, PurePosixPath
-from typing import Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from .._errors import SDLParseError
 from ._filesystem import (
@@ -25,6 +25,9 @@ from ._filesystem import (
     _write_version_pointer,
 )
 
+if TYPE_CHECKING:
+    from . import _OCIResourceLimits
+
 _CACHE_THREAD_LOCKS: dict[str, threading.Lock] = {}
 _CACHE_THREAD_LOCKS_GUARD = threading.Lock()
 _CACHE_TREE_MANIFEST_NAME = ".raes-cache-tree.json"
@@ -33,9 +36,11 @@ _DECOMPRESSION_CHUNK_BYTES = 1024 * 1024
 _SPOOL_MEMORY_BYTES = 8 * 1024 * 1024
 _WINDOWS_LOCKING = os.name == "nt"
 _LOCK_DIR_FD_SUPPORTED = os.open in os.supports_dir_fd
+_CACHE_INTEGRITY_ERROR = "OCI module cache tree failed integrity validation"
+_CACHE_MANIFEST_FIELDS = frozenset({"content_digest", "entries", "root_file", "schema", "tree_digest"})
 
 
-def _limits() -> Any:
+def _limits() -> _OCIResourceLimits:
     # Keep the historical package-facade test/operator seam authoritative.
     from . import _OCI_LIMITS
 
@@ -62,7 +67,7 @@ def _acquire_file_lock(handle: BinaryIO) -> None:
 
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             return
-        except (BlockingIOError, OSError) as exc:
+        except OSError as exc:
             if time.monotonic() >= deadline:
                 raise SDLParseError("Timed out waiting for the OCI module cache lock") from exc
             time.sleep(0.01)
@@ -88,6 +93,102 @@ def _same_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
     return not (left.st_ino and right.st_ino and left.st_ino != right.st_ino)
 
 
+def _anchored_lock_parent(
+    lock_path: Path,
+    *,
+    error_message: str,
+) -> tuple[int, os.stat_result, str | Path, dict[str, int]]:
+    parent_expected = lock_path.parent.lstat()
+    if not stat.S_ISDIR(parent_expected.st_mode):
+        raise SDLParseError(error_message)
+    if not _LOCK_DIR_FD_SUPPORTED:
+        return -1, parent_expected, lock_path, {}
+
+    parent_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    parent_descriptor = os.open(lock_path.parent, parent_flags)
+    try:
+        parent_actual = os.fstat(parent_descriptor)
+        if not stat.S_ISDIR(parent_actual.st_mode) or not _same_file_identity(parent_expected, parent_actual):
+            raise SDLParseError(error_message)
+    except (OSError, SDLParseError):
+        os.close(parent_descriptor)
+        raise
+    return parent_descriptor, parent_actual, lock_path.name, {"dir_fd": parent_descriptor}
+
+
+def _lock_file_stat(lock_path: Path, parent_descriptor: int) -> os.stat_result:
+    if parent_descriptor >= 0:
+        return os.stat(lock_path.name, dir_fd=parent_descriptor, follow_symlinks=False)
+    return lock_path.lstat()
+
+
+def _open_existing_lock_file(
+    open_path: str | Path,
+    *,
+    expected: os.stat_result,
+    common_flags: int,
+    open_options: dict[str, int],
+    error_message: str,
+) -> int:
+    if not stat.S_ISREG(expected.st_mode):
+        raise SDLParseError(error_message)
+    return os.open(open_path, common_flags, **open_options)
+
+
+def _open_lock_file(
+    lock_path: Path,
+    *,
+    parent_descriptor: int,
+    open_path: str | Path,
+    common_flags: int,
+    open_options: dict[str, int],
+    error_message: str,
+) -> tuple[int, os.stat_result | None]:
+    try:
+        expected = _lock_file_stat(lock_path, parent_descriptor)
+    except FileNotFoundError:
+        try:
+            descriptor = os.open(open_path, common_flags | os.O_CREAT | os.O_EXCL, 0o600, **open_options)
+        except FileExistsError:
+            # A concurrent first user may create the shared lock after our
+            # missing-path check. Re-enter the same no-follow admission path.
+            expected = _lock_file_stat(lock_path, parent_descriptor)
+            descriptor = _open_existing_lock_file(
+                open_path,
+                expected=expected,
+                common_flags=common_flags,
+                open_options=open_options,
+                error_message=error_message,
+            )
+        else:
+            expected = None
+    else:
+        descriptor = _open_existing_lock_file(
+            open_path,
+            expected=expected,
+            common_flags=common_flags,
+            open_options=open_options,
+            error_message=error_message,
+        )
+    return descriptor, expected
+
+
+def _validate_open_lock(
+    lock_path: Path,
+    *,
+    descriptor: int,
+    expected: os.stat_result | None,
+    parent_actual: os.stat_result,
+    error_message: str,
+) -> None:
+    actual = os.fstat(descriptor)
+    if not stat.S_ISREG(actual.st_mode) or (expected is not None and not _same_file_identity(expected, actual)):
+        raise SDLParseError(error_message)
+    parent_after = lock_path.parent.lstat()
+    if not stat.S_ISDIR(parent_after.st_mode) or not _same_file_identity(parent_actual, parent_after):
+        raise SDLParseError(error_message)
+
+
 def _open_cache_lock(lock_path: Path) -> BinaryIO:
     """Open one regular lock file, anchored to a validated parent directory."""
 
@@ -96,51 +197,26 @@ def _open_cache_lock(lock_path: Path) -> BinaryIO:
     common_flags = os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
     descriptor = -1
     parent_descriptor = -1
-    expected: os.stat_result | None = None
     try:
-        parent_expected = lock_path.parent.lstat()
-        if not stat.S_ISDIR(parent_expected.st_mode):
-            raise SDLParseError(error_message)
-        open_path: str | Path = lock_path
-        open_options: dict[str, int] = {}
-        parent_actual = parent_expected
-        if _LOCK_DIR_FD_SUPPORTED:
-            parent_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
-            parent_descriptor = os.open(lock_path.parent, parent_flags)
-            parent_actual = os.fstat(parent_descriptor)
-            if not stat.S_ISDIR(parent_actual.st_mode) or not _same_file_identity(parent_expected, parent_actual):
-                raise SDLParseError(error_message)
-            open_path = lock_path.name
-            open_options = {"dir_fd": parent_descriptor}
-        try:
-            if parent_descriptor >= 0:
-                expected = os.stat(lock_path.name, dir_fd=parent_descriptor, follow_symlinks=False)
-            else:
-                expected = lock_path.lstat()
-        except FileNotFoundError:
-            try:
-                descriptor = os.open(open_path, common_flags | os.O_CREAT | os.O_EXCL, 0o600, **open_options)
-            except FileExistsError:
-                # A concurrent first user may create the shared lock after our
-                # missing-path check. Re-enter the same no-follow admission
-                # path rather than turning normal contention into a failure.
-                if parent_descriptor >= 0:
-                    expected = os.stat(lock_path.name, dir_fd=parent_descriptor, follow_symlinks=False)
-                else:
-                    expected = lock_path.lstat()
-                if not stat.S_ISREG(expected.st_mode):
-                    raise SDLParseError(error_message) from None
-                descriptor = os.open(open_path, common_flags, **open_options)
-        else:
-            if not stat.S_ISREG(expected.st_mode):
-                raise SDLParseError(error_message)
-            descriptor = os.open(open_path, common_flags, **open_options)
-        actual = os.fstat(descriptor)
-        if not stat.S_ISREG(actual.st_mode) or (expected is not None and not _same_file_identity(expected, actual)):
-            raise SDLParseError(error_message)
-        parent_after = lock_path.parent.lstat()
-        if not stat.S_ISDIR(parent_after.st_mode) or not _same_file_identity(parent_actual, parent_after):
-            raise SDLParseError(error_message)
+        parent_descriptor, parent_actual, open_path, open_options = _anchored_lock_parent(
+            lock_path,
+            error_message=error_message,
+        )
+        descriptor, expected = _open_lock_file(
+            lock_path,
+            parent_descriptor=parent_descriptor,
+            open_path=open_path,
+            common_flags=common_flags,
+            open_options=open_options,
+            error_message=error_message,
+        )
+        _validate_open_lock(
+            lock_path,
+            descriptor=descriptor,
+            expected=expected,
+            parent_actual=parent_actual,
+            error_message=error_message,
+        )
         handle = os.fdopen(descriptor, "r+b")
         descriptor = -1
         return handle
@@ -211,12 +287,12 @@ def _hash_cache_file(path: Path, expected: os.stat_result) -> tuple[int, str]:
     """Hash one regular file without following a last-component symlink."""
 
     if expected.st_size > _limits().max_member_bytes:
-        raise SDLParseError("OCI module cache tree failed integrity validation")
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
     flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
         descriptor = os.open(path, flags)
     except OSError as exc:
-        raise SDLParseError("OCI module cache tree failed integrity validation") from exc
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
     digest = hashlib.sha256()
     total = 0
     try:
@@ -229,19 +305,85 @@ def _hash_cache_file(path: Path, expected: os.stat_result) -> tuple[int, str]:
                 or actual.st_size != expected.st_size
                 or stat.S_IMODE(actual.st_mode) != stat.S_IMODE(expected.st_mode)
             ):
-                raise SDLParseError("OCI module cache tree failed integrity validation")
+                raise SDLParseError(_CACHE_INTEGRITY_ERROR)
             while chunk := handle.read(_DECOMPRESSION_CHUNK_BYTES):
                 total += len(chunk)
                 if total > _limits().max_member_bytes:
-                    raise SDLParseError("OCI module cache tree failed integrity validation")
+                    raise SDLParseError(_CACHE_INTEGRITY_ERROR)
                 digest.update(chunk)
     except OSError as exc:
         if descriptor >= 0:
             os.close(descriptor)
-        raise SDLParseError("OCI module cache tree failed integrity validation") from exc
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
     if total != expected.st_size:
-        raise SDLParseError("OCI module cache tree failed integrity validation")
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
     return total, f"sha256:{digest.hexdigest()}"
+
+
+def _cache_lstat(path: Path) -> os.stat_result:
+    try:
+        return path.lstat()
+    except OSError as exc:
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
+
+
+def _append_bounded_child(children: list[Path], child_path: str, *, max_children: int) -> None:
+    if len(children) >= max_children:
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
+    children.append(Path(child_path))
+
+
+def _validated_directory_children(
+    path: Path,
+    *,
+    before: os.stat_result,
+    mode: int,
+    max_children: int,
+) -> list[Path]:
+    try:
+        children: list[Path] = []
+        with os.scandir(path) as iterator:
+            for child in iterator:
+                _append_bounded_child(children, child.path, max_children=max_children)
+        children.sort(key=lambda child: child.name)
+        after = path.lstat()
+    except OSError as exc:
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
+    if not stat.S_ISDIR(after.st_mode) or not _same_file_identity(before, after) or stat.S_IMODE(after.st_mode) != mode:
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
+    return children
+
+
+def _cache_tree_node(
+    path: Path,
+    relative: PurePosixPath,
+    *,
+    max_children: int,
+) -> tuple[dict[str, Any], list[Path], int]:
+    before = _cache_lstat(path)
+    mode = stat.S_IMODE(before.st_mode)
+    relative_name = relative.as_posix()
+    if stat.S_ISLNK(before.st_mode):
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
+    if stat.S_ISREG(before.st_mode):
+        size, digest = _hash_cache_file(path, before)
+        entry = {"digest": digest, "mode": mode, "path": relative_name, "size": size, "type": "file"}
+        return entry, [], size
+    if not stat.S_ISDIR(before.st_mode):
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
+    children = _validated_directory_children(
+        path,
+        before=before,
+        mode=mode,
+        max_children=max_children,
+    )
+    return {"mode": mode, "path": relative_name, "type": "directory"}, children, 0
+
+
+def _child_relative_path(parent: PurePosixPath, child: Path) -> PurePosixPath:
+    if parent == PurePosixPath("."):
+        return PurePosixPath(child.name)
+    return parent / child.name
 
 
 def _cache_tree_entries(root: Path) -> list[dict[str, Any]]:
@@ -249,7 +391,7 @@ def _cache_tree_entries(root: Path) -> list[dict[str, Any]]:
 
     limits = _limits()
     if limits.max_bundle_members < 0 or limits.max_tree_depth < 0:
-        raise SDLParseError("OCI module cache tree failed integrity validation")
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
     entries: list[dict[str, Any]] = []
     total_bytes = 0
     pending: list[tuple[Path, PurePosixPath, int]] = [(root, PurePosixPath("."), 0)]
@@ -257,51 +399,24 @@ def _cache_tree_entries(root: Path) -> list[dict[str, Any]]:
     while pending:
         path, relative, depth = pending.pop()
         if depth > limits.max_tree_depth:
-            raise SDLParseError("OCI module cache tree failed integrity validation")
-        try:
-            before = path.lstat()
-        except OSError as exc:
-            raise SDLParseError("OCI module cache tree failed integrity validation") from exc
-        mode = stat.S_IMODE(before.st_mode)
-        relative_name = relative.as_posix()
-        if stat.S_ISLNK(before.st_mode):
-            raise SDLParseError("OCI module cache tree failed integrity validation")
-        if stat.S_ISREG(before.st_mode):
-            size, digest = _hash_cache_file(path, before)
-            total_bytes += size
-            if total_bytes > limits.max_total_bytes:
-                raise SDLParseError("OCI module cache tree failed integrity validation")
-            entries.append({"digest": digest, "mode": mode, "path": relative_name, "size": size, "type": "file"})
-            continue
-        if not stat.S_ISDIR(before.st_mode):
-            raise SDLParseError("OCI module cache tree failed integrity validation")
-        entries.append({"mode": mode, "path": relative_name, "type": "directory"})
-        try:
-            children: list[Path] = []
-            with os.scandir(path) as iterator:
-                for child in iterator:
-                    children.append(Path(child.path))
-                    if len(entries) + len(pending) + len(children) > entry_limit:
-                        raise SDLParseError("OCI module cache tree failed integrity validation")
-            children.sort(key=lambda child: child.name)
-            after = path.lstat()
-        except OSError as exc:
-            raise SDLParseError("OCI module cache tree failed integrity validation") from exc
-        if (
-            not stat.S_ISDIR(after.st_mode)
-            or not _same_file_identity(before, after)
-            or stat.S_IMODE(after.st_mode) != mode
-        ):
-            raise SDLParseError("OCI module cache tree failed integrity validation")
+            raise SDLParseError(_CACHE_INTEGRITY_ERROR)
+        entry, children, size = _cache_tree_node(
+            path,
+            relative,
+            max_children=entry_limit - len(entries) - len(pending) - 1,
+        )
+        total_bytes += size
+        if total_bytes > limits.max_total_bytes:
+            raise SDLParseError(_CACHE_INTEGRITY_ERROR)
+        entries.append(entry)
         for child in reversed(children):
             if relative == PurePosixPath(".") and child.name == _CACHE_TREE_MANIFEST_NAME:
                 continue
-            child_relative = PurePosixPath(child.name) if relative == PurePosixPath(".") else relative / child.name
-            pending.append((child, child_relative, depth + 1))
+            pending.append((child, _child_relative_path(relative, child), depth + 1))
     return entries
 
 
-def _canonical_json_bytes(value: Any) -> bytes:
+def _canonical_json_bytes(value: object) -> bytes:
     return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
 
@@ -337,9 +452,9 @@ def _read_cache_manifest_bytes(path: Path) -> bytes:
     try:
         expected = path.lstat()
     except OSError as exc:
-        raise SDLParseError("OCI module cache tree failed integrity validation") from exc
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
     if not stat.S_ISREG(expected.st_mode):
-        raise SDLParseError("OCI module cache tree failed integrity validation")
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
     flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
     descriptor = -1
     try:
@@ -348,14 +463,14 @@ def _read_cache_manifest_bytes(path: Path) -> bytes:
             descriptor = -1
             actual = os.fstat(handle.fileno())
             if not stat.S_ISREG(actual.st_mode) or not _same_file_identity(expected, actual):
-                raise SDLParseError("OCI module cache tree failed integrity validation")
+                raise SDLParseError(_CACHE_INTEGRITY_ERROR)
             payload = handle.read(_limits().max_metadata_bytes + 1)
     except OSError as exc:
         if descriptor >= 0:
             os.close(descriptor)
-        raise SDLParseError("OCI module cache tree failed integrity validation") from exc
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
     if len(payload) > _limits().max_metadata_bytes:
-        raise SDLParseError("OCI module cache tree failed integrity validation")
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
     return payload
 
 
@@ -365,7 +480,7 @@ def _trusted_entry_projection(entries: list[Any]) -> list[dict[str, Any]]:
     projected: list[dict[str, Any]] = []
     for entry in entries:
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
-            raise SDLParseError("OCI module cache tree failed integrity validation")
+            raise SDLParseError(_CACHE_INTEGRITY_ERROR)
         if entry.get("type") == "directory":
             projected.append({"path": entry["path"], "type": "directory"})
         elif entry.get("type") == "file" and all(
@@ -382,8 +497,66 @@ def _trusted_entry_projection(entries: list[Any]) -> list[dict[str, Any]]:
                 }
             )
         else:
-            raise SDLParseError("OCI module cache tree failed integrity validation")
+            raise SDLParseError(_CACHE_INTEGRITY_ERROR)
     return projected
+
+
+def _require_cache_integrity(condition: bool) -> None:
+    if not condition:
+        raise SDLParseError(_CACHE_INTEGRITY_ERROR)
+
+
+def _require_cache_manifest(value: object) -> dict[str, Any]:
+    _require_cache_integrity(isinstance(value, dict))
+    manifest: dict[str, Any] = value
+    _require_cache_integrity(set(manifest) == _CACHE_MANIFEST_FIELDS)
+    _require_cache_integrity(manifest["schema"] == _CACHE_TREE_SCHEMA)
+    _require_cache_integrity(isinstance(manifest["entries"], list))
+    return manifest
+
+
+def _expected_manifest_projection(expected_manifest: object) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    manifest = _require_cache_manifest(expected_manifest)
+    entries = manifest["entries"]
+    expected_tree_digest = f"sha256:{hashlib.sha256(_canonical_json_bytes(entries)).hexdigest()}"
+    _require_cache_integrity(manifest["tree_digest"] == expected_tree_digest)
+    return manifest, _trusted_entry_projection(entries)
+
+
+def _read_trusted_cache_manifest(version: Path) -> dict[str, Any]:
+    raw = _read_cache_manifest_bytes(version / _CACHE_TREE_MANIFEST_NAME)
+    manifest = _require_cache_manifest(json.loads(raw.decode("utf-8")))
+    _require_cache_integrity(raw == _canonical_json_bytes(manifest))
+    return manifest
+
+
+def _require_matching_manifest_identity(
+    manifest: dict[str, Any],
+    expected_manifest: dict[str, Any],
+) -> None:
+    identity_fields = ("content_digest", "root_file", "schema")
+    _require_cache_integrity(all(manifest[field] == expected_manifest[field] for field in identity_fields))
+
+
+def _require_matching_cache_inventory(
+    *,
+    version: Path,
+    manifest: dict[str, Any],
+    expected_entries: list[dict[str, Any]],
+) -> None:
+    entries = _cache_tree_entries(version)
+    _require_cache_integrity(manifest["entries"] == entries)
+    tree_digest = f"sha256:{hashlib.sha256(_canonical_json_bytes(entries)).hexdigest()}"
+    _require_cache_integrity(manifest["tree_digest"] == tree_digest)
+    _require_cache_integrity(_trusted_entry_projection(entries) == expected_entries)
+
+
+def _validated_root_path(version: Path, root_relative: PurePosixPath) -> Path:
+    root_path = version.joinpath(*root_relative.parts)
+    _require_cache_integrity(not root_path.is_symlink())
+    _require_cache_integrity(root_path.is_file())
+    _require_cache_integrity(root_path.resolve(strict=True).is_relative_to(version.resolve(strict=True)))
+    return root_path
 
 
 def _validated_cache_root(
@@ -395,55 +568,18 @@ def _validated_cache_root(
     """Return the root only when it matches inventory derived from verified bytes."""
 
     try:
-        if not isinstance(expected_manifest, dict) or set(expected_manifest) != {
-            "content_digest",
-            "entries",
-            "root_file",
-            "schema",
-            "tree_digest",
-        }:
-            return None
-        if expected_manifest["schema"] != _CACHE_TREE_SCHEMA or not isinstance(expected_manifest["entries"], list):
-            return None
-        if expected_manifest["tree_digest"] != (
-            f"sha256:{hashlib.sha256(_canonical_json_bytes(expected_manifest['entries'])).hexdigest()}"
-        ):
-            return None
-        expected_entries = _trusted_entry_projection(expected_manifest["entries"])
-        raw = _read_cache_manifest_bytes(version / _CACHE_TREE_MANIFEST_NAME)
-        manifest = json.loads(raw.decode("utf-8"))
-        if not isinstance(manifest, dict) or set(manifest) != {
-            "content_digest",
-            "entries",
-            "root_file",
-            "schema",
-            "tree_digest",
-        }:
-            return None
-        if raw != _canonical_json_bytes(manifest):
-            return None
-        if manifest["schema"] != _CACHE_TREE_SCHEMA or not isinstance(manifest["entries"], list):
-            return None
-        if any(manifest[field] != expected_manifest[field] for field in ("content_digest", "root_file", "schema")):
-            return None
-        entries = _cache_tree_entries(version)
-        if manifest["entries"] != entries:
-            return None
-        expected_tree_digest = f"sha256:{hashlib.sha256(_canonical_json_bytes(entries)).hexdigest()}"
-        if manifest["tree_digest"] != expected_tree_digest:
-            return None
-        if _trusted_entry_projection(entries) != expected_entries:
-            return None
-        root_path = version.joinpath(*root_relative.parts)
-        if (
-            root_path.is_symlink()
-            or not root_path.is_file()
-            or not root_path.resolve(strict=True).is_relative_to(version.resolve(strict=True))
-        ):
-            return None
-        return root_path
+        trusted_expected, expected_entries = _expected_manifest_projection(expected_manifest)
+        manifest = _read_trusted_cache_manifest(version)
+        _require_matching_manifest_identity(manifest, trusted_expected)
+        _require_matching_cache_inventory(
+            version=version,
+            manifest=manifest,
+            expected_entries=expected_entries,
+        )
+        root_path = _validated_root_path(version, root_relative)
     except (OSError, UnicodeError, json.JSONDecodeError, SDLParseError):
         return None
+    return root_path
 
 
 def _recover_cache_root(

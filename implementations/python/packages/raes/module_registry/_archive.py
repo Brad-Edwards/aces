@@ -5,13 +5,18 @@ from __future__ import annotations
 import hashlib
 import tarfile
 from pathlib import PurePosixPath
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .._errors import SDLParseError
 from ._cache import _CACHE_TREE_SCHEMA, _DECOMPRESSION_CHUNK_BYTES, _canonical_json_bytes
 
+if TYPE_CHECKING:
+    from . import _OCIResourceLimits
 
-def _limits() -> Any:
+_ARCHIVE_PATH_CONFLICT_ERROR = "OCI bundle contains conflicting file and directory paths"
+
+
+def _limits() -> _OCIResourceLimits:
     from . import _OCI_LIMITS
 
     return _OCI_LIMITS
@@ -24,6 +29,68 @@ def _filtered_file_mode(mode: int) -> int:
     if not filtered & 0o100:
         filtered &= ~0o111
     return filtered | 0o600
+
+
+def _add_directory_node(nodes: dict[str, dict[str, Any]], relative: PurePosixPath) -> None:
+    relative_name = relative.as_posix()
+    existing = nodes.get(relative_name)
+    if existing is not None and existing["type"] != "directory":
+        raise SDLParseError(_ARCHIVE_PATH_CONFLICT_ERROR)
+    nodes[relative_name] = {"path": relative_name, "type": "directory"}
+
+
+def _add_parent_directories(nodes: dict[str, dict[str, Any]], relative: PurePosixPath) -> None:
+    for parent in reversed(relative.parents):
+        if parent != PurePosixPath("."):
+            _add_directory_node(nodes, parent)
+
+
+def _hash_archive_member(tar: tarfile.TarFile, member: tarfile.TarInfo) -> tuple[int, str]:
+    extracted = tar.extractfile(member)
+    if extracted is None:
+        raise SDLParseError("Unable to read a regular file from the OCI module bundle")
+    digest = hashlib.sha256()
+    size = 0
+    with extracted:
+        while chunk := extracted.read(_DECOMPRESSION_CHUNK_BYTES):
+            size += len(chunk)
+            if size > member.size:
+                raise SDLParseError("OCI bundle member payload exceeds its declared size")
+            digest.update(chunk)
+    if size != member.size:
+        raise SDLParseError("OCI bundle member payload is shorter than its declared size")
+    return size, f"sha256:{digest.hexdigest()}"
+
+
+def _add_archive_member(
+    nodes: dict[str, dict[str, Any]],
+    *,
+    tar: tarfile.TarFile,
+    member: tarfile.TarInfo,
+    relative: PurePosixPath,
+) -> None:
+    if member.isdir():
+        _add_directory_node(nodes, relative)
+        return
+    relative_name = relative.as_posix()
+    if relative_name in nodes:
+        raise SDLParseError(_ARCHIVE_PATH_CONFLICT_ERROR)
+    size, digest = _hash_archive_member(tar, member)
+    nodes[relative_name] = {
+        "digest": digest,
+        "mode": _filtered_file_mode(member.mode),
+        "path": relative_name,
+        "size": size,
+        "type": "file",
+    }
+
+
+def _is_archive_root(member: tarfile.TarInfo, relative: PurePosixPath) -> bool:
+    if relative != PurePosixPath("."):
+        return False
+    if not member.isdir():
+        raise SDLParseError("OCI bundle cannot replace the cache tree root")
+    return True
 
 
 def _expected_cache_tree_manifest(
@@ -39,47 +106,10 @@ def _expected_cache_tree_manifest(
     entry_limit = _limits().max_bundle_members + 1
     for member in members:
         relative = PurePosixPath(member.name)
-        if relative == PurePosixPath("."):
-            if not member.isdir():
-                raise SDLParseError("OCI bundle cannot replace the cache tree root")
+        if _is_archive_root(member, relative):
             continue
-        for parent in reversed(relative.parents):
-            if parent == PurePosixPath("."):
-                continue
-            parent_name = parent.as_posix()
-            existing = nodes.get(parent_name)
-            if existing is not None and existing["type"] != "directory":
-                raise SDLParseError("OCI bundle contains conflicting file and directory paths")
-            nodes[parent_name] = {"path": parent_name, "type": "directory"}
-        relative_name = relative.as_posix()
-        existing = nodes.get(relative_name)
-        if member.isdir():
-            if existing is not None and existing["type"] != "directory":
-                raise SDLParseError("OCI bundle contains conflicting file and directory paths")
-            nodes[relative_name] = {"path": relative_name, "type": "directory"}
-        else:
-            if existing is not None:
-                raise SDLParseError("OCI bundle contains conflicting file and directory paths")
-            extracted = tar.extractfile(member)
-            if extracted is None:
-                raise SDLParseError("Unable to read a regular file from the OCI module bundle")
-            digest = hashlib.sha256()
-            size = 0
-            with extracted:
-                while chunk := extracted.read(_DECOMPRESSION_CHUNK_BYTES):
-                    size += len(chunk)
-                    if size > member.size:
-                        raise SDLParseError("OCI bundle member payload exceeds its declared size")
-                    digest.update(chunk)
-            if size != member.size:
-                raise SDLParseError("OCI bundle member payload is shorter than its declared size")
-            nodes[relative_name] = {
-                "digest": f"sha256:{digest.hexdigest()}",
-                "mode": _filtered_file_mode(member.mode),
-                "path": relative_name,
-                "size": size,
-                "type": "file",
-            }
+        _add_parent_directories(nodes, relative)
+        _add_archive_member(nodes, tar=tar, member=member, relative=relative)
         if len(nodes) > entry_limit:
             raise SDLParseError("OCI bundle exceeds the bounded extracted-tree entry limit")
     entries = [nodes[name] for name in sorted(nodes, key=lambda name: PurePosixPath(name).parts)]
