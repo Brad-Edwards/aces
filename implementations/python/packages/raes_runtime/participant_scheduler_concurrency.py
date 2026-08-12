@@ -159,6 +159,27 @@ def _restore_pre_batch_snapshot(
     run.working = pre_batch
 
 
+def _abandon_concurrent_batch(
+    batch: _ConcurrentBatch,
+    pre_batch: RuntimeSnapshot,
+    *,
+    code: str,
+    message: str,
+) -> None:
+    """Report a backend batch that produced no usable results and undo its reservations."""
+
+    _restore_pre_batch_snapshot(batch.run, pre_batch)
+    _set_concurrent_failure(
+        batch.run,
+        Diagnostic(
+            code=code,
+            domain="participant",
+            address=batch.policy.address,
+            message=message,
+        ),
+    )
+
+
 def _finish_concurrent_service_state(
     run: SchedulerRunState,
     policy_address: str,
@@ -378,34 +399,24 @@ def _execute_concurrent_batch(batch: _ConcurrentBatch) -> None:
     try:
         results = batch_method(requests, base, len(requests))
         result_count = len(results)
-    except Exception as exc:  # noqa: BLE001 - backend trust boundary
-        _restore_pre_batch_snapshot(batch.run, pre_batch)
-        _set_concurrent_failure(
-            batch.run,
-            Diagnostic(
-                code="runtime.participant-concurrent-batch-failed",
-                domain="participant",
-                address=batch.policy.address,
-                # Only the exception type crosses the boundary, matching
-                # `_backend_call_failed`: backend messages can carry host paths,
-                # credentials, or participant data that must not enter a
-                # portable diagnostic.
-                message=(f"Backend concurrent participant batch did not complete ({type(exc).__name__})."),
-            ),
+    except Exception as exc:  # NOSONAR - backend trust boundary; any failure becomes a diagnostic
+        # Only the exception type crosses the boundary, matching
+        # `_backend_call_failed`: backend messages can carry host paths,
+        # credentials, or participant data that must not enter a portable
+        # diagnostic.
+        _abandon_concurrent_batch(
+            batch,
+            pre_batch,
+            code="runtime.participant-concurrent-batch-failed",
+            message=f"Backend concurrent participant batch did not complete ({type(exc).__name__}).",
         )
         return
     if result_count != len(requests):
-        _restore_pre_batch_snapshot(batch.run, pre_batch)
-        _set_concurrent_failure(
-            batch.run,
-            Diagnostic(
-                code="runtime.participant-concurrent-result-count-invalid",
-                domain="participant",
-                address=batch.policy.address,
-                message=(
-                    f"Backend returned {result_count} concurrent participant results for {len(requests)} requests."
-                ),
-            ),
+        _abandon_concurrent_batch(
+            batch,
+            pre_batch,
+            code="runtime.participant-concurrent-result-count-invalid",
+            message=f"Backend returned {result_count} concurrent participant results for {len(requests)} requests.",
         )
         return
     for context, state, request, result in zip(selected_contexts, selected_states, requests, results, strict=True):

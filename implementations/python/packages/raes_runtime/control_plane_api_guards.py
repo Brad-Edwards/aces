@@ -71,8 +71,11 @@ async def _body_size_guard_response(
     accepted_body = bytes(body)
     # Streaming consumes the receive channel, so seed Starlette's body cache the
     # way ``Request.body()`` would. Route handlers and FastAPI's own body parsing
-    # then still see the payload instead of an exhausted stream.
-    request._body = accepted_body  # noqa: SLF001
+    # then still see the payload instead of an exhausted stream: Starlette's own
+    # ``_CachedRequest.wrapped_receive`` replays ``_body`` to the inner app, which
+    # is the framework's hook for middleware that consumes the body, and there is
+    # no public equivalent.
+    request._body = accepted_body  # noqa: SLF001 # NOSONAR - documented Starlette body-cache hook
     request.state.raw_body = accepted_body
     return None
 
