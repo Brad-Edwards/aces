@@ -510,3 +510,147 @@ def test_oci_rolls_back_realized_resources_on_partial_failure():
         provider_resource_name("provision.network.lan", prefix="raes"),
     ] in runner.calls
     assert driver.realized_addresses() == frozenset()
+
+
+@pytest.mark.parametrize(
+    "image_ref",
+    [
+        # A tag/path spliced onto the digest: the ref never pins content, yet an
+        # unanchored ``@sha256:`` substring test would trust it.
+        "evil.example.com/malware@sha256:x/actually-a-tag",
+        # Too-short digests (including one hex char short of canonical).
+        "foo@sha256:short",
+        "foo@sha256:" + "a" * 63,
+        # Too-long digest (one hex char past canonical).
+        "foo@sha256:" + "a" * 65,
+        # Non-hex and non-lowercase digest bodies.
+        "foo@sha256:" + "g" * 64,
+        "foo@sha256:" + "A" * 64,
+        # A valid-length digest that does not terminate the reference.
+        "foo@sha256:" + "a" * 64 + "/pull-me",
+        "foo@sha256:" + "a" * 64 + ":latest",
+    ],
+)
+def test_oci_rejects_spoofed_digest_pinned_refs(image_ref):
+    """Image-trust boundary: only a canonical ``sha256`` digest of exactly 64
+    lowercase hex characters anchored at the end of a well-formed name pins
+    content. A ref that merely *contains* ``@sha256:`` is not a trust anchor and
+    must not be run under the default digest-pinned policy."""
+
+    recorder = _Recorder(stdout="id\n")
+    driver = OciDeploymentDriver(runtime="docker", workspace="ws", runner=recorder)
+
+    result = driver.realize(
+        networks=(),
+        containers=(ContainerSpec(address="provision.node.web", name="web", image_ref=image_ref),),
+    )
+
+    assert not any("run" in call["argv"] for call in recorder.calls)
+    codes = {diag.code for diag in result.diagnostics}
+    assert "reference-backend.driver.image-not-allowed" in codes
+
+
+@pytest.mark.parametrize(
+    "image_ref",
+    [
+        # Registry with nested namespaces.
+        "docker.io/library/alpine@sha256:" + "a" * 64,
+        # Bare name, no registry.
+        "alpine@sha256:" + "b" * 64,
+        # Registry host carrying an explicit port.
+        "localhost:5000/team/app@sha256:" + "c" * 64,
+        "registry.example.com:8443/a/b/c/d@sha256:" + "e" * 64,
+        # Tag and digest together.
+        "alpine:3.19@sha256:" + "d" * 64,
+    ],
+)
+def test_oci_allows_wellformed_digest_pinned_refs(image_ref):
+    """The tightened parser must keep realizing genuinely digest-pinned refs --
+    registry-with-port and nested-namespace forms included -- so the fix does
+    not fail closed on legitimate content pins."""
+
+    recorder = _Recorder(stdout="id\n")
+    driver = OciDeploymentDriver(runtime="docker", workspace="ws", runner=recorder)
+
+    result = driver.realize(
+        networks=(),
+        containers=(ContainerSpec(address="provision.node.web", name="web", image_ref=image_ref),),
+    )
+
+    assert not result.diagnostics
+    run_argv = next(call["argv"] for call in recorder.calls if "run" in call["argv"])
+    assert image_ref in run_argv
+
+
+def test_oci_placeholder_substitution_requires_exact_synthesized_ref():
+    """Only the interpreter-synthesized ``raes-reference/<os-family>`` placeholder
+    is swapped for the operator default. A plan-author ref that merely starts
+    with the prefix but smuggles extra path structure is not the placeholder, so
+    it flows to the trust policy on its own merits and is rejected."""
+
+    recorder = _Recorder(stdout="id\n")
+    driver = OciDeploymentDriver(
+        runtime="docker",
+        workspace="ws",
+        runner=recorder,
+        image_policy=ImageTrustPolicy(default_image="operator/base:1"),
+    )
+
+    result = driver.realize(
+        networks=(),
+        containers=(ContainerSpec(address="provision.node.web", name="web", image_ref="raes-reference/evil/pull-me"),),
+    )
+
+    assert not any("run" in call["argv"] for call in recorder.calls)
+    assert {diag.code for diag in result.diagnostics} == {"reference-backend.driver.image-not-allowed"}
+
+
+def test_oci_substitutes_operator_default_for_synthesized_placeholder():
+    """The exact synthesized placeholder still resolves to the operator default,
+    so an image-less plan keeps realizing against the configured registry."""
+
+    recorder = _Recorder(stdout="id\n")
+    driver = OciDeploymentDriver(
+        runtime="docker",
+        workspace="ws",
+        runner=recorder,
+        image_policy=ImageTrustPolicy(default_image="operator/base:1"),
+    )
+
+    result = driver.realize(
+        networks=(),
+        containers=(ContainerSpec(address="provision.node.web", name="web", image_ref="raes-reference/linux"),),
+    )
+
+    assert not result.diagnostics
+    run_argv = next(call["argv"] for call in recorder.calls if "run" in call["argv"])
+    assert "operator/base:1" in run_argv
+    assert "raes-reference/linux" not in run_argv
+
+
+def test_oci_permission_error_becomes_diagnostic_not_raise():
+    """A ``PermissionError`` (e.g. an inaccessible runtime socket) is an
+    ``OSError`` that must be converted to a portable runtime-unavailable
+    diagnostic, never allowed to escape as a raw exception, and never leak its
+    native ``strerror`` into the diagnostic message."""
+
+    def _permission_denied_runner(argv, **kwargs):
+        raise PermissionError(13, "Permission denied")
+
+    driver = OciDeploymentDriver(
+        runtime="docker",
+        workspace="ws",
+        runner=_permission_denied_runner,
+        image_policy=ImageTrustPolicy(allowed_images=("img",)),
+    )
+
+    result = driver.realize(
+        networks=(),
+        containers=(ContainerSpec(address="provision.node.web", name="web", image_ref="img"),),
+    )
+
+    assert result.diagnostics
+    codes = {diag.code for diag in result.diagnostics}
+    assert "reference-backend.driver.runtime-unavailable" in codes
+    for diag in result.diagnostics:
+        assert "Permission denied" not in diag.message
