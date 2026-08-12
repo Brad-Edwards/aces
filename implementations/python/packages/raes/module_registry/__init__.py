@@ -1,22 +1,12 @@
 """Registry-aware SDL module resolution and publishing.
 
-This package is a thin facade over cohesive subdomains:
-
-* :mod:`._constants` - lockfile / trust-policy / OCI-layout names and schema versions.
-* :mod:`._cache` - bounded gzip admission, safe locks, tree integrity, and recovery.
-* :mod:`._filesystem` - durable immutable-version and pointer transactions.
-* :mod:`._digests` - digest and version-matching helpers.
-* :mod:`.models` - Pydantic policy/lock models, the resolved-module DTO, and lockfile persistence.
-* :mod:`.signing` - Ed25519 signature payloads and trusted-signer verification.
-* :mod:`.resolution` - local/locked/OCI import resolution orchestration.
-* :mod:`.publishing` - OCI-layout publishing.
+This package is a thin facade over cohesive cache, extraction, filesystem,
+model, resolution, signing, and publishing subdomains.
 
 The package facade remains the compatibility and injection surface for OCI
-transport and archive limits. Network reads and tar-member validation live here;
-the cache submodule dynamically reads ``raes.module_registry._OCI_LIMITS`` and
-the facade re-exports its private test seams. This preserves the historical
-``test_sdl_module_registry.py`` patch behavior while keeping every source module
-below the repository size cap.
+transport and archive limits. The cache/extraction helpers dynamically use the
+facade's patchable seams, preserving historical test behavior while keeping each
+source module below the repository size cap.
 """
 
 from __future__ import annotations
@@ -46,7 +36,6 @@ from ._archive import _expected_cache_tree_manifest
 from ._cache import (
     _CACHE_THREAD_LOCKS,
     _CACHE_THREAD_LOCKS_GUARD,
-    _CACHE_TREE_MANIFEST_NAME,
     _CACHE_TREE_SCHEMA,
     _DECOMPRESSION_CHUNK_BYTES,
     _SPOOL_MEMORY_BYTES,
@@ -77,6 +66,12 @@ from ._constants import (
     TRUST_POLICY_SCHEMA_VERSION,
 )
 from ._digests import _sha256_digest
+from ._extraction import (
+    _HTTP_TIMEOUT_SECONDS,
+    _OCIResourceLimits,
+    _safe_tar_members_with_limits,
+    _validate_tar_member_shape,
+)
 from ._filesystem import (
     _install_version_directory,
     _iter_version_directories,
@@ -102,34 +97,6 @@ from .models import (
 from .publishing import publish_module_to_oci_layout
 from .resolution import resolve_import, resolve_lock_records
 from .signing import _signable_payload, _verify_signatures
-
-_HTTP_TIMEOUT_SECONDS = 30
-
-
-@dataclass(frozen=True)
-class _OCIResourceLimits:
-    """Bounds for remote OCI fetches and bundle extraction (issue #12).
-
-    The OCI import path pulls attacker-influenceable bytes from allowlisted
-    registries; without caps a compromised registry, mirror, or oversized module
-    can exhaust process memory (buffering an unbounded response) or disk/CPU
-    (extracting an unbounded bundle). Compressed-download limits are kept separate
-    from extracted-archive limits because a small gzip can expand into a large tar
-    payload. This is the single extensibility seam: operator-tunable overrides
-    should later extend ``RegistryTrustPolicy`` and merge with these defaults,
-    rather than threading limit arguments through parser/compiler/runtime/CLI.
-    """
-
-    timeout_seconds: int = _HTTP_TIMEOUT_SECONDS
-    max_metadata_bytes: int = 8 * 1024 * 1024
-    max_bundle_bytes: int = 128 * 1024 * 1024
-    max_bundle_members: int = 8192
-    max_member_bytes: int = 64 * 1024 * 1024
-    max_total_bytes: int = 256 * 1024 * 1024
-    max_tar_stream_bytes: int = 320 * 1024 * 1024
-    max_gzip_expansion_ratio: int = 1024
-    max_tree_depth: int = 256
-
 
 _OCI_LIMITS = _OCIResourceLimits()
 
@@ -221,102 +188,277 @@ def _oci_cache_dir(base_dir: Path) -> Path:
     return base_dir / ".raes" / "module-cache"
 
 
-def _validate_tar_member_shape(
-    member: tarfile.TarInfo,
-    *,
-    dest: Path,
-    resolved_dest: Path,
-    seen_paths: set[str],
-    limits: _OCIResourceLimits,
-) -> None:
-    """Fail closed on an unsafe or oversized single tar member (issues #12/#13).
-
-    Rejects path traversal, symlinks, hard links, special files, and duplicate
-    normalized paths, and enforces the per-member extracted-size cap. Records the
-    member's normalized path in ``seen_paths`` so a later duplicate is caught.
-    """
-    pure_name = PurePosixPath(member.name)
-    source_name = member.name.removesuffix("/") if member.isdir() else member.name
-    if (
-        not member.name
-        or "\\" in member.name
-        or pure_name.is_absolute()
-        or ".." in pure_name.parts
-        or source_name != pure_name.as_posix()
-        or (pure_name.parts and len(pure_name.parts[0]) == 2 and pure_name.parts[0][1] == ":")
-    ):
-        raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
-    member_path = (dest / member.name).resolve()
-    if not member_path.is_relative_to(resolved_dest):
-        raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
-    relative_path = member_path.relative_to(resolved_dest)
-    if len(relative_path.parts) > limits.max_tree_depth:
-        raise SDLParseError(
-            f"OCI bundle member {member.name!r} exceeds the {limits.max_tree_depth}-component path-depth limit"
-        )
-    if member_path == (dest / _CACHE_TREE_MANIFEST_NAME).resolve():
-        raise SDLParseError("OCI module bundle contains a reserved cache metadata path")
-    if member.issym() or member.islnk():
-        raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
-    if not (member.isfile() or member.isdir()):
-        raise SDLParseError(f"Unsupported tar member type in OCI bundle: {member.name!r}")
-    normalized = member_path.as_posix()
-    if normalized in seen_paths:
-        raise SDLParseError(f"Duplicate tar member path in OCI bundle: {member.name!r}")
-    seen_paths.add(normalized)
-    # Account by the logical member size so a sparse or padded member cannot
-    # understate the bytes it will extract.
-    if member.isfile() and member.size > limits.max_member_bytes:
-        raise SDLParseError(
-            f"OCI bundle member {member.name!r} exceeds the {limits.max_member_bytes}-byte per-member limit"
-        )
-
-
 def _safe_tar_members(
     tar: tarfile.TarFile,
     dest: Path,
 ) -> list[tarfile.TarInfo]:
-    """Validate every tar member before extraction (fail closed).
+    """Validate every tar member under the facade's patchable limits seam."""
 
-    The OCI bundle bytes are attacker-controlled even after registry allowlisting,
-    digest pinning, and signature verification, so this validation is the
-    filesystem-write boundary for module import resolution. It complements the
-    mandatory PEP 706 ``data`` filter: reject path traversal, symlinks, hard
-    links, and special files, and strip setuid/setgid/sticky bits. A runtime that
-    lacks the filter fails closed instead of using unfiltered extraction.
+    return _safe_tar_members_with_limits(tar, dest, limits=_OCI_LIMITS)
 
-    It is also the resource-exhaustion boundary (issue #12): the archive member
-    count, per-member extracted size, and total extracted bytes are bounded by
-    ``_OCI_LIMITS`` and duplicate normalized paths are rejected, so a malicious or
-    oversized bundle cannot exhaust disk or CPU during extraction.
-    """
-    limits = _OCI_LIMITS
-    safe: list[tarfile.TarInfo] = []
-    resolved_dest = dest.resolve()
-    seen_paths: set[str] = set()
-    total_bytes = 0
-    # Iterate lazily rather than materialising ``tar.getmembers()`` so a bundle that
-    # declares an unbounded member list, or expands into an unbounded extraction, is
-    # rejected as soon as a cap is crossed - before the remainder of the archive is
-    # decompressed (issue #12).
-    for member_count, member in enumerate(tar, start=1):
-        if member_count > limits.max_bundle_members:
-            raise SDLParseError(f"OCI bundle exceeds the maximum of {limits.max_bundle_members} archive members")
-        _validate_tar_member_shape(
-            member,
-            dest=dest,
-            resolved_dest=resolved_dest,
-            seen_paths=seen_paths,
-            limits=limits,
+
+@dataclass(frozen=True)
+class _CacheExtraction:
+    """Validated immutable inputs for one cache transaction."""
+
+    bundle_bytes: bytes
+    content_digest: str
+    root_file: str
+    root_relative: PurePosixPath
+    cache_slot: Path
+    lock_path: Path
+    source_options: SDLSourceParseOptions | None
+
+
+def _validated_cache_key(manifest_digest: str) -> str:
+    invalid = any(
+        (
+            not manifest_digest,
+            manifest_digest in {".", ".."},
+            "/" in manifest_digest,
+            "\\" in manifest_digest,
+            "\x00" in manifest_digest,
         )
-        if member.isfile():
-            total_bytes += member.size
-            if total_bytes > limits.max_total_bytes:
-                raise SDLParseError(f"OCI bundle exceeds the {limits.max_total_bytes}-byte total extraction limit")
-        # Drop setuid/setgid/sticky bits.
-        member.mode &= 0o777
-        safe.append(member)
-    return safe
+    )
+    if invalid:
+        raise SDLParseError("Invalid OCI manifest digest cache key")
+    return manifest_digest
+
+
+def _is_windows_absolute_path(path: PurePosixPath) -> bool:
+    return bool(path.parts) and len(path.parts[0]) == 2 and path.parts[0][1] == ":"
+
+
+def _validated_root_file(root_file: str) -> PurePosixPath:
+    root_relative = PurePosixPath(root_file)
+    invalid = any(
+        (
+            not root_file,
+            "\\" in root_file,
+            "\x00" in root_file,
+            ".." in root_relative.parts,
+            root_relative.is_absolute(),
+            root_relative == PurePosixPath("."),
+            root_file != root_relative.as_posix(),
+            _is_windows_absolute_path(root_relative),
+        )
+    )
+    if invalid:
+        raise SDLParseError(f"Invalid OCI root_file path: {root_file!r}")
+    return root_relative
+
+
+def _validated_content_digest(bundle_bytes: bytes, expected: str | None) -> str:
+    actual = f"sha256:{_sha256_digest(bundle_bytes)}"
+    expected_digest = expected or actual
+    if expected_digest != actual:
+        raise SDLParseError("OCI module bundle does not match its expected content digest")
+    return expected_digest
+
+
+def _cache_extraction(
+    *,
+    bundle_bytes: bytes,
+    manifest_digest: str,
+    content_digest: str | None = None,
+    root_file: str,
+    base_dir: Path,
+    source_options: SDLSourceParseOptions | None = None,
+) -> _CacheExtraction:
+    cache_key = _validated_cache_key(manifest_digest)
+    root_relative = _validated_root_file(root_file)
+    expected_content_digest = _validated_content_digest(bundle_bytes, content_digest)
+    cache_root = _oci_cache_dir(base_dir)
+    cache_error = "Unable to create the OCI module cache"
+    _require_directory(cache_root.parent, error_message=cache_error)
+    _require_directory(cache_root, error_message=cache_error)
+    return _CacheExtraction(
+        bundle_bytes=bundle_bytes,
+        content_digest=expected_content_digest,
+        root_file=root_file,
+        root_relative=root_relative,
+        cache_slot=cache_root / cache_key,
+        lock_path=cache_root / ".locks" / f"{cache_key}.lock",
+        source_options=source_options,
+    )
+
+
+def _expected_extraction_manifest(
+    extraction: _CacheExtraction,
+    *,
+    tar: tarfile.TarFile,
+    safe_members: list[tarfile.TarInfo],
+) -> dict[str, Any]:
+    expected_manifest = _expected_cache_tree_manifest(
+        tar=tar,
+        members=safe_members,
+        content_digest=extraction.content_digest,
+        root_file=extraction.root_file,
+    )
+    expected_root = next(
+        (entry for entry in expected_manifest["entries"] if entry["path"] == extraction.root_relative.as_posix()),
+        None,
+    )
+    if expected_root is None or expected_root["type"] != "file":
+        raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{extraction.root_file}'")
+    return expected_manifest
+
+
+def _source_result(
+    extraction: _CacheExtraction,
+    root: Path,
+    expected_manifest: dict[str, Any],
+) -> Path | _VerifiedSourceBundle:
+    return _cache_source_result(
+        root,
+        expected_manifest=expected_manifest,
+        root_relative=extraction.root_relative,
+        source_options=extraction.source_options,
+    )
+
+
+def _recover_extracted_source(
+    extraction: _CacheExtraction,
+    *,
+    versions: Path,
+    expected_manifest: dict[str, Any],
+) -> Path | _VerifiedSourceBundle | None:
+    hit = _recover_cache_root(
+        slot=extraction.cache_slot,
+        versions=versions,
+        expected_content_digest=extraction.content_digest,
+        expected_manifest=expected_manifest,
+        root_relative=extraction.root_relative,
+    )
+    if hit is None:
+        return None
+    return _source_result(extraction, hit, expected_manifest)
+
+
+def _extract_to_stage(
+    extraction: _CacheExtraction,
+    *,
+    tar: tarfile.TarFile,
+    safe_members: list[tarfile.TarInfo],
+    staging: Path,
+) -> None:
+    try:
+        tar.extractall(staging, members=safe_members, filter="data")
+    except TypeError as exc:
+        raise SDLParseError("Safe OCI tar extraction requires Python 3.11.4 or newer") from exc
+    staged_root = staging.joinpath(*extraction.root_relative.parts)
+    if not _valid_staged_root(staged_root, staging=staging):
+        raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{extraction.root_file}'")
+
+
+def _valid_staged_root(staged_root: Path, *, staging: Path) -> bool:
+    if staged_root.is_symlink() or not staged_root.is_file():
+        return False
+    return staged_root.resolve(strict=True).is_relative_to(staging.resolve(strict=True))
+
+
+def _commit_extracted_stage(
+    extraction: _CacheExtraction,
+    *,
+    staging: Path,
+    versions: Path,
+    prior_version: str | None,
+    expected_manifest: dict[str, Any],
+) -> Path | _VerifiedSourceBundle:
+    staged_validation = _validated_cache_root(
+        version=staging,
+        expected_manifest=expected_manifest,
+        root_relative=extraction.root_relative,
+    )
+    if staged_validation is None:
+        raise SDLParseError("Staged OCI module cache entry failed validation")
+    version_name = f"{extraction.content_digest.removeprefix('sha256:')}-{uuid4().hex}"
+    installed = _install_version_directory(
+        staged=staging,
+        versions=versions,
+        version_name=version_name,
+        error_message="Unable to commit the OCI module cache entry atomically",
+    )
+    committed = _validated_cache_root(
+        version=installed,
+        expected_manifest=expected_manifest,
+        root_relative=extraction.root_relative,
+    )
+    if committed is None:
+        raise SDLParseError("Committed OCI module cache entry failed validation")
+    _prune_version_directories(
+        versions=versions,
+        retain_names={version_name, *(() if prior_version is None else (prior_version,))},
+        error_message="Unable to prune stale OCI module cache versions",
+    )
+    _write_version_pointer(
+        slot=extraction.cache_slot,
+        version_name=version_name,
+        error_message="Unable to commit the OCI module cache pointer atomically",
+    )
+    return _source_result(extraction, committed, expected_manifest)
+
+
+def _install_extracted_source(
+    extraction: _CacheExtraction,
+    *,
+    tar: tarfile.TarFile,
+    safe_members: list[tarfile.TarInfo],
+    versions: Path,
+    expected_manifest: dict[str, Any],
+) -> Path | _VerifiedSourceBundle:
+    staging = _new_version_stage(
+        versions=versions,
+        error_message="Unable to stage the OCI module cache entry",
+    )
+    try:
+        _extract_to_stage(extraction, tar=tar, safe_members=safe_members, staging=staging)
+        prior_version = _read_version_pointer(slot=extraction.cache_slot)
+        _write_cache_tree_manifest(
+            root=staging,
+            content_digest=extraction.content_digest,
+            root_file=extraction.root_file,
+        )
+        return _commit_extracted_stage(
+            extraction,
+            staging=staging,
+            versions=versions,
+            prior_version=prior_version,
+            expected_manifest=expected_manifest,
+        )
+    finally:
+        _remove_path(staging)
+
+
+def _read_or_install_extracted_source(
+    extraction: _CacheExtraction,
+    *,
+    tar: tarfile.TarFile,
+    versions: Path,
+) -> Path | _VerifiedSourceBundle:
+    # The complete uncompressed stream is admitted before ``tarfile`` parses its
+    # first header. Member validation and the standard data filter then provide
+    # independent filesystem-write defenses.
+    safe_members = _safe_tar_members(tar, versions / ".inventory")
+    expected_manifest = _expected_extraction_manifest(
+        extraction,
+        tar=tar,
+        safe_members=safe_members,
+    )
+    recovered = _recover_extracted_source(
+        extraction,
+        versions=versions,
+        expected_manifest=expected_manifest,
+    )
+    if recovered is not None:
+        return recovered
+    return _install_extracted_source(
+        extraction,
+        tar=tar,
+        safe_members=safe_members,
+        versions=versions,
+        expected_manifest=expected_manifest,
+    )
 
 
 def _extract_bundle_to_cache(
@@ -328,138 +470,25 @@ def _extract_bundle_to_cache(
     base_dir: Path,
     source_options: SDLSourceParseOptions | None = None,
 ) -> Path | _VerifiedSourceBundle:
-    if (
-        not manifest_digest
-        or manifest_digest in {".", ".."}
-        or "/" in manifest_digest
-        or "\\" in manifest_digest
-        or "\x00" in manifest_digest
-    ):
-        raise SDLParseError("Invalid OCI manifest digest cache key")
-    root_relative = PurePosixPath(root_file)
-    if (
-        not root_file
-        or "\\" in root_file
-        or "\x00" in root_file
-        or ".." in root_relative.parts
-        or root_relative.is_absolute()
-        or root_relative == PurePosixPath(".")
-        or root_file != root_relative.as_posix()
-        or (root_relative.parts and len(root_relative.parts[0]) == 2 and root_relative.parts[0][1] == ":")
-    ):
-        raise SDLParseError(f"Invalid OCI root_file path: {root_file!r}")
-    actual_content_digest = f"sha256:{_sha256_digest(bundle_bytes)}"
-    expected_content_digest = content_digest or actual_content_digest
-    if expected_content_digest != actual_content_digest:
-        raise SDLParseError("OCI module bundle does not match its expected content digest")
+    extraction = _cache_extraction(
+        bundle_bytes=bundle_bytes,
+        manifest_digest=manifest_digest,
+        content_digest=content_digest,
+        root_file=root_file,
+        base_dir=base_dir,
+        source_options=source_options,
+    )
 
-    cache_root = _oci_cache_dir(base_dir)
-    cache_error = "Unable to create the OCI module cache"
-    _require_directory(cache_root.parent, error_message=cache_error)
-    _require_directory(cache_root, error_message=cache_error)
-    cache_slot = cache_root / manifest_digest
-    lock_path = cache_root / ".locks" / f"{manifest_digest}.lock"
-
-    with _cache_entry_lock(lock_path):
+    with _cache_entry_lock(extraction.lock_path):
         versions = _prepare_versioned_slot(
-            slot=cache_slot,
+            slot=extraction.cache_slot,
             error_message="Unable to prepare the OCI module cache entry",
         )
         try:
             with (
-                _bounded_gzip_tar_stream(bundle_bytes) as tar_stream,
+                _bounded_gzip_tar_stream(extraction.bundle_bytes) as tar_stream,
                 tarfile.open(fileobj=tar_stream, mode="r:") as tar,
             ):
-                # The complete uncompressed stream is admitted before ``tarfile``
-                # parses its first header. Member validation and the standard data
-                # filter then provide independent filesystem-write defenses.
-                safe_members = _safe_tar_members(tar, versions / ".inventory")
-                expected_manifest = _expected_cache_tree_manifest(
-                    tar=tar,
-                    members=safe_members,
-                    content_digest=expected_content_digest,
-                    root_file=root_file,
-                )
-                expected_root = next(
-                    (entry for entry in expected_manifest["entries"] if entry["path"] == root_relative.as_posix()),
-                    None,
-                )
-                if expected_root is None or expected_root["type"] != "file":
-                    raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{root_file}'")
-                hit = _recover_cache_root(
-                    slot=cache_slot,
-                    versions=versions,
-                    expected_content_digest=expected_content_digest,
-                    expected_manifest=expected_manifest,
-                    root_relative=root_relative,
-                )
-                if hit is not None:
-                    return _cache_source_result(
-                        hit,
-                        expected_manifest=expected_manifest,
-                        root_relative=root_relative,
-                        source_options=source_options,
-                    )
-                staging = _new_version_stage(
-                    versions=versions,
-                    error_message="Unable to stage the OCI module cache entry",
-                )
-                try:
-                    try:
-                        tar.extractall(staging, members=safe_members, filter="data")
-                    except TypeError as exc:
-                        raise SDLParseError("Safe OCI tar extraction requires Python 3.11.4 or newer") from exc
-                    staged_root = staging.joinpath(*root_relative.parts)
-                    if (
-                        staged_root.is_symlink()
-                        or not staged_root.is_file()
-                        or not staged_root.resolve(strict=True).is_relative_to(staging.resolve(strict=True))
-                    ):
-                        raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{root_file}'")
-                    prior_version = _read_version_pointer(slot=cache_slot)
-                    _write_cache_tree_manifest(
-                        root=staging,
-                        content_digest=expected_content_digest,
-                        root_file=root_file,
-                    )
-                    staged_validation = _validated_cache_root(
-                        version=staging,
-                        expected_manifest=expected_manifest,
-                        root_relative=root_relative,
-                    )
-                    if staged_validation is None:
-                        raise SDLParseError("Staged OCI module cache entry failed validation")
-                    version_name = f"{actual_content_digest.removeprefix('sha256:')}-{uuid4().hex}"
-                    installed = _install_version_directory(
-                        staged=staging,
-                        versions=versions,
-                        version_name=version_name,
-                        error_message="Unable to commit the OCI module cache entry atomically",
-                    )
-                    committed = _validated_cache_root(
-                        version=installed,
-                        expected_manifest=expected_manifest,
-                        root_relative=root_relative,
-                    )
-                    if committed is None:
-                        raise SDLParseError("Committed OCI module cache entry failed validation")
-                    _prune_version_directories(
-                        versions=versions,
-                        retain_names={version_name, *(() if prior_version is None else (prior_version,))},
-                        error_message="Unable to prune stale OCI module cache versions",
-                    )
-                    _write_version_pointer(
-                        slot=cache_slot,
-                        version_name=version_name,
-                        error_message="Unable to commit the OCI module cache pointer atomically",
-                    )
-                    return _cache_source_result(
-                        committed,
-                        expected_manifest=expected_manifest,
-                        root_relative=root_relative,
-                        source_options=source_options,
-                    )
-                finally:
-                    _remove_path(staging)
+                return _read_or_install_extracted_source(extraction, tar=tar, versions=versions)
         except (EOFError, OSError, tarfile.TarError, zlib.error) as exc:
             raise SDLParseError("OCI module bundle is not a valid gzip-compressed tar archive") from exc

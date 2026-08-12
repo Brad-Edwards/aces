@@ -201,38 +201,49 @@ def _read_version_pointer(*, slot: Path) -> str | None:
     """Read the current-version pointer, returning ``None`` when it is invalid."""
 
     pointer = slot / _CURRENT_POINTER_NAME
-    descriptor = -1
-    try:
-        expected = pointer.lstat()
-        if not stat.S_ISREG(expected.st_mode):
-            return None
-        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
-        descriptor = os.open(pointer, flags)
-        with os.fdopen(descriptor, "rb") as handle:
-            descriptor = -1
-            actual = os.fstat(handle.fileno())
-            if (
-                not stat.S_ISREG(actual.st_mode)
-                or (expected.st_dev and actual.st_dev and expected.st_dev != actual.st_dev)
-                or (expected.st_ino and actual.st_ino and expected.st_ino != actual.st_ino)
-            ):
-                return None
-            payload = handle.read(_MAX_POINTER_BYTES + 1)
-    except OSError:
-        if descriptor >= 0:
-            os.close(descriptor)
-        return None
-    if len(payload) > _MAX_POINTER_BYTES:
-        return None
-    try:
-        name = payload.decode("ascii").removesuffix("\n")
-    except UnicodeDecodeError:
-        return None
-    if payload != f"{name}\n".encode("ascii") or not _valid_version_name(name):
+    payload = _read_version_pointer_payload(pointer)
+    name = _decode_version_pointer(payload)
+    if name is None:
         return None
     version = slot / _VERSIONS_DIRECTORY_NAME / name
-    if version.is_symlink() or not version.is_dir():
-        return None
+    return name if not version.is_symlink() and version.is_dir() else None
+
+
+def _read_version_pointer_payload(pointer: Path) -> bytes | None:
+    """Read a bounded pointer payload through a stable regular-file descriptor."""
+
+    descriptor = -1
+    payload: bytes | None = None
+    try:
+        expected = pointer.lstat()
+        if stat.S_ISREG(expected.st_mode):
+            flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(pointer, flags)
+            with os.fdopen(descriptor, "rb") as handle:
+                descriptor = -1
+                actual = os.fstat(handle.fileno())
+                if stat.S_ISREG(actual.st_mode) and _same_file_identity(expected, actual):
+                    payload = handle.read(_MAX_POINTER_BYTES + 1)
+    except OSError:
+        pass
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    return payload
+
+
+def _decode_version_pointer(payload: bytes | None) -> str | None:
+    """Decode the exact canonical pointer representation, if valid."""
+
+    name: str | None = None
+    if payload is not None and len(payload) <= _MAX_POINTER_BYTES:
+        try:
+            candidate = payload.decode("ascii").removesuffix("\n")
+        except UnicodeDecodeError:
+            pass
+        else:
+            if payload == f"{candidate}\n".encode("ascii") and _valid_version_name(candidate):
+                name = candidate
     return name
 
 

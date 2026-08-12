@@ -8,6 +8,8 @@ import io
 import json
 import stat
 import tarfile
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -146,17 +148,26 @@ def _build_signatures(
     ]
 
 
-def _write_oci_layout(
+@dataclass(frozen=True)
+class _LayoutPublication:
+    """Immutable inputs shared by layout validation and publication."""
+
+    slot: Path
+    expected_files: Mapping[str, bytes]
+    manifest_digest: str
+
+
+class _InvalidLayoutError(ValueError):
+    """Internal marker for a filesystem object that is not an OCI layout."""
+
+
+def _build_layout_index(
     *,
-    output_dir: Path,
     descriptor: ModuleDescriptor,
     blobs: dict[str, bytes],
     manifest_digest: str,
-) -> Path:
-    # ``blobs`` maps each blob's ``sha256:`` digest to its bytes (config, bundle,
-    # manifest); ``manifest_digest`` selects which one the index references.
-    layout_slot = output_dir / f"{descriptor.id.replace('/', '_')}-{descriptor.version}.oci"
-    index_bytes = (
+) -> bytes:
+    return (
         json.dumps(
             {
                 "schemaVersion": 2,
@@ -177,64 +188,192 @@ def _write_oci_layout(
         )
         + "\n"
     ).encode("utf-8")
-    expected_files = {
+
+
+def _layout_expected_files(
+    *,
+    descriptor: ModuleDescriptor,
+    blobs: dict[str, bytes],
+    manifest_digest: str,
+) -> dict[str, bytes]:
+    # ``blobs`` maps each blob's ``sha256:`` digest to its bytes (config, bundle,
+    # manifest); ``manifest_digest`` selects which one the index references.
+    return {
         "oci-layout": b'{"imageLayoutVersion":"1.0.0"}\n',
-        "index.json": index_bytes,
+        "index.json": _build_layout_index(
+            descriptor=descriptor,
+            blobs=blobs,
+            manifest_digest=manifest_digest,
+        ),
         **{f"blobs/sha256/{digest.removeprefix(_SHA256_PREFIX)}": payload for digest, payload in blobs.items()},
     }
 
-    def valid_layout(version: Path) -> bool:
-        try:
-            actual_files: set[str] = set()
-            actual_directories: set[str] = {"."}
-            for path in version.rglob("*"):
-                relative = path.relative_to(version).as_posix()
-                metadata = path.lstat()
-                if stat.S_ISLNK(metadata.st_mode):
-                    return False
-                if stat.S_ISDIR(metadata.st_mode):
-                    actual_directories.add(relative)
-                elif stat.S_ISREG(metadata.st_mode):
-                    actual_files.add(relative)
-                else:
-                    return False
-            if actual_directories != {".", "blobs", "blobs/sha256"} or actual_files != set(expected_files):
-                return False
-            for relative, expected in expected_files.items():
-                path = version.joinpath(*relative.split("/"))
-                if path.is_symlink() or path.stat().st_size != len(expected) or path.read_bytes() != expected:
-                    return False
-            return True
-        except OSError:
-            return False
 
-    def recover_layout(versions: Path, current: str | None) -> Path | None:
-        candidates: list[Path] = []
-        if current is not None:
-            candidates.append(versions / current)
-        digest_prefix = manifest_digest.removeprefix(_SHA256_PREFIX) + "-"
-        for version in _iter_version_directories(
-            versions,
-            error_message="Unable to inspect OCI layout versions",
-        ):
-            if version.name.startswith(digest_prefix) and version not in candidates:
-                candidates.append(version)
-        for version in candidates[:64]:
-            if not valid_layout(version):
-                continue
-            _prune_version_directories(
-                versions=versions,
-                retain_names={version.name, *(() if current is None else (current,))},
-                error_message="Unable to prune stale OCI layout versions",
+def _layout_inventory(version: Path) -> tuple[set[str], set[str]]:
+    actual_files: set[str] = set()
+    actual_directories: set[str] = {"."}
+    for path in version.rglob("*"):
+        relative = path.relative_to(version).as_posix()
+        metadata = path.lstat()
+        if stat.S_ISLNK(metadata.st_mode):
+            raise _InvalidLayoutError
+        if stat.S_ISDIR(metadata.st_mode):
+            actual_directories.add(relative)
+        elif stat.S_ISREG(metadata.st_mode):
+            actual_files.add(relative)
+        else:
+            raise _InvalidLayoutError
+    return actual_files, actual_directories
+
+
+def _layout_file_bytes_match(version: Path, expected_files: Mapping[str, bytes]) -> bool:
+    matches = True
+    for relative, expected in expected_files.items():
+        path = version.joinpath(*relative.split("/"))
+        if path.is_symlink() or path.stat().st_size != len(expected) or path.read_bytes() != expected:
+            matches = False
+            break
+    return matches
+
+
+def _valid_oci_layout(version: Path, expected_files: Mapping[str, bytes]) -> bool:
+    try:
+        actual_files, actual_directories = _layout_inventory(version)
+        expected_directories = {".", "blobs", "blobs/sha256"}
+        valid_inventory = actual_directories == expected_directories and actual_files == set(expected_files)
+        return valid_inventory and _layout_file_bytes_match(version, expected_files)
+    except (OSError, _InvalidLayoutError):
+        return False
+
+
+def _layout_candidates(
+    publication: _LayoutPublication,
+    *,
+    versions: Path,
+    current: str | None,
+) -> list[Path]:
+    candidates = [] if current is None else [versions / current]
+    digest_prefix = publication.manifest_digest.removeprefix(_SHA256_PREFIX) + "-"
+    for version in _iter_version_directories(
+        versions,
+        error_message="Unable to inspect OCI layout versions",
+    ):
+        if version.name.startswith(digest_prefix) and version not in candidates:
+            candidates.append(version)
+    return candidates[:64]
+
+
+def _recover_oci_layout(
+    publication: _LayoutPublication,
+    *,
+    versions: Path,
+    current: str | None,
+) -> Path | None:
+    for version in _layout_candidates(publication, versions=versions, current=current):
+        if not _valid_oci_layout(version, publication.expected_files):
+            continue
+        _prune_version_directories(
+            versions=versions,
+            retain_names={version.name, *(() if current is None else (current,))},
+            error_message="Unable to prune stale OCI layout versions",
+        )
+        if current != version.name:
+            _write_version_pointer(
+                slot=publication.slot,
+                version_name=version.name,
+                error_message="Unable to publish the OCI layout pointer atomically",
             )
-            if current != version.name:
-                _write_version_pointer(
-                    slot=layout_slot,
-                    version_name=version.name,
-                    error_message="Unable to publish the OCI layout pointer atomically",
-                )
-            return version
-        return None
+        return version
+    return None
+
+
+def _reject_legacy_layout(layout_slot: Path) -> None:
+    if layout_slot.is_symlink() or not layout_slot.is_dir():
+        return
+    legacy_paths = (layout_slot / "oci-layout", layout_slot / "index.json", layout_slot / "blobs")
+    if any(child.exists() or child.is_symlink() for child in legacy_paths):
+        raise SDLParseError(
+            "Existing OCI output uses the legacy root-layout format; move or remove "
+            f"'{layout_slot}' before publishing into its versioned layout slot"
+        )
+
+
+def _populate_layout_stage(staging: Path, expected_files: Mapping[str, bytes]) -> None:
+    (staging / "blobs" / "sha256").mkdir(parents=True)
+    for relative, payload in sorted(expected_files.items()):
+        staging.joinpath(*relative.split("/")).write_bytes(payload)
+    if not _valid_oci_layout(staging, expected_files):
+        raise SDLParseError("Staged OCI layout failed validation")
+
+
+def _commit_layout_stage(
+    publication: _LayoutPublication,
+    *,
+    staging: Path,
+    versions: Path,
+    prior_version: str | None,
+) -> Path:
+    version_name = f"{publication.manifest_digest.removeprefix(_SHA256_PREFIX)}-{uuid4().hex}"
+    installed = _install_version_directory(
+        staged=staging,
+        versions=versions,
+        version_name=version_name,
+        error_message="Unable to publish the OCI layout atomically",
+    )
+    if not _valid_oci_layout(installed, publication.expected_files):
+        raise SDLParseError("Published OCI layout failed validation")
+    _prune_version_directories(
+        versions=versions,
+        retain_names={version_name, *(() if prior_version is None else (prior_version,))},
+        error_message="Unable to prune stale OCI layout versions",
+    )
+    _write_version_pointer(
+        slot=publication.slot,
+        version_name=version_name,
+        error_message="Unable to publish the OCI layout pointer atomically",
+    )
+    return installed
+
+
+def _publish_new_layout(
+    publication: _LayoutPublication,
+    *,
+    versions: Path,
+    prior_version: str | None,
+) -> Path:
+    staging = _new_version_stage(
+        versions=versions,
+        error_message="Unable to stage the OCI layout",
+    )
+    try:
+        _populate_layout_stage(staging, publication.expected_files)
+        return _commit_layout_stage(
+            publication,
+            staging=staging,
+            versions=versions,
+            prior_version=prior_version,
+        )
+    finally:
+        _remove_path(staging)
+
+
+def _write_oci_layout(
+    *,
+    output_dir: Path,
+    descriptor: ModuleDescriptor,
+    blobs: dict[str, bytes],
+    manifest_digest: str,
+) -> Path:
+    layout_slot = output_dir / f"{descriptor.id.replace('/', '_')}-{descriptor.version}.oci"
+    publication = _LayoutPublication(
+        slot=layout_slot,
+        expected_files=_layout_expected_files(
+            descriptor=descriptor,
+            blobs=blobs,
+            manifest_digest=manifest_digest,
+        ),
+        manifest_digest=manifest_digest,
+    )
 
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -242,58 +381,20 @@ def _write_oci_layout(
         from . import _cache_entry_lock
 
         with _cache_entry_lock(lock_path):
-            if not layout_slot.is_symlink() and layout_slot.is_dir():
-                legacy_inventory = [
-                    child
-                    for child in (layout_slot / "oci-layout", layout_slot / "index.json", layout_slot / "blobs")
-                    if child.exists() or child.is_symlink()
-                ]
-                if legacy_inventory:
-                    raise SDLParseError(
-                        "Existing OCI output uses the legacy root-layout format; move or remove "
-                        f"'{layout_slot}' before publishing into its versioned layout slot"
-                    )
+            _reject_legacy_layout(layout_slot)
             versions = _prepare_versioned_slot(
                 slot=layout_slot,
                 error_message="Unable to publish the OCI layout atomically",
             )
             prior_version = _read_version_pointer(slot=layout_slot)
-            recovered = recover_layout(versions, prior_version)
+            recovered = _recover_oci_layout(publication, versions=versions, current=prior_version)
             if recovered is not None:
                 return recovered
-            staging = _new_version_stage(
+            return _publish_new_layout(
+                publication,
                 versions=versions,
-                error_message="Unable to stage the OCI layout",
+                prior_version=prior_version,
             )
-            try:
-                blobs_dir = staging / "blobs" / "sha256"
-                blobs_dir.mkdir(parents=True)
-                for relative, payload in sorted(expected_files.items()):
-                    staging.joinpath(*relative.split("/")).write_bytes(payload)
-                if not valid_layout(staging):
-                    raise SDLParseError("Staged OCI layout failed validation")
-                version_name = f"{manifest_digest.removeprefix(_SHA256_PREFIX)}-{uuid4().hex}"
-                installed = _install_version_directory(
-                    staged=staging,
-                    versions=versions,
-                    version_name=version_name,
-                    error_message="Unable to publish the OCI layout atomically",
-                )
-                if not valid_layout(installed):
-                    raise SDLParseError("Published OCI layout failed validation")
-                _prune_version_directories(
-                    versions=versions,
-                    retain_names={version_name, *(() if prior_version is None else (prior_version,))},
-                    error_message="Unable to prune stale OCI layout versions",
-                )
-                _write_version_pointer(
-                    slot=layout_slot,
-                    version_name=version_name,
-                    error_message="Unable to publish the OCI layout pointer atomically",
-                )
-                return installed
-            finally:
-                _remove_path(staging)
     except OSError as exc:
         raise SDLParseError("Unable to build the OCI layout") from exc
 

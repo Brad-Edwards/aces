@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, Unpack
 from urllib.parse import quote
 
 from packaging.version import InvalidVersion, Version
@@ -30,6 +31,26 @@ from .models import (
 # ``from . import`` at each use, rather than bound here from the submodules. A test
 # that patches ``raes.module_registry.<seam>`` then replaces the binding these
 # production calls use, exactly as the pre-split single-file module did.
+
+
+@dataclass(frozen=True)
+class _ResolutionContext:
+    """Invariant options shared by locked, local, and OCI resolution."""
+
+    base_dir: Path
+    lockfile: Lockfile | None
+    trust_policy: TrustPolicy
+    source_options: SDLSourceParseOptions
+    source_diagnostics: list[SDLParseDiagnostic] | None
+    verified_sources: _VerifiedSourceBundle | None
+    registry_base_dir: Path | None
+
+
+class _ResolutionPrivateOptions(TypedDict, total=False):
+    """Compatibility names for descriptor-bound internal resolution state."""
+
+    verified_sources: _VerifiedSourceBundle | None
+    _registry_base_dir: Path | None
 
 
 def _parse_oci_source(source: str) -> tuple[str, str]:
@@ -123,43 +144,35 @@ def resolve_import(
     trust_policy: TrustPolicy | None = None,
     source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
-    verified_sources: _VerifiedSourceBundle | None = None,
-    _registry_base_dir: Path | None = None,
+    **private_options: Unpack[_ResolutionPrivateOptions],
 ) -> ResolvedModule:
-    trust_policy = trust_policy or TrustPolicy()
+    context = _ResolutionContext(
+        base_dir=base_dir,
+        lockfile=lockfile,
+        trust_policy=trust_policy or TrustPolicy(),
+        source_options=source_options,
+        source_diagnostics=source_diagnostics,
+        verified_sources=private_options.get("verified_sources"),
+        registry_base_dir=private_options.get("_registry_base_dir"),
+    )
+    return _resolve_import_with_context(import_decl, context)
+
+
+def _resolve_import_with_context(import_decl: ImportDecl, context: _ResolutionContext) -> ResolvedModule:
     source = import_decl.normalized_source
     if source.startswith("locked:"):
-        return _resolve_locked_import(
-            import_decl,
-            source,
-            base_dir=base_dir,
-            lockfile=lockfile,
-            trust_policy=trust_policy,
-            source_options=source_options,
-            source_diagnostics=source_diagnostics,
-            verified_sources=verified_sources,
-            _registry_base_dir=_registry_base_dir,
-        )
+        return _resolve_locked_import(import_decl, source, context=context)
     if source.startswith("local:"):
-        return _resolve_local_import(
-            import_decl,
-            source,
-            base_dir=base_dir,
-            lockfile=lockfile,
-            trust_policy=trust_policy,
-            source_options=source_options,
-            source_diagnostics=source_diagnostics,
-            verified_sources=verified_sources,
-        )
+        return _resolve_local_import(import_decl, source, context=context)
     if not source.startswith("oci:"):
         raise SDLParseError(f"Unsupported import source '{source}'")
     return _resolve_oci_import(
         import_decl,
         source,
-        base_dir=base_dir if _registry_base_dir is None else _registry_base_dir,
-        lockfile=lockfile,
-        trust_policy=trust_policy,
-        source_options=source_options,
+        base_dir=context.base_dir if context.registry_base_dir is None else context.registry_base_dir,
+        lockfile=context.lockfile,
+        trust_policy=context.trust_policy,
+        source_options=context.source_options,
     )
 
 
@@ -167,15 +180,10 @@ def _resolve_locked_import(
     import_decl: ImportDecl,
     source: str,
     *,
-    base_dir: Path,
-    lockfile: Lockfile | None,
-    trust_policy: TrustPolicy,
-    source_options: SDLSourceParseOptions,
-    source_diagnostics: list[SDLParseDiagnostic] | None,
-    verified_sources: _VerifiedSourceBundle | None,
-    _registry_base_dir: Path | None,
+    context: _ResolutionContext,
 ) -> ResolvedModule:
     locked_ref = source.removeprefix("locked:")
+    lockfile = context.lockfile
     if lockfile is None:
         raise SDLParseError(f"Locked import '{source}' requires {LOCKFILE_NAME}")
     record = next(
@@ -195,49 +203,38 @@ def _resolve_locked_import(
         parameters=dict(import_decl.parameters),
         digest=import_decl.digest or record.content_digest,
     )
-    return resolve_import(
-        delegated,
-        base_dir=base_dir,
-        lockfile=lockfile,
-        trust_policy=trust_policy,
-        source_options=source_options,
-        source_diagnostics=source_diagnostics,
-        verified_sources=verified_sources,
-        _registry_base_dir=_registry_base_dir,
-    )
+    return _resolve_import_with_context(delegated, context)
 
 
 def _resolve_local_import(
     import_decl: ImportDecl,
     source: str,
     *,
-    base_dir: Path,
-    lockfile: Lockfile | None,
-    trust_policy: TrustPolicy,
-    source_options: SDLSourceParseOptions,
-    source_diagnostics: list[SDLParseDiagnostic] | None,
-    verified_sources: _VerifiedSourceBundle | None,
+    context: _ResolutionContext,
 ) -> ResolvedModule:
     from ..parser import _load_normalized_data, read_sdl_source
     from . import _sha256_digest
 
     relative = source.removeprefix("local:")
-    if verified_sources is None:
-        import_path = (base_dir / relative).resolve()
-        if not import_path.is_relative_to(base_dir.resolve()):
+    if context.verified_sources is None:
+        import_path = (context.base_dir / relative).resolve()
+        if not import_path.is_relative_to(context.base_dir.resolve()):
             raise SDLParseError(f"Local import path escapes base directory: {relative!r}")
         if not import_path.exists():
             raise SDLParseError(f"Imported SDL file not found: {relative}")
-        imported_source = read_sdl_source(import_path, limits=source_options.limits)
+        imported_source = read_sdl_source(import_path, limits=context.source_options.limits)
     else:
-        import_path, imported_source = verified_sources.resolve_local(base_dir=base_dir, relative=relative)
+        import_path, imported_source = context.verified_sources.resolve_local(
+            base_dir=context.base_dir,
+            relative=relative,
+        )
     imported_raw = _load_normalized_data(
         imported_source.text,
         path=import_path,
-        source_format=source_options.source_format,
-        migration_policy=source_options.migration_policy,
-        limits=source_options.limits,
-        source_diagnostics=source_diagnostics,
+        source_format=context.source_options.source_format,
+        migration_policy=context.source_options.migration_policy,
+        limits=context.source_options.limits,
+        source_diagnostics=context.source_diagnostics,
     )
     imported_scenario = Scenario.model_validate(imported_raw)
     descriptor = _scenario_module_descriptor(
@@ -249,12 +246,12 @@ def _resolve_local_import(
         raise SDLParseError(
             f"Import '{relative}' requested version {import_decl.version!r} but module declares {descriptor.version!r}"
         )
-    if verified_sources is None and not trust_policy.allow_unsigned_local_sources:
+    if context.verified_sources is None and not context.trust_policy.allow_unsigned_local_sources:
         raise SDLParseError(
             "Local SDL imports are disabled by trust policy because unsigned local sources are not allowed"
         )
     _validate_digest_pin(content_digest, import_decl.digest, source=source)
-    locked = _lock_record_for(lockfile, import_decl)
+    locked = _lock_record_for(context.lockfile, import_decl)
     if locked is not None and locked.content_digest:
         _validate_digest_pin(content_digest, locked.content_digest, source=source)
     _verify_allowed_parameters(import_decl, descriptor)
@@ -263,10 +260,14 @@ def _resolve_local_import(
         module_descriptor=descriptor,
         root_file=import_path,
         source_document=imported_source,
-        resolved_source=_local_resolved_source(import_path, base_dir, lexical=verified_sources is not None),
+        resolved_source=_local_resolved_source(
+            import_path,
+            context.base_dir,
+            lexical=context.verified_sources is not None,
+        ),
         content_digest=content_digest,
         export_hash=_descriptor_digest(descriptor.exports),
-        verified_sources=verified_sources,
+        verified_sources=context.verified_sources,
     )
 
 
