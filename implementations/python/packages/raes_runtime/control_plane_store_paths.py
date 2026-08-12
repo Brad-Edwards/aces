@@ -46,7 +46,10 @@ def _require_safe_store_path_metadata(
     get_effective_uid = getattr(os, "geteuid", None)
     if callable(get_effective_uid) and metadata.st_uid != get_effective_uid():
         raise RuntimeError(f"local control-plane {kind} must be owned by the current user: {path}")
-    if kind in {_DATABASE_FILE_KIND, "SQLite sidecar"} and getattr(metadata, "st_nlink", 1) != 1:
+    link_count = getattr(metadata, "st_nlink", 1)
+    if kind == _DATABASE_FILE_KIND and link_count != 1:
+        raise RuntimeError(f"local control-plane {kind} must not have hard links: {path}")
+    if kind == "SQLite sidecar" and link_count > 1:
         raise RuntimeError(f"local control-plane {kind} must not have hard links: {path}")
 
 
@@ -117,6 +120,8 @@ def _validate_sqlite_sidecar(path: Path) -> bool:
     except FileNotFoundError:
         return False
     _require_safe_store_path_metadata(metadata, path, kind="SQLite sidecar")
+    if getattr(metadata, "st_nlink", 1) == 0:
+        return False
     if os.name != "nt" and stat.S_IMODE(metadata.st_mode) != _PRIVATE_FILE_MODE:
         raise RuntimeError(f"local control-plane SQLite sidecar must use private permissions 0600: {path}")
     return True

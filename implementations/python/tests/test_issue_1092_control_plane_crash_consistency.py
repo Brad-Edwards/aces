@@ -1268,6 +1268,15 @@ def test_sqlite_sidecar_validation_is_metadata_only_and_tolerates_disappearance(
     monkeypatch.setattr(Path, "chmod", unexpected_descriptor_operation)
 
     assert store_paths_module._validate_sqlite_sidecar(sidecar) is True
+    disappearing = SimpleNamespace(
+        st_mode=stat.S_IFREG | 0o600,
+        st_file_attributes=0,
+        st_uid=getattr(os, "geteuid", lambda: 0)(),
+        st_nlink=0,
+    )
+    monkeypatch.setattr(Path, "lstat", lambda _path: disappearing)
+    assert store_paths_module._validate_sqlite_sidecar(sidecar) is False
+    monkeypatch.undo()
     sidecar.unlink()
     assert store_paths_module._validate_sqlite_sidecar(sidecar) is False
 
@@ -1286,6 +1295,15 @@ def test_sqlite_sidecar_validation_rejects_unsafe_metadata(
         (
             SimpleNamespace(st_mode=stat.S_IFDIR | 0o700, st_file_attributes=0, st_uid=current_uid),
             "wrong filesystem type",
+        ),
+        (
+            SimpleNamespace(
+                st_mode=stat.S_IFREG | 0o600,
+                st_file_attributes=0,
+                st_uid=current_uid,
+                st_nlink=2,
+            ),
+            "must not have hard links",
         ),
     ]
     if os.name != "nt":

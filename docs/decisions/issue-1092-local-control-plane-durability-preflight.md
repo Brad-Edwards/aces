@@ -214,7 +214,9 @@ Three alternatives were considered:
 Sidecars therefore fail closed when stable metadata shows a symlink/reparse
 point, wrong type, foreign owner, or non-private POSIX mode. Their normal
 creation or deletion is ephemeral, so disappearance during validation is not
-an error. The application never raw-opens, closes, or `fchmod`s any
+an error. A concurrent unlink may surface as link count zero after pathname
+lookup; that state is treated as disappearance, while multiple links remain a
+hard failure. The application never raw-opens, closes, or `fchmod`s any
 SQLite-managed path. The main database remains fail-closed through metadata
 identity comparisons and URI open mode under the descriptor-verified `0700`
 directory.
