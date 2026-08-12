@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 from coverage import Coverage
-
 from tools import check_changed_coverage as coverage_policy
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
