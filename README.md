@@ -16,11 +16,10 @@ backend.
 
 ## Validate your first scenario
 
-You need standard CPython 3.11 through 3.14. Python 3.15 is not admitted until
-its post-final dependency and compatibility qualification is complete. OCI
-module extraction additionally requires Python 3.11.4 or newer because earlier
-3.11 patch releases lack the mandatory safe tar extraction filter. Those
-releases fail closed instead of extracting without it.
+You need Python 3.11 or newer. OCI module extraction additionally requires
+Python 3.11.4 or newer because earlier 3.11 patch releases lack the mandatory
+safe tar extraction filter. Those releases fail closed instead of extracting
+without it.
 
 ```console
 python -m venv .venv

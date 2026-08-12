@@ -69,7 +69,10 @@ Python recursion, so admitted depth cannot produce `RecursionError` residue.
 Before any extracted-tree write, stream every validated regular member from the
 bounded, already SHA-256-verified tar and build the trusted expected inventory.
 It contains normalized paths, synthesized implicit directories, entry types,
-PEP 706-filtered file modes, sizes, and file digests. A hit parses the local
+safe modes in the permission classes representable by the host platform, sizes,
+and file digests. POSIX directory modes are normalized to owner-only access;
+Windows file and directory modes use CPython's writable `0666`/`0777`
+representation. A hit parses the local
 completion record under a size cap, reconstructs the exact on-disk inventory
 without following links, and compares its bundle-derived projection to that
 trusted inventory. The writable cache manifest is never accepted as the

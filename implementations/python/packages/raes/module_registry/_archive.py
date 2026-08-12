@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import tarfile
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from .._errors import SDLParseError
-from ._cache_integrity import _CACHE_TREE_SCHEMA, _DECOMPRESSION_CHUNK_BYTES, _canonical_json_bytes
+from ._cache_integrity import (
+    _CACHE_TREE_SCHEMA,
+    _DECOMPRESSION_CHUNK_BYTES,
+    _canonical_json_bytes,
+    _representable_directory_mode,
+)
 
 if TYPE_CHECKING:
     from . import _OCIResourceLimits
@@ -23,12 +29,12 @@ def _limits() -> _OCIResourceLimits:
 
 
 def _filtered_file_mode(mode: int) -> int:
-    """Return the regular-file mode produced by the mandatory PEP 706 data filter."""
+    """Return the host representation of the PEP 706-filtered regular-file mode."""
 
     filtered = mode & 0o755
     if not filtered & 0o100:
         filtered &= ~0o111
-    return filtered | 0o600
+    return {"nt": 0o666}.get(os.name, filtered | 0o600)
 
 
 def _add_directory_node(nodes: dict[str, dict[str, Any]], relative: PurePosixPath) -> None:
@@ -36,7 +42,11 @@ def _add_directory_node(nodes: dict[str, dict[str, Any]], relative: PurePosixPat
     existing = nodes.get(relative_name)
     if existing is not None and existing["type"] != "directory":
         raise SDLParseError(_ARCHIVE_PATH_CONFLICT_ERROR)
-    nodes[relative_name] = {"path": relative_name, "type": "directory"}
+    nodes[relative_name] = {
+        "mode": _representable_directory_mode(),
+        "path": relative_name,
+        "type": "directory",
+    }
 
 
 def _add_parent_directories(nodes: dict[str, dict[str, Any]], relative: PurePosixPath) -> None:
@@ -102,7 +112,9 @@ def _expected_cache_tree_manifest(
 ) -> dict[str, Any]:
     """Hash a verified tar into the platform-neutral cache integrity inventory."""
 
-    nodes: dict[str, dict[str, Any]] = {".": {"path": ".", "type": "directory"}}
+    nodes: dict[str, dict[str, Any]] = {
+        ".": {"mode": _representable_directory_mode(), "path": ".", "type": "directory"}
+    }
     entry_limit = _limits().max_bundle_members + 1
     for member in members:
         relative = PurePosixPath(member.name)

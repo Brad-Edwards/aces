@@ -18,17 +18,16 @@ import time
 import zlib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Protocol, cast
+from typing import Any, Protocol
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
-# The submodule imports below are this package's public re-export surface, plus
-# the private ``_sha256_digest`` / ``_signable_payload`` / ``_verify_signatures``
-# seams the pre-split module exposed for tests. They are deliberately NOT narrowed
-# by an ``__all__``: the single-file module had none, so adding one would change
-# the legacy ``from raes.module_registry import *`` semantics. F401 is ignored for
-# this facade in pyproject.toml - the "unused import" claim is false for re-exports.
+# The submodule imports below retain the package's documented domain re-exports
+# plus the private ``_sha256_digest`` / ``_signable_payload`` /
+# ``_verify_signatures`` seams used by existing tests. Incidental implementation
+# imports are not an API; F401 is ignored for this facade because these deliberate
+# domain re-exports otherwise look unused inside this file.
 from .._errors import SDLParseError
 from .._source_profile import SDLSourceParseOptions
 from ..scenario import ImportDecl, ModuleDescriptor, Scenario
@@ -69,7 +68,7 @@ from ._constants import (
 from ._digests import _sha256_digest
 from ._extraction import (
     _HTTP_TIMEOUT_SECONDS,
-    _DataFilterTarFile,
+    _extract_tar_to_stage,
     _OCIResourceLimits,
     _safe_tar_members_with_limits,
     _validate_tar_member_shape,
@@ -170,7 +169,7 @@ def _decode_json_object(payload: bytes, *, context: str) -> dict[str, Any]:
 
     try:
         decoded = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (UnicodeDecodeError, RecursionError, ValueError) as exc:
         raise SDLParseError(f"{context} is not valid UTF-8 JSON") from exc
     if not isinstance(decoded, dict):
         raise SDLParseError(f"{context} must be a JSON object")
@@ -338,22 +337,6 @@ def _recover_extracted_source(
     return _source_result(extraction, hit, expected_manifest)
 
 
-def _extract_to_stage(
-    extraction: _CacheExtraction,
-    *,
-    tar: tarfile.TarFile,
-    safe_members: list[tarfile.TarInfo],
-    staging: Path,
-) -> None:
-    try:
-        cast(_DataFilterTarFile, tar).extractall(staging, members=safe_members, filter="data")
-    except TypeError as exc:
-        raise SDLParseError("Safe OCI tar extraction requires Python 3.11.4 or newer") from exc
-    staged_root = staging.joinpath(*extraction.root_relative.parts)
-    if not _valid_staged_root(staged_root, staging=staging):
-        raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{extraction.root_file}'")
-
-
 def _valid_staged_root(staged_root: Path, *, staging: Path) -> bool:
     if staged_root.is_symlink() or not staged_root.is_file():
         return False
@@ -415,7 +398,15 @@ def _install_extracted_source(
         error_message="Unable to stage the OCI module cache entry",
     )
     try:
-        _extract_to_stage(extraction, tar=tar, safe_members=safe_members, staging=staging)
+        _extract_tar_to_stage(
+            tar=tar,
+            members=safe_members,
+            staging=staging,
+            expected_entries=expected_manifest["entries"],
+        )
+        staged_root = staging.joinpath(*extraction.root_relative.parts)
+        if not _valid_staged_root(staged_root, staging=staging):
+            raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{extraction.root_file}'")
         prior_version = _read_version_pointer(slot=extraction.cache_slot)
         _write_cache_tree_manifest(
             root=staging,

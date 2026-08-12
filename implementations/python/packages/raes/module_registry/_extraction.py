@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import os
+import stat
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from .._errors import SDLParseError
 from ._cache_integrity import _CACHE_TREE_MANIFEST_NAME
+from ._filesystem import _same_file_identity
 
 _HTTP_TIMEOUT_SECONDS = 30
 
@@ -51,6 +54,7 @@ def _invalid_member_name(member: tarfile.TarInfo) -> bool:
     return any(
         (
             not member.name,
+            "\x00" in member.name,
             "\\" in member.name,
             pure_name.is_absolute(),
             ".." in pure_name.parts,
@@ -98,6 +102,45 @@ def _require_bounded_member_size(member: tarfile.TarInfo, limits: _OCIResourceLi
         raise SDLParseError(
             f"OCI bundle member {member.name!r} exceeds the {limits.max_member_bytes}-byte per-member limit"
         )
+
+
+def _normalize_extracted_directory_modes(root: Path, entries: list[dict[str, Any]]) -> None:
+    """Apply and verify bundle-derived safe modes on every extracted directory."""
+
+    for entry in entries:
+        if entry["type"] != "directory":
+            continue
+        relative = PurePosixPath(entry["path"])
+        path = root if relative == PurePosixPath(".") else root.joinpath(*relative.parts)
+        try:
+            before = path.lstat()
+            if not stat.S_ISDIR(before.st_mode):
+                raise SDLParseError("OCI cache directory mode normalization found a non-directory entry")
+            if os.name != "nt":
+                os.chmod(path, entry["mode"], follow_symlinks=False)
+            after = path.lstat()
+        except (NotImplementedError, OSError, TypeError) as exc:
+            raise SDLParseError("Unable to normalize OCI cache directory permissions") from exc
+        if (
+            not stat.S_ISDIR(after.st_mode)
+            or not _same_file_identity(before, after)
+            or stat.S_IMODE(after.st_mode) != entry["mode"]
+        ):
+            raise SDLParseError("OCI cache directory permissions changed during normalization")
+
+
+def _extract_tar_to_stage(
+    tar: tarfile.TarFile,
+    *,
+    members: list[tarfile.TarInfo],
+    staging: Path,
+    expected_entries: list[dict[str, Any]],
+) -> None:
+    try:
+        cast(_DataFilterTarFile, tar).extractall(staging, members=members, filter="data")
+    except TypeError as exc:
+        raise SDLParseError("Safe OCI tar extraction requires Python 3.11.4 or newer") from exc
+    _normalize_extracted_directory_modes(staging, expected_entries)
 
 
 def _validate_tar_member_shape(
@@ -159,6 +202,8 @@ def _safe_tar_members_with_limits(
 __all__ = [
     "_HTTP_TIMEOUT_SECONDS",
     "_OCIResourceLimits",
+    "_extract_tar_to_stage",
+    "_normalize_extracted_directory_modes",
     "_safe_tar_members_with_limits",
     "_validate_tar_member_shape",
 ]

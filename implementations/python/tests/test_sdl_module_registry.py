@@ -22,7 +22,9 @@ from urllib.error import URLError
 import pytest
 import raes.composition._expand as composition_expand
 import raes.module_registry as module_registry
+import raes.module_registry._archive as module_registry_archive
 import raes.module_registry._cache as module_registry_cache
+import raes.module_registry._extraction as module_registry_extraction
 import raes.module_registry._filesystem as module_registry_filesystem
 import raes.module_registry.publishing as module_registry_publishing
 import raes.module_registry.resolution as module_registry_resolution
@@ -1626,6 +1628,7 @@ def test_signed_oci_import_rejects_non_object_signature_metadata(
         (b'{"unterminated":', "is not valid UTF-8 JSON"),
         (b'\xff{"valid": false}', "is not valid UTF-8 JSON"),
         (b'["not", "an", "object"]', "must be a JSON object"),
+        pytest.param(b'{"integer":' + b"9" * 10_000 + b"}", "is not valid UTF-8 JSON", id="integer"),
     ],
 )
 def test_oci_metadata_malformed_json_has_stable_error(monkeypatch: pytest.MonkeyPatch, payload: bytes, message: str):
@@ -1636,6 +1639,21 @@ def test_oci_metadata_malformed_json_has_stable_error(monkeypatch: pytest.Monkey
 
     assert str(exc_info.value) == f"OCI metadata from https://registry.example/v2/acme/tags/list {message}"
     assert "line 1 column" not in str(exc_info.value)
+
+
+@pytest.mark.parametrize("decoder_error", [RecursionError("too deep"), ValueError("integer limit")])
+def test_oci_metadata_decoder_limit_errors_are_stable(
+    monkeypatch: pytest.MonkeyPatch,
+    decoder_error: Exception,
+) -> None:
+    def fail_decode(_payload: str) -> object:
+        raise decoder_error
+
+    monkeypatch.setattr(module_registry.json, "loads", fail_decode)
+    with pytest.raises(SDLParseError) as exc_info:
+        module_registry._decode_json_object(b"{}", context="OCI metadata")
+
+    assert str(exc_info.value) == "OCI metadata is not valid UTF-8 JSON"
 
 
 def test_oci_manifest_malformed_json_has_stable_error(monkeypatch: pytest.MonkeyPatch):
@@ -1703,6 +1721,25 @@ def test_oci_bundle_rejects_unsafe_tar_members(tmp_path: Path):
         pytest.raises(SDLParseError, match="Path traversal detected"),
     ):
         module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_nul_in_pax_member_path(tmp_path: Path):
+    raw_bundle = io.BytesIO()
+    with tarfile.open(fileobj=raw_bundle, mode="w", format=tarfile.PAX_FORMAT) as tar:
+        payload = b"name: unsafe\n"
+        member = tarfile.TarInfo(name="safe.yaml")
+        member.pax_headers = {"path": "unsafe\x00name.yaml"}
+        member.size = len(payload)
+        tar.addfile(member, io.BytesIO(payload))
+
+    bundle = gzip.compress(raw_bundle.getvalue(), mtime=0)
+    with pytest.raises(SDLParseError, match="Path traversal detected"):
+        module_registry._extract_bundle_to_cache(
+            bundle_bytes=bundle,
+            manifest_digest="nul-pax-path",
+            root_file="safe.yaml",
+            base_dir=tmp_path,
+        )
 
 
 def test_oci_bundle_rejects_special_member_types(tmp_path: Path):
@@ -1840,8 +1877,8 @@ def test_oci_bundle_inventory_is_streamed_with_filtered_modes_and_implicit_direc
         )
 
     assert manifest["entries"] == [
-        {"path": ".", "type": "directory"},
-        {"path": "nested", "type": "directory"},
+        {"mode": 0o700, "path": ".", "type": "directory"},
+        {"mode": 0o700, "path": "nested", "type": "directory"},
         {
             "digest": f"sha256:{module_registry._sha256_digest(payload)}",
             "mode": 0o711,
@@ -1851,6 +1888,81 @@ def test_oci_bundle_inventory_is_streamed_with_filtered_modes_and_implicit_direc
         },
     ]
     assert not (tmp_path / "inventory").exists()
+
+
+def test_oci_bundle_inventory_uses_windows_representable_modes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(module_registry_archive.os, "name", "nt")
+    bundle = _gzip_tar([("nested/module.yaml", b"name: windows\n")])
+    with tarfile.open(fileobj=bundle, mode="r:gz") as archive:
+        members = module_registry._safe_tar_members(archive, tmp_path / "inventory")
+        manifest = module_registry._expected_cache_tree_manifest(
+            tar=archive,
+            members=members,
+            content_digest="sha256:" + "0" * 64,
+            root_file="nested/module.yaml",
+        )
+
+    entries = {entry["path"]: entry for entry in manifest["entries"]}
+    assert entries["."]["mode"] == 0o777
+    assert entries["nested"]["mode"] == 0o777
+    assert entries["nested/module.yaml"]["mode"] == 0o666
+
+
+def test_oci_directory_mode_normalization_does_not_use_windows_chmod(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mode = stat.S_IMODE(tmp_path.stat().st_mode)
+    monkeypatch.setattr(module_registry_extraction.os, "name", "nt")
+    monkeypatch.setattr(
+        module_registry_extraction.os,
+        "chmod",
+        lambda *args, **kwargs: pytest.fail("Windows directory mode admission must not call chmod"),
+    )
+
+    module_registry_extraction._normalize_extracted_directory_modes(
+        tmp_path,
+        [{"mode": mode, "path": ".", "type": "directory"}],
+    )
+
+
+def test_oci_directory_mode_normalization_rejects_invalid_and_unstable_entries(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    not_directory = tmp_path / "file"
+    not_directory.write_text("payload", encoding="utf-8")
+    with pytest.raises(SDLParseError, match="non-directory entry"):
+        module_registry_extraction._normalize_extracted_directory_modes(
+            tmp_path,
+            [{"mode": 0o700, "path": "file", "type": "directory"}],
+        )
+
+    expected_mode = stat.S_IMODE(tmp_path.stat().st_mode) ^ 0o100
+    monkeypatch.setattr(module_registry_extraction.os, "chmod", lambda *args, **kwargs: None)
+    with pytest.raises(SDLParseError, match="changed during normalization"):
+        module_registry_extraction._normalize_extracted_directory_modes(
+            tmp_path,
+            [{"mode": expected_mode, "path": ".", "type": "directory"}],
+        )
+
+
+def test_oci_directory_mode_normalization_wraps_platform_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_chmod(*args, **kwargs):
+        raise OSError("injected mode failure")
+
+    monkeypatch.setattr(module_registry_extraction.os, "chmod", fail_chmod)
+    with pytest.raises(SDLParseError, match="Unable to normalize"):
+        module_registry_extraction._normalize_extracted_directory_modes(
+            tmp_path,
+            [{"mode": 0o700, "path": ".", "type": "directory"}],
+        )
 
 
 @pytest.mark.parametrize(
@@ -1910,7 +2022,7 @@ def test_oci_bundle_inventory_defensive_stream_failures(monkeypatch: pytest.Monk
         content_digest="sha256:" + "0" * 64,
         root_file="module.yaml",
     )
-    assert manifest["entries"] == [{"path": ".", "type": "directory"}]
+    assert manifest["entries"] == [{"mode": 0o700, "path": ".", "type": "directory"}]
 
     file_member = tarfile.TarInfo(name="entry")
     file_member.size = 1
@@ -2545,8 +2657,9 @@ def test_oci_cache_hit_revalidates_complete_extracted_tree(tmp_path: Path, tampe
     assert entries["nested/child.yaml"]["mode"] == (repaired.parent / "nested" / "child.yaml").stat().st_mode & 0o777
 
 
-def test_oci_cache_rejects_tree_and_manifest_forged_together(tmp_path: Path):
-    bundle = _cache_test_bundle(b"name: authentic\n")
+@pytest.mark.parametrize("forgery", ["content", "directory-mode"])
+def test_oci_cache_rejects_tree_and_manifest_forged_together(tmp_path: Path, forgery: str):
+    bundle = _cache_graph_bundle() if forgery == "directory-mode" else _cache_test_bundle(b"name: authentic\n")
     digest = f"sha256:{module_registry._sha256_digest(bundle)}"
     root = module_registry._extract_bundle_to_cache(
         bundle_bytes=bundle,
@@ -2556,7 +2669,12 @@ def test_oci_cache_rejects_tree_and_manifest_forged_together(tmp_path: Path):
         base_dir=tmp_path,
     )
     forged_version = root.parent
-    root.write_bytes(b"name: forged\n")
+    authentic_root = root.read_bytes()
+    if forgery == "content":
+        root.write_bytes(b"name: forged\n")
+    else:
+        directory = forged_version / "nested"
+        directory.chmod(stat.S_IMODE(directory.stat().st_mode) ^ 0o020)
     forged_manifest = module_registry._cache_tree_manifest(
         root=forged_version,
         content_digest=digest,
@@ -2573,7 +2691,7 @@ def test_oci_cache_rejects_tree_and_manifest_forged_together(tmp_path: Path):
     )
 
     assert repaired.parent != forged_version
-    assert repaired.read_bytes() == b"name: authentic\n"
+    assert repaired.read_bytes() == authentic_root
 
 
 @pytest.mark.parametrize("corruption", ["malformed", "shape", "noncanonical", "tree-digest", "entry-mode"])
@@ -4119,6 +4237,24 @@ def test_oci_bundle_rejects_excess_member_count(tmp_path: Path, monkeypatch: pyt
         pytest.raises(SDLParseError, match="archive members"),
     ):
         module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_cache_manifest_does_not_consume_member_budget(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "_OCI_LIMITS",
+        dataclasses.replace(module_registry._OCI_LIMITS, max_bundle_members=1),
+    )
+    bundle = _gzip_tar([("module.yaml", b"name: bounded\n")]).getvalue()
+
+    root = module_registry._extract_bundle_to_cache(
+        bundle_bytes=bundle,
+        manifest_digest="one-member-boundary",
+        root_file="module.yaml",
+        base_dir=tmp_path,
+    )
+
+    assert root.read_bytes() == b"name: bounded\n"
 
 
 def test_oci_bundle_rejects_oversized_member(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

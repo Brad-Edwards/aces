@@ -22,6 +22,12 @@ _CACHE_MANIFEST_FIELDS = frozenset({"content_digest", "entries", "root_file", "s
 _DECOMPRESSION_CHUNK_BYTES = 1024 * 1024
 
 
+def _representable_directory_mode() -> int:
+    """Return the safe directory mode representable by the current platform."""
+
+    return {"nt": 0o777}.get(os.name, 0o700)
+
+
 def _limits() -> _OCIResourceLimits:
     # Keep the historical package-facade test/operator seam authoritative.
     from . import _OCI_LIMITS
@@ -85,11 +91,14 @@ def _validated_directory_children(
     before: os.stat_result,
     mode: int,
     max_children: int,
+    excluded_names: frozenset[str],
 ) -> list[Path]:
     try:
         children: list[Path] = []
         with os.scandir(path) as iterator:
             for child in iterator:
+                if child.name in excluded_names:
+                    continue
                 _append_bounded_child(children, child.path, max_children=max_children)
         children.sort(key=lambda child: child.name)
         after = path.lstat()
@@ -122,6 +131,7 @@ def _cache_tree_node(
         before=before,
         mode=mode,
         max_children=max_children,
+        excluded_names=frozenset({_CACHE_TREE_MANIFEST_NAME}) if relative == PurePosixPath(".") else frozenset(),
     )
     return {"mode": mode, "path": relative_name, "type": "directory"}, children, 0
 
@@ -156,8 +166,6 @@ def _cache_tree_entries(root: Path) -> list[dict[str, Any]]:
             raise SDLParseError(_CACHE_INTEGRITY_ERROR)
         entries.append(entry)
         for child in reversed(children):
-            if relative == PurePosixPath(".") and child.name == _CACHE_TREE_MANIFEST_NAME:
-                continue
             pending.append((child, _child_relative_path(relative, child), depth + 1))
     return entries
 
@@ -227,8 +235,8 @@ def _trusted_entry_projection(entries: list[Any]) -> list[dict[str, Any]]:
     for entry in entries:
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
             raise SDLParseError(_CACHE_INTEGRITY_ERROR)
-        if entry.get("type") == "directory":
-            projected.append({"path": entry["path"], "type": "directory"})
+        if entry.get("type") == "directory" and isinstance(entry.get("mode"), int):
+            projected.append({"mode": entry["mode"], "path": entry["path"], "type": "directory"})
         elif entry.get("type") == "file" and all(
             isinstance(entry.get(field), field_type)
             for field, field_type in (("digest", str), ("mode", int), ("size", int))
