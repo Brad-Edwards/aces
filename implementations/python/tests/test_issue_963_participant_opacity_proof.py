@@ -10,7 +10,6 @@ from pathlib import Path
 from urllib.error import URLError
 
 import pytest
-import tools.isabelle_tool as isabelle_tool
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes_contracts.behavioral_relation_profiles import (
@@ -24,6 +23,8 @@ from raes_contracts.behavioral_relations import (
     load_behavioral_relation_catalog,
     load_behavioral_relation_catalog_revision,
 )
+
+import tools.isabelle_tool as isabelle_tool
 from tools.check_participant_opacity_proof import (
     ProofEvidenceError,
     load_proof_manifest,
@@ -31,8 +32,11 @@ from tools.check_participant_opacity_proof import (
 )
 from tools.isabelle_tool import (
     ISABELLE_PROCESS_ADDRESS_SPACE_LIMIT_MIB,
+    ISABELLE_REQUIRED_FONTCONFIG_PATHS,
+    ISABELLE_SYSTEM_RUNTIME_PATHS,
     _proof_process_limits,
     _proof_sandbox_command,
+    _require_fontconfig_runtime,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -121,6 +125,50 @@ def test_proof_sandbox_exposes_only_fixed_inputs_runtime_and_private_state() -> 
     assert "--unshare-net" in command
     assert "--unshare-pid" in command
     assert command[-2:] == ["-D", "/workspace/session"]
+
+
+def test_proof_sandbox_allowlists_fontconfig_symlink_targets() -> None:
+    assert Path("/etc/fonts") in ISABELLE_SYSTEM_RUNTIME_PATHS
+    assert Path("/usr/share/fontconfig") in ISABELLE_SYSTEM_RUNTIME_PATHS
+    assert Path("/usr/share/fonts") in ISABELLE_SYSTEM_RUNTIME_PATHS
+    assert set(ISABELLE_REQUIRED_FONTCONFIG_PATHS) <= set(ISABELLE_SYSTEM_RUNTIME_PATHS)
+
+
+def test_proof_runtime_requires_complete_fontconfig_data(tmp_path: Path) -> None:
+    existing = tuple(tmp_path / name for name in ("etc-fonts", "share-fontconfig", "share-fonts"))
+    for path in existing:
+        path.mkdir()
+
+    _require_fontconfig_runtime(existing)
+
+    existing[-1].rmdir()
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig runtime is required"):
+        _require_fontconfig_runtime(existing)
+
+
+def test_proof_replay_checks_fontconfig_before_session_entry(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    original_is_file = Path.is_file
+
+    def reject_missing_fontconfig() -> None:
+        raise isabelle_tool.IsabelleToolError("fontconfig test sentinel")
+
+    monkeypatch.setattr(isabelle_tool, "require_isabelle", lambda _repo_root: tmp_path)
+    monkeypatch.setattr(
+        Path,
+        "is_file",
+        lambda path: path == Path("/usr/bin/bwrap") or original_is_file(path),
+    )
+    monkeypatch.setattr(
+        isabelle_tool,
+        "_require_fontconfig_runtime",
+        reject_missing_fontconfig,
+    )
+
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig test sentinel"):
+        isabelle_tool.run_isabelle_build(tmp_path)
 
 
 def test_proof_process_limit_enforces_per_process_address_space(monkeypatch: pytest.MonkeyPatch) -> None:

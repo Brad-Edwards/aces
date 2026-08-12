@@ -45,6 +45,7 @@ ISABELLE_SYSTEM_RUNTIME_PATHS = (
     Path("/usr/lib"),
     Path("/usr/lib64"),
     Path("/usr/share/locale"),
+    Path("/usr/share/fontconfig"),
     Path("/usr/share/fonts"),
     Path("/usr/share/zoneinfo"),
     Path("/lib"),
@@ -52,6 +53,11 @@ ISABELLE_SYSTEM_RUNTIME_PATHS = (
     Path("/etc/fonts"),
     Path("/etc/ld.so.cache"),
     Path("/var/cache/fontconfig"),
+)
+ISABELLE_REQUIRED_FONTCONFIG_PATHS = (
+    Path("/etc/fonts"),
+    Path("/usr/share/fontconfig"),
+    Path("/usr/share/fonts"),
 )
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 
@@ -307,6 +313,15 @@ def _proof_sandbox_command(
     return command
 
 
+def _require_fontconfig_runtime(
+    paths: tuple[Path, ...] = ISABELLE_REQUIRED_FONTCONFIG_PATHS,
+) -> None:
+    """Fail before sandbox entry when the pinned prover's font runtime is absent."""
+
+    if any(not path.is_dir() for path in paths):
+        raise IsabelleToolError("fontconfig runtime is required for offline proof replay")
+
+
 def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
     """Kernel-check the fixed session in a network-isolated, bounded process."""
 
@@ -314,6 +329,7 @@ def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
     bwrap = Path("/usr/bin/bwrap")
     if not bwrap.is_file():
         raise IsabelleToolError("bubblewrap is required to enforce offline proof replay")
+    _require_fontconfig_runtime()
     session_root = (repo_root / ISABELLE_SESSION_RELATIVE_PATH).resolve()
     if not session_root.is_dir() or repo_root.resolve() not in session_root.parents:
         raise IsabelleToolError("the fixed Isabelle session root is unavailable")
