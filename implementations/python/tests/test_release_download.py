@@ -612,10 +612,12 @@ def test_response_without_deadline_capable_transport_fails_closed() -> None:
         def read1(self, _size: int) -> bytes:
             return b""
 
+    response = NoDeadlineControl()
+    deadline = time.monotonic() + 1
     with pytest.raises(release_download.ReleaseDownloadError, match="cannot enforce the download deadline"):
         release_download._read_response_body(
-            NoDeadlineControl(),
-            deadline=time.monotonic() + 1,
+            response,
+            deadline=deadline,
             request_timeout=1,
             maximum_bytes=1,
         )
@@ -854,13 +856,15 @@ def test_bounded_reader_falls_back_to_read_and_rejects_invalid_readers() -> None
         def read1(self, size: int) -> bytes:
             return b"x" * (size + 1)
 
+    non_bytes_reader = NonBytesReader()
+    over_bound_reader = OverBoundReader()
     assert release_download._read_chunk(ReadOnly(), 2) == b"ok"
     with pytest.raises(release_download.ReleaseDownloadError, match="not readable"):
         release_download._read_chunk(object(), 2)
     with pytest.raises(release_download.ReleaseDownloadError, match="did not return bytes"):
-        release_download._read_chunk(NonBytesReader(), 2)
+        release_download._read_chunk(non_bytes_reader, 2)
     with pytest.raises(release_download.ReleaseDownloadError, match="requested read bound"):
-        release_download._read_chunk(OverBoundReader(), 2)
+        release_download._read_chunk(over_bound_reader, 2)
 
 
 def test_oversized_declared_length_fails_before_body_read(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1203,7 +1207,7 @@ def test_checksum_metadata_installers_wrap_asset_stage_exhaustion(
     detail = "exhausted 3 bounded attempts: HTTP 503"
     opener = SequenceOpener(
         DownloadResponse(checksum_metadata),
-        release_download.ReleaseDownloadError(detail),
+        DownloadResponse(release_download.ReleaseDownloadError(detail)),
     )
     monkeypatch.setattr(tool, "urlopen", opener)
 

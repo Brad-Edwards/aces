@@ -2562,9 +2562,7 @@ def test_osv_scanner_download_timeout_fails_closed(monkeypatch: pytest.MonkeyPat
 
     def timeout(_url: str, **kwargs: object) -> io.BytesIO:
         assert kwargs["timeout"] == 60
-        raise osv_scanner_tool.ReleaseDownloadError(
-            "release download exhausted 3 bounded attempts"
-        )
+        raise osv_scanner_tool.ReleaseDownloadError("release download exhausted 3 bounded attempts")
 
     monkeypatch.setattr(osv_scanner_tool, "urlopen", timeout)
 
