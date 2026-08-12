@@ -94,12 +94,16 @@ def _workflow_timeout_reason(
     forever, so it is reclaimed under a distinct reason instead.
     """
 
-    current = parse_timestamp(submitted_at).timestamp()
+    current = parse_timestamp(submitted_at)
     try:
-        deadline = parse_timestamp(normalized.started_at).timestamp() + timeout_seconds
+        started = parse_timestamp(normalized.started_at)
     except (TypeError, ValueError):
         return UNPARSEABLE_START_REASON
-    return TIMED_OUT_REASON if current >= deadline else None
+    # Elapsed time is compared against the timeout rather than added to the start
+    # instant: `timeout_seconds` has no declared upper bound, and folding a very
+    # large one into a float timestamp or a timedelta overflows.
+    elapsed_seconds = (current - started).total_seconds()
+    return TIMED_OUT_REASON if elapsed_seconds >= timeout_seconds else None
 
 
 def _timed_out_workflow_update(

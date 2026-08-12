@@ -15,6 +15,15 @@ from raes_runtime.control_plane_timeouts import (
 _WORKFLOW_ADDRESS = "orchestration.workflow.response"
 
 
+def _workflow_entry_with_timeout(timeout_seconds: int) -> SnapshotEntry:
+    return SnapshotEntry(
+        address=_WORKFLOW_ADDRESS,
+        domain=RuntimeDomain.ORCHESTRATION,
+        resource_type="workflow",
+        payload={"execution_contract": {"timeout_seconds": timeout_seconds}},
+    )
+
+
 def _workflow_entry(timeout_seconds: int = 1) -> SnapshotEntry:
     return SnapshotEntry(
         address=_WORKFLOW_ADDRESS,
@@ -79,6 +88,25 @@ def test_workflow_with_unparseable_started_at_is_reclaimed(started_at: str):
     assert update is not None
     assert update[0]["workflow_status"] == WorkflowStatus.TIMED_OUT.value
     assert update[0]["terminal_reason"] == UNPARSEABLE_START_REASON
+
+
+def test_enormous_timeout_reports_not_timed_out_instead_of_overflowing():
+    """`timeout_seconds` has no declared upper bound, so it must not overflow.
+
+    Folding a very large timeout into a float timestamp or a timedelta raises
+    `OverflowError`, which would abort the whole reconciliation pass and surface
+    as a 500 from the HTTP adapter.
+    """
+    update = workflow_timeout_update(
+        RuntimeSnapshot(),
+        _WORKFLOW_ADDRESS,
+        _workflow_entry_with_timeout(10**400),
+        {_WORKFLOW_ADDRESS: _running_result("2000-01-01T00:00:00Z")},
+        {},
+        "2030-01-01T00:00:00Z",
+    )
+
+    assert update is None
 
 
 def test_unparseable_reconciliation_clock_is_raised_not_swallowed():
