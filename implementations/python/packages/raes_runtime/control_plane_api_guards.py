@@ -75,7 +75,7 @@ async def _body_size_guard_response(
     # ``_CachedRequest.wrapped_receive`` replays ``_body`` to the inner app, which
     # is the framework's hook for middleware that consumes the body, and there is
     # no public equivalent.
-    request._body = accepted_body  # noqa: SLF001 # NOSONAR - documented Starlette body-cache hook
+    request._body = accepted_body  # NOSONAR - documented Starlette body-cache hook, no public equivalent
     request.state.raw_body = accepted_body
     return None
 
