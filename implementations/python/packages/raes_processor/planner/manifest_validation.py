@@ -330,6 +330,8 @@ def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest)
             )
         ]
 
+    evaluator = manifest.evaluator
+    assert evaluator is not None
     diagnostics: list[Diagnostic] = []
     supported_sections = manifest.evaluator_supported_sections
     for section, used in evaluation_sections.items():
@@ -351,6 +353,64 @@ def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest)
                 message="Evaluator does not support objectives.",
             )
         )
+    if "propositions" in supported_sections:
+        for proposition in model.propositions.values():
+            if proposition.predicate_kind not in evaluator.supported_predicate_families:
+                diagnostics.append(
+                    Diagnostic(
+                        code="evaluator.unsupported-predicate-family",
+                        domain="evaluation",
+                        address=proposition.address,
+                        message=(
+                            f"Evaluator does not support proposition predicate family '{proposition.predicate_kind}'."
+                        ),
+                    )
+                )
+            if proposition.quantifier not in evaluator.supported_quantifiers:
+                diagnostics.append(
+                    Diagnostic(
+                        code="evaluator.unsupported-quantifier",
+                        domain="evaluation",
+                        address=proposition.address,
+                        message=f"Evaluator does not support proposition quantifier '{proposition.quantifier}'.",
+                    )
+                )
+            if proposition.unresolved_evidence_channel_refs:
+                diagnostics.append(
+                    Diagnostic(
+                        code="evaluator.evidence-channel-unresolved",
+                        domain="evaluation",
+                        address=proposition.address,
+                        message=(
+                            "Evaluator admission requires every cited evidence requirement to declare a channel kind."
+                        ),
+                    )
+                )
+            for channel in proposition.evidence_channels:
+                if channel in evaluator.supported_evidence_channels:
+                    continue
+                diagnostics.append(
+                    Diagnostic(
+                        code="evaluator.unsupported-evidence-channel",
+                        domain="evaluation",
+                        address=proposition.address,
+                        message=f"Evaluator does not support evidence channel '{channel}'.",
+                    )
+                )
+            if (
+                proposition.required_time_domain
+                and proposition.required_time_domain not in evaluator.supported_time_domains
+            ):
+                diagnostics.append(
+                    Diagnostic(
+                        code="evaluator.unsupported-time-domain",
+                        domain="evaluation",
+                        address=proposition.address,
+                        message=(
+                            f"Evaluator does not support proposition time domain '{proposition.required_time_domain}'."
+                        ),
+                    )
+                )
     return diagnostics
 
 
