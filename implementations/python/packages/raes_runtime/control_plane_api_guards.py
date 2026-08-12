@@ -63,9 +63,11 @@ async def _body_size_guard_response(
     # and could exhaust memory before any size check runs.
     body = bytearray()
     async for chunk in request.stream():
-        body.extend(chunk)
-        if len(body) > max_request_bytes:
+        # Measure before copying: a single oversized chunk would otherwise be
+        # appended in full before the limit is consulted.
+        if len(body) + len(chunk) > max_request_bytes:
             return _request_too_large_response(control_plane, request)
+        body.extend(chunk)
     accepted_body = bytes(body)
     # Streaming consumes the receive channel, so seed Starlette's body cache the
     # way ``Request.body()`` would. Route handlers and FastAPI's own body parsing

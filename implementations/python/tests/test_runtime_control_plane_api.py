@@ -746,6 +746,38 @@ def test_request_size_guard_stops_reading_an_oversized_chunked_body():
     assert delivered <= 3
 
 
+def test_request_size_guard_rejects_a_single_oversized_chunk_without_buffering_it():
+    """One chunk larger than the cap must be refused before it is copied."""
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    oversized = b"x" * 4096
+    delivered = 0
+
+    async def receive() -> dict[str, object]:
+        nonlocal delivered
+        delivered += 1
+        return {"type": "http.request", "body": oversized, "more_body": False}
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/operations/provisioning",
+            "headers": [(b"content-type", b"application/json")],
+            "query_string": b"",
+        },
+        receive=receive,
+    )
+
+    response = asyncio.run(
+        request_size_guard_response(control_plane, request, max_request_bytes=64),
+    )
+
+    assert response is not None
+    assert response.status_code == 413
+    assert not hasattr(request.state, "raw_body")
+
+
 def test_local_control_plane_store_saves_snapshot_with_atomic_replace(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

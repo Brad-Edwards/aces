@@ -115,7 +115,7 @@ def _stub_request_binding(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def _assert_reservations_released(run: SchedulerRunState) -> None:
+def _assert_reservations_released(run: SchedulerRunState, before: RuntimeSnapshot) -> None:
     service = ParticipantExecutionServiceStateModel.model_validate(
         run.working.participant_execution_services[_POLICY_ADDRESS]
     )
@@ -124,10 +124,13 @@ def _assert_reservations_released(run: SchedulerRunState) -> None:
         state = ParticipantAutonomousExecutionStateModel.model_validate(
             run.working.participant_autonomous_execution_states[_state_key(address)]
         )
-        # The reserved attempt is settled as failed, preserving
-        # attempted_actions == succeeded + failed + in_flight.
         assert state.in_flight == 0
         assert state.attempted_actions == state.succeeded_actions + state.failed_actions + state.in_flight
+    # Reverting to the pre-batch state is the point: a partly-applied occurrence
+    # (a recorded failure whose next_tick/next_action_index never advanced) could
+    # be serviced again at the same tick.
+    assert run.working.participant_autonomous_execution_states == before.participant_autonomous_execution_states
+    assert run.working.participant_execution_services == before.participant_execution_services
 
 
 def test_miscounted_backend_batch_is_reported_and_releases_reservations():
@@ -138,13 +141,14 @@ def test_miscounted_backend_batch_is_reported_and_releases_reservations():
     and the service non-quiescent, blocking all later occurrences.
     """
     batch = _batch(SimpleNamespace(admit_actions_concurrently=lambda requests, snapshot, workers: ()))
+    before = batch.run.working
 
     _execute_concurrent_batch(batch)
 
     assert batch.run.failure is not None
     codes = [diagnostic.code for diagnostic in batch.run.failure.diagnostics]
     assert "runtime.participant-concurrent-result-count-invalid" in codes
-    _assert_reservations_released(batch.run)
+    _assert_reservations_released(batch.run, before)
 
 
 def test_raising_backend_batch_is_reported_and_releases_reservations():
@@ -154,10 +158,17 @@ def test_raising_backend_batch_is_reported_and_releases_reservations():
         raise RuntimeError("backend exploded")
 
     batch = _batch(SimpleNamespace(admit_actions_concurrently=_explode))
+    before = batch.run.working
 
     _execute_concurrent_batch(batch)
 
     assert batch.run.failure is not None
     codes = [diagnostic.code for diagnostic in batch.run.failure.diagnostics]
     assert "runtime.participant-concurrent-batch-failed" in codes
-    _assert_reservations_released(batch.run)
+    # Only the exception type may cross the backend boundary.
+    message = next(
+        d.message for d in batch.run.failure.diagnostics if d.code == "runtime.participant-concurrent-batch-failed"
+    )
+    assert "backend exploded" not in message
+    assert "RuntimeError" in message
+    _assert_reservations_released(batch.run, before)

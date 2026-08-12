@@ -151,10 +151,13 @@ def _release_concurrent_reservations(
     in-flight and the service non-quiescent, so no later occurrence can be
     admitted for them.
 
-    The reserved attempt is settled as failed rather than erased: the backend was
-    asked to run it, so it did happen and did not succeed. That also preserves the
-    snapshot invariant ``attempted_actions == succeeded + failed + in_flight``,
-    which a bare ``in_flight`` reset would break.
+    The reservation is reverted rather than settled as a failed action. Without
+    per-action results there is no basis for the rest of a failed-action
+    transition (``next_tick``, ``next_action_index``, lifecycle), and recording a
+    failure while leaving those untouched would let the same occurrence be
+    serviced again at the same tick. Reverting restores the pre-batch state
+    exactly, so the returned failure snapshot reports the diagnostic without
+    inventing a half-applied occurrence.
     """
 
     states = dict(run.working.participant_autonomous_execution_states)
@@ -166,7 +169,7 @@ def _release_concurrent_reservations(
         states[context.key] = state.model_copy(
             update={
                 "in_flight": 0,
-                "failed_actions": state.failed_actions + state.in_flight,
+                "attempted_actions": state.attempted_actions - state.in_flight,
             }
         ).model_dump(mode="json")
     run.working = run.working.with_entries(
