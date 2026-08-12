@@ -138,6 +138,44 @@ def _reserve_concurrent_actions(
     )
 
 
+def _release_concurrent_reservations(
+    run: SchedulerRunState,
+    contexts: tuple[_DueActionContext, ...],
+    policy_address: str,
+) -> None:
+    """Undo ``_reserve_concurrent_actions`` when the batch never produced results.
+
+    Reservations are taken before the backend batch call, and only
+    ``_commit_concurrent_result`` clears a participant's ``in_flight``. Abandoning
+    the batch without releasing them would leave participants permanently
+    in-flight and the service non-quiescent, so no later occurrence can be
+    admitted for them.
+
+    The reserved attempt is settled as failed rather than erased: the backend was
+    asked to run it, so it did happen and did not succeed. That also preserves the
+    snapshot invariant ``attempted_actions == succeeded + failed + in_flight``,
+    which a bare ``in_flight`` reset would break.
+    """
+
+    states = dict(run.working.participant_autonomous_execution_states)
+    for context in contexts:
+        payload = states.get(context.key)
+        if payload is None:
+            continue
+        state = ParticipantAutonomousExecutionStateModel.model_validate(payload)
+        states[context.key] = state.model_copy(
+            update={
+                "in_flight": 0,
+                "failed_actions": state.failed_actions + state.in_flight,
+            }
+        ).model_dump(mode="json")
+    run.working = run.working.with_entries(
+        dict(run.working.entries),
+        participant_autonomous_execution_states=states,
+    )
+    _finish_concurrent_service_state(run, policy_address)
+
+
 def _finish_concurrent_service_state(
     run: SchedulerRunState,
     policy_address: str,
@@ -350,9 +388,38 @@ def _execute_concurrent_batch(batch: _ConcurrentBatch) -> None:
     )
     _reserve_concurrent_actions(batch.run, selected_contexts)
     base = batch.run.working
-    results = batch_method(requests, base, len(requests))
-    if len(results) != len(requests):
-        raise ValueError("concurrent participant result count must match requests")
+    # The batch method is backend-supplied. A raising or miscounting backend is a
+    # conformance failure to report, not an exception to leak through the
+    # scheduler, and either way the reservations taken above must be released.
+    try:
+        results = batch_method(requests, base, len(requests))
+        result_count = len(results)
+    except Exception as exc:  # noqa: BLE001 - backend trust boundary
+        _release_concurrent_reservations(batch.run, selected_contexts, batch.policy.address)
+        _set_concurrent_failure(
+            batch.run,
+            Diagnostic(
+                code="runtime.participant-concurrent-batch-failed",
+                domain="participant",
+                address=batch.policy.address,
+                message=f"Backend concurrent participant batch raised: {exc}",
+            ),
+        )
+        return
+    if result_count != len(requests):
+        _release_concurrent_reservations(batch.run, selected_contexts, batch.policy.address)
+        _set_concurrent_failure(
+            batch.run,
+            Diagnostic(
+                code="runtime.participant-concurrent-result-count-invalid",
+                domain="participant",
+                address=batch.policy.address,
+                message=(
+                    f"Backend returned {result_count} concurrent participant results for {len(requests)} requests."
+                ),
+            ),
+        )
+        return
     for context, state, request, result in zip(selected_contexts, selected_states, requests, results, strict=True):
         _commit_concurrent_result(context, state, request, result, base, batch.run)
         if batch.run.failure is not None:
