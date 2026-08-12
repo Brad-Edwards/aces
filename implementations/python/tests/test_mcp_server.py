@@ -31,7 +31,7 @@ def _text(result) -> str:
 
 def _call(server, tool: str, args: dict | None = None) -> str:
     """Synchronously call a tool and return its text."""
-    return asyncio.get_event_loop().run_until_complete(_async_call(server, tool, args or {}))
+    return asyncio.run(_async_call(server, tool, args or {}))
 
 
 async def _async_call(server, tool: str, args: dict) -> str:
@@ -897,7 +897,7 @@ class TestServerConstruction:
         # Using the real registration surface (rather than a hand-copied
         # literal) means a drift between what the server exposes and what
         # raes_tool_surface advertises cannot pass silently.
-        registered = asyncio.get_event_loop().run_until_complete(server.list_tools())
+        registered = asyncio.run(server.list_tools())
         registered_names = {tool.name for tool in registered}
         assert registered_names, "server registered no tools"
 
