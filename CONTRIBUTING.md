@@ -72,6 +72,12 @@ reports a missing prerequisite separately from a kernel rejection. Run the
 gate on Linux, or rely on continuous integration, when your workstation is
 another platform.
 
+Some Linux security policies also deny unprivileged user or network namespaces.
+The proof tool reports that condition as unavailable bubblewrap isolation and
+does not retry without the network sandbox. Use an administrator-approved host
+policy for bubblewrap or rely on continuous integration; do not disable the
+offline boundary to make the lane pass.
+
 Run the change-aware local gate while iterating:
 
 ```shell

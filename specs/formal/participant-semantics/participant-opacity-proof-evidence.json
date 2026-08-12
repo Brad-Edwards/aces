@@ -292,7 +292,7 @@
       },
       {
         "path": "tools/isabelle_tool.py",
-        "digest": "sha256:e7423efc782afe63e447f9fd6c8e2c33fc6210642ab47520a217a39661e405e8"
+        "digest": "sha256:6d430acc5668c3fa693dc020314dadb55609496dd1545ac0ca164c84a6474b9b"
       }
     ]
   },

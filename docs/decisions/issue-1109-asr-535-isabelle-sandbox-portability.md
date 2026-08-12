@@ -33,6 +33,12 @@ requires a real Ubuntu 24.04 x86_64 replay of the checksum-pinned archive under
 bubblewrap network isolation. The proof evidence digest and theorem semantics
 must remain unchanged.
 
+If the host denies bubblewrap namespace setup, the runner must report a stable
+sandbox-unavailable error rather than classify pre-prover output as a kernel
+rejection. It must not retry with host networking. Ubuntu installations with
+restrictive unprivileged-user-namespace policy use an administrator-approved
+bubblewrap policy or the canonical CI host.
+
 ## Nonclaims
 
 This repairs Linux distribution portability for the declared canonical proof

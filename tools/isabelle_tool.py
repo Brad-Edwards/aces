@@ -322,6 +322,12 @@ def _require_fontconfig_runtime(
         raise IsabelleToolError("fontconfig runtime is required for offline proof replay")
 
 
+def _bubblewrap_setup_failed(output: str) -> bool:
+    """Return whether bubblewrap failed before the fixed prover could start."""
+
+    return output.lstrip().startswith("bwrap:")
+
+
 def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
     """Kernel-check the fixed session in a network-isolated, bounded process."""
 
@@ -370,6 +376,8 @@ def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
             raise IsabelleToolError("Isabelle proof replay exceeded its wall-time bound") from exc
         output = _read_bounded_output(output_path)
         if completed.returncode != 0:
+            if _bubblewrap_setup_failed(output):
+                raise IsabelleToolError("bubblewrap network isolation is unavailable for offline proof replay")
             failure_tail = output.strip()[-4096:]
             detail = f":\n{failure_tail}" if failure_tail else ""
             raise IsabelleToolError(f"Isabelle kernel rejected the fixed proof session{detail}")

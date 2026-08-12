@@ -7,6 +7,7 @@ import io
 import json
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.error import URLError
 
 import pytest
@@ -34,6 +35,7 @@ from tools.isabelle_tool import (
     ISABELLE_PROCESS_ADDRESS_SPACE_LIMIT_MIB,
     ISABELLE_REQUIRED_FONTCONFIG_PATHS,
     ISABELLE_SYSTEM_RUNTIME_PATHS,
+    _bubblewrap_setup_failed,
     _proof_process_limits,
     _proof_sandbox_command,
     _require_fontconfig_runtime,
@@ -168,6 +170,41 @@ def test_proof_replay_checks_fontconfig_before_session_entry(
     )
 
     with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig test sentinel"):
+        isabelle_tool.run_isabelle_build(tmp_path)
+
+
+def test_proof_replay_distinguishes_sandbox_setup_from_kernel_rejection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    session_root = tmp_path / isabelle_tool.ISABELLE_SESSION_RELATIVE_PATH
+    session_root.mkdir(parents=True)
+    original_is_file = Path.is_file
+
+    monkeypatch.setattr(isabelle_tool, "require_isabelle", lambda _repo_root: tmp_path / "isabelle")
+    monkeypatch.setattr(
+        Path,
+        "is_file",
+        lambda path: path == Path("/usr/bin/bwrap") or original_is_file(path),
+    )
+    monkeypatch.setattr(isabelle_tool, "_require_fontconfig_runtime", lambda: None)
+
+    def completed_with(output: bytes):
+        def fake_run(*_args: object, stdout: object, **_kwargs: object) -> SimpleNamespace:
+            stdout.write(output)
+            return SimpleNamespace(returncode=1)
+
+        return fake_run
+
+    assert _bubblewrap_setup_failed("  bwrap: loopback setup denied\n") is True
+    assert _bubblewrap_setup_failed("*** Isabelle theorem failure\n") is False
+
+    monkeypatch.setattr(isabelle_tool.subprocess, "run", completed_with(b"bwrap: network namespace denied\n"))
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="bubblewrap network isolation is unavailable"):
+        isabelle_tool.run_isabelle_build(tmp_path)
+
+    monkeypatch.setattr(isabelle_tool.subprocess, "run", completed_with(b"*** Isabelle theorem failure\n"))
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="Isabelle kernel rejected"):
         isabelle_tool.run_isabelle_build(tmp_path)
 
 
