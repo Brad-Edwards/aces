@@ -55,6 +55,7 @@ RUFF_CONFIG = PROJECT_ROOT / "pyproject.toml"
 OSV_LOCKFILE_PATH = PROJECT_ROOT / "uv.lock"
 OSV_REPORT_PATH = PROJECT_ROOT / "osv-scanner-report.json"
 COVERAGE_JSON_PATH = PROJECT_ROOT / "coverage.json"
+COVERAGE_CONFIG_PATH = PROJECT_ROOT / "pyproject.toml"
 COVERAGE_RATCHET_PATH = REPO_ROOT / "tools" / "coverage_ratchet.json"
 TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_repo_policy_tools.py",
@@ -894,6 +895,8 @@ def _write_and_check_coverage(
         "tools/check_changed_coverage.py",
         "--coverage-json",
         str(COVERAGE_JSON_PATH),
+        "--coverage-config",
+        str(COVERAGE_CONFIG_PATH),
         "--ratchet",
         str(COVERAGE_RATCHET_PATH),
         "--repo-root",

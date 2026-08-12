@@ -10,14 +10,49 @@ import math
 import re
 import subprocess
 import tokenize
+import tomllib
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(?P<start>\d+)(?:,(?P<count>\d+))? @@", re.MULTILINE)
-_FORBIDDEN_COVERAGE_PRAGMA = re.compile(r"#\s*pragma\s*:\s*no\s+(?:cover|branch)\b", re.IGNORECASE)
+_FORBIDDEN_COVERAGE_PRAGMA = re.compile(r"#\s*pragma\s*:?\s*no\s+(?:cover|branch)\b", re.IGNORECASE)
 _MEASURED_PREFIXES = ("implementations/python/packages/", "tools/")
 _MEASURED_FILES = frozenset({"noxfile.py", "implementations/python/hatch_build.py"})
+_CANONICAL_COVERAGE_CONFIG = "implementations/python/pyproject.toml"
+_CANONICAL_RATCHET = "tools/coverage_ratchet.json"
+_COVERAGE_SOURCE = ("../..",)
+_COVERAGE_OMIT = frozenset(
+    {
+        "*/.cache/*",
+        "*/docs/*",
+        "*/implementations/python/.venv/*",
+        "*/implementations/python/tests/*",
+    }
+)
+_COVERAGE_EXCLUDE_ALSO = ("def " + "_default_runner",)
+_FORBIDDEN_RUN_OPTIONS = frozenset({"include", "plugins", "source_dirs", "source_pkgs"})
+_FORBIDDEN_REPORT_OPTIONS = frozenset(
+    {
+        "exclude_lines",
+        "ignore_errors",
+        "include",
+        "omit",
+        "partial_also",
+        "partial_branches",
+    }
+)
+_NON_CODE_TOKEN_TYPES = frozenset(
+    {
+        tokenize.COMMENT,
+        tokenize.DEDENT,
+        tokenize.ENCODING,
+        tokenize.ENDMARKER,
+        tokenize.INDENT,
+        tokenize.NEWLINE,
+        tokenize.NL,
+    }
+)
 
 
 class CoveragePolicyError(RuntimeError):
@@ -139,6 +174,70 @@ def normalized_file_records(
     return records
 
 
+def _canonical_policy_path(repo_root: Path, path: Path, expected: str, *, label: str) -> str:
+    try:
+        relative_path = path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError as exc:
+        raise CoveragePolicyError(f"{label} path escapes the repository: {path}") from exc
+    if relative_path != expected:
+        raise CoveragePolicyError(f"{label} must remain at the canonical path {expected}")
+    return relative_path
+
+
+def load_toml(path: Path) -> Mapping[str, Any]:
+    """Load one TOML object with a stable policy error on malformed input."""
+
+    try:
+        with path.open("rb") as stream:
+            return tomllib.load(stream)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise CoveragePolicyError(f"could not read {path}: {exc}") from exc
+
+
+def _required_mapping(parent: Mapping[str, Any], key: str, *, label: str) -> Mapping[str, Any]:
+    value = parent.get(key)
+    if not isinstance(value, Mapping):
+        raise CoveragePolicyError(f"coverage config must contain {label}")
+    return value
+
+
+def validate_coverage_config(config: Mapping[str, Any]) -> None:
+    """Reject coverage configuration that can narrow or suppress the gate."""
+
+    tool = _required_mapping(config, "tool", label="[tool]")
+    coverage = _required_mapping(tool, "coverage", label="[tool.coverage]")
+    if "paths" in coverage:
+        raise CoveragePolicyError("coverage config path aliases can merge unrelated source files")
+    run = _required_mapping(coverage, "run", label="[tool.coverage.run]")
+    report = _required_mapping(coverage, "report", label="[tool.coverage.report]")
+
+    if run.get("branch") is not True:
+        raise CoveragePolicyError("coverage config must enable branch data")
+    if run.get("relative_files") is not True:
+        raise CoveragePolicyError("coverage config must use repository-relative files")
+    if tuple(run.get("source", ())) != _COVERAGE_SOURCE:
+        raise CoveragePolicyError("coverage config must measure the canonical repository source root")
+    configured_omit = run.get("omit")
+    if (
+        not isinstance(configured_omit, Sequence)
+        or isinstance(configured_omit, (str, bytes))
+        or len(configured_omit) != len(_COVERAGE_OMIT)
+        or set(configured_omit) != _COVERAGE_OMIT
+    ):
+        raise CoveragePolicyError("coverage config omit list must contain only canonical non-source paths")
+    forbidden_run = sorted(_FORBIDDEN_RUN_OPTIONS & run.keys())
+    if forbidden_run:
+        raise CoveragePolicyError(f"coverage config run option can narrow measurement: {forbidden_run[0]}")
+
+    if report.get("include_namespace_packages") is not True:
+        raise CoveragePolicyError("coverage config must discover namespace-package source files")
+    if tuple(report.get("exclude_also", ())) != _COVERAGE_EXCLUDE_ALSO:
+        raise CoveragePolicyError("coverage config may contain only the governed legacy exclusion")
+    forbidden_report = sorted(_FORBIDDEN_REPORT_OPTIONS & report.keys())
+    if forbidden_report:
+        raise CoveragePolicyError(f"coverage config report option can suppress measurement: {forbidden_report[0]}")
+
+
 def _terminal_name(node: ast.expr) -> str | None:
     while isinstance(node, ast.Subscript):
         node = node.value
@@ -178,12 +277,14 @@ def _is_declaration_only_protocol(node: ast.ClassDef) -> bool:
     )
 
 
-def _structural_exclusion_lines(source: str, *, path: str) -> set[int]:
+def _parse_source(source: str, *, path: str) -> ast.Module:
     try:
-        tree = ast.parse(source, filename=path)
+        return ast.parse(source, filename=path)
     except SyntaxError as exc:
         raise CoveragePolicyError(f"could not parse changed Python source {path}: {exc.msg}") from exc
 
+
+def _structural_exclusion_lines(source: str, tree: ast.Module) -> set[int]:
     source_lines = source.splitlines()
     structural: set[int] = set()
     for node in ast.walk(tree):
@@ -215,25 +316,122 @@ def _structural_exclusion_lines(source: str, *, path: str) -> set[int]:
     return structural
 
 
+def _significant_source_lines(tokens: Sequence[tokenize.TokenInfo]) -> set[int]:
+    significant: set[int] = set()
+    for token in tokens:
+        if token.type in _NON_CODE_TOKEN_TYPES:
+            continue
+        significant.update(range(token.start[0], token.end[0] + 1))
+    return significant
+
+
+def _docstring_lines(tree: ast.Module) -> set[int]:
+    lines: set[int] = set()
+    containers = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    for node in ast.walk(tree):
+        if not isinstance(node, containers) or not node.body:
+            continue
+        statement = node.body[0]
+        if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant):
+            if isinstance(statement.value.value, str):
+                lines.update(range(statement.lineno, (statement.end_lineno or statement.lineno) + 1))
+    return lines
+
+
+def _owning_coverage_line(tree: ast.Module, physical_line: int, coverage_lines: set[int]) -> int | None:
+    candidates: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        start = getattr(node, "lineno", None)
+        end = getattr(node, "end_lineno", None)
+        if not isinstance(start, int) or not isinstance(end, int):
+            continue
+        if start in coverage_lines and start <= physical_line <= end:
+            candidates.append((end - start, start))
+    return min(candidates)[1] if candidates else None
+
+
+def _contains_line(node: ast.AST, physical_line: int) -> bool:
+    start = getattr(node, "lineno", None)
+    end = getattr(node, "end_lineno", None)
+    return isinstance(start, int) and isinstance(end, int) and start <= physical_line <= end
+
+
+def _branch_header_owners(tree: ast.Module, physical_line: int, branch_sources: set[int]) -> set[int]:
+    owners: set[int] = set()
+    for node in ast.walk(tree):
+        header_nodes: tuple[ast.AST, ...]
+        if isinstance(node, (ast.If, ast.While, ast.IfExp)):
+            header_nodes = (node.test,)
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            header_nodes = (node.target, node.iter)
+        else:
+            continue
+        if node.lineno in branch_sources and any(_contains_line(header, physical_line) for header in header_nodes):
+            owners.add(node.lineno)
+    return owners
+
+
+def _branch_edges(record: Mapping[str, Any], key: str) -> set[tuple[int, int]]:
+    return {
+        (int(edge[0]), int(edge[1]))
+        for edge in record.get(key, [])
+        if isinstance(edge, Sequence) and not isinstance(edge, (str, bytes)) and len(edge) == 2
+    }
+
+
+def _expanded_execution_lines(
+    changed_lines: set[int],
+    *,
+    significant_lines: set[int],
+    tree: ast.Module,
+    record: Mapping[str, Any],
+) -> tuple[set[int], set[int]]:
+    coverage_lines = {
+        int(line) for key in ("executed_lines", "missing_lines", "excluded_lines") for line in record.get(key, [])
+    }
+    branch_edges = _branch_edges(record, "executed_branches") | _branch_edges(record, "missing_branches")
+    branch_sources = {source for source, _destination in branch_edges}
+    for source, destination in branch_edges:
+        coverage_lines.add(source)
+        if destination > 0:
+            coverage_lines.add(destination)
+
+    expanded = set(changed_lines)
+    unmapped: set[int] = set()
+    significant_changed = (changed_lines & significant_lines) - _docstring_lines(tree)
+    for physical_line in significant_changed:
+        expanded.update(_branch_header_owners(tree, physical_line, branch_sources))
+    candidates = significant_changed - coverage_lines
+    for physical_line in sorted(candidates):
+        owner = _owning_coverage_line(tree, physical_line, coverage_lines)
+        if owner is None:
+            unmapped.add(physical_line)
+        else:
+            expanded.add(owner)
+    return expanded, unmapped
+
+
 def _source_coverage_policy(
     repo_root: Path,
     path: str,
     changed_lines: set[int],
-) -> tuple[set[int], set[int]]:
+) -> tuple[ast.Module, set[int], set[int], set[int]]:
     source_path = repo_root / path
     try:
         source = source_path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:
         raise CoveragePolicyError(f"could not inspect changed Python source {path}: {exc}") from exc
-    structural = _structural_exclusion_lines(source, path=path)
+    tree = _parse_source(source, path=path)
+    tokens = tuple(tokenize.generate_tokens(io.StringIO(source).readline))
+    structural = _structural_exclusion_lines(source, tree)
     forbidden = {
         token.start[0]
-        for token in tokenize.generate_tokens(io.StringIO(source).readline)
+        for token in tokens
         if token.type == tokenize.COMMENT
         and token.start[0] in changed_lines
         and _FORBIDDEN_COVERAGE_PRAGMA.search(token.string)
     }
-    return structural, forbidden
+    return tree, structural, forbidden, _significant_source_lines(tokens)
 
 
 def changed_coverage_failures(
@@ -246,27 +444,33 @@ def changed_coverage_failures(
 
     failures: list[str] = []
     for path, changed_lines in sorted(changed.items()):
-        structural_exclusions, forbidden_pragmas = _source_coverage_policy(repo_root, path, changed_lines)
+        tree, structural_exclusions, forbidden_pragmas, significant_lines = _source_coverage_policy(
+            repo_root, path, changed_lines
+        )
         for line in sorted(forbidden_pragmas):
             failures.append(f"{path}:{line}: explicit coverage exclusion pragma is forbidden on changed code")
         record = records.get(path)
         if record is None:
             failures.append(f"{path}: changed measured Python file is absent from coverage data")
             continue
+        execution_lines, unmapped_lines = _expanded_execution_lines(
+            changed_lines,
+            significant_lines=significant_lines,
+            tree=tree,
+            record=record,
+        )
+        for line in sorted(unmapped_lines):
+            failures.append(f"{path}:{line}: changed code is absent from the coverage line mapping")
         executed = {int(line) for line in record.get("executed_lines", [])}
         missing = {int(line) for line in record.get("missing_lines", [])}
         excluded = {int(line) for line in record.get("excluded_lines", [])}
-        executable_changed = changed_lines & (executed | missing)
+        executable_changed = execution_lines & (executed | missing)
         for line in sorted(executable_changed & missing):
             failures.append(f"{path}:{line}: changed executable line is not covered")
-        for line in sorted((changed_lines & excluded) - structural_exclusions - forbidden_pragmas):
+        for line in sorted((execution_lines & excluded) - structural_exclusions - forbidden_pragmas):
             failures.append(f"{path}:{line}: changed line is excluded from coverage")
-        missing_branches = {
-            (int(edge[0]), int(edge[1]))
-            for edge in record.get("missing_branches", [])
-            if isinstance(edge, Sequence) and len(edge) == 2
-        }
-        for source, destination in sorted(edge for edge in missing_branches if edge[0] in changed_lines):
+        missing_branches = _branch_edges(record, "missing_branches")
+        for source, destination in sorted(edge for edge in missing_branches if edge[0] in execution_lines):
             failures.append(f"{path}:{source}->{destination}: changed branch exit is not covered")
     return failures
 
@@ -313,12 +517,17 @@ def base_ratchet(
 ) -> Mapping[str, Any] | None:
     """Load the ratchet recorded at the exact base, if it already existed."""
 
-    try:
-        relative_path = ratchet_path.resolve().relative_to(repo_root.resolve()).as_posix()
-    except ValueError as exc:
-        raise CoveragePolicyError(f"coverage ratchet path escapes the repository: {ratchet_path}") from exc
+    relative_path = _canonical_policy_path(
+        repo_root,
+        ratchet_path,
+        _CANONICAL_RATCHET,
+        label="coverage ratchet",
+    )
     result = _git(repo_root, "show", f"{base_rev}:{relative_path}", check=False)
     if result.returncode != 0:
+        history = _git(repo_root, "log", "--format=%H", base_rev, "--", relative_path).stdout
+        if history.strip():
+            raise CoveragePolicyError(f"coverage ratchet is missing at base {base_rev!r} after its canonical adoption")
         return None
     try:
         value = json.loads(result.stdout.decode("utf-8"))
@@ -361,6 +570,7 @@ def load_json(path: Path) -> Mapping[str, Any]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coverage-json", type=Path, required=True)
+    parser.add_argument("--coverage-config", type=Path, required=True)
     parser.add_argument("--ratchet", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, required=True)
     parser.add_argument("--project-root", type=Path, required=True)
@@ -371,6 +581,19 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        _canonical_policy_path(
+            args.repo_root,
+            args.coverage_config,
+            _CANONICAL_COVERAGE_CONFIG,
+            label="coverage config",
+        )
+        _canonical_policy_path(
+            args.repo_root,
+            args.ratchet,
+            _CANONICAL_RATCHET,
+            label="coverage ratchet",
+        )
+        validate_coverage_config(load_toml(args.coverage_config))
         report = load_json(args.coverage_json)
         ratchet = load_json(args.ratchet)
         records = normalized_file_records(

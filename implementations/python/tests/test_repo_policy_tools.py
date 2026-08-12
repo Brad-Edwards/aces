@@ -150,6 +150,8 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
     policy_command = next(
         command for command, _options in session.commands if "tools/check_changed_coverage.py" in command
     )
+    config_index = policy_command.index("--coverage-config")
+    assert policy_command[config_index + 1] == str(noxfile.COVERAGE_CONFIG_PATH)
     assert "--base-rev" not in policy_command
 
 
@@ -321,6 +323,8 @@ def test_parallel_coverage_is_combined_before_reporting(
     policy_command = next(
         command for command, _options in session.commands if "tools/check_changed_coverage.py" in command
     )
+    config_index = policy_command.index("--coverage-config")
+    assert policy_command[config_index + 1] == str(noxfile.COVERAGE_CONFIG_PATH)
     assert policy_command[-2:] == ("--base-rev", "base-sha")
 
 

@@ -32,8 +32,12 @@ raise them.
 
 Measured scope includes the twelve shipped package roots, repository-owned
 `tools`, `noxfile.py`, and the Hatch build hook. Tests, generated environments,
-and external dependencies are not production denominator padding. Existing
-explicit exclusions retain their separately documented integration rationale.
+acquired tool caches, and external dependencies are not production denominator
+padding. The checked-in Coverage.py configuration is itself validated: source
+roots and non-source omissions are fixed, path aliases are forbidden, and no
+custom partial-branch or exclusion rule may suppress the changed-code gate.
+Existing explicit exclusions retain their separately documented integration
+rationale.
 
 ## Diff And Branch Semantics
 
@@ -41,19 +45,26 @@ The gate consumes Coverage.py JSON produced from the combined unit and
 integration data and a Git commit accepted by `git merge-base --is-ancestor`.
 It parses zero-context added-line ranges from that exact base through `HEAD`.
 Comments and other non-executable changed lines are ignored. An executable
-changed line is covered only when Coverage.py reports it executed. When a
-changed executable line is a branch source, no missing destination from that
-source is allowed.
+changed line is covered only when Coverage.py reports it executed. Physical
+changes inside a multiline expression are mapped to the owning Coverage.py
+statement; multiline branch headers are also mapped to their branch source.
+This prevents a continuation-line edit from disappearing between Git's physical
+line model and Coverage.py's executable-line model. When a changed executable
+line is a branch source, no missing destination from that source is allowed.
 
 Files outside the measured OpenRAE source/tool roots do not enter the changed
 coverage gate. New and renamed files use their destination path; a rename is
 checked conservatively as a new destination file. Deleted files have no
-remaining executable obligation.
+remaining executable obligation. The aggregate ratchet stays at the canonical
+`tools/coverage_ratchet.json` path. Once that path has appeared in base history,
+its deletion or relocation is an error rather than a new first adoption.
 
 ## Verification
 
 Unit tests cover diff ranges, new and renamed files, path normalization,
-comments, missing source records, missing lines, missing branches, branch-data
-absence, and invalid base revisions. Canonical verification must publish XML and
-JSON, enforce the aggregate ratchet, and run the changed-code gate with the same
-base SHA used by repository policy.
+comments, multiline statements and branch headers, missing source records,
+missing lines, missing branches, configuration suppression attempts, ratchet
+relocation/deletion, acquired-cache isolation, branch-data absence, and invalid
+base revisions. Canonical verification must publish XML and JSON, enforce the
+aggregate ratchet, and run the changed-code gate with the same base SHA used by
+repository policy.

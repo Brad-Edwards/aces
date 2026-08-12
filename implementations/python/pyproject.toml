@@ -127,6 +127,7 @@ branch = true
 relative_files = true
 source = ["../.."]
 omit = [
+    "*/.cache/*",
     "*/implementations/python/tests/*",
     "*/implementations/python/.venv/*",
     "*/docs/*",

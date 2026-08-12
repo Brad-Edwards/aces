@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import json
 import runpy
+import shutil
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
+from coverage import Coverage
 from tools import check_changed_coverage as coverage_policy
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PROJECT_CONFIG = REPO_ROOT / "implementations" / "python" / "pyproject.toml"
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -52,6 +58,21 @@ def _report(*, line_covered: int = 1, branch_covered: int = 1) -> dict[str, obje
 
 def _ratchet(*, line: float = 100.0, branch: float = 100.0) -> dict[str, object]:
     return {"minimum_line_percent": line, "minimum_branch_percent": branch}
+
+
+def _install_coverage_config(project: Path) -> Path:
+    project.mkdir(parents=True, exist_ok=True)
+    config_path = project / "pyproject.toml"
+    shutil.copyfile(PROJECT_CONFIG, config_path)
+    return config_path
+
+
+def _main_paths(repo: Path) -> tuple[Path, Path]:
+    project = repo / "implementations" / "python"
+    config_path = _install_coverage_config(project)
+    ratchet_path = repo / "tools" / "coverage_ratchet.json"
+    ratchet_path.parent.mkdir(parents=True, exist_ok=True)
+    return config_path, ratchet_path
 
 
 @pytest.mark.parametrize(
@@ -192,6 +213,88 @@ def test_normalized_file_records_rejects_paths_outside_repository(tmp_path: Path
         )
 
 
+def test_canonical_coverage_config_omits_acquired_cache_but_keeps_repo_tools(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    project = repo / "implementations" / "python"
+    config_path = _install_coverage_config(project)
+    owned_tool = repo / "tools" / "owned.py"
+    owned_tool.parent.mkdir(parents=True)
+    owned_tool.write_text("OWNED = True\n", encoding="utf-8")
+    acquired = repo / ".cache" / "raes-sdl" / "tooling" / "isabelle" / "appendix_gen.py"
+    acquired.parent.mkdir(parents=True)
+    acquired.write_text('print "Python 2 syntax"\n', encoding="utf-8")
+    monkeypatch.chdir(project)
+
+    measured = Coverage(config_file=str(config_path), data_file=str(tmp_path / ".coverage"))
+    measured.start()
+    runpy.run_path(str(owned_tool))
+    measured.stop()
+    measured.save()
+    report_path = tmp_path / "coverage.xml"
+    measured.xml_report(outfile=str(report_path))
+
+    report = report_path.read_text(encoding="utf-8")
+    assert "tools/owned.py" in report
+    assert "appendix_gen.py" not in report
+
+
+def test_canonical_coverage_config_passes_policy_validation() -> None:
+    coverage_policy.validate_coverage_config(coverage_policy.load_toml(PROJECT_CONFIG))
+
+
+@pytest.mark.parametrize(
+    ("section", "key", "value", "match"),
+    [
+        ("run", "branch", False, "enable branch data"),
+        ("run", "relative_files", False, "repository-relative files"),
+        ("run", "source", ["packages"], "canonical repository source root"),
+        ("run", "omit", ["*/.cache/*"], "canonical non-source paths"),
+        ("run", "plugins", ["weakener"], "can narrow measurement"),
+        ("report", "include_namespace_packages", False, "namespace-package"),
+        ("report", "exclude_also", [".*"], "governed legacy exclusion"),
+        ("report", "partial_branches", [".*"], "can suppress measurement"),
+        ("report", "partial_also", [".*"], "can suppress measurement"),
+        ("report", "exclude_lines", [".*"], "can suppress measurement"),
+    ],
+)
+def test_coverage_config_rejects_scope_and_suppression_weakening(
+    section: str,
+    key: str,
+    value: object,
+    match: str,
+) -> None:
+    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG))
+    config["tool"]["coverage"][section][key] = value
+
+    with pytest.raises(coverage_policy.CoveragePolicyError, match=match):
+        coverage_policy.validate_coverage_config(config)
+
+
+@pytest.mark.parametrize("missing", ["tool", "coverage", "run", "report"])
+def test_coverage_config_requires_governed_tables(missing: str) -> None:
+    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG))
+    if missing == "tool":
+        config.pop("tool")
+    elif missing == "coverage":
+        config["tool"].pop("coverage")
+    else:
+        config["tool"]["coverage"].pop(missing)
+
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="must contain"):
+        coverage_policy.validate_coverage_config(config)
+
+
+def test_coverage_config_rejects_path_aliases() -> None:
+    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG))
+    config["tool"]["coverage"]["paths"] = {"source": ["implementations/python/packages", "elsewhere"]}
+
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="path aliases"):
+        coverage_policy.validate_coverage_config(config)
+
+
 def test_changed_coverage_reports_missing_files_lines_and_branch_exits(tmp_path: Path) -> None:
     changed = {
         "implementations/python/packages/absent.py": {1},
@@ -238,6 +341,177 @@ def test_changed_coverage_ignores_changed_comments_and_blank_lines(tmp_path: Pat
         coverage_policy.changed_coverage_failures(
             {path: {1, 2}},
             {path: {}},
+            repo_root=tmp_path,
+        )
+        == []
+    )
+
+
+def test_changed_coverage_maps_multiline_condition_changes_to_branch_owner(tmp_path: Path) -> None:
+    path = "tools/multiline_branch.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """def choose(flag: bool) -> int:
+    if (
+        flag
+    ):
+        return 1
+    return 0
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {3}},
+        {
+            path: {
+                "executed_lines": [1, 2, 5],
+                "missing_lines": [6],
+                "excluded_lines": [],
+                "executed_branches": [[2, 5]],
+                "missing_branches": [[2, 6]],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [f"{path}:2->6: changed branch exit is not covered"]
+
+
+def test_changed_coverage_keeps_branch_owner_when_condition_continuation_is_reported(tmp_path: Path) -> None:
+    path = "tools/reported_condition.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """def choose(flag: bool) -> int:
+    if (
+        check(flag)
+    ):
+        return 1
+    return 0
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {3}},
+        {
+            path: {
+                "executed_lines": [1, 2, 3, 5],
+                "missing_lines": [6],
+                "missing_branches": [[2, 6]],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [f"{path}:2->6: changed branch exit is not covered"]
+
+
+def test_changed_coverage_maps_multiline_loop_iterable_to_branch_owner(tmp_path: Path) -> None:
+    path = "tools/multiline_loop.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """for item in (
+    items
+):
+    consume(item)
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {2}},
+        {
+            path: {
+                "executed_lines": [1, 2, 4],
+                "missing_lines": [],
+                "missing_branches": [[1, -1]],
+            }
+        },
+        repo_root=tmp_path,
+    ) == [f"{path}:1->-1: changed branch exit is not covered"]
+
+
+def test_changed_coverage_maps_multiline_expression_changes_to_statement_owner(tmp_path: Path) -> None:
+    path = "tools/multiline_expression.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """value = (
+    build_value()
+)
+""",
+        encoding="utf-8",
+    )
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {2}},
+        {path: {"executed_lines": [], "missing_lines": [1], "missing_branches": []}},
+        repo_root=tmp_path,
+    ) == [f"{path}:1: changed executable line is not covered"]
+
+
+def test_changed_coverage_does_not_map_comment_only_continuation_lines(tmp_path: Path) -> None:
+    path = "tools/multiline_comment.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        """if (
+    # explanation only
+    enabled
+):
+    run()
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {2}},
+            {path: {"executed_lines": [1, 5], "missing_lines": [], "missing_branches": [[1, -1]]}},
+            repo_root=tmp_path,
+        )
+        == []
+    )
+
+
+def test_changed_coverage_fails_closed_when_code_has_no_reported_owner(tmp_path: Path) -> None:
+    path = "tools/unmapped.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+
+    assert coverage_policy.changed_coverage_failures(
+        {path: {1}},
+        {path: {}},
+        repo_root=tmp_path,
+    ) == [f"{path}:1: changed code is absent from the coverage line mapping"]
+
+
+def test_changed_coverage_ignores_docstring_only_changes(tmp_path: Path) -> None:
+    path = "tools/docstrings.py"
+    source = tmp_path / path
+    source.parent.mkdir()
+    source.write_text(
+        '''"""Module
+documentation.
+"""
+
+class Example:
+    """Class documentation."""
+
+    def sync(self) -> None:
+        """Sync documentation."""
+
+    async def asynchronous(self) -> None:
+        """Async documentation."""
+''',
+        encoding="utf-8",
+    )
+
+    assert (
+        coverage_policy.changed_coverage_failures(
+            {path: {2, 6, 9, 12}},
+            {path: {"executed_lines": [5, 8, 11], "missing_lines": [], "missing_branches": []}},
             repo_root=tmp_path,
         )
         == []
@@ -331,7 +605,15 @@ class Generated(factory()):
     )
 
 
-@pytest.mark.parametrize("pragma", ["# pragma: no cover", "# PRAGMA : NO branch - rationale"])
+@pytest.mark.parametrize(
+    "pragma",
+    [
+        "# pragma: no cover",
+        "# pragma no branch",
+        "# pragmano branch",
+        "# PRAGMA : NO branch - rationale",
+    ],
+)
 def test_changed_coverage_forbids_explicit_pragmas_on_changed_lines(tmp_path: Path, pragma: str) -> None:
     path = "tools/example.py"
     source = tmp_path / path
@@ -455,6 +737,30 @@ def test_ratchet_history_is_monotonic_after_initial_adoption(tmp_path: Path) -> 
     assert coverage_policy.ratchet_regression_failures(_ratchet(), None) == []
 
 
+def test_ratchet_cannot_move_away_from_its_canonical_history(tmp_path: Path) -> None:
+    repo, base = _repository(tmp_path)
+    renamed = repo / "tools" / "coverage_floor.json"
+    renamed.write_text(json.dumps(_ratchet(line=1, branch=1)), encoding="utf-8")
+
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="must remain at the canonical path"):
+        coverage_policy.base_ratchet(repo, base, renamed)
+
+
+def test_missing_base_ratchet_fails_after_prior_canonical_adoption(tmp_path: Path) -> None:
+    repo, _ = _repository(tmp_path)
+    ratchet_path = repo / "tools" / "coverage_ratchet.json"
+    ratchet_path.write_text(json.dumps(_ratchet(line=80, branch=70)), encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "adopt ratchet")
+    ratchet_path.unlink()
+    _git(repo, "add", "-u")
+    _git(repo, "commit", "-m", "remove ratchet")
+    base_without_ratchet = _git(repo, "rev-parse", "HEAD")
+
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="missing at base.*after its canonical adoption"):
+        coverage_policy.base_ratchet(repo, base_without_ratchet, ratchet_path)
+
+
 def test_base_ratchet_rejects_outside_and_malformed_files(tmp_path: Path) -> None:
     repo, _ = _repository(tmp_path)
     outside = tmp_path / "outside.json"
@@ -490,13 +796,25 @@ def test_load_json_accepts_objects_and_rejects_bad_inputs(tmp_path: Path) -> Non
         coverage_policy.load_json(tmp_path / "missing.json")
 
 
+def test_load_toml_accepts_objects_and_rejects_bad_inputs(tmp_path: Path) -> None:
+    path = tmp_path / "value.toml"
+    path.write_text("value = 1\n", encoding="utf-8")
+    assert coverage_policy.load_toml(path) == {"value": 1}
+
+    path.write_text("value = [\n", encoding="utf-8")
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="could not read"):
+        coverage_policy.load_toml(path)
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="could not read"):
+        coverage_policy.load_toml(tmp_path / "missing.toml")
+
+
 def test_main_pass_failure_and_policy_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     repo, base = _repository(tmp_path)
     project = repo / "implementations" / "python"
     source = project / "packages" / "demo.py"
     source.write_text("value = 2\n", encoding="utf-8")
     report_path = tmp_path / "coverage.json"
-    ratchet_path = repo / "tools" / "coverage_ratchet.json"
+    config_path, ratchet_path = _main_paths(repo)
     report = _report()
     report["files"] = {str(source): {"executed_lines": [1], "missing_lines": [], "missing_branches": []}}
     report_path.write_text(json.dumps(report), encoding="utf-8")
@@ -504,6 +822,8 @@ def test_main_pass_failure_and_policy_error(tmp_path: Path, capsys: pytest.Captu
     args = [
         "--coverage-json",
         str(report_path),
+        "--coverage-config",
+        str(config_path),
         "--ratchet",
         str(ratchet_path),
         "--repo-root",
@@ -528,7 +848,7 @@ def test_main_pass_failure_and_policy_error(tmp_path: Path, capsys: pytest.Captu
 
 def test_main_can_check_only_the_aggregate(tmp_path: Path) -> None:
     report_path = tmp_path / "coverage.json"
-    ratchet_path = tmp_path / "ratchet.json"
+    config_path, ratchet_path = _main_paths(tmp_path)
     report_path.write_text(json.dumps(_report()), encoding="utf-8")
     ratchet_path.write_text(json.dumps(_ratchet()), encoding="utf-8")
 
@@ -537,6 +857,8 @@ def test_main_can_check_only_the_aggregate(tmp_path: Path) -> None:
             [
                 "--coverage-json",
                 str(report_path),
+                "--coverage-config",
+                str(config_path),
                 "--ratchet",
                 str(ratchet_path),
                 "--repo-root",
@@ -551,7 +873,7 @@ def test_main_can_check_only_the_aggregate(tmp_path: Path) -> None:
 
 def test_script_entrypoint_delegates_to_main(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     report_path = tmp_path / "coverage.json"
-    ratchet_path = tmp_path / "ratchet.json"
+    config_path, ratchet_path = _main_paths(tmp_path)
     report_path.write_text(json.dumps(_report()), encoding="utf-8")
     ratchet_path.write_text(json.dumps(_ratchet()), encoding="utf-8")
     monkeypatch.setattr(
@@ -561,6 +883,8 @@ def test_script_entrypoint_delegates_to_main(tmp_path: Path, monkeypatch: pytest
             "check_changed_coverage.py",
             "--coverage-json",
             str(report_path),
+            "--coverage-config",
+            str(config_path),
             "--ratchet",
             str(ratchet_path),
             "--repo-root",
