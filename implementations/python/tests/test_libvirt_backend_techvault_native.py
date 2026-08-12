@@ -933,6 +933,12 @@ def _domain_with_interface(**interface: object) -> dict[str, object]:
     return {"name": "webapp", "interfaces": [interface]}
 
 
+def test_init_script_accepts_a_decimal_string_cidr_prefix():
+    script = _init_script(_domain_with_interface(**{**_VALID_INTERFACE, "cidr_prefix": "24"}))
+
+    assert "ip addr add '192.0.2.10/24' dev \"$iface\"" in script
+
+
 def test_init_script_quotes_valid_interface_addressing():
     script = _init_script(_domain_with_interface(**_VALID_INTERFACE))
 
@@ -951,6 +957,13 @@ def test_init_script_quotes_valid_interface_addressing():
         ({**_VALID_INTERFACE, "ip": "`reboot`"}, "ip is not an IP"),
         ({**_VALID_INTERFACE, "cidr_prefix": "24; rm -rf /"}, "cidr_prefix is not an integer"),
         ({**_VALID_INTERFACE, "cidr_prefix": 33}, "cidr_prefix is out of range"),
+        # Non-string ip, and values `int()` would mishandle: a bool, and a
+        # superscript that `str.isdigit` accepts but `int` refuses.
+        ({**_VALID_INTERFACE, "ip": 3221225994}, "ip is not an IP"),
+        ({**_VALID_INTERFACE, "ip": None}, "ip is not an IP"),
+        ({**_VALID_INTERFACE, "cidr_prefix": True}, "cidr_prefix is not an integer"),
+        ({**_VALID_INTERFACE, "cidr_prefix": "\u00b2"}, "cidr_prefix is not an integer"),
+        ({**_VALID_INTERFACE, "cidr_prefix": 24.5}, "cidr_prefix is not an integer"),
     ),
 )
 def test_init_script_rejects_hostile_interface_fields_before_scripting(interface, match):
@@ -958,6 +971,13 @@ def test_init_script_rejects_hostile_interface_fields_before_scripting(interface
     # no attacker-controlled shell can reach the root-run guest init script.
     with pytest.raises(ValueError, match=match):
         _init_script(_domain_with_interface(**interface))
+
+
+def test_init_script_skips_malformed_interface_entries():
+    script = _init_script({"name": "webapp", "interfaces": ["not-a-mapping", _VALID_INTERFACE]})
+
+    assert "    '52:54:00:00:00:01')" in script
+    assert "not-a-mapping" not in script
 
 
 def test_cpio_newc_rejects_newline_in_member_path(tmp_path):

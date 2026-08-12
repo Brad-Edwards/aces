@@ -165,7 +165,10 @@ def _validated_interface_address(ip: object, cidr_prefix: object) -> str:
 def _validated_cidr_prefix(value: object, max_prefix: int) -> int:
     if isinstance(value, bool):
         raise ValueError(f"interface cidr_prefix is not an integer: {value!r}")
-    if isinstance(value, str) and value.isdigit():
+    # ``isdecimal`` rather than ``isdigit``: the latter also accepts characters
+    # like "²" that ``int`` then refuses, leaking a bare interpreter message
+    # instead of this function's.
+    if isinstance(value, str) and value.isdecimal():
         value = int(value)
     if not isinstance(value, int):
         raise ValueError(f"interface cidr_prefix is not an integer: {value!r}")
