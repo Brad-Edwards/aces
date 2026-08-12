@@ -13,6 +13,8 @@ import pytest
 import raes_contracts.runtime_state as runtime_state_contracts
 import raes_runtime.participant_scheduler as participant_scheduler
 import raes_runtime.participant_scheduler_concurrency as scheduler_concurrency
+import raes_runtime.participant_scheduler_concurrent_commit as scheduler_commit
+import raes_runtime.participant_scheduler_concurrent_dispatch as scheduler_dispatch
 import raes_runtime.participant_scheduler_concurrent_settlement as scheduler_settlement
 import raes_runtime.participant_scheduler_operations as scheduler_operations
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
@@ -199,6 +201,15 @@ def _raise_service_settlement(run, policy_address, completed_count):
     raise RuntimeError("settlement failed")
 
 
+def test_batch_without_concurrent_method_reports_unsupported_backend() -> None:
+    batch = _batch(object())
+
+    _execute_concurrent_batch(batch)
+
+    assert batch.run.failure is not None
+    assert batch.run.failure.diagnostics[0].code == "runtime.participant-concurrency-unsupported"
+
+
 def test_miscounted_backend_batch_is_reported_and_releases_reservations():
     """A wrong result count fences potentially executed actions.
 
@@ -276,7 +287,7 @@ def test_success_snapshot_is_detached_from_caller_predecessor(monkeypatch: pytes
         )
         return tuple(result for _request in requests)
 
-    monkeypatch.setattr(scheduler_concurrency, "autonomous_action_result_violation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler_commit, "autonomous_action_result_violation", lambda *args, **kwargs: None)
     batch = _batch(SimpleNamespace(admit_actions_concurrently=_complete))
     predecessor = batch.run.working.with_entries({}, metadata={"nested": {"value": "before"}})
     batch.run.working = predecessor
@@ -350,7 +361,7 @@ def test_snapshot_isolation_failure_before_dispatch_restores_exact_snapshot(
             raise RuntimeError("snapshot copy failed")
         return deepcopy(value)
 
-    monkeypatch.setattr(scheduler_concurrency, "deepcopy", _failing_copy)
+    monkeypatch.setattr(scheduler_dispatch, "deepcopy", _failing_copy)
     batch = _batch(SimpleNamespace(admit_actions_concurrently=_backend))
     before = deepcopy(batch.run.working)
 
@@ -581,7 +592,7 @@ def test_stale_generation_settles_dispatched_actions_without_committing_results(
         return tuple(result for _request in requests)
 
     monkeypatch.setattr(scheduler_operations, "_bound_action_request", _stale_binding)
-    monkeypatch.setattr(scheduler_concurrency, "autonomous_action_result_violation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler_commit, "autonomous_action_result_violation", lambda *args, **kwargs: None)
     batch = _batch(SimpleNamespace(admit_actions_concurrently=_complete))
     before = deepcopy(batch.run.working)
 
@@ -592,6 +603,19 @@ def test_stale_generation_settles_dispatched_actions_without_committing_results(
         "runtime.participant-execution-stale-completion"
     ) == 2
     _assert_indeterminate_batch_settled(batch.run, before)
+
+
+def test_missing_execution_service_fences_concurrent_completion() -> None:
+    request = SimpleNamespace(
+        execution_scope_ref="participant.execution-service.missing",
+        execution_generation=1,
+        participant_address=_PARTICIPANTS[0],
+    )
+
+    diagnostic = scheduler_commit.participant_generation_commit_diagnostic(request, RuntimeSnapshot())
+
+    assert diagnostic is not None
+    assert diagnostic.code == "runtime.participant-execution-stale-completion"
 
 
 def test_protocol_invalid_snapshot_is_not_merged_before_validation():
@@ -732,6 +756,18 @@ def test_concurrent_due_scan_preserves_preexisting_failure(
 
     assert run_policy_due_concurrently(policy, None, object(), 0, 1, batch.run) is True
     assert batch.run.failure is original_failure
+
+
+def test_non_v1_policy_is_left_for_the_serial_scheduler() -> None:
+    batch = _batch(object())
+    policy = SimpleNamespace(profile="participant-autonomous-execution/v2")
+    predecessor = batch.run.working
+
+    handled = run_policy_due_concurrently(policy, None, object(), 0, 1, batch.run)
+
+    assert handled is False
+    assert batch.run.working is predecessor
+    assert batch.run.failure is None
 
 
 def test_single_available_slot_falls_back_to_serial_and_stops_after_failure(
@@ -930,13 +966,10 @@ def test_metadata_conflict_diagnostic_does_not_include_backend_key():
         base,
         base.with_entries({}, metadata={secret_key: "first"}),
     )
+    conflicting = base.with_entries({}, metadata={secret_key: "second"})
 
     with pytest.raises(ValueError) as exc_info:
-        _merge_concurrent_action_snapshot(
-            base,
-            current,
-            base.with_entries({}, metadata={secret_key: "second"}),
-        )
+        _merge_concurrent_action_snapshot(base, current, conflicting)
 
     assert secret_key not in str(exc_info.value)
 
@@ -965,7 +998,7 @@ def test_rejected_conflicting_result_contributes_no_backend_changed_address(
             ),
         )
 
-    monkeypatch.setattr(scheduler_concurrency, "autonomous_action_result_violation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler_commit, "autonomous_action_result_violation", lambda *args, **kwargs: None)
     batch = _batch(SimpleNamespace(admit_actions_concurrently=_conflicting_results))
 
     _execute_concurrent_batch(batch)
@@ -990,8 +1023,8 @@ def test_final_concurrent_materialization_failure_is_normalized(monkeypatch: pyt
         del snapshot
         raise ValueError("final validation failed")
 
-    monkeypatch.setattr(scheduler_concurrency, "autonomous_action_result_violation", lambda *args, **kwargs: None)
-    monkeypatch.setattr(scheduler_concurrency, "_materialize_concurrent_snapshot", _materialization_failure)
+    monkeypatch.setattr(scheduler_commit, "autonomous_action_result_violation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler_dispatch, "_materialize_concurrent_snapshot", _materialization_failure)
     batch = _batch(SimpleNamespace(admit_actions_concurrently=_complete))
 
     _execute_concurrent_batch(batch)
@@ -1009,10 +1042,11 @@ def test_snapshot_ownership_exhaustively_classifies_every_runtime_field():
     }
 
     assert classified == {field.name for field in dataclass_fields(RuntimeSnapshot)}
-    assert {
+    actual_protected_fields = _PROTECTED_SCHEDULER_FIELDS
+    assert actual_protected_fields == {
         "participant_autonomous_execution_states",
         "participant_execution_services",
-    } == _PROTECTED_SCHEDULER_FIELDS
+    }
 
 
 def test_snapshot_ownership_guard_reports_missing_and_stale_fields():
@@ -1197,7 +1231,8 @@ def test_many_participants_use_one_iterative_due_scan_and_real_settlement(monkey
 
     monkeypatch.setattr(scheduler_concurrency, "_due_contexts", _counted_due_contexts)
     monkeypatch.setattr(scheduler_concurrency, "deepcopy", _counted_copy)
-    monkeypatch.setattr(scheduler_concurrency, "autonomous_action_result_violation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler_dispatch, "deepcopy", _counted_copy)
+    monkeypatch.setattr(scheduler_commit, "autonomous_action_result_violation", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         runtime_state_contracts,
         "require_participant_autonomous_state_snapshot",

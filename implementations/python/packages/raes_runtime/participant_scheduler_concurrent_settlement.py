@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from asyncio import CancelledError
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
@@ -17,6 +18,18 @@ from .participant_scheduler_concurrent_state import (
 
 if TYPE_CHECKING:
     from .participant_scheduler_types import SchedulerRunState, _DueActionContext
+
+
+@dataclass(frozen=True)
+class _ConcurrentBatchSettlement:
+    """Authoritative scheduler state needed to settle one dispatched batch."""
+
+    run: SchedulerRunState
+    policy_address: str
+    contexts: tuple[_DueActionContext, ...]
+    states: tuple[ParticipantAutonomousExecutionStateModel, ...]
+    requests: tuple[ParticipantActionAdmissionRequest, ...]
+    pre_batch: RuntimeSnapshot
 
 
 def _set_concurrent_failure(run: SchedulerRunState, diagnostic: Diagnostic | None = None) -> None:
@@ -123,13 +136,8 @@ def _settle_concurrent_service_state(
 
 
 def _settle_indeterminate_concurrent_batch(
-    run: SchedulerRunState,
+    settlement: _ConcurrentBatchSettlement,
     *,
-    policy_address: str,
-    contexts: tuple[_DueActionContext, ...],
-    states: tuple[ParticipantAutonomousExecutionStateModel, ...],
-    requests: tuple[ParticipantActionAdmissionRequest, ...],
-    pre_batch: RuntimeSnapshot,
     code: str,
     message: str,
 ) -> None:
@@ -142,26 +150,32 @@ def _settle_indeterminate_concurrent_batch(
     released.
     """
 
-    run.diagnostics.append(
+    settlement.run.diagnostics.append(
         Diagnostic(
             code=code,
             domain="participant",
-            address=policy_address,
+            address=settlement.policy_address,
             message=message,
         )
     )
-    for context, state, request in zip(contexts, states, requests, strict=True):
-        _settle_failed_concurrent_occurrence(context, state, request, run)
-    if _settle_concurrent_service_state(
-        run,
-        policy_address=policy_address,
-        completed_count=len(requests),
-        pre_batch=pre_batch,
+    for context, state, request in zip(
+        settlement.contexts,
+        settlement.states,
+        settlement.requests,
+        strict=True,
     ):
-        _set_concurrent_failure(run)
+        _settle_failed_concurrent_occurrence(context, state, request, settlement.run)
+    if _settle_concurrent_service_state(
+        settlement.run,
+        policy_address=settlement.policy_address,
+        completed_count=len(settlement.requests),
+        pre_batch=settlement.pre_batch,
+    ):
+        _set_concurrent_failure(settlement.run)
 
 
 __all__ = (
+    "_ConcurrentBatchSettlement",
     "_fail_concurrent_batch_before_dispatch",
     "_set_concurrent_failure",
     "_settle_concurrent_service_state",
