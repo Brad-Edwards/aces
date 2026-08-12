@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import io
 import json
 import os
 import shutil
@@ -2352,7 +2353,7 @@ def test_osv_scanner_valid_cache_hit_rehashes_without_network(
     binary.chmod(0o755)
     monkeypatch.setattr(
         osv_scanner_tool,
-        "download_bytes",
+        "urlopen",
         lambda _url, **_kwargs: pytest.fail("network used for valid cache"),
     )
 
@@ -2376,7 +2377,7 @@ def test_osv_scanner_invalid_file_cache_is_reacquired_atomically(
     else:
         binary.write_bytes(payload if cache_kind == "non-executable" else b"tampered")
         binary.chmod(0o644 if cache_kind == "non-executable" else 0o755)
-    monkeypatch.setattr(osv_scanner_tool, "download_bytes", lambda _url, **_kwargs: payload)
+    monkeypatch.setattr(osv_scanner_tool, "urlopen", lambda _url, **_kwargs: io.BytesIO(payload))
 
     installed = osv_scanner_tool.ensure_osv_scanner(tmp_path)
 
@@ -2525,18 +2526,16 @@ def test_osv_scanner_download_has_a_finite_timeout(monkeypatch: pytest.MonkeyPat
     _pin_fake_osv_download(monkeypatch, payload)
     observed: dict[str, object] = {}
 
-    def download(url: str, **kwargs: object) -> bytes:
+    def download(url: str, **kwargs: object) -> io.BytesIO:
         observed.update(url=url, **kwargs)
-        return payload
+        return io.BytesIO(payload)
 
-    monkeypatch.setattr(osv_scanner_tool, "download_bytes", download)
+    monkeypatch.setattr(osv_scanner_tool, "urlopen", download)
 
     assert osv_scanner_tool.ensure_osv_scanner(tmp_path).read_bytes() == payload
     assert observed == {
         "url": "https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_darwin_arm64",
-        "description": "osv-scanner",
-        "timeout_seconds": 60,
-        "max_bytes": 256 * 1024 * 1024,
+        "timeout": 60,
     }
 
 
@@ -2549,7 +2548,7 @@ def test_osv_scanner_download_rejects_an_untrusted_release_url(
     monkeypatch.setattr(osv_scanner_tool, "_release_base_url", lambda _version: "file:///tmp")
     monkeypatch.setattr(
         osv_scanner_tool,
-        "download_bytes",
+        "urlopen",
         lambda _url, **_kwargs: pytest.fail("unsafe URL reached the network client"),
     )
 
@@ -2561,11 +2560,13 @@ def test_osv_scanner_download_timeout_fails_closed(monkeypatch: pytest.MonkeyPat
     payload = b"reviewed-scanner"
     _pin_fake_osv_download(monkeypatch, payload)
 
-    def timeout(_url: str, **kwargs: object) -> bytes:
-        assert kwargs["timeout_seconds"] == 60
-        raise RuntimeError("failed to download osv-scanner after 5 attempts")
+    def timeout(_url: str, **kwargs: object) -> io.BytesIO:
+        assert kwargs["timeout"] == 60
+        raise osv_scanner_tool.ReleaseDownloadError(
+            "release download exhausted 3 bounded attempts"
+        )
 
-    monkeypatch.setattr(osv_scanner_tool, "download_bytes", timeout)
+    monkeypatch.setattr(osv_scanner_tool, "urlopen", timeout)
 
     with pytest.raises(RuntimeError, match="failed to download osv-scanner"):
         osv_scanner_tool.ensure_osv_scanner(tmp_path)
@@ -2580,7 +2581,7 @@ def test_osv_scanner_unpinned_version_and_download_mismatch_fail_closed(
     with pytest.raises(RuntimeError, match="no repository-pinned checksum"):
         osv_scanner_tool.ensure_osv_scanner(tmp_path, version="9.9.9")
 
-    monkeypatch.setattr(osv_scanner_tool, "download_bytes", lambda _url, **_kwargs: b"different")
+    monkeypatch.setattr(osv_scanner_tool, "urlopen", lambda _url, **_kwargs: io.BytesIO(b"different"))
     with pytest.raises(RuntimeError, match="checksum mismatch"):
         osv_scanner_tool.ensure_osv_scanner(tmp_path)
     assert not osv_scanner_tool.osv_scanner_binary_path(tmp_path).exists()
@@ -2590,7 +2591,7 @@ def test_osv_scanner_oversized_download_is_rejected(monkeypatch: pytest.MonkeyPa
     payload = b"four"
     _pin_fake_osv_download(monkeypatch, payload)
     monkeypatch.setattr(osv_scanner_tool, "_MAX_BINARY_BYTES", 3)
-    monkeypatch.setattr(osv_scanner_tool, "download_bytes", lambda _url, **_kwargs: payload)
+    monkeypatch.setattr(osv_scanner_tool, "urlopen", lambda _url, **_kwargs: io.BytesIO(payload))
 
     with pytest.raises(RuntimeError, match="exceeds the download limit"):
         osv_scanner_tool.ensure_osv_scanner(tmp_path)
@@ -2604,11 +2605,11 @@ def test_osv_scanner_concurrent_acquisition_publishes_only_complete_bytes(
     _pin_fake_osv_download(monkeypatch, payload)
     barrier = threading.Barrier(2, timeout=3)
 
-    def concurrent_download(_url: str, **_kwargs: object) -> bytes:
+    def concurrent_download(_url: str, **_kwargs: object) -> io.BytesIO:
         barrier.wait()
-        return payload
+        return io.BytesIO(payload)
 
-    monkeypatch.setattr(osv_scanner_tool, "download_bytes", concurrent_download)
+    monkeypatch.setattr(osv_scanner_tool, "urlopen", concurrent_download)
     results: list[Path] = []
     failures: list[BaseException] = []
 

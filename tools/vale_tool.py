@@ -7,8 +7,10 @@ import stat
 import tarfile
 from hashlib import sha256
 from pathlib import Path
+from urllib.error import URLError
 
-from tools.http_download import download_bytes
+from tools.release_download import ReleaseDownloadError
+from tools.release_download import retrying_urlopen as urlopen
 from tools.tool_versions import VALE_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -82,7 +84,11 @@ def ensure_vale(repo_root: Path = REPO_ROOT, *, version: str = VALE_VERSION) -> 
         raise RuntimeError(f"no repository-pinned checksum for Vale asset {asset_name}")
     base_url = _release_base_url(version)
     asset_url = f"{base_url}/{asset_name}"
-    archive_bytes = download_bytes(asset_url, description="Vale")
+    try:
+        with urlopen(asset_url) as response:  # noqa: S310 - pinned HTTPS release asset
+            archive_bytes = response.read()
+    except (URLError, ReleaseDownloadError) as exc:
+        raise RuntimeError(f"failed to download Vale from {asset_url}: {exc}") from exc
     actual = sha256(archive_bytes).hexdigest()
     if actual != expected:
         raise RuntimeError(f"Vale checksum mismatch for {asset_name}: expected {expected}, got {actual}")
