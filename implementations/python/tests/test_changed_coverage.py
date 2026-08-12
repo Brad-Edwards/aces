@@ -267,10 +267,16 @@ def test_normalized_file_records_resolves_project_repo_and_absolute_paths(tmp_pa
     project = repo / "implementations" / "python"
     tool = repo / "tools" / "check.py"
     tool.write_text("pass\n", encoding="utf-8")
+    absolute_package = project / "packages" / "absolute.py"
+    absolute_package.write_text("pass\n", encoding="utf-8")
+    absolute_tool = repo / "tools" / "absolute.py"
+    absolute_tool.write_text("pass\n", encoding="utf-8")
     report = {
         "files": {
             "packages/demo.py": {"executed_lines": [1]},
             "tools/check.py": {"executed_lines": [1]},
+            str(absolute_package): {"executed_lines": [1]},
+            str(absolute_tool): {"executed_lines": [1]},
             str(repo / "noxfile.py"): {"executed_lines": [1]},
             "tests/test_demo.py": {"executed_lines": [1]},
         }
@@ -278,6 +284,8 @@ def test_normalized_file_records_resolves_project_repo_and_absolute_paths(tmp_pa
 
     assert coverage_policy.normalized_file_records(report, repo_root=repo, project_root=project) == {
         "implementations/python/packages/demo.py": {"executed_lines": [1]},
+        "implementations/python/packages/absolute.py": {"executed_lines": [1]},
+        "tools/absolute.py": {"executed_lines": [1]},
         "tools/check.py": {"executed_lines": [1]},
         "noxfile.py": {"executed_lines": [1]},
     }
@@ -343,14 +351,14 @@ def test_canonical_coverage_config_omits_acquired_cache_but_keeps_repo_tools(
 
 
 def test_canonical_coverage_config_passes_policy_validation() -> None:
-    coverage_policy.validate_coverage_config(coverage_policy.load_toml(PROJECT_CONFIG))
+    coverage_policy.validate_coverage_config(coverage_policy.load_toml(PROJECT_CONFIG, trusted_root=REPO_ROOT))
 
 
 @pytest.mark.parametrize(
     ("section", "key", "value", "match"),
     [
         ("run", "branch", False, "enable branch data"),
-        ("run", "relative_files", False, "repository-relative files"),
+        ("run", "relative_files", True, "same-checkout absolute source paths"),
         ("run", "source", ["packages"], "canonical repository source root"),
         ("run", "omit", ["*/.cache/*"], "canonical non-source paths"),
         ("run", "plugins", ["weakener"], "can narrow measurement"),
@@ -367,7 +375,7 @@ def test_coverage_config_rejects_scope_and_suppression_weakening(
     value: object,
     match: str,
 ) -> None:
-    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG))
+    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG, trusted_root=REPO_ROOT))
     config["tool"]["coverage"][section][key] = value
 
     with pytest.raises(coverage_policy.CoveragePolicyError, match=match):
@@ -376,7 +384,7 @@ def test_coverage_config_rejects_scope_and_suppression_weakening(
 
 @pytest.mark.parametrize("missing", ["tool", "coverage", "run", "report"])
 def test_coverage_config_requires_governed_tables(missing: str) -> None:
-    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG))
+    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG, trusted_root=REPO_ROOT))
     if missing == "tool":
         config.pop("tool")
     elif missing == "coverage":
@@ -389,7 +397,7 @@ def test_coverage_config_requires_governed_tables(missing: str) -> None:
 
 
 def test_coverage_config_rejects_path_aliases() -> None:
-    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG))
+    config = deepcopy(coverage_policy.load_toml(PROJECT_CONFIG, trusted_root=REPO_ROOT))
     config["tool"]["coverage"]["paths"] = {"source": ["implementations/python/packages", "elsewhere"]}
 
     with pytest.raises(coverage_policy.CoveragePolicyError, match="path aliases"):
@@ -837,6 +845,7 @@ class Generated(factory()):
         "from typing import TYPE_CHECKING as TYPE_CHECKING\n",
         "from typing import TYPE_CHECKING\nTYPE_CHECKING = runtime_flag\n",
         "from typing import TYPE_CHECKING\nmodule.TYPE_CHECKING = runtime_flag\n",
+        "from typing import TYPE_CHECKING\nmatch {}:\n    case {**TYPE_CHECKING}:\n        pass\n",
         'from typing import TYPE_CHECKING\nglobals()["TYPE_CHECKING"] = True\n',
         "from typing import TYPE_CHECKING\nglobals().update(TYPE_CHECKING=True)\n",
         "from typing import TYPE_CHECKING\nglobals().update(dict(TYPE_CHECKING=True))\n",
@@ -1419,8 +1428,9 @@ def test_aggregate_coverage_handles_empty_denominators() -> None:
     ],
 )
 def test_aggregate_coverage_requires_branch_metadata_and_totals(report: dict[str, object]) -> None:
+    ratchet = _ratchet()
     with pytest.raises(coverage_policy.CoveragePolicyError):
-        coverage_policy.aggregate_coverage_failures(report, _ratchet())
+        coverage_policy.aggregate_coverage_failures(report, ratchet)
 
 
 @pytest.mark.parametrize(
@@ -1437,8 +1447,9 @@ def test_aggregate_coverage_rejects_invalid_ratchet_floors(
     ratchet: dict[str, object],
     match: str,
 ) -> None:
+    report = _report()
     with pytest.raises(coverage_policy.CoveragePolicyError, match=match):
-        coverage_policy.aggregate_coverage_failures(_report(), ratchet)
+        coverage_policy.aggregate_coverage_failures(report, ratchet)
 
 
 def test_ratchet_history_is_monotonic_after_initial_adoption(tmp_path: Path) -> None:
@@ -1509,28 +1520,36 @@ def test_base_ratchet_rejects_outside_and_malformed_files(tmp_path: Path) -> Non
 def test_load_json_accepts_objects_and_rejects_bad_inputs(tmp_path: Path) -> None:
     path = tmp_path / "value.json"
     path.write_text('{"value": 1}', encoding="utf-8")
-    assert coverage_policy.load_json(path) == {"value": 1}
+    assert coverage_policy.load_json(path, trusted_root=tmp_path) == {"value": 1}
 
     path.write_text("[]", encoding="utf-8")
     with pytest.raises(coverage_policy.CoveragePolicyError, match="JSON object"):
-        coverage_policy.load_json(path)
+        coverage_policy.load_json(path, trusted_root=tmp_path)
     path.write_text("{", encoding="utf-8")
     with pytest.raises(coverage_policy.CoveragePolicyError, match="could not read"):
-        coverage_policy.load_json(path)
+        coverage_policy.load_json(path, trusted_root=tmp_path)
+    missing_path = tmp_path / "missing.json"
     with pytest.raises(coverage_policy.CoveragePolicyError, match="could not read"):
-        coverage_policy.load_json(tmp_path / "missing.json")
+        coverage_policy.load_json(missing_path, trusted_root=tmp_path)
+    outside_path = tmp_path.parent / f"{tmp_path.name}-outside.json"
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="escapes the trusted root"):
+        coverage_policy.load_json(outside_path, trusted_root=tmp_path)
 
 
 def test_load_toml_accepts_objects_and_rejects_bad_inputs(tmp_path: Path) -> None:
     path = tmp_path / "value.toml"
     path.write_text("value = 1\n", encoding="utf-8")
-    assert coverage_policy.load_toml(path) == {"value": 1}
+    assert coverage_policy.load_toml(path, trusted_root=tmp_path) == {"value": 1}
 
     path.write_text("value = [\n", encoding="utf-8")
     with pytest.raises(coverage_policy.CoveragePolicyError, match="could not read"):
-        coverage_policy.load_toml(path)
+        coverage_policy.load_toml(path, trusted_root=tmp_path)
+    missing_path = tmp_path / "missing.toml"
     with pytest.raises(coverage_policy.CoveragePolicyError, match="could not read"):
-        coverage_policy.load_toml(tmp_path / "missing.toml")
+        coverage_policy.load_toml(missing_path, trusted_root=tmp_path)
+    outside_path = tmp_path.parent / f"{tmp_path.name}-outside.toml"
+    with pytest.raises(coverage_policy.CoveragePolicyError, match="escapes the trusted root"):
+        coverage_policy.load_toml(outside_path, trusted_root=tmp_path)
 
 
 def test_main_pass_failure_and_policy_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -1538,7 +1557,7 @@ def test_main_pass_failure_and_policy_error(tmp_path: Path, capsys: pytest.Captu
     project = repo / "implementations" / "python"
     source = project / "packages" / "demo.py"
     source.write_text("value = 2\n", encoding="utf-8")
-    report_path = tmp_path / "coverage.json"
+    report_path = project / "coverage.json"
     config_path, ratchet_path = _main_paths(repo)
     report = _report()
     report["files"] = {str(source): {"executed_lines": [1], "missing_lines": [], "missing_branches": []}}
@@ -1570,10 +1589,61 @@ def test_main_pass_failure_and_policy_error(tmp_path: Path, capsys: pytest.Captu
     assert coverage_policy.main([*args[:-1], "unknown"]) == 2
     assert "COVERAGE_POLICY_ERROR" in capsys.readouterr().out
 
+    outside_report = tmp_path / "coverage.json"
+    outside_report.write_text(json.dumps(report), encoding="utf-8")
+    escaped_args = [*args]
+    escaped_args[1] = str(outside_report)
+    assert coverage_policy.main(escaped_args) == 2
+    assert "coverage JSON path escapes the repository" in capsys.readouterr().out
+
+
+def test_main_rejects_noncanonical_report_and_project_roots(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo, _base = _repository(tmp_path)
+    project = repo / "implementations" / "python"
+    config_path, ratchet_path = _main_paths(repo)
+    report_path = project / "coverage.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+    ratchet_path.write_text(json.dumps(_ratchet()), encoding="utf-8")
+    args = [
+        "--coverage-json",
+        str(report_path),
+        "--coverage-config",
+        str(config_path),
+        "--ratchet",
+        str(ratchet_path),
+        "--repo-root",
+        str(repo),
+        "--project-root",
+        str(project),
+    ]
+
+    in_repo_report = repo / "coverage.json"
+    in_repo_report.write_text(json.dumps(_report()), encoding="utf-8")
+    noncanonical_report_args = [*args]
+    noncanonical_report_args[1] = str(in_repo_report)
+    assert coverage_policy.main(noncanonical_report_args) == 2
+    assert "coverage JSON must remain at the canonical path" in capsys.readouterr().out
+
+    noncanonical_project = repo / "project"
+    noncanonical_project.mkdir()
+    noncanonical_project_args = [*args]
+    noncanonical_project_args[9] = str(noncanonical_project)
+    assert coverage_policy.main(noncanonical_project_args) == 2
+    assert "project root must remain at the canonical path" in capsys.readouterr().out
+
+    escaping_project_args = [*args]
+    escaping_project_args[9] = str(tmp_path)
+    assert coverage_policy.main(escaping_project_args) == 2
+    assert "project root path escapes the repository" in capsys.readouterr().out
+
 
 def test_main_can_check_only_the_aggregate(tmp_path: Path) -> None:
-    report_path = tmp_path / "coverage.json"
     config_path, ratchet_path = _main_paths(tmp_path)
+    project = config_path.parent
+    report_path = project / "coverage.json"
     report_path.write_text(json.dumps(_report()), encoding="utf-8")
     ratchet_path.write_text(json.dumps(_ratchet()), encoding="utf-8")
 
@@ -1589,7 +1659,7 @@ def test_main_can_check_only_the_aggregate(tmp_path: Path) -> None:
                 "--repo-root",
                 str(tmp_path),
                 "--project-root",
-                str(tmp_path),
+                str(project),
             ]
         )
         == 0
@@ -1597,8 +1667,9 @@ def test_main_can_check_only_the_aggregate(tmp_path: Path) -> None:
 
 
 def test_script_entrypoint_delegates_to_main(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    report_path = tmp_path / "coverage.json"
     config_path, ratchet_path = _main_paths(tmp_path)
+    project = config_path.parent
+    report_path = project / "coverage.json"
     report_path.write_text(json.dumps(_report()), encoding="utf-8")
     ratchet_path.write_text(json.dumps(_ratchet()), encoding="utf-8")
     monkeypatch.setattr(
@@ -1615,7 +1686,7 @@ def test_script_entrypoint_delegates_to_main(tmp_path: Path, monkeypatch: pytest
             "--repo-root",
             str(tmp_path),
             "--project-root",
-            str(tmp_path),
+            str(project),
         ],
     )
 

@@ -124,7 +124,7 @@ timeout = 120
 
 [tool.coverage.run]
 branch = true
-relative_files = true
+relative_files = false
 source = ["../.."]
 omit = [
     "*/.cache/*",

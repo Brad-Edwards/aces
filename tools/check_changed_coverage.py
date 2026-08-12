@@ -20,9 +20,14 @@ _HUNK = re.compile(
     r"\+(?P<start>\d+)(?:,(?P<count>\d+))? @@",
     re.MULTILINE,
 )
-_FORBIDDEN_COVERAGE_PRAGMA = re.compile(r"#\s*pragma\s*:?\s*no\s+(?:cover|branch)\b", re.IGNORECASE)
+_FORBIDDEN_COVERAGE_PRAGMA = re.compile(
+    r"#\x20?pragma\x20?:?\x20?no\x20(?:cover|branch)(?!\w)",
+    re.IGNORECASE,
+)
 _MEASURED_PREFIXES = ("implementations/python/packages/", "tools/")
 _MEASURED_FILES = frozenset({"noxfile.py", "implementations/python/hatch_build.py"})
+_CANONICAL_PROJECT_ROOT = "implementations/python"
+_CANONICAL_COVERAGE_JSON = f"{_CANONICAL_PROJECT_ROOT}/coverage.json"
 _CANONICAL_COVERAGE_CONFIG = "implementations/python/pyproject.toml"
 _CANONICAL_RATCHET = "tools/coverage_ratchet.json"
 _COVERAGE_SOURCE = ("../..",)
@@ -230,24 +235,30 @@ def normalized_file_records(
     return records
 
 
-def _canonical_policy_path(repo_root: Path, path: Path, expected: str, *, label: str) -> str:
+def _canonical_policy_path(repo_root: Path, path: Path, expected: str, *, label: str) -> Path:
+    resolved_path = path.resolve()
     try:
-        relative_path = path.resolve().relative_to(repo_root.resolve()).as_posix()
+        relative_path = resolved_path.relative_to(repo_root.resolve()).as_posix()
     except ValueError as exc:
         raise CoveragePolicyError(f"{label} path escapes the repository: {path}") from exc
     if relative_path != expected:
         raise CoveragePolicyError(f"{label} must remain at the canonical path {expected}")
-    return relative_path
+    return resolved_path
 
 
-def load_toml(path: Path) -> Mapping[str, Any]:
+def load_toml(path: Path, *, trusted_root: Path) -> Mapping[str, Any]:
     """Load one TOML object with a stable policy error on malformed input."""
 
+    resolved_path = path.resolve()
     try:
-        with path.open("rb") as stream:
+        resolved_path.relative_to(trusted_root.resolve())
+    except ValueError as exc:
+        raise CoveragePolicyError(f"input path escapes the trusted root: {path}") from exc
+    try:
+        with resolved_path.open("rb") as stream:
             return tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
-        raise CoveragePolicyError(f"could not read {path}: {exc}") from exc
+        raise CoveragePolicyError(f"could not read {resolved_path}: {exc}") from exc
 
 
 def _required_mapping(parent: Mapping[str, Any], key: str, *, label: str) -> Mapping[str, Any]:
@@ -255,6 +266,39 @@ def _required_mapping(parent: Mapping[str, Any], key: str, *, label: str) -> Map
     if not isinstance(value, Mapping):
         raise CoveragePolicyError(f"coverage config must contain {label}")
     return value
+
+
+def _canonical_omit_list(value: object) -> bool:
+    return (
+        isinstance(value, Sequence)
+        and not isinstance(value, (str, bytes))
+        and len(value) == len(_COVERAGE_OMIT)
+        and set(value) == _COVERAGE_OMIT
+    )
+
+
+def _validate_coverage_run(run: Mapping[str, Any]) -> None:
+    if run.get("branch") is not True:
+        raise CoveragePolicyError("coverage config must enable branch data")
+    if run.get("relative_files") is not False:
+        raise CoveragePolicyError("coverage config must retain same-checkout absolute source paths")
+    if tuple(run.get("source", ())) != _COVERAGE_SOURCE:
+        raise CoveragePolicyError("coverage config must measure the canonical repository source root")
+    if not _canonical_omit_list(run.get("omit")):
+        raise CoveragePolicyError("coverage config omit list must contain only canonical non-source paths")
+    forbidden_run = sorted(_FORBIDDEN_RUN_OPTIONS & run.keys())
+    if forbidden_run:
+        raise CoveragePolicyError(f"coverage config run option can narrow measurement: {forbidden_run[0]}")
+
+
+def _validate_coverage_report(report: Mapping[str, Any]) -> None:
+    if report.get("include_namespace_packages") is not True:
+        raise CoveragePolicyError("coverage config must discover namespace-package source files")
+    if tuple(report.get("exclude_also", ())) != _COVERAGE_EXCLUDE_ALSO:
+        raise CoveragePolicyError("coverage config may contain only the governed legacy exclusion")
+    forbidden_report = sorted(_FORBIDDEN_REPORT_OPTIONS & report.keys())
+    if forbidden_report:
+        raise CoveragePolicyError(f"coverage config report option can suppress measurement: {forbidden_report[0]}")
 
 
 def validate_coverage_config(config: Mapping[str, Any]) -> None:
@@ -266,32 +310,8 @@ def validate_coverage_config(config: Mapping[str, Any]) -> None:
         raise CoveragePolicyError("coverage config path aliases can merge unrelated source files")
     run = _required_mapping(coverage, "run", label="[tool.coverage.run]")
     report = _required_mapping(coverage, "report", label="[tool.coverage.report]")
-
-    if run.get("branch") is not True:
-        raise CoveragePolicyError("coverage config must enable branch data")
-    if run.get("relative_files") is not True:
-        raise CoveragePolicyError("coverage config must use repository-relative files")
-    if tuple(run.get("source", ())) != _COVERAGE_SOURCE:
-        raise CoveragePolicyError("coverage config must measure the canonical repository source root")
-    configured_omit = run.get("omit")
-    if (
-        not isinstance(configured_omit, Sequence)
-        or isinstance(configured_omit, (str, bytes))
-        or len(configured_omit) != len(_COVERAGE_OMIT)
-        or set(configured_omit) != _COVERAGE_OMIT
-    ):
-        raise CoveragePolicyError("coverage config omit list must contain only canonical non-source paths")
-    forbidden_run = sorted(_FORBIDDEN_RUN_OPTIONS & run.keys())
-    if forbidden_run:
-        raise CoveragePolicyError(f"coverage config run option can narrow measurement: {forbidden_run[0]}")
-
-    if report.get("include_namespace_packages") is not True:
-        raise CoveragePolicyError("coverage config must discover namespace-package source files")
-    if tuple(report.get("exclude_also", ())) != _COVERAGE_EXCLUDE_ALSO:
-        raise CoveragePolicyError("coverage config may contain only the governed legacy exclusion")
-    forbidden_report = sorted(_FORBIDDEN_REPORT_OPTIONS & report.keys())
-    if forbidden_report:
-        raise CoveragePolicyError(f"coverage config report option can suppress measurement: {forbidden_report[0]}")
+    _validate_coverage_run(run)
+    _validate_coverage_report(report)
 
 
 def _is_ellipsis_declaration(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
@@ -353,22 +373,6 @@ def _protocol_declaration_lines(
     return lines
 
 
-def _is_declaration_only_protocol(node: ast.ClassDef) -> bool:
-    declarations = [
-        member
-        for member in node.body
-        if not (
-            isinstance(member, ast.Expr)
-            and isinstance(member.value, ast.Constant)
-            and isinstance(member.value.value, str)
-        )
-    ]
-    return bool(declarations) and all(
-        isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and _is_ellipsis_declaration(member)
-        for member in declarations
-    )
-
-
 def _namespace_mapping_call(node: ast.AST) -> bool:
     return (
         isinstance(node, ast.Call)
@@ -402,59 +406,76 @@ def _direct_namespace_factory_reference(node: ast.Name, parents: Mapping[ast.AST
     return not isinstance(parent, ast.Call) or parent.func is not node
 
 
+def _unsafe_import(node: ast.AST) -> bool:
+    if not isinstance(node, ast.ImportFrom):
+        return False
+    star_import = any(alias.name == "*" for alias in node.names)
+    unsafe_builtin = node.module == "builtins" and any(alias.name in _UNSAFE_BUILTINS_EXPORTS for alias in node.names)
+    return star_import or unsafe_builtin
+
+
+def _unsafe_name(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> bool:
+    if not isinstance(node, ast.Name):
+        return False
+    unsafe_builtin = isinstance(node.ctx, ast.Load) and node.id in _UNSAFE_DYNAMIC_BUILTINS
+    escaped_factory = node.id in _NAMESPACE_FACTORIES and _direct_namespace_factory_reference(node, parents)
+    return node.id == "__builtins__" or unsafe_builtin or escaped_factory
+
+
+def _unsafe_call(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    callable_name = node.func.id if isinstance(node.func, ast.Name) else None
+    dynamic_builtin = callable_name in _UNSAFE_DYNAMIC_BUILTINS
+    parameterized_vars = callable_name == "vars" and bool(node.args or node.keywords)
+    namespace_escape = _namespace_mapping_call(node) and not _safe_namespace_read(node, parents)
+    return dynamic_builtin or parameterized_vars or namespace_escape
+
+
 def _unsafe_namespace_access(tree: ast.Module) -> bool:
     parents = _parent_nodes(tree)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom):
-            if any(alias.name == "*" for alias in node.names):
-                return True
-            if node.module == "builtins" and any(alias.name in _UNSAFE_BUILTINS_EXPORTS for alias in node.names):
-                return True
-        if isinstance(node, ast.Attribute) and node.attr in _UNSAFE_ATTRIBUTE_NAMES:
-            return True
-        if isinstance(node, ast.Name) and node.id == "__builtins__":
-            return True
-        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in _UNSAFE_DYNAMIC_BUILTINS:
-            return True
-        if isinstance(node, ast.Name) and node.id in _NAMESPACE_FACTORIES:
-            if _direct_namespace_factory_reference(node, parents):
-                return True
-        if not isinstance(node, ast.Call):
-            continue
-        callable_name = node.func.id if isinstance(node.func, ast.Name) else None
-        if callable_name in _UNSAFE_DYNAMIC_BUILTINS:
-            return True
-        if callable_name == "vars" and (node.args or node.keywords):
-            return True
-        if _namespace_mapping_call(node) and not _safe_namespace_read(node, parents):
-            return True
-    return False
-
-
-def _rebinds_imported_symbol(node: ast.AST, symbol: str) -> bool:
-    return (
-        isinstance(node, ast.Name)
-        and node.id == symbol
-        and isinstance(node.ctx, (ast.Store, ast.Del))
+    return any(
+        _unsafe_import(node)
         or isinstance(node, ast.Attribute)
-        and node.attr == symbol
-        and isinstance(node.ctx, (ast.Store, ast.Del))
-        or isinstance(node, ast.arg)
-        and node.arg == symbol
-        or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-        and node.name == symbol
-        or isinstance(node, ast.ExceptHandler)
-        and node.name == symbol
-        or isinstance(node, (ast.MatchAs, ast.MatchStar))
-        and node.name == symbol
-        or isinstance(node, ast.MatchMapping)
-        and node.rest == symbol
+        and node.attr in _UNSAFE_ATTRIBUTE_NAMES
+        or _unsafe_name(node, parents)
+        or _unsafe_call(node, parents)
+        for node in ast.walk(tree)
     )
 
 
-def _trusted_typing_import_lines(tree: ast.Module, symbol: str) -> tuple[int, ...]:
-    if _unsafe_namespace_access(tree):
-        return ()
+def _target_binding_name(node: ast.AST) -> str | None:
+    bound_name: str | None = None
+    if isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
+        bound_name = node.id
+    elif isinstance(node, ast.Attribute) and isinstance(node.ctx, (ast.Store, ast.Del)):
+        bound_name = node.attr
+    elif isinstance(node, ast.arg):
+        bound_name = node.arg
+    return bound_name
+
+
+def _named_binding_name(node: ast.AST) -> str | None:
+    bound_name: str | None = None
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.ExceptHandler)):
+        bound_name = node.name
+    return bound_name
+
+
+def _pattern_binding_name(node: ast.AST) -> str | None:
+    bound_name: str | None = None
+    if isinstance(node, (ast.MatchAs, ast.MatchStar)):
+        bound_name = node.name
+    elif isinstance(node, ast.MatchMapping):
+        bound_name = node.rest
+    return bound_name
+
+
+def _rebinds_imported_symbol(node: ast.AST, symbol: str) -> bool:
+    return symbol in {_target_binding_name(node), _named_binding_name(node), _pattern_binding_name(node)}
+
+
+def _canonical_typing_imports(tree: ast.Module, symbol: str) -> tuple[set[int], list[int]]:
     canonical_aliases: set[int] = set()
     import_lines: list[int] = []
     for statement in tree.body:
@@ -464,15 +485,27 @@ def _trusted_typing_import_lines(tree: ast.Module, symbol: str) -> tuple[int, ..
             if alias.name == symbol and alias.asname is None:
                 canonical_aliases.add(id(alias))
                 import_lines.append(statement.lineno)
+    return canonical_aliases, import_lines
 
-    for node in ast.walk(tree):
-        if isinstance(node, ast.alias):
-            bound_name = node.asname or node.name.split(".", maxsplit=1)[0]
-            if bound_name == symbol and id(node) not in canonical_aliases:
-                return ()
-        elif _rebinds_imported_symbol(node, symbol):
-            return ()
-    return tuple(import_lines)
+
+def _node_rebinds_typing_symbol(node: ast.AST, symbol: str, canonical_aliases: set[int]) -> bool:
+    if isinstance(node, ast.alias):
+        bound_name = node.asname or node.name.split(".", maxsplit=1)[0]
+        return bound_name == symbol and id(node) not in canonical_aliases
+    return _rebinds_imported_symbol(node, symbol)
+
+
+def _typing_symbol_is_rebound(tree: ast.Module, symbol: str, canonical_aliases: set[int]) -> bool:
+    return any(_node_rebinds_typing_symbol(node, symbol, canonical_aliases) for node in ast.walk(tree))
+
+
+def _trusted_typing_import_lines(tree: ast.Module, symbol: str) -> tuple[int, ...]:
+    import_lines: tuple[int, ...] = ()
+    if not _unsafe_namespace_access(tree):
+        canonical_aliases, candidate_lines = _canonical_typing_imports(tree, symbol)
+        if not _typing_symbol_is_rebound(tree, symbol, canonical_aliases):
+            import_lines = tuple(candidate_lines)
+    return import_lines
 
 
 def _canonical_typing_reference(node: ast.expr, symbol: str) -> bool:
@@ -488,39 +521,35 @@ def _parse_source(source: str, *, path: str) -> ast.Module:
         raise CoveragePolicyError(f"could not parse changed Python source {path}: {exc.msg}") from exc
 
 
-def _structural_exclusion_lines(tree: ast.Module) -> set[int]:
+def _type_checking_exclusion_lines(tree: ast.Module, import_lines: tuple[int, ...]) -> set[int]:
     structural: set[int] = set()
-    type_checking_import_lines = _trusted_typing_import_lines(tree, "TYPE_CHECKING")
-    protocol_import_lines = _trusted_typing_import_lines(tree, "Protocol")
-    annotations_postponed = _postpones_annotations(tree)
     for node in ast.walk(tree):
         if (
             isinstance(node, ast.If)
             and isinstance(node.test, ast.Name)
             and node.test.id == "TYPE_CHECKING"
-            and any(line < node.lineno for line in type_checking_import_lines)
+            and any(line < node.lineno for line in import_lines)
         ):
             first_body_line = min(statement.lineno for statement in node.body)
             structural.update(range(node.lineno, first_body_line))
             for statement in node.body:
                 structural.update(range(statement.lineno, (statement.end_lineno or statement.lineno) + 1))
+    return structural
 
+
+def _protocol_exclusion_lines(
+    tree: ast.Module,
+    import_lines: tuple[int, ...],
+    *,
+    annotations_postponed: bool,
+) -> set[int]:
+    structural: set[int] = set()
     for node in ast.walk(tree):
         if (
             not isinstance(node, ast.ClassDef)
             or not any(_canonical_typing_reference(base, "Protocol") for base in node.bases)
-            or not any(line < node.lineno for line in protocol_import_lines)
+            or not any(line < node.lineno for line in import_lines)
         ):
-            continue
-        if _is_declaration_only_protocol(node):
-            for declaration in node.body:
-                if isinstance(declaration, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    structural.update(
-                        _protocol_declaration_lines(
-                            declaration,
-                            annotations_postponed=annotations_postponed,
-                        )
-                    )
             continue
         for declaration in node.body:
             if not isinstance(declaration, (ast.FunctionDef, ast.AsyncFunctionDef)) or not _is_ellipsis_declaration(
@@ -534,6 +563,16 @@ def _structural_exclusion_lines(tree: ast.Module) -> set[int]:
                 )
             )
     return structural
+
+
+def _structural_exclusion_lines(tree: ast.Module) -> set[int]:
+    type_checking = _type_checking_exclusion_lines(tree, _trusted_typing_import_lines(tree, "TYPE_CHECKING"))
+    protocol = _protocol_exclusion_lines(
+        tree,
+        _trusted_typing_import_lines(tree, "Protocol"),
+        annotations_postponed=_postpones_annotations(tree),
+    )
+    return type_checking | protocol
 
 
 def _significant_source_lines(tokens: Sequence[tokenize.TokenInfo]) -> set[int]:
@@ -576,34 +615,52 @@ def _contains_line(node: ast.AST, physical_line: int) -> bool:
     return isinstance(start, int) and isinstance(end, int) and start <= physical_line <= end
 
 
+def _match_header_owners(node: ast.Match, physical_line: int, branch_sources: set[int]) -> set[int]:
+    owners: set[int] = set()
+    case_sources = {case.pattern.lineno for case in node.cases if case.pattern.lineno in branch_sources}
+    if _contains_line(node.subject, physical_line):
+        owners.update(case_sources)
+    for case in node.cases:
+        source = case.pattern.lineno
+        case_header = (case.pattern,) if case.guard is None else (case.pattern, case.guard)
+        if source in branch_sources and any(_contains_line(part, physical_line) for part in case_header):
+            owners.add(source)
+    return owners
+
+
+def _comprehension_header_owners(node: ast.AST, physical_line: int, branch_sources: set[int]) -> set[int]:
+    if not _contains_line(node, physical_line):
+        return set()
+    start = node.lineno
+    end = node.end_lineno or start
+    return {source for source in branch_sources if start <= source <= end}
+
+
+def _branch_header_nodes(node: ast.AST) -> tuple[ast.AST, ...]:
+    headers: tuple[ast.AST, ...] = ()
+    if isinstance(node, (ast.If, ast.While, ast.IfExp)):
+        headers = (node.test,)
+    elif isinstance(node, (ast.For, ast.AsyncFor)):
+        headers = (node.target, node.iter)
+    return headers
+
+
 def _branch_header_owners(tree: ast.Module, physical_line: int, branch_sources: set[int]) -> set[int]:
     owners: set[int] = set()
+    comprehensions = (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)
     for node in ast.walk(tree):
-        header_nodes: tuple[ast.AST, ...]
-        if isinstance(node, (ast.If, ast.While, ast.IfExp)):
-            header_nodes = (node.test,)
-        elif isinstance(node, (ast.For, ast.AsyncFor)):
-            header_nodes = (node.target, node.iter)
-        elif isinstance(node, ast.Match):
-            case_sources = {case.pattern.lineno for case in node.cases if case.pattern.lineno in branch_sources}
-            if _contains_line(node.subject, physical_line):
-                owners.update(case_sources)
-            for case in node.cases:
-                source = case.pattern.lineno
-                case_header = (case.pattern,) if case.guard is None else (case.pattern, case.guard)
-                if source in branch_sources and any(_contains_line(part, physical_line) for part in case_header):
-                    owners.add(source)
-            continue
-        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
-            if _contains_line(node, physical_line):
-                start = node.lineno
-                end = node.end_lineno or start
-                owners.update(source for source in branch_sources if start <= source <= end)
-            continue
+        if isinstance(node, ast.Match):
+            owners.update(_match_header_owners(node, physical_line, branch_sources))
+        elif isinstance(node, comprehensions):
+            owners.update(_comprehension_header_owners(node, physical_line, branch_sources))
         else:
-            continue
-        if node.lineno in branch_sources and any(_contains_line(header, physical_line) for header in header_nodes):
-            owners.add(node.lineno)
+            headers = _branch_header_nodes(node)
+            if (
+                headers
+                and node.lineno in branch_sources
+                and any(_contains_line(header, physical_line) for header in headers)
+            ):
+                owners.add(node.lineno)
     return owners
 
 
@@ -644,7 +701,7 @@ def _governing_coverage_pragmas(
         if (
             token.type != tokenize.COMMENT
             or pragma_line not in significant_lines
-            or not _FORBIDDEN_COVERAGE_PRAGMA.search(token.string)
+            or not _FORBIDDEN_COVERAGE_PRAGMA.search(" ".join(token.string.split()))
         ):
             continue
         owner = next((span for span in owner_spans if span[0] <= pragma_line <= span[1]), None)
@@ -800,12 +857,13 @@ def base_ratchet(
 ) -> Mapping[str, Any] | None:
     """Load the ratchet recorded at the exact base, if it already existed."""
 
-    relative_path = _canonical_policy_path(
+    ratchet_path = _canonical_policy_path(
         repo_root,
         ratchet_path,
         _CANONICAL_RATCHET,
         label="coverage ratchet",
     )
+    relative_path = ratchet_path.relative_to(repo_root.resolve()).as_posix()
     result = _git(repo_root, "show", f"{base_rev}:{relative_path}", check=False)
     if result.returncode != 0:
         history = _git(repo_root, "log", "--format=%H", base_rev, "--", relative_path).stdout
@@ -841,15 +899,20 @@ def ratchet_regression_failures(
     return failures
 
 
-def load_json(path: Path) -> Mapping[str, Any]:
+def load_json(path: Path, *, trusted_root: Path) -> Mapping[str, Any]:
     """Load one JSON object with a stable policy error on malformed input."""
 
+    resolved_path = path.resolve()
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        resolved_path.relative_to(trusted_root.resolve())
+    except ValueError as exc:
+        raise CoveragePolicyError(f"input path escapes the trusted root: {path}") from exc
+    try:
+        value = json.loads(resolved_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise CoveragePolicyError(f"could not read {path}: {exc}") from exc
+        raise CoveragePolicyError(f"could not read {resolved_path}: {exc}") from exc
     if not isinstance(value, Mapping):
-        raise CoveragePolicyError(f"{path} must contain a JSON object")
+        raise CoveragePolicyError(f"{resolved_path} must contain a JSON object")
     return value
 
 
@@ -867,25 +930,37 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        _canonical_policy_path(
+        coverage_config_path = _canonical_policy_path(
             args.repo_root,
             args.coverage_config,
             _CANONICAL_COVERAGE_CONFIG,
             label="coverage config",
         )
-        _canonical_policy_path(
+        ratchet_path = _canonical_policy_path(
             args.repo_root,
             args.ratchet,
             _CANONICAL_RATCHET,
             label="coverage ratchet",
         )
-        validate_coverage_config(load_toml(args.coverage_config))
-        report = load_json(args.coverage_json)
-        ratchet = load_json(args.ratchet)
+        project_root = _canonical_policy_path(
+            args.repo_root,
+            args.project_root,
+            _CANONICAL_PROJECT_ROOT,
+            label="project root",
+        )
+        coverage_json_path = _canonical_policy_path(
+            args.repo_root,
+            args.coverage_json,
+            _CANONICAL_COVERAGE_JSON,
+            label="coverage JSON",
+        )
+        validate_coverage_config(load_toml(coverage_config_path, trusted_root=args.repo_root))
+        report = load_json(coverage_json_path, trusted_root=args.repo_root)
+        ratchet = load_json(ratchet_path, trusted_root=args.repo_root)
         records = normalized_file_records(
             report,
             repo_root=args.repo_root,
-            project_root=args.project_root,
+            project_root=project_root,
         )
         failures = aggregate_coverage_failures(report, ratchet)
         if args.base_rev is not None:
@@ -893,7 +968,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             failures.extend(
                 ratchet_regression_failures(
                     ratchet,
-                    base_ratchet(args.repo_root, args.base_rev, args.ratchet),
+                    base_ratchet(args.repo_root, args.base_rev, ratchet_path),
                 )
             )
             failures.extend(

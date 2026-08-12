@@ -14,6 +14,8 @@ from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
+from defusedxml import ElementTree as ET
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -343,8 +345,10 @@ def test_parallel_coverage_requires_both_nonempty_lane_artifacts(
         if artifact_name != missing:
             (tmp_path / artifact_name).write_bytes(b"coverage data")
 
-    with pytest.raises(RuntimeError, match=f"required coverage artifact is missing: {missing}"):
-        noxfile._finalize_parallel_coverage(types.SimpleNamespace(), tmp_path, base_rev="base-sha")
+    session = types.SimpleNamespace()
+    expected_error = f"required coverage artifact is missing: {missing}"
+    with pytest.raises(RuntimeError, match=expected_error):
+        noxfile._finalize_parallel_coverage(session, tmp_path, base_rev="base-sha")
 
 
 def test_parallel_coverage_rejects_empty_or_aliased_lane_artifacts(
@@ -357,13 +361,14 @@ def test_parallel_coverage_rejects_empty_or_aliased_lane_artifacts(
     unit.write_bytes(b"coverage data")
     integration.touch()
 
+    session = types.SimpleNamespace()
     with pytest.raises(RuntimeError, match="not a non-empty file: .coverage.integration"):
-        noxfile._finalize_parallel_coverage(types.SimpleNamespace(), tmp_path, base_rev="base-sha")
+        noxfile._finalize_parallel_coverage(session, tmp_path, base_rev="base-sha")
 
     integration.unlink()
     integration.hardlink_to(unit)
     with pytest.raises(RuntimeError, match="must be distinct files"):
-        noxfile._finalize_parallel_coverage(types.SimpleNamespace(), tmp_path, base_rev="base-sha")
+        noxfile._finalize_parallel_coverage(session, tmp_path, base_rev="base-sha")
 
 
 def test_parallel_coverage_policy_script_resolves_from_real_project_cwd(
@@ -414,6 +419,8 @@ def test_nox_xml_command_overrides_configured_output(
     noxfile = load_noxfile_with_fake_nox(monkeypatch)
     canonical_output = tmp_path / "canonical" / "coverage.xml"
     coverage_file = tmp_path / ".coverage"
+    config_path = tmp_path / "pyproject.toml"
+    monkeypatch.setattr(noxfile, "COVERAGE_CONFIG_PATH", config_path)
     monkeypatch.setattr(noxfile, "COVERAGE_XML_PATH", canonical_output)
 
     class FakeSession:
@@ -423,12 +430,19 @@ def test_nox_xml_command_overrides_configured_output(
         def run(self, *args: str, **kwargs: Any) -> None:
             self.commands.append((args, kwargs))
 
+        def chdir(self, _path: Path):
+            return nullcontext()
+
     session = FakeSession()
     coverage_env = {"COVERAGE_FILE": str(coverage_file)}
     noxfile._write_and_check_coverage(session, coverage_env=coverage_env)
-    xml_command = next(command for command, _options in session.commands if command[4:5] == ("xml",))
+    xml_command = next(
+        command
+        for command, _options in session.commands
+        if "coverage" in command and command[command.index("coverage") + 1] == "xml"
+    )
 
-    (tmp_path / "pyproject.toml").write_text(
+    config_path.write_text(
         f"[tool.coverage.xml]\noutput = {json.dumps(os.devnull)}\n",
         encoding="utf-8",
     )
@@ -443,7 +457,7 @@ def test_nox_xml_command_overrides_configured_output(
         text=True,
     )
     subprocess.run(
-        [sys.executable, "-m", "coverage", *xml_command[4:]],
+        [sys.executable, "-m", "coverage", *xml_command[xml_command.index("coverage") + 1 :]],
         cwd=tmp_path,
         env=process_env,
         check=True,
@@ -453,6 +467,96 @@ def test_nox_xml_command_overrides_configured_output(
 
     assert canonical_output.is_file()
     assert canonical_output.read_text(encoding="utf-8").startswith("<?xml")
+
+
+def test_nox_xml_command_emits_repository_relative_source_paths(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    project_root = tmp_path / "implementations" / "python"
+    tools_root = tmp_path / "tools"
+    packages_root = project_root / "packages"
+    packages_root.mkdir(parents=True)
+    tools_root.mkdir()
+    config_path = project_root / "pyproject.toml"
+    coverage_file = tmp_path / ".coverage"
+    xml_path = project_root / "coverage.xml"
+    config_path.write_text(
+        """[tool.coverage.run]
+branch = true
+relative_files = false
+source = ["../.."]
+
+[tool.coverage.xml]
+output = "coverage.xml"
+""",
+        encoding="utf-8",
+    )
+    (project_root / "hatch_build.py").write_text("hatch_value = 1\n", encoding="utf-8")
+    (packages_root / "demo.py").write_text("package_value = 1\n", encoding="utf-8")
+    (tools_root / "demo_tool.py").write_text("tool_value = 1\n", encoding="utf-8")
+    (tmp_path / "noxfile.py").write_text("nox_value = 1\n", encoding="utf-8")
+    (project_root / "exercise.py").write_text(
+        """import runpy
+
+runpy.run_path("hatch_build.py")
+runpy.run_path("packages/demo.py")
+runpy.run_path("../../tools/demo_tool.py")
+runpy.run_path("../../noxfile.py")
+""",
+        encoding="utf-8",
+    )
+    coverage_env = {"COVERAGE_FILE": str(coverage_file)}
+    subprocess.run(
+        [sys.executable, "-m", "coverage", "run", "--rcfile", str(config_path), "exercise.py"],
+        cwd=project_root,
+        env=os.environ | coverage_env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    monkeypatch.setattr(noxfile, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(noxfile, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(noxfile, "COVERAGE_CONFIG_PATH", config_path)
+    monkeypatch.setattr(noxfile, "COVERAGE_XML_PATH", xml_path)
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.commands: list[tuple[tuple[str, ...], dict[str, Any]]] = []
+
+        def run(self, *args: str, **kwargs: Any) -> None:
+            self.commands.append((args, kwargs))
+
+        def chdir(self, _path: Path):
+            return nullcontext()
+
+    session = FakeSession()
+    noxfile._write_and_check_coverage(session, coverage_env=coverage_env)
+    xml_command = next(
+        command
+        for command, _options in session.commands
+        if "coverage" in command and command[command.index("coverage") + 1] == "xml"
+    )
+    subprocess.run(
+        [sys.executable, "-m", "coverage", *xml_command[xml_command.index("coverage") + 1 :]],
+        cwd=project_root,
+        env=os.environ | coverage_env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    xml_root = ET.parse(xml_path).getroot()
+    sources = [element.text for element in xml_root.iterfind("./sources/source")]
+    filenames = {element.attrib["filename"] for element in xml_root.iterfind(".//class")}
+    assert sources == [str(tmp_path)]
+    assert {
+        "implementations/python/hatch_build.py",
+        "implementations/python/packages/demo.py",
+        "noxfile.py",
+        "tools/demo_tool.py",
+    } <= filenames
 
 
 def test_coverage_base_revision_defaults_and_validates_values(monkeypatch: pytest.MonkeyPatch) -> None:

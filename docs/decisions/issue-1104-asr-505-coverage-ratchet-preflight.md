@@ -34,10 +34,13 @@ Measured scope includes the twelve shipped package roots, repository-owned
 `tools`, `noxfile.py`, and the Hatch build hook. Tests, generated environments,
 acquired tool caches, and external dependencies are not production denominator
 padding. The checked-in Coverage.py configuration is itself validated: source
-roots and non-source omissions are fixed, path aliases are forbidden, and no
-custom partial-branch or exclusion rule may suppress the changed-code gate.
-Existing explicit exclusions retain their separately documented integration
-rationale. An inline coverage pragma is rejected whenever its semantic
+roots and non-source omissions are fixed, same-checkout absolute data paths are
+required, path aliases are forbidden, and no custom partial-branch or exclusion
+rule may suppress the changed-code gate. Absolute data paths let Coverage.py
+emit one repository source and repository-relative XML filenames for project,
+tooling, and Nox code without merging aliases across machines. Existing explicit
+exclusions retain their separately documented integration rationale. An inline
+coverage pragma is rejected whenever its semantic
 statement owns changed code, even when the pragma's physical line is unchanged.
 Coverage.py's structural `TYPE_CHECKING` and `Protocol` exclusions are accepted
 only for canonical, unshadowed imports from `typing`; runtime-evaluated defaults,
