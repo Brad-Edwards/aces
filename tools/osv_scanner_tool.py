@@ -8,7 +8,7 @@ import tempfile
 from enum import StrEnum
 from hashlib import sha256
 from pathlib import Path
-from urllib.error import HTTPError, URLError
+from urllib.error import URLError
 from urllib.request import urlopen
 
 from tools.tool_versions import OSV_SCANNER_VERSION
@@ -149,10 +149,10 @@ def _validated_cache_hit(binary_path: Path, expected_checksum: str) -> bool:
         final_mode = binary_path.lstat().st_mode
     except OSError as exc:
         raise RuntimeError(f"failed to validate cached osv-scanner at {binary_path}") from exc
-    if stat.S_ISREG(final_mode) and actual_checksum == expected_checksum and final_mode & stat.S_IXUSR:
-        return True
-    binary_path.unlink()
-    return False
+    valid = stat.S_ISREG(final_mode) and actual_checksum == expected_checksum and bool(final_mode & stat.S_IXUSR)
+    if not valid:
+        binary_path.unlink()
+    return valid
 
 
 def _install_binary(binary_path: Path, binary_bytes: bytes) -> None:
@@ -190,14 +190,16 @@ def ensure_osv_scanner(repo_root: Path = REPO_ROOT, *, version: str = OSV_SCANNE
 
     base_url = _release_base_url(version)
     asset_url = f"{base_url}/{asset_name}"
+    if not asset_url.startswith("https://github.com/google/osv-scanner/releases/download/"):
+        raise RuntimeError(f"unsafe osv-scanner release URL: {asset_url}")
 
     try:
-        with urlopen(  # noqa: S310 - pinned HTTPS release asset
+        with urlopen(
             asset_url,
             timeout=_DOWNLOAD_TIMEOUT_SECONDS,
         ) as response:
             binary_bytes = response.read(_MAX_BINARY_BYTES + 1)
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except (URLError, TimeoutError) as exc:
         raise RuntimeError(f"failed to download osv-scanner from {asset_url}: {exc}") from exc
     if len(binary_bytes) > _MAX_BINARY_BYTES:
         raise RuntimeError(f"osv-scanner asset {asset_name} exceeds the download limit")

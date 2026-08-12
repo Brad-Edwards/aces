@@ -2480,9 +2480,10 @@ def test_osv_scanner_cache_hash_rejects_last_component_swap(
         return real_open(path, flags, *args)
 
     monkeypatch.setattr(osv_scanner_tool.os, "open", swap_before_open)
+    expected = osv_scanner_tool.sha256(payload).hexdigest()
 
     with pytest.raises(RuntimeError, match="failed to validate cached osv-scanner"):
-        osv_scanner_tool._validated_cache_hit(binary, osv_scanner_tool.sha256(payload).hexdigest())
+        osv_scanner_tool._validated_cache_hit(binary, expected)
     assert outside.read_bytes() == payload
 
 
@@ -2552,6 +2553,23 @@ def test_osv_scanner_download_has_a_finite_timeout(monkeypatch: pytest.MonkeyPat
         "url": "https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_darwin_arm64",
         "timeout": 60,
     }
+
+
+def test_osv_scanner_download_rejects_an_untrusted_release_url(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    monkeypatch.setattr(osv_scanner_tool, "_release_base_url", lambda _version: "file:///tmp")
+    monkeypatch.setattr(
+        osv_scanner_tool,
+        "urlopen",
+        lambda _url, **_kwargs: pytest.fail("unsafe URL reached the network client"),
+    )
+
+    with pytest.raises(RuntimeError, match="unsafe osv-scanner release URL"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path)
 
 
 def test_osv_scanner_download_timeout_fails_closed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
