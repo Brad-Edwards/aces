@@ -49,6 +49,7 @@ from ..instantiate import _bind_scenario_content
 from ..module_registry import (
     Lockfile,
     TrustPolicy,
+    _VerifiedSourceBundle,
     load_lockfile,
     load_trust_policy,
     resolve_import,
@@ -199,6 +200,8 @@ class _ImportContext:
     migration_policy: SDLMigrationPolicy | str
     limits: SDLParserLimits
     source_diagnostics: list[SDLParseDiagnostic] | None
+    verified_sources: _VerifiedSourceBundle | None
+    registry_base_dir: Path
 
 
 def _expand_one_import(
@@ -233,6 +236,8 @@ def _expand_one_import(
             limits=context.limits,
         ),
         source_diagnostics=context.source_diagnostics,
+        verified_sources=context.verified_sources,
+        _registry_base_dir=context.registry_base_dir,
     )
     import_path = resolved_import.root_file
     imported_raw = _load_normalized_data(
@@ -251,6 +256,10 @@ def _expand_one_import(
         limits=context.limits,
         source_diagnostics=context.source_diagnostics,
         _traversal=context.child_traversal,
+        _verified_sources=resolved_import.verified_sources,
+        _inherited_lockfile=context.lockfile,
+        _inherited_trust_policy=context.trust_policy,
+        _registry_base_dir=context.registry_base_dir if resolved_import.verified_sources is not None else None,
     )
     try:
         imported_scenario = ExpandedScenario.model_validate(imported_expanded)
@@ -321,6 +330,10 @@ def expand_sdl_modules(
     limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
     _traversal: CompositionTraversal | None = None,
+    _verified_sources: _VerifiedSourceBundle | None = None,
+    _inherited_lockfile: Lockfile | None = None,
+    _inherited_trust_policy: TrustPolicy | None = None,
+    _registry_base_dir: Path | None = None,
 ) -> tuple[dict[str, Any], ExpansionProvenance]:
     """Expand trusted imports into executable content and portable evidence."""
 
@@ -332,10 +345,11 @@ def expand_sdl_modules(
     budget = traversal.budget
     budget.check_depth(traversal.depth, path=path)
     budget.add_document(data, path=path)
-    resolved_path = path.resolve()
+    resolved_path = _verified_sources.identity_path(path) if _verified_sources is not None else path.resolve()
     if resolved_path in traversal.seen:
         raise SDLParseError(f"Import cycle detected at {resolved_path}", path=path)
     child_traversal = traversal.descend_from(resolved_path)
+    registry_base_dir = resolved_path.parent if _registry_base_dir is None else _registry_base_dir
 
     merged = dict(data)
     merged.setdefault("imports", [])
@@ -353,8 +367,12 @@ def expand_sdl_modules(
             realization_constraints.extend(constraint_records(typed_designation))
         except ValidationError as exc:
             raise SDLParseError("Realization designation is structurally invalid", path=path) from exc
-    lockfile = load_lockfile(resolved_path.parent)
-    trust_policy = load_trust_policy(resolved_path.parent)
+    if _verified_sources is None:
+        lockfile = load_lockfile(resolved_path.parent)
+        trust_policy = load_trust_policy(resolved_path.parent)
+    else:
+        lockfile = _inherited_lockfile
+        trust_policy = _inherited_trust_policy if _inherited_trust_policy is not None else TrustPolicy()
     context = _ImportContext(
         path=path,
         resolved_path=resolved_path,
@@ -366,6 +384,8 @@ def expand_sdl_modules(
         migration_policy=migration_policy,
         limits=limits,
         source_diagnostics=source_diagnostics,
+        verified_sources=_verified_sources,
+        registry_base_dir=registry_base_dir,
     )
 
     for raw_import in merged.get("imports", []):

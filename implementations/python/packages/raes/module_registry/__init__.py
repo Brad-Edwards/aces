@@ -3,32 +3,35 @@
 This package is a thin facade over cohesive subdomains:
 
 * :mod:`._constants` - lockfile / trust-policy / OCI-layout names and schema versions.
+* :mod:`._cache` - bounded gzip admission, safe locks, tree integrity, and recovery.
+* :mod:`._filesystem` - durable immutable-version and pointer transactions.
 * :mod:`._digests` - digest and version-matching helpers.
 * :mod:`.models` - Pydantic policy/lock models, the resolved-module DTO, and lockfile persistence.
 * :mod:`.signing` - Ed25519 signature payloads and trusted-signer verification.
 * :mod:`.resolution` - local/locked/OCI import resolution orchestration.
 * :mod:`.publishing` - OCI-layout publishing.
 
-The OCI transport and archive-safety security boundary (URL fetch with an explicit
-timeout, capped reads, and tar-member validation before extraction) is defined in
-this module rather than a submodule on purpose. ``test_sdl_module_registry.py``
-patches ``raes.module_registry.urlopen`` and ``raes.module_registry._OCI_LIMITS`` on
-the package object, and a Python function resolves such globals from the module
-where it is *defined*. Keeping these seams defined here preserves that patch
-behavior for the request and archive paths without modifying the tests; the
-resolution orchestrator reaches them through a function-local ``from . import``.
+The package facade remains the compatibility and injection surface for OCI
+transport and archive limits. Network reads and tar-member validation live here;
+the cache submodule dynamically reads ``raes.module_registry._OCI_LIMITS`` and
+the facade re-exports its private test seams. This preserves the historical
+``test_sdl_module_registry.py`` patch behavior while keeping every source module
+below the repository size cap.
 """
 
 from __future__ import annotations
 
-import io
 import json
+import os
 import tarfile
+import time
+import zlib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 # The submodule imports below are this package's public re-export surface, plus
 # the private ``_sha256_digest`` / ``_signable_payload`` / ``_verify_signatures``
@@ -37,7 +40,32 @@ from urllib.request import Request, urlopen
 # the legacy ``from raes.module_registry import *`` semantics. F401 is ignored for
 # this facade in pyproject.toml - the "unused import" claim is false for re-exports.
 from .._errors import SDLParseError
+from .._source_profile import SDLSourceParseOptions
 from ..scenario import ImportDecl, ModuleDescriptor, Scenario
+from ._archive import _expected_cache_tree_manifest
+from ._cache import (
+    _CACHE_THREAD_LOCKS,
+    _CACHE_THREAD_LOCKS_GUARD,
+    _CACHE_TREE_MANIFEST_NAME,
+    _CACHE_TREE_SCHEMA,
+    _DECOMPRESSION_CHUNK_BYTES,
+    _SPOOL_MEMORY_BYTES,
+    _acquire_file_lock,
+    _bounded_gzip_tar_stream,
+    _cache_entry_lock,
+    _cache_tree_entries,
+    _cache_tree_manifest,
+    _canonical_json_bytes,
+    _hash_cache_file,
+    _open_cache_lock,
+    _read_cache_manifest_bytes,
+    _recover_cache_root,
+    _release_file_lock,
+    _same_file_identity,
+    _trusted_entry_projection,
+    _validated_cache_root,
+    _write_cache_tree_manifest,
+)
 from ._constants import (
     LOCKFILE_NAME,
     LOCKFILE_SCHEMA_VERSION,
@@ -49,6 +77,18 @@ from ._constants import (
     TRUST_POLICY_SCHEMA_VERSION,
 )
 from ._digests import _sha256_digest
+from ._filesystem import (
+    _install_version_directory,
+    _iter_version_directories,
+    _new_version_stage,
+    _prepare_versioned_slot,
+    _prune_version_directories,
+    _read_version_pointer,
+    _remove_path,
+    _require_directory,
+    _write_version_pointer,
+)
+from ._verified_sources import _cache_source_result, _VerifiedSourceBundle
 from .models import (
     Lockfile,
     LockRecord,
@@ -86,6 +126,9 @@ class _OCIResourceLimits:
     max_bundle_members: int = 8192
     max_member_bytes: int = 64 * 1024 * 1024
     max_total_bytes: int = 256 * 1024 * 1024
+    max_tar_stream_bytes: int = 320 * 1024 * 1024
+    max_gzip_expansion_ratio: int = 1024
+    max_tree_depth: int = 256
 
 
 _OCI_LIMITS = _OCIResourceLimits()
@@ -145,20 +188,33 @@ def _json_request(url: str, *, headers: dict[str, str] | None = None, max_bytes:
     request = Request(url, headers=headers or {})
     limit = _OCI_LIMITS.max_metadata_bytes if max_bytes is None else max_bytes
     try:
-        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
-            return json.loads(_read_capped(response, url=url, max_bytes=limit).decode("utf-8"))
-    except (URLError, json.JSONDecodeError) as exc:
-        raise SDLParseError(f"Failed to fetch OCI metadata from {url}: {exc}") from exc
+        with urlopen(request, timeout=_OCI_LIMITS.timeout_seconds) as response:
+            payload = _read_capped(response, url=url, max_bytes=limit)
+    except URLError as exc:
+        raise SDLParseError(f"Failed to fetch OCI metadata from {url}") from exc
+    return _decode_json_object(payload, context=f"OCI metadata from {url}")
+
+
+def _decode_json_object(payload: bytes, *, context: str) -> dict[str, Any]:
+    """Decode attacker-controlled JSON behind one stable, bounded error surface."""
+
+    try:
+        decoded = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SDLParseError(f"{context} is not valid UTF-8 JSON") from exc
+    if not isinstance(decoded, dict):
+        raise SDLParseError(f"{context} must be a JSON object")
+    return decoded
 
 
 def _bytes_request(url: str, *, headers: dict[str, str] | None = None, max_bytes: int | None = None) -> bytes:
     request = Request(url, headers=headers or {})
     limit = _OCI_LIMITS.max_metadata_bytes if max_bytes is None else max_bytes
     try:
-        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
+        with urlopen(request, timeout=_OCI_LIMITS.timeout_seconds) as response:
             return _read_capped(response, url=url, max_bytes=limit)
     except URLError as exc:
-        raise SDLParseError(f"Failed to fetch OCI blob from {url}: {exc}") from exc
+        raise SDLParseError(f"Failed to fetch OCI blob from {url}") from exc
 
 
 def _oci_cache_dir(base_dir: Path) -> Path:
@@ -179,9 +235,27 @@ def _validate_tar_member_shape(
     normalized paths, and enforces the per-member extracted-size cap. Records the
     member's normalized path in ``seen_paths`` so a later duplicate is caught.
     """
+    pure_name = PurePosixPath(member.name)
+    source_name = member.name.removesuffix("/") if member.isdir() else member.name
+    if (
+        not member.name
+        or "\\" in member.name
+        or pure_name.is_absolute()
+        or ".." in pure_name.parts
+        or source_name != pure_name.as_posix()
+        or (pure_name.parts and len(pure_name.parts[0]) == 2 and pure_name.parts[0][1] == ":")
+    ):
+        raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
     member_path = (dest / member.name).resolve()
     if not member_path.is_relative_to(resolved_dest):
         raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
+    relative_path = member_path.relative_to(resolved_dest)
+    if len(relative_path.parts) > limits.max_tree_depth:
+        raise SDLParseError(
+            f"OCI bundle member {member.name!r} exceeds the {limits.max_tree_depth}-component path-depth limit"
+        )
+    if member_path == (dest / _CACHE_TREE_MANIFEST_NAME).resolve():
+        raise SDLParseError("OCI module bundle contains a reserved cache metadata path")
     if member.issym() or member.islnk():
         raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
     if not (member.isfile() or member.isdir()):
@@ -206,12 +280,10 @@ def _safe_tar_members(
 
     The OCI bundle bytes are attacker-controlled even after registry allowlisting,
     digest pinning, and signature verification, so this validation is the
-    filesystem-write boundary for module import resolution. It must hold on every
-    supported runtime, not just on Python 3.12+ where ``extractall(filter="data")``
-    is available, because the PEP 706 ``filter`` keyword was backported only in
-    Python 3.11.4 while the project supports ``>=3.11``. Validation therefore
-    matches the ``data`` filter's guarantees: reject path traversal, symlinks,
-    hard links, and special files, and strip setuid/setgid/sticky bits.
+    filesystem-write boundary for module import resolution. It complements the
+    mandatory PEP 706 ``data`` filter: reject path traversal, symlinks, hard
+    links, and special files, and strip setuid/setgid/sticky bits. A runtime that
+    lacks the filter fails closed instead of using unfiltered extraction.
 
     It is also the resource-exhaustion boundary (issue #12): the archive member
     count, per-member extracted size, and total extracted bytes are bounded by
@@ -251,34 +323,143 @@ def _extract_bundle_to_cache(
     *,
     bundle_bytes: bytes,
     manifest_digest: str,
+    content_digest: str | None = None,
     root_file: str,
     base_dir: Path,
-) -> Path:
-    cache_dir = _oci_cache_dir(base_dir) / manifest_digest
-    if ".." in Path(root_file).parts or Path(root_file).is_absolute():
+    source_options: SDLSourceParseOptions | None = None,
+) -> Path | _VerifiedSourceBundle:
+    if (
+        not manifest_digest
+        or manifest_digest in {".", ".."}
+        or "/" in manifest_digest
+        or "\\" in manifest_digest
+        or "\x00" in manifest_digest
+    ):
+        raise SDLParseError("Invalid OCI manifest digest cache key")
+    root_relative = PurePosixPath(root_file)
+    if (
+        not root_file
+        or "\\" in root_file
+        or "\x00" in root_file
+        or ".." in root_relative.parts
+        or root_relative.is_absolute()
+        or root_relative == PurePosixPath(".")
+        or root_file != root_relative.as_posix()
+        or (root_relative.parts and len(root_relative.parts[0]) == 2 and root_relative.parts[0][1] == ":")
+    ):
         raise SDLParseError(f"Invalid OCI root_file path: {root_file!r}")
-    resolved_cache = cache_dir.resolve()
-    root_path = cache_dir / root_file
-    if not root_path.exists():
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        with tarfile.open(fileobj=io.BytesIO(bundle_bytes), mode="r:gz") as tar:
-            # Validate every member up front so the security property is identical on
-            # all supported runtimes and never depends on the runtime's tarfile filter
-            # support. ``filter="data"`` is applied as defense in depth where available
-            # (Python 3.11.4+/3.12+); on 3.11.0–3.11.3 the keyword is absent and the
-            # already-validated members are the guarantee. No path falls back to an
-            # unfiltered ``tar.extractall(cache_dir)``.
-            safe_members = _safe_tar_members(tar, cache_dir)
-            try:
-                tar.extractall(cache_dir, members=safe_members, filter="data")
-            # Python 3.11.0–3.11.3 lack the PEP 706 filter keyword.
-            except TypeError:
-                tar.extractall(cache_dir, members=safe_members)
-    # Enforce the root-file containment contract on EVERY return path, including
-    # the cache-hit fast path: a stale cache (e.g. one populated by an earlier
-    # unsafe extractor) could hold a symlink or a non-regular file at root_file
-    # that resolves outside the digest cache. Validating here fails closed
-    # regardless of whether extraction ran this call.
-    if not root_path.is_file() or not root_path.resolve().is_relative_to(resolved_cache):
-        raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{root_file}'")
-    return root_path
+    actual_content_digest = f"sha256:{_sha256_digest(bundle_bytes)}"
+    expected_content_digest = content_digest or actual_content_digest
+    if expected_content_digest != actual_content_digest:
+        raise SDLParseError("OCI module bundle does not match its expected content digest")
+
+    cache_root = _oci_cache_dir(base_dir)
+    cache_error = "Unable to create the OCI module cache"
+    _require_directory(cache_root.parent, error_message=cache_error)
+    _require_directory(cache_root, error_message=cache_error)
+    cache_slot = cache_root / manifest_digest
+    lock_path = cache_root / ".locks" / f"{manifest_digest}.lock"
+
+    with _cache_entry_lock(lock_path):
+        versions = _prepare_versioned_slot(
+            slot=cache_slot,
+            error_message="Unable to prepare the OCI module cache entry",
+        )
+        try:
+            with (
+                _bounded_gzip_tar_stream(bundle_bytes) as tar_stream,
+                tarfile.open(fileobj=tar_stream, mode="r:") as tar,
+            ):
+                # The complete uncompressed stream is admitted before ``tarfile``
+                # parses its first header. Member validation and the standard data
+                # filter then provide independent filesystem-write defenses.
+                safe_members = _safe_tar_members(tar, versions / ".inventory")
+                expected_manifest = _expected_cache_tree_manifest(
+                    tar=tar,
+                    members=safe_members,
+                    content_digest=expected_content_digest,
+                    root_file=root_file,
+                )
+                expected_root = next(
+                    (entry for entry in expected_manifest["entries"] if entry["path"] == root_relative.as_posix()),
+                    None,
+                )
+                if expected_root is None or expected_root["type"] != "file":
+                    raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{root_file}'")
+                hit = _recover_cache_root(
+                    slot=cache_slot,
+                    versions=versions,
+                    expected_content_digest=expected_content_digest,
+                    expected_manifest=expected_manifest,
+                    root_relative=root_relative,
+                )
+                if hit is not None:
+                    return _cache_source_result(
+                        hit,
+                        expected_manifest=expected_manifest,
+                        root_relative=root_relative,
+                        source_options=source_options,
+                    )
+                staging = _new_version_stage(
+                    versions=versions,
+                    error_message="Unable to stage the OCI module cache entry",
+                )
+                try:
+                    try:
+                        tar.extractall(staging, members=safe_members, filter="data")
+                    except TypeError as exc:
+                        raise SDLParseError("Safe OCI tar extraction requires Python 3.11.4 or newer") from exc
+                    staged_root = staging.joinpath(*root_relative.parts)
+                    if (
+                        staged_root.is_symlink()
+                        or not staged_root.is_file()
+                        or not staged_root.resolve(strict=True).is_relative_to(staging.resolve(strict=True))
+                    ):
+                        raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{root_file}'")
+                    prior_version = _read_version_pointer(slot=cache_slot)
+                    _write_cache_tree_manifest(
+                        root=staging,
+                        content_digest=expected_content_digest,
+                        root_file=root_file,
+                    )
+                    staged_validation = _validated_cache_root(
+                        version=staging,
+                        expected_manifest=expected_manifest,
+                        root_relative=root_relative,
+                    )
+                    if staged_validation is None:
+                        raise SDLParseError("Staged OCI module cache entry failed validation")
+                    version_name = f"{actual_content_digest.removeprefix('sha256:')}-{uuid4().hex}"
+                    installed = _install_version_directory(
+                        staged=staging,
+                        versions=versions,
+                        version_name=version_name,
+                        error_message="Unable to commit the OCI module cache entry atomically",
+                    )
+                    committed = _validated_cache_root(
+                        version=installed,
+                        expected_manifest=expected_manifest,
+                        root_relative=root_relative,
+                    )
+                    if committed is None:
+                        raise SDLParseError("Committed OCI module cache entry failed validation")
+                    _prune_version_directories(
+                        versions=versions,
+                        retain_names={version_name, *(() if prior_version is None else (prior_version,))},
+                        error_message="Unable to prune stale OCI module cache versions",
+                    )
+                    _write_version_pointer(
+                        slot=cache_slot,
+                        version_name=version_name,
+                        error_message="Unable to commit the OCI module cache pointer atomically",
+                    )
+                    return _cache_source_result(
+                        committed,
+                        expected_manifest=expected_manifest,
+                        root_relative=root_relative,
+                        source_options=source_options,
+                    )
+                finally:
+                    _remove_path(staging)
+        except (EOFError, OSError, tarfile.TarError, zlib.error) as exc:
+            raise SDLParseError("OCI module bundle is not a valid gzip-compressed tar archive") from exc
