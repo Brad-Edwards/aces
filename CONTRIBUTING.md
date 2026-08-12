@@ -58,6 +58,20 @@ The full repository gate is:
 uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s verify
 ```
 
+That gate includes a `participant-opacity-proof` lane, which replays the pinned
+Isabelle proof offline. The lane runs on Linux x86_64 only. It needs
+`bubblewrap` to enforce the offline replay, and a fontconfig setup with at least
+one installed font, because Isabelle starts a JVM that will not run without one:
+
+```shell
+sudo apt-get install bubblewrap fontconfig fonts-dejavu-core
+```
+
+Without fonts, the lane reports that the Isabelle kernel rejected the fixed
+proof session, which reads as a failing proof rather than a missing
+prerequisite. Run the gate on Linux, or rely on continuous integration, when
+your workstation is another platform.
+
 Run the change-aware local gate while iterating:
 
 ```shell
