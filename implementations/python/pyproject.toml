@@ -123,29 +123,18 @@ addopts = "-m 'not fuzz and not integration and not docker'"
 timeout = 120
 
 [tool.coverage.run]
-source = [
-    "raes_contracts",
-    "raes_backend_protocols",
-    "raes_backend_stubs",
-    "raes_backend_libvirt",
-    "raes_operations",
-    "raes_reference_backend",
-    "raes_cli",
-    "raes_conformance",
-    "raes_mcp",
-    "raes_processor",
-    "raes_runtime",
-    "raes",
-    # Repo CI tooling (issue #54): the `tools/` tree lives at the repo root and
-    # is imported as the top-level `tools` package via pytest's `pythonpath`
-    # (`../..`). Coverage matches source packages by module name, so its
-    # `tools.*` modules are measured even though pytest runs from
-    # `implementations/python/`.
-    "tools",
+branch = true
+relative_files = true
+source = ["../.."]
+omit = [
+    "*/implementations/python/tests/*",
+    "*/implementations/python/.venv/*",
+    "*/docs/*",
 ]
 
 [tool.coverage.report]
 show_missing = true
+include_namespace_packages = true
 exclude_also = [
     # The reference backend's OCI subprocess leaf (RUN-314): real container
     # IO, exercised only by the opt-in docker integration tests, never in the

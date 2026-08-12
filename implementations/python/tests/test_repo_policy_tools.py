@@ -143,9 +143,14 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["xml", "report"]
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert [command[4] for command, _options in coverage_commands] == ["xml", "json", "report"]
+    assert coverage_commands[1][0][5:] == ("-o", str(noxfile.COVERAGE_JSON_PATH))
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
+    policy_command = next(
+        command for command, _options in session.commands if "tools/check_changed_coverage.py" in command
+    )
+    assert "--base-rev" not in policy_command
 
 
 def test_verification_lanes_run_concurrently_and_preserve_declared_order(
@@ -299,19 +304,79 @@ def test_parallel_coverage_is_combined_before_reporting(
             return nullcontext()
 
     session = FakeSession()
-    noxfile._finalize_parallel_coverage(session, tmp_path)
+    noxfile._finalize_parallel_coverage(session, tmp_path, base_rev="base-sha")
 
     coverage_commands = [
         (command, options)
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "report"]
+    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "json", "report"]
     assert coverage_commands[0][0][5:] == ("--keep", str(tmp_path))
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert coverage_commands[2][0][5:] == ("-o", str(noxfile.COVERAGE_JSON_PATH))
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(
         options["env"] == {"COVERAGE_FILE": str(tmp_path / ".coverage")} for _command, options in coverage_commands
     )
+    policy_command = next(
+        command for command, _options in session.commands if "tools/check_changed_coverage.py" in command
+    )
+    assert policy_command[-2:] == ("--base-rev", "base-sha")
+
+
+def test_coverage_base_revision_defaults_and_validates_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+
+    assert noxfile._coverage_base_revision([]) == "HEAD^"
+    assert noxfile._coverage_base_revision(["--base-rev", "abc123"]) == "abc123"
+    with pytest.raises(ValueError, match="--base-rev requires a value"):
+        noxfile._coverage_base_revision(["--base-rev"])
+
+
+def test_parallel_verification_resolves_coverage_base_before_starting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    session = types.SimpleNamespace(posargs=["--base-rev", "base-sha"])
+    reporter = types.SimpleNamespace()
+
+    def stop_after_resolution(posargs: list[str]) -> str:
+        assert posargs == ["--base-rev", "base-sha"]
+        raise RuntimeError("base resolved")
+
+    monkeypatch.setattr(noxfile, "_coverage_base_revision", stop_after_resolution)
+
+    with pytest.raises(RuntimeError, match="base resolved"):
+        noxfile._run_parallel_verification(session, reporter, include_policy=True)
+
+
+def test_parallel_verification_passes_exact_base_to_combined_coverage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    finalized: list[str] = []
+
+    class FakeReporter:
+        def run(self, _name: str, action: object, *, detail: str | None = None) -> None:
+            assert callable(action)
+            action()
+
+    session = types.SimpleNamespace(posargs=["--base-rev", "base-sha"], log=lambda _message: None)
+    monkeypatch.setattr(noxfile, "_sync_project", lambda _session: None)
+    monkeypatch.setattr(noxfile, "_run_project_python", lambda _session, *_args: None)
+    monkeypatch.setattr(noxfile, "_available_cpu_count", lambda: 2)
+    monkeypatch.setattr(noxfile, "_verification_lanes", lambda **_kwargs: ())
+    monkeypatch.setattr(noxfile, "_verification_lane_workers", lambda **_kwargs: 1)
+    monkeypatch.setattr(noxfile, "run_verification_lanes", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(
+        noxfile,
+        "_finalize_parallel_coverage",
+        lambda _session, _coverage_dir, *, base_rev: finalized.append(base_rev),
+    )
+
+    noxfile._run_parallel_verification(session, FakeReporter(), include_policy=True)
+
+    assert finalized == ["base-sha"]
 
 
 def test_docs_graph_uses_curated_root_and_reader_style_gate(

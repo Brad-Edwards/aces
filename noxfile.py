@@ -54,6 +54,8 @@ PUBLIC_DOCS_EXAMPLE_TESTS = (
 RUFF_CONFIG = PROJECT_ROOT / "pyproject.toml"
 OSV_LOCKFILE_PATH = PROJECT_ROOT / "uv.lock"
 OSV_REPORT_PATH = PROJECT_ROOT / "osv-scanner-report.json"
+COVERAGE_JSON_PATH = PROJECT_ROOT / "coverage.json"
+COVERAGE_RATCHET_PATH = REPO_ROOT / "tools" / "coverage_ratchet.json"
 TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_repo_policy_tools.py",
     "implementations/python/tests/test_requirement_governance.py",
@@ -268,18 +270,7 @@ def _run_pytest(
     with session.chdir(PROJECT_ROOT):
         _run(session, *command, env=coverage_env)
         if finalize_coverage:
-            _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
-            _run(
-                session,
-                "uv",
-                "run",
-                "--frozen",
-                "coverage",
-                "report",
-                "--fail-under=50",
-                "--format=total",
-                env=coverage_env,
-            )
+            _write_and_check_coverage(session, coverage_env=coverage_env)
 
 
 def _split_policy_session_args(posargs: list[str]) -> tuple[list[str], list[str], bool]:
@@ -306,6 +297,17 @@ def _split_policy_session_args(posargs: list[str]) -> tuple[list[str], list[str]
         requirement_args.append(arg)
         index += 1
     return repo_args, requirement_args, skip_requirement
+
+
+def _coverage_base_revision(posargs: Sequence[str]) -> str:
+    values = list(posargs)
+    if "--base-rev" not in values:
+        return "HEAD^"
+    index = values.index("--base-rev")
+    value_index = index + 1
+    if value_index >= len(values) or not values[value_index] or values[value_index].startswith("--"):
+        raise ValueError("--base-rev requires a value")
+    return values[value_index]
 
 
 def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -> HygieneSelection:
@@ -869,7 +871,42 @@ def _run_integration_tests(
     )
 
 
-def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path) -> None:
+def _write_and_check_coverage(
+    session: nox.Session,
+    *,
+    coverage_env: dict[str, str],
+    base_rev: str | None = None,
+) -> None:
+    _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
+    _run(
+        session,
+        "uv",
+        "run",
+        "--frozen",
+        "coverage",
+        "json",
+        "-o",
+        str(COVERAGE_JSON_PATH),
+        env=coverage_env,
+    )
+    _run(session, "uv", "run", "--frozen", "coverage", "report", "--format=total", env=coverage_env)
+    command = [
+        "tools/check_changed_coverage.py",
+        "--coverage-json",
+        str(COVERAGE_JSON_PATH),
+        "--ratchet",
+        str(COVERAGE_RATCHET_PATH),
+        "--repo-root",
+        str(REPO_ROOT),
+        "--project-root",
+        str(PROJECT_ROOT),
+    ]
+    if base_rev is not None:
+        command.extend(("--base-rev", base_rev))
+    _run_project_python(session, *command)
+
+
+def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path, *, base_rev: str) -> None:
     coverage_file = coverage_dir / ".coverage"
     coverage_env = {"COVERAGE_FILE": str(coverage_file)}
     with session.chdir(PROJECT_ROOT):
@@ -884,18 +921,7 @@ def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path) -> Non
             str(coverage_dir),
             env=coverage_env,
         )
-        _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
-        _run(
-            session,
-            "uv",
-            "run",
-            "--frozen",
-            "coverage",
-            "report",
-            "--fail-under=50",
-            "--format=total",
-            env=coverage_env,
-        )
+        _write_and_check_coverage(session, coverage_env=coverage_env, base_rev=base_rev)
 
 
 def _run_docker_integration_tests(session: nox.Session, reporter: SessionReporter) -> None:
@@ -1427,6 +1453,7 @@ def _run_parallel_verification(
     *,
     include_policy: bool,
 ) -> None:
+    coverage_base_rev = _coverage_base_revision(session.posargs)
     reporter.run(
         "verify / locked project environment",
         lambda: _sync_project(session),
@@ -1492,8 +1519,8 @@ def _run_parallel_verification(
         )
         reporter.run(
             "verify / combined coverage",
-            lambda: _finalize_parallel_coverage(session, coverage_dir),
-            detail="unit + integration data files",
+            lambda: _finalize_parallel_coverage(session, coverage_dir, base_rev=coverage_base_rev),
+            detail=f"unit + integration data files; changed-code base={coverage_base_rev}",
         )
 
 

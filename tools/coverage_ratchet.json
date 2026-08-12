@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "minimum_line_percent": 89.739,
+  "minimum_branch_percent": 75.638,
+  "baseline": {
+    "covered_lines": 74067,
+    "num_statements": 82536,
+    "covered_branches": 19542,
+    "num_branches": 25836,
+    "python": "CPython 3.12.3",
+    "platform": "Linux x86_64",
+    "suites": ["unit", "integration"]
+  }
+}
