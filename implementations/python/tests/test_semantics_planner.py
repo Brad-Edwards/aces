@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 from types import SimpleNamespace
 
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from raes_processor.semantics.planner import (
     DependencyKind,
@@ -96,9 +96,13 @@ def _dependency_graphs() -> st.SearchStrategy[dict[str, tuple[str, ...]]]:
             for node, targets in zip(nodes, choices, strict=True)
         }
 
-    return st.integers(min_value=1, max_value=8).flatmap(
+    # Deliberately larger and denser than the DAG strategies above: the explicit
+    # frame stack has to resume a partially consumed iterator, so the graphs that
+    # matter are the ones where a node still has unvisited dependencies left when
+    # a descent happens and some of those are already on the stack.
+    return st.integers(min_value=1, max_value=18).flatmap(
         lambda size: st.lists(
-            st.lists(st.integers(min_value=0, max_value=7), max_size=3),
+            st.lists(st.integers(min_value=0, max_value=17), max_size=6),
             min_size=size,
             max_size=size,
         ).map(lambda choices: _build(size, choices))
@@ -238,6 +242,7 @@ class TestDependencyCycleScale:
 
         assert len(topological_dependency_order(graph)) == len(graph)
 
+    @settings(max_examples=400)
     @given(_dependency_graphs())
     def test_cycle_detection_matches_a_reference_walk(self, graph):
         """Guards the explicit-stack walk against the recursive semantics it replaced."""
