@@ -186,9 +186,16 @@ def _compensated_workflow_payload(
 
 
 def parse_timestamp(raw: str) -> datetime:
-    if raw.endswith("Z"):
-        raw = raw[:-1] + "+00:00"
-    parsed = datetime.fromisoformat(raw)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    return parsed
+    """Parse one explicit-offset ISO-8601 timestamp and normalize it to UTC."""
+
+    if not isinstance(raw, str) or not raw:
+        raise ValueError("timestamp must be an ISO-8601 value with an explicit UTC offset")
+    normalized = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+    try:
+        parsed = datetime.fromisoformat(normalized)
+        offset = parsed.utcoffset()
+    except (OverflowError, TypeError, ValueError):
+        raise ValueError("timestamp must be an ISO-8601 value with an explicit UTC offset") from None
+    if parsed.tzinfo is None or offset is None:
+        raise ValueError("timestamp must be an ISO-8601 value with an explicit UTC offset")
+    return parsed.astimezone(UTC)

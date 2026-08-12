@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
 from raes_contracts.workflow import (
@@ -15,7 +17,11 @@ from raes_contracts.workflow import (
 from .control_plane_workflows import maybe_apply_compensation, parse_timestamp
 
 TIMED_OUT_REASON = "workflow timed out"
-UNPARSEABLE_START_REASON = "workflow timed out: started_at could not be parsed"
+INVALID_RECONCILIATION_CLOCK = "workflow timeout reconciliation clock is invalid"
+INVALID_WORKFLOW_STATE = "persisted workflow execution state is invalid"
+INVALID_WORKFLOW_TIMESTAMP = "persisted workflow execution timestamps are invalid"
+INVALID_TIMEOUT_CONFIGURATION = "persisted workflow timeout configuration is invalid"
+NON_MONOTONIC_WORKFLOW_CLOCK = "workflow timeout reconciliation clock precedes persisted workflow state"
 
 
 def workflow_timeout_update(
@@ -25,14 +31,19 @@ def workflow_timeout_update(
     orchestration_results: dict[str, dict[str, object]],
     orchestration_history: dict[str, list[dict[str, object]]],
     submitted_at: str,
+    *,
+    reconciliation_clock: datetime | None = None,
 ) -> tuple[dict[str, object], list[dict[str, object]]] | None:
+    current = reconciliation_clock or _reconciliation_clock(submitted_at)
+    if current.tzinfo is None or current.utcoffset() is None:
+        raise ValueError(INVALID_RECONCILIATION_CLOCK)
     update = None
     timeout_seconds = _eligible_workflow_timeout_seconds(entry)
     normalized = _running_workflow_result(orchestration_results.get(workflow_address))
-    terminal_reason = None
+    timed_out = False
     if timeout_seconds is not None and normalized is not None:
-        terminal_reason = _workflow_timeout_reason(normalized, timeout_seconds, submitted_at)
-    if terminal_reason is not None:
+        timed_out = _workflow_has_timed_out(normalized, timeout_seconds, current)
+    if timed_out:
         update = _timed_out_workflow_update(
             snapshot,
             workflow_address,
@@ -40,9 +51,15 @@ def workflow_timeout_update(
             timeout_seconds,
             orchestration_history,
             submitted_at,
-            terminal_reason,
         )
     return update
+
+
+def _reconciliation_clock(submitted_at: str) -> datetime:
+    try:
+        return parse_timestamp(submitted_at)
+    except ValueError:
+        raise ValueError(INVALID_RECONCILIATION_CLOCK) from None
 
 
 def _eligible_workflow_timeout_seconds(entry: SnapshotEntry) -> int | None:
@@ -53,57 +70,57 @@ def _eligible_workflow_timeout_seconds(entry: SnapshotEntry) -> int | None:
 
 
 def _running_workflow_result(result_payload: object) -> WorkflowExecutionState | None:
-    normalized = None
-    if isinstance(result_payload, dict):
+    if result_payload is None:
+        return None
+    if not isinstance(result_payload, dict):
+        raise ValueError(INVALID_WORKFLOW_STATE)
+    try:
         candidate = WorkflowExecutionState.from_payload(result_payload)
-        if candidate.workflow_status == WorkflowStatus.RUNNING:
-            normalized = candidate
-    return normalized
+    except (TypeError, ValueError):
+        raise ValueError(INVALID_WORKFLOW_STATE) from None
+    return candidate if candidate.workflow_status == WorkflowStatus.RUNNING else None
 
 
 def _workflow_timeout_seconds(payload: object) -> int | None:
-    timeout = None
-    if isinstance(payload, dict):
-        execution_contract_payload = payload.get("execution_contract")
-        if isinstance(execution_contract_payload, dict):
-            timeout = _coerce_timeout_seconds(execution_contract_payload.get("timeout_seconds"))
-    return timeout
+    if not isinstance(payload, dict):
+        raise ValueError(INVALID_TIMEOUT_CONFIGURATION)
+    execution_contract_payload = payload.get("execution_contract")
+    if execution_contract_payload is None:
+        return None
+    if not isinstance(execution_contract_payload, dict):
+        raise ValueError(INVALID_TIMEOUT_CONFIGURATION)
+    return _coerce_timeout_seconds(execution_contract_payload.get("timeout_seconds"))
 
 
 def _coerce_timeout_seconds(raw: object) -> int | None:
-    timeout = None
-    if raw not in (None, "", 0):
-        try:
-            timeout = int(raw)
-        except (TypeError, ValueError):
-            timeout = None
-    return timeout
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw <= 0:
+        raise ValueError(INVALID_TIMEOUT_CONFIGURATION)
+    return raw
 
 
-def _workflow_timeout_reason(
+def _workflow_has_timed_out(
     normalized: WorkflowExecutionState,
     timeout_seconds: int,
-    submitted_at: str,
-) -> str | None:
-    """Return the terminal reason when the workflow must time out, else ``None``.
+    current: datetime,
+) -> bool:
+    """Return whether elapsed wall time proves the declared timeout."""
 
-    ``submitted_at`` is the caller's reconciliation clock and governs the whole
-    pass, so an unusable value is raised rather than quietly disabling every
-    timeout. A running workflow whose own ``started_at`` cannot be parsed has no
-    derivable deadline; reporting "not timed out" would pin it in RUNNING
-    forever, so it is reclaimed under a distinct reason instead.
-    """
-
-    current = parse_timestamp(submitted_at)
     try:
         started = parse_timestamp(normalized.started_at)
-    except (TypeError, ValueError):
-        return UNPARSEABLE_START_REASON
+        updated = parse_timestamp(normalized.updated_at)
+    except ValueError:
+        raise ValueError(INVALID_WORKFLOW_TIMESTAMP) from None
+    if updated < started:
+        raise ValueError(INVALID_WORKFLOW_TIMESTAMP)
+    if current < started or current < updated:
+        raise ValueError(NON_MONOTONIC_WORKFLOW_CLOCK)
     # Elapsed time is compared against the timeout rather than added to the start
     # instant: `timeout_seconds` has no declared upper bound, and folding a very
     # large one into a float timestamp or a timedelta overflows.
     elapsed_seconds = (current - started).total_seconds()
-    return TIMED_OUT_REASON if elapsed_seconds >= timeout_seconds else None
+    return elapsed_seconds >= timeout_seconds
 
 
 def _timed_out_workflow_update(
@@ -113,9 +130,8 @@ def _timed_out_workflow_update(
     timeout_seconds: int,
     orchestration_history: dict[str, list[dict[str, object]]],
     submitted_at: str,
-    terminal_reason: str,
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
-    timed_out_state = _timed_out_workflow_state(normalized, submitted_at, terminal_reason)
+    timed_out_state = _timed_out_workflow_state(normalized, submitted_at)
     history = orchestration_history.setdefault(workflow_address, [])
     history.append(
         WorkflowHistoryEvent(
@@ -136,7 +152,6 @@ def _timed_out_workflow_update(
 def _timed_out_workflow_state(
     normalized: WorkflowExecutionState,
     submitted_at: str,
-    terminal_reason: str,
 ) -> WorkflowExecutionState:
     return WorkflowExecutionState(
         state_schema_version=normalized.state_schema_version,
@@ -144,7 +159,7 @@ def _timed_out_workflow_state(
         run_id=normalized.run_id,
         started_at=normalized.started_at,
         updated_at=submitted_at,
-        terminal_reason=terminal_reason,
+        terminal_reason=TIMED_OUT_REASON,
         compensation_status=WorkflowCompensationStatus.NOT_REQUIRED,
         compensation_started_at=None,
         compensation_updated_at=None,
