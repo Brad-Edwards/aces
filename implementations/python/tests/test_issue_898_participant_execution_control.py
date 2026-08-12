@@ -46,7 +46,7 @@ from raes_processor.compiler import compile_runtime_model
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_api import create_control_plane_app
 from raes_runtime.manager import RuntimeManager
-from raes_runtime.participant_scheduler_concurrency import (
+from raes_runtime.participant_scheduler_concurrent_commit import (
     participant_generation_commit_diagnostic,
 )
 from starlette.testclient import TestClient

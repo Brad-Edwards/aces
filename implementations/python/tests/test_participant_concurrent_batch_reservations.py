@@ -25,10 +25,11 @@ from raes_contracts.participant_binding import ParticipantActionApplyResult
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from raes_runtime.participant_clock_driver import ParticipantClockDriver
 from raes_runtime.participant_scheduler_concurrency import (
-    _concurrent_result_protocol_invalid,
     _execute_concurrent_batch,
-    _reserve_concurrent_actions,
     run_policy_due_concurrently,
+)
+from raes_runtime.participant_scheduler_concurrent_commit import (
+    _concurrent_result_protocol_invalid,
 )
 from raes_runtime.participant_scheduler_concurrent_state import (
     _BACKEND_MAPPING_FIELDS,
@@ -41,6 +42,7 @@ from raes_runtime.participant_scheduler_concurrent_state import (
     _merge_concurrent_action_snapshot,
     _merge_mapping_revision_checked,
     _merge_value_revision_checked,
+    _reserve_concurrent_actions,
 )
 from raes_runtime.participant_scheduler_types import SchedulerRunState
 
@@ -750,7 +752,7 @@ def test_concurrent_due_scan_preserves_preexisting_failure(
         profile="participant-autonomous-execution/v1",
         participant_addresses=_PARTICIPANTS,
     )
-    scheduler_concurrency._unsupported_concurrency_failure(policy, batch.run)
+    scheduler_dispatch._unsupported_concurrency_failure(policy, batch.run)
     original_failure = batch.run.failure
     monkeypatch.setattr(scheduler_concurrency, "_due_contexts", lambda *_args: ([], []))
 
@@ -783,7 +785,7 @@ def test_single_available_slot_falls_back_to_serial_and_stops_after_failure(
 
     def fail_first(context: _StubContext, run: SchedulerRunState) -> None:
         serial_calls.append(context.participant_address)
-        scheduler_concurrency._unsupported_concurrency_failure(policy, run)
+        scheduler_dispatch._unsupported_concurrency_failure(policy, run)
 
     monkeypatch.setattr(
         scheduler_concurrency,

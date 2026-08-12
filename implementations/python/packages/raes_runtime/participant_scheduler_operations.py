@@ -31,7 +31,8 @@ from .participant_activity_support import (
 from .participant_scheduler_activity_state import (
     next_activity_occurrence_state as _next_activity_occurrence_state,
 )
-from .participant_scheduler_concurrency import participant_generation_commit_diagnostic, run_policy_due_concurrently
+from .participant_scheduler_concurrency import run_policy_due_concurrently
+from .participant_scheduler_concurrent_commit import participant_generation_commit_diagnostic
 from .participant_scheduler_resources import (
     commit_activity_resources,
     measurement_requirements,
