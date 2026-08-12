@@ -1241,6 +1241,40 @@ def test_version_fsync_failures_and_unsafe_tree_nodes_fail_closed(
     assert not module_registry_filesystem._same_file_identity(original, os.stat_result(changed_values))
 
 
+@pytest.mark.parametrize("access_mode", [os.O_RDONLY, os.O_RDWR])
+def test_tree_fsync_uses_platform_compatible_file_access(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    access_mode: int,
+):
+    regular = tmp_path / "regular"
+    regular.write_text("regular\n", encoding="utf-8")
+    real_open = module_registry_filesystem.os.open
+    opened_flags: dict[int, int] = {}
+    synced: list[int] = []
+
+    def tracked_open(path, flags):
+        descriptor = real_open(path, flags)
+        opened_flags[descriptor] = flags
+        return descriptor
+
+    def windows_compatible_fsync(descriptor):
+        flags = opened_flags[descriptor]
+        if access_mode == os.O_RDWR and flags & os.O_RDWR != os.O_RDWR:
+            raise OSError(module_registry_filesystem.errno.EBADF, "Windows requires a writable descriptor")
+        synced.append(descriptor)
+
+    monkeypatch.setattr(module_registry_filesystem, "_REGULAR_FILE_FSYNC_ACCESS_MODE", access_mode)
+    monkeypatch.setattr(module_registry_filesystem.os, "open", tracked_open)
+    monkeypatch.setattr(module_registry_filesystem.os, "fsync", windows_compatible_fsync)
+
+    module_registry_filesystem._fsync_tree(regular, error_message="sync failed")
+
+    assert len(opened_flags) == 1
+    assert next(iter(opened_flags.values())) & (os.O_WRONLY | os.O_RDWR) == access_mode
+    assert len(synced) == 1
+
+
 def test_version_install_cleans_stage_when_tree_sync_rejects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     slot = tmp_path / "slot"
     versions = module_registry_filesystem._prepare_versioned_slot(slot=slot, error_message="transaction failed")

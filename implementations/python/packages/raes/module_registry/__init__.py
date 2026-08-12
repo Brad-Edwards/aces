@@ -169,7 +169,7 @@ def _decode_json_object(payload: bytes, *, context: str) -> dict[str, Any]:
 
     try:
         decoded = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, RecursionError, ValueError) as exc:
+    except (RecursionError, ValueError) as exc:
         raise SDLParseError(f"{context} is not valid UTF-8 JSON") from exc
     if not isinstance(decoded, dict):
         raise SDLParseError(f"{context} must be a JSON object")
