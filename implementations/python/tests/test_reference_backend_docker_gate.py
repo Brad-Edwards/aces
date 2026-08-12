@@ -13,7 +13,9 @@ _RUNTIME = "docker"
 
 
 def test_docker_integration_uses_the_reviewed_multiarch_digest() -> None:
-    assert f"docker.io/library/alpine@{_REVIEWED_ALPINE_DIGEST}" == docker_integration._IMAGE
+    expected_image = f"docker.io/library/alpine@{_REVIEWED_ALPINE_DIGEST}"
+
+    assert expected_image == docker_integration._IMAGE
 
 
 def test_optional_docker_integration_skips_without_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -77,7 +79,10 @@ def test_required_docker_integration_accepts_successful_pull(monkeypatch: pytest
         lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0),
     )
 
-    assert docker_integration._require_container_runtime() == _RUNTIME
+    expected_runtime = _RUNTIME
+    actual_runtime = docker_integration._require_container_runtime()
+
+    assert expected_runtime == actual_runtime
 
 
 def test_invalid_required_mode_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:

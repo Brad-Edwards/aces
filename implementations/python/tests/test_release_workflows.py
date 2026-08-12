@@ -155,7 +155,7 @@ def test_ci_uses_the_same_canonical_verifier_for_github_sha() -> None:
     workflow = _load(CI_PATH)
     assert workflow["permissions"] == {"contents": "read", "pull-requests": "write"}
     assert "interpreters" not in workflow["jobs"]
-    assert workflow["jobs"]["supply-chain"]["continue-on-error"] is True
+    assert "continue-on-error" not in workflow["jobs"]["supply-chain"]
     canonical = workflow["jobs"]["canonical"]
     assert canonical["uses"] == LOCAL_CANONICAL_WORKFLOW
     assert canonical["with"]["ref"] == "${{ github.sha }}"
