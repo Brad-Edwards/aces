@@ -14,6 +14,7 @@ from raes_contracts.runtime_state import RuntimeSnapshot
 
 _PRIVATE_DIRECTORY_MODE = 0o700
 _PRIVATE_FILE_MODE = 0o600
+_DATABASE_FILE_KIND = "database file"
 _SQLITE_SIDECAR_SUFFIXES = ("-wal", "-shm", "-journal")
 _DIRECTORY_FSYNC_SUPPORTED = os.name != "nt"
 _UNSUPPORTED_DIRECTORY_FSYNC_ERRNOS = frozenset(
@@ -45,7 +46,7 @@ def _require_safe_store_path_metadata(
     get_effective_uid = getattr(os, "geteuid", None)
     if callable(get_effective_uid) and metadata.st_uid != get_effective_uid():
         raise RuntimeError(f"local control-plane {kind} must be owned by the current user: {path}")
-    if kind in {"database file", "SQLite sidecar"} and getattr(metadata, "st_nlink", 1) != 1:
+    if kind in {_DATABASE_FILE_KIND, "SQLite sidecar"} and getattr(metadata, "st_nlink", 1) != 1:
         raise RuntimeError(f"local control-plane {kind} must not have hard links: {path}")
 
 
@@ -80,7 +81,7 @@ def _secure_database_file(path: Path, *, allow_missing: bool) -> os.stat_result 
         if allow_missing:
             return None
         raise RuntimeError(f"local control-plane database file is missing: {path}") from exc
-    _require_safe_store_path_metadata(before, path, kind="database file")
+    _require_safe_store_path_metadata(before, path, kind=_DATABASE_FILE_KIND)
     if os.name != "nt" and stat.S_IMODE(before.st_mode) != _PRIVATE_FILE_MODE:
         try:
             os.chmod(path, _PRIVATE_FILE_MODE, follow_symlinks=False)
@@ -90,7 +91,7 @@ def _secure_database_file(path: Path, *, allow_missing: bool) -> os.stat_result 
         after = path.lstat()
     except FileNotFoundError as exc:
         raise RuntimeError(f"local control-plane database file disappeared while it was secured: {path}") from exc
-    _require_safe_store_path_metadata(after, path, kind="database file")
+    _require_safe_store_path_metadata(after, path, kind=_DATABASE_FILE_KIND)
     if not os.path.samestat(before, after):
         raise RuntimeError(f"local control-plane database file changed while it was secured: {path}")
     if os.name != "nt" and stat.S_IMODE(after.st_mode) != _PRIVATE_FILE_MODE:

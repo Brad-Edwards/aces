@@ -87,7 +87,7 @@ class RuntimeDurabilityMixin:
         try:
             snapshot = self._store.load_snapshot()
             operations = self._store.load_records()
-        except BaseException as reconciliation_error:
+        except Exception as reconciliation_error:
             self._poison_runtime_durability()
             error.add_note(
                 "Durable state could not be reconciled after the store error; "
