@@ -116,11 +116,13 @@ def _workflow_has_timed_out(
         raise ValueError(INVALID_WORKFLOW_TIMESTAMP)
     if current < started or current < updated:
         raise ValueError(NON_MONOTONIC_WORKFLOW_CLOCK)
-    # Elapsed time is compared against the timeout rather than added to the start
-    # instant: `timeout_seconds` has no declared upper bound, and folding a very
-    # large one into a float timestamp or a timedelta overflows.
-    elapsed_seconds = (current - started).total_seconds()
-    return elapsed_seconds >= timeout_seconds
+    # Compare exact integral seconds. ``timedelta.total_seconds()`` returns a
+    # float and rounds microseconds over large spans, which can synthesize an
+    # early timeout and compensation. Adding an unbounded timeout to ``started``
+    # would instead overflow, so derive the exact whole-second component.
+    elapsed = current - started
+    elapsed_whole_seconds = elapsed.days * 86_400 + elapsed.seconds
+    return elapsed_whole_seconds >= timeout_seconds
 
 
 def _timed_out_workflow_update(

@@ -185,6 +185,26 @@ def test_enormous_timeout_reports_not_timed_out_instead_of_overflowing():
     assert update is None
 
 
+def test_large_elapsed_span_does_not_round_up_to_an_early_timeout():
+    """One microsecond below an integer deadline must remain below it.
+
+    ``timedelta.total_seconds()`` rounds this span to
+    ``315537897600.0`` even though its exact whole-second component is one
+    second smaller.
+    """
+
+    update = workflow_timeout_update(
+        RuntimeSnapshot(),
+        _WORKFLOW_ADDRESS,
+        _workflow_entry_with_timeout(315_537_897_600),
+        {_WORKFLOW_ADDRESS: _running_result("0001-01-01T00:00:00Z")},
+        {},
+        "9999-12-31T23:59:59.999999Z",
+    )
+
+    assert update is None
+
+
 def test_unparseable_reconciliation_clock_is_raised_not_swallowed():
     """A bad caller-supplied ``now`` governs every workflow, so it must surface.
 
