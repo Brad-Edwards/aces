@@ -562,6 +562,9 @@ def test_oci_rejects_spoofed_digest_pinned_refs(image_ref):
         "registry.example.com:8443/a/b/c/d@sha256:" + "e" * 64,
         # Tag and digest together.
         "alpine:3.19@sha256:" + "d" * 64,
+        # Bracketed IPv6 registry authority, with and without a port.
+        "[2001:db8::1]:5000/team/app@sha256:" + "f" * 64,
+        "[::1]/team/app@sha256:" + "a" * 64,
     ],
 )
 def test_oci_allows_wellformed_digest_pinned_refs(image_ref):

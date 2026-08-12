@@ -73,7 +73,11 @@ def _default_runner(argv: list[str], **kwargs) -> subprocess.CompletedProcess:
 # path components; character classes for separators and alphanumerics are
 # disjoint, so matching is linear (no catastrophic backtracking).
 _REF_DOMAIN_COMPONENT = r"(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])"
-_REF_DOMAIN = rf"{_REF_DOMAIN_COMPONENT}(?:\.{_REF_DOMAIN_COMPONENT})*(?::[0-9]+)?"
+# Docker and containerd also accept a bracketed IPv6 authority (``[2001:db8::1]``,
+# optionally with a port), so a registry reachable only over IPv6 must not be
+# rejected. Bounded and built from a disjoint character class, so still linear.
+_REF_IPV6_AUTHORITY = r"\[[0-9A-Fa-f:.]{2,45}\]"
+_REF_DOMAIN = rf"(?:{_REF_DOMAIN_COMPONENT}(?:\.{_REF_DOMAIN_COMPONENT})*|{_REF_IPV6_AUTHORITY})(?::[0-9]+)?"
 _REF_PATH_COMPONENT = r"[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*"
 _REF_NAME = rf"(?:{_REF_DOMAIN}/)?{_REF_PATH_COMPONENT}(?:/{_REF_PATH_COMPONENT})*"
 _REF_TAG = r"[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}"
