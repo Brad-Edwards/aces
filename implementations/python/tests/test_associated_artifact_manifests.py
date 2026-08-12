@@ -9,7 +9,9 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-from raes import canonical_sdl_digest, parse_sdl
+from raes import canonical_sdl_digest, parse_sdl, parse_sdl_file
+from raes.instantiate import instantiate_scenario
+from raes.scenario import ExpandedScenario, Scenario
 from raes_conformance.conformance import _MODEL_VALIDATORS, _fixture_case_diagnostics
 from raes_contracts.associated_artifacts import (
     AssociatedArtifactValidationLimits,
@@ -362,6 +364,84 @@ def test_snapshot_parent_digest_is_checked_without_changing_sdl_identity() -> No
                 artifact_readers={"operator-guide": BytesIO(PAYLOAD)},
             )
         )
+
+
+def test_snapshot_parent_admits_validated_file_backed_expansion_only(tmp_path: Path) -> None:
+    module = tmp_path / "module.yaml"
+    module.write_text(
+        """\
+name: shared-host
+version: 1.0.0
+module:
+  id: raes/shared-host
+  version: 1.0.0
+  exports: {nodes: [host]}
+nodes:
+  host: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+""",
+        encoding="utf-8",
+    )
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        """\
+name: training-range
+version: 1.0.0
+imports:
+  - path: module.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+        encoding="utf-8",
+    )
+    expanded = parse_sdl_file(root)
+    assert isinstance(expanded, ExpandedScenario)
+    parent_ref = {
+        "ref_kind": "scenario-snapshot",
+        "ref_id": expanded.name,
+        "ref_version": expanded.version,
+        "ref_digest": canonical_sdl_digest(expanded).value,
+    }
+    manifest = _manifest(parent_ref=parent_ref)
+
+    assert (
+        validate_associated_artifact_manifest(
+            manifest,
+            parent=expanded,
+            artifact_readers={"operator-guide": BytesIO(PAYLOAD)},
+        )
+        == ()
+    )
+
+    wrong_digest = _manifest(parent_ref={**parent_ref, "ref_digest": "sha256:" + ("0" * 64)})
+    assert "associated-artifact.parent-mismatch" in _codes(
+        validate_associated_artifact_manifest(
+            wrong_digest,
+            parent=expanded,
+            artifact_readers={"operator-guide": BytesIO(PAYLOAD)},
+        )
+    )
+
+    unvalidated_expanded = ExpandedScenario.model_validate(expanded.model_dump(mode="python"))
+    unvalidated_scenario = Scenario.model_validate({"name": expanded.name, "version": expanded.version})
+    instantiated = instantiate_scenario(expanded)
+    for inadmissible_parent in (unvalidated_expanded, unvalidated_scenario, instantiated):
+        assert "associated-artifact.parent-mismatch" in _codes(
+            validate_associated_artifact_manifest(
+                manifest,
+                parent=inadmissible_parent,
+                artifact_readers={"operator-guide": BytesIO(PAYLOAD)},
+            )
+        )
+
+    generic_manifest = _manifest(parent_ref={"ref_kind": "scenario", "ref_id": expanded.name})
+    assert (
+        validate_associated_artifact_manifest(
+            generic_manifest,
+            parent=unvalidated_scenario,
+            artifact_readers={"operator-guide": BytesIO(PAYLOAD)},
+        )
+        == ()
+    )
 
 
 def test_published_schema_and_fixture_corpus_cover_both_attachment_scopes() -> None:

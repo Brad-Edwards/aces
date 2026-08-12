@@ -96,6 +96,12 @@ requires `validate_associated_artifact_manifest()` with:
 - the concrete parent artifact; and
 - exactly one concrete byte reader for every artifact id.
 
+A generic `scenario` parent retains the id-only `Scenario` association
+contract. A `scenario-snapshot` concrete parent MUST be a semantically validated
+normalized `Scenario` or composed `ExpandedScenario`, matching the authoring
+phases admitted by `canonical_sdl_digest()`. An unvalidated authoring object or
+an `InstantiatedScenario` MUST NOT satisfy a scenario-snapshot parent reference.
+
 The validator MUST:
 
 1. match parent kind, id, version, and snapshot digest where applicable;
