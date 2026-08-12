@@ -45,7 +45,24 @@ def test_download_retries_transient_disconnects_with_bounded_backoff() -> None:
         == b"verified asset"
     )
     assert calls == 3
-    assert delays == [0.25, 1.0]
+    assert delays == [1.0, 2.0]
+
+
+def test_download_exhausts_a_bounded_retry_window() -> None:
+    delays: list[float] = []
+
+    def opener(_url: str, *, timeout: float) -> _Response:
+        raise RemoteDisconnected("persistent release-asset disconnect")
+
+    with pytest.raises(RuntimeError, match=r"after 5 attempt\(s\): RemoteDisconnected"):
+        download_bytes(
+            "https://example.invalid/pinned-tool",
+            description="pinned tool",
+            _opener=opener,
+            _sleeper=delays.append,
+        )
+
+    assert delays == [1.0, 2.0, 4.0, 8.0]
 
 
 def test_download_does_not_retry_non_transient_http_status() -> None:

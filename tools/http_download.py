@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import Request, build_opener
 
-_RETRY_DELAYS_SECONDS = (0.25, 1.0)
+_RETRY_DELAYS_SECONDS = (1.0, 2.0, 4.0, 8.0)
 _RETRYABLE_HTTP_STATUS = frozenset({408, 429, 500, 502, 503, 504})
 
 
@@ -33,7 +33,7 @@ def download_bytes(
     url: str,
     *,
     description: str,
-    attempts: int = 3,
+    attempts: int = 5,
     timeout_seconds: float = 60,
     _opener: Callable[..., _Response] | None = None,
     _sleeper: Callable[[float], None] | None = None,
