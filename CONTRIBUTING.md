@@ -19,7 +19,7 @@ documentation more precise and easier to validate.
 
 Prerequisites:
 
-- Python 3.11 or newer
+- standard CPython 3.11, 3.12, 3.13, or 3.14
 - [uv](https://github.com/astral-sh/uv)
 - [nox](https://nox.thea.codes/) or `uvx nox`
 

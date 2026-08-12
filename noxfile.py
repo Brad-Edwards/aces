@@ -89,6 +89,8 @@ MAX_LARGE_FILE_KB = "500"
 VERIFY_PROJECT_SYNCED_ENV = "RAES_VERIFY_PROJECT_SYNCED"
 VERIFY_COVERAGE_FILE_ENV = "RAES_VERIFY_COVERAGE_FILE"
 JSON_SCHEMA_WORKERS_ENV = "RAES_JSON_SCHEMA_WORKERS"
+EXPECTED_PYTHON_ENV = "RAES_EXPECTED_PYTHON"
+EXPECT_FREE_THREADED_ENV = "RAES_EXPECT_FREE_THREADED"
 
 nox.options.default_venv_backend = "none"
 nox.options.reuse_existing_virtualenvs = True
@@ -282,6 +284,13 @@ def _run_pytest(
             )
 
 
+def _required_option_value(values: Sequence[str], index: int, option: str) -> str:
+    value_index = index + 1
+    if value_index >= len(values) or not values[value_index] or values[value_index].startswith("--"):
+        raise ValueError(f"{option} requires a value")
+    return values[value_index]
+
+
 def _split_policy_session_args(posargs: list[str]) -> tuple[list[str], list[str], bool]:
     repo_args: list[str] = []
     requirement_args: list[str] = []
@@ -294,12 +303,13 @@ def _split_policy_session_args(posargs: list[str]) -> tuple[list[str], list[str]
             index += 1
             continue
         if arg == "--requirement-uid":
-            requirement_args.extend([arg, posargs[index + 1]])
+            requirement_args.extend([arg, _required_option_value(posargs, index, arg)])
             index += 2
             continue
         if arg == "--base-rev":
-            repo_args.extend([arg, posargs[index + 1]])
-            requirement_args.extend([arg, posargs[index + 1]])
+            value = _required_option_value(posargs, index, arg)
+            repo_args.extend([arg, value])
+            requirement_args.extend([arg, value])
             index += 2
             continue
         repo_args.append(arg)
@@ -329,7 +339,7 @@ def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -
             index += 1
             continue
         if arg == "--base-rev":
-            base_rev = values[index + 1]
+            base_rev = _required_option_value(values, index, arg)
             all_files = False
             index += 2
             continue
@@ -337,6 +347,7 @@ def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -
             index += 1
             continue
         if arg == "--requirement-uid":
+            _required_option_value(values, index, arg)
             index += 2
             continue
         explicit_paths.append(arg)
@@ -840,6 +851,158 @@ def _run_tests(
     )
 
 
+def _run_python_compatibility(session: nox.Session, reporter: SessionReporter) -> None:
+    expected = os.environ.get(EXPECTED_PYTHON_ENV, "")
+    selector = os.environ.get("UV_PYTHON", "")
+    if expected not in {"3.11", "3.12", "3.13", "3.14"}:
+        raise RuntimeError(f"{EXPECTED_PYTHON_ENV} must select a supported feature release")
+    if not selector:
+        raise RuntimeError("UV_PYTHON must select the interpreter under test")
+    expect_free_threaded = os.environ.get(EXPECT_FREE_THREADED_ENV) == "1"
+    # Nox removes UV_PYTHON inherited from the parent process. Put the
+    # matrix selector back into the per-session command environment so every
+    # nested uv invocation uses the interpreter that the lane names.
+    session.env["UV_PYTHON"] = selector
+
+    reporter.run(
+        "python compatibility / frozen sync",
+        lambda: _sync_project(session),
+        detail=f"selector={selector}",
+    )
+
+    runtime_assertion = """
+import sys
+
+expected = tuple(int(part) for part in sys.argv[1].split("."))
+assert sys.implementation.name == "cpython", sys.implementation.name
+assert sys.version_info[:2] == expected, (sys.version, expected)
+is_gil_enabled = getattr(sys, "_is_gil_enabled", None)
+if sys.argv[2] == "1":
+    assert callable(is_gil_enabled), "interpreter does not disclose GIL state"
+    assert is_gil_enabled() is False, "interpreter is not free-threaded"
+elif callable(is_gil_enabled):
+    assert is_gil_enabled() is True, "standard lane selected a free-threaded interpreter"
+print(sys.version)
+"""
+    reporter.run(
+        "python compatibility / exact runtime",
+        lambda: _run(
+            session,
+            "uv",
+            "run",
+            "--project",
+            str(PROJECT_ROOT),
+            "--all-extras",
+            "--frozen",
+            "python",
+            "-c",
+            runtime_assertion,
+            expected,
+            "1" if expect_free_threaded else "0",
+        ),
+    )
+    reporter.run(
+        "python compatibility / hermetic tests",
+        lambda: _run_pytest(session, "-q", parallel=True),
+        detail="xdist auto, max 8, worksteal",
+    )
+
+    with tempfile.TemporaryDirectory(prefix="raes-python-compatibility-") as temporary_dir:
+        root = Path(temporary_dir)
+        dist_dir = root / "dist"
+        environment_dir = root / "installed"
+
+        reporter.run(
+            "python compatibility / build distributions",
+            lambda: _run(
+                session,
+                "uv",
+                "build",
+                "--python",
+                selector,
+                "--out-dir",
+                str(dist_dir),
+                str(PROJECT_ROOT),
+            ),
+        )
+        wheels = sorted(dist_dir.glob("raes-*.whl"))
+        source_distributions = sorted(dist_dir.glob("raes-*.tar.gz"))
+        if len(wheels) != 1 or len(source_distributions) != 1:
+            raise RuntimeError("compatibility build must produce exactly one wheel and one source distribution")
+
+        reporter.run(
+            "python compatibility / create clean environment",
+            lambda: _run(
+                session,
+                "uv",
+                "venv",
+                "--no-project",
+                "--python",
+                selector,
+                str(environment_dir),
+            ),
+        )
+        scripts_dir = environment_dir / ("Scripts" if os.name == "nt" else "bin")
+        python = scripts_dir / ("python.exe" if os.name == "nt" else "python")
+        raes = scripts_dir / ("raes.exe" if os.name == "nt" else "raes")
+        reporter.run(
+            "python compatibility / install wheel",
+            lambda: _run(
+                session,
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                str(python),
+                str(wheels[0]),
+            ),
+        )
+
+        installed_assertion = """
+import importlib
+import sys
+from importlib.metadata import metadata
+
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
+
+expected = tuple(int(part) for part in sys.argv[1].split("."))
+assert sys.version_info[:2] == expected, (sys.version, expected)
+for module in (
+    "raes",
+    "raes_backend_libvirt",
+    "raes_backend_protocols",
+    "raes_backend_stubs",
+    "raes_cli",
+    "raes_conformance",
+    "raes_contracts",
+    "raes_mcp",
+    "raes_operations",
+    "raes_processor",
+    "raes_reference_backend",
+    "raes_runtime",
+):
+    importlib.import_module(module)
+requires_python = metadata("raes")["Requires-Python"]
+support = SpecifierSet(requires_python)
+assert Version("3.11") in support
+assert Version("3.14") in support
+assert Version("3.15") not in support
+"""
+        reporter.run(
+            "python compatibility / installed metadata and imports",
+            lambda: _run(session, str(python), "-c", installed_assertion, expected),
+        )
+        reporter.run(
+            "python compatibility / installed CLI version",
+            lambda: _run(session, str(raes), "--version"),
+        )
+        reporter.run(
+            "python compatibility / installed CLI help",
+            lambda: _run(session, str(raes), "--help"),
+        )
+
+
 def _run_fuzz(session: nox.Session, reporter: SessionReporter) -> None:
     reporter.run(
         "tests / pytest fuzz",
@@ -1093,6 +1256,17 @@ def tests(session: nox.Session) -> None:
                 Path(coverage_dir) / ".coverage",
                 list(session.posargs),
             )
+    finally:
+        reporter.summary()
+
+
+@nox.session(name="python-compatibility")
+def python_compatibility(session: nox.Session) -> None:
+    """Test one exact supported interpreter and its installed distribution."""
+
+    reporter = SessionReporter(session, "python-compatibility")
+    try:
+        _run_python_compatibility(session, reporter)
     finally:
         reporter.summary()
 
