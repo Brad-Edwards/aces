@@ -1107,6 +1107,133 @@ workflows:
         assert "evaluator.objectives-unsupported" in codes
         assert not execution_plan.is_valid
 
+    def test_evaluator_admission_enforces_compiled_proposition_capabilities(self):
+        limited = _limited_backend_manifest(
+            provisioner=ProvisionerCapabilities(
+                name="limited-provisioner",
+                supported_node_types=frozenset({"compute"}),
+                supported_os_families=frozenset({"linux"}),
+            ),
+            evaluator=EvaluatorCapabilities(
+                name="boolean-api-evaluator",
+                supported_sections=frozenset({"propositions", "assertions"}),
+                supported_predicate_families=frozenset({"boolean"}),
+                supported_quantifiers=frozenset({"all"}),
+                supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+                supported_evidence_channels=frozenset({"api_response"}),
+                supported_time_domains=frozenset({"wall_clock_time"}),
+                preserves_binding_provenance=True,
+            ),
+        )
+        model = compile_runtime_model(
+            _scenario("""
+name: evaluator-capability-mismatch
+nodes:
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+evidence_requirements:
+  runtime-log:
+    source_refs: [nodes.vm]
+    scope: evaluator admission test
+    boundary_kind: assertion_evaluation
+    channel: log
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
+propositions:
+  load:
+    description: The runtime load equals the expected value.
+    subjects: [nodes.vm]
+    basis: observed_state
+    quantifier: any
+    predicate:
+      kind: number
+      property: runtime.load
+      semantic_ref: urn:raes:observed-property:runtime.load
+      expected: 1
+      unit: count
+      unit_semantic_ref: urn:raes:unit:count
+    evidence_requirements: [runtime-log]
+assertions:
+  load: {proposition: load, role: postcondition}
+""")
+        )
+
+        proposition = model.propositions["evaluation.proposition.load"]
+        execution_plan = plan(model, limited)
+        codes = {diagnostic.code for diagnostic in execution_plan.diagnostics}
+
+        assert proposition.quantifier == "any"
+        assert proposition.evidence_channels == ("log",)
+        assert proposition.required_time_domain == "scenario_time"
+        assert {
+            "evaluator.unsupported-predicate-family",
+            "evaluator.unsupported-quantifier",
+            "evaluator.unsupported-evidence-channel",
+            "evaluator.unsupported-time-domain",
+        } <= codes
+        assert not execution_plan.is_valid
+
+    def test_evaluator_admission_rejects_opaque_evidence_channel_refs(self):
+        evaluator = EvaluatorCapabilities(
+            name="complete-evaluator",
+            supported_sections=frozenset({"propositions", "assertions"}),
+            supported_predicate_families=frozenset({"boolean"}),
+            supported_quantifiers=frozenset({"all"}),
+            supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+            supported_evidence_channels=frozenset({"log"}),
+            supported_time_domains=frozenset({"scenario_time"}),
+            preserves_binding_provenance=True,
+        )
+        manifest = _limited_backend_manifest(
+            provisioner=ProvisionerCapabilities(
+                name="limited-provisioner",
+                supported_node_types=frozenset({"compute"}),
+                supported_os_families=frozenset({"linux"}),
+            ),
+            evaluator=evaluator,
+        )
+        model = compile_runtime_model(
+            _scenario("""
+name: unresolved-evidence-channel
+nodes:
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+evidence_requirements:
+  opaque-capture:
+    source_refs: [nodes.vm]
+    scope: evaluator admission test
+    boundary_kind: assertion_evaluation
+    channel_refs: [nodes.vm]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
+propositions:
+  healthy:
+    description: The observed runtime is healthy.
+    subjects: [nodes.vm]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: runtime.healthy
+      semantic_ref: urn:raes:observed-property:runtime.healthy
+      expected: true
+    evidence_requirements: [opaque-capture]
+assertions:
+  healthy: {proposition: healthy, role: postcondition}
+""")
+        )
+
+        execution_plan = plan(model, manifest)
+
+        assert model.propositions["evaluation.proposition.healthy"].unresolved_evidence_channel_refs == (
+            "opaque-capture",
+        )
+        assert "evaluator.evidence-channel-unresolved" in {diagnostic.code for diagnostic in execution_plan.diagnostics}
+        assert not execution_plan.is_valid
+
     def test_acl_capability_validation_covers_node_attached_rules(self):
         limited = _limited_backend_manifest(
             name="limited",

@@ -15,14 +15,40 @@ from .alias_index import _runtime_addressable_ref_index, _runtime_addresses_for_
 from .ref_resolution import _evaluation_contracts
 from .support import _dedupe, _dump
 
+_OBSERVED_PROPOSITION_TIME_DOMAIN = "scenario_time"
+
+
+def _evidence_capability_projection(
+    scenario: InstantiatedScenario,
+    evidence_requirement_refs: list[str],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Project channel kinds without treating opaque channel refs as kinds."""
+
+    channels: set[str] = set()
+    unresolved: list[str] = []
+    for ref in evidence_requirement_refs:
+        requirement = scenario.evidence_requirements[ref]
+        channel = requirement.channel
+        if channel is None:
+            unresolved.append(ref)
+            continue
+        channels.add(str(getattr(channel, "value", channel)))
+    return tuple(sorted(channels)), tuple(unresolved)
+
 
 def _compile_propositions(
     scenario: InstantiatedScenario,
 ) -> dict[str, PropositionRuntime]:
     address_index = _runtime_addressable_ref_index(scenario)
-    return {
-        _proposition_address(name): PropositionRuntime(
-            address=_proposition_address(name),
+    propositions: dict[str, PropositionRuntime] = {}
+    for name, proposition in scenario.propositions.items():
+        channels, unresolved_channels = _evidence_capability_projection(
+            scenario,
+            proposition.evidence_requirements,
+        )
+        address = _proposition_address(name)
+        propositions[address] = PropositionRuntime(
+            address=address,
             name=name,
             spec=_dump(proposition),
             subject_addresses=_runtime_addresses_for_refs(
@@ -30,11 +56,16 @@ def _compile_propositions(
                 addressable_ref_index=address_index,
             ),
             predicate_kind=proposition.predicate.kind,
+            quantifier=proposition.quantifier.value,
             evaluation_basis=proposition.basis.value,
             evidence_requirement_refs=tuple(proposition.evidence_requirements),
+            evidence_channels=channels,
+            unresolved_evidence_channel_refs=unresolved_channels,
+            required_time_domain=(
+                _OBSERVED_PROPOSITION_TIME_DOMAIN if proposition.basis.value == "observed_state" else ""
+            ),
         )
-        for name, proposition in scenario.propositions.items()
-    }
+    return propositions
 
 
 def _compile_assertions(
