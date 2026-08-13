@@ -677,9 +677,10 @@ def test_operation_deadline_starts_before_model_validation(monkeypatch: pytest.M
 
     monkeypatch.setattr(solver_adapter.time, "monotonic_ns", lambda: clock["now"])
     monkeypatch.setattr(solver_adapter, "_require_unique_clause_ids", validation_finishing_at_deadline)
+    model = _normalized_model([1], [[]])
 
     with pytest.raises(SolverOperationalError, match="operation deadline exhausted") as raised:
-        solve_model(_normalized_model([1], [[]]))
+        solve_model(model)
 
     assert raised.value.phase == "model-validation"
     assert raised.value.check_count == 0
@@ -722,9 +723,10 @@ def test_result_selection_finishing_at_operation_deadline_is_rejected(monkeypatc
 
     monkeypatch.setattr(solver_adapter.time, "monotonic_ns", lambda: clock["now"])
     monkeypatch.setattr(solver_adapter, "_select_witness", selection_finishing_at_deadline)
+    model = _normalized_model([1], [[]])
 
     with pytest.raises(SolverOperationalError, match="operation deadline exhausted") as raised:
-        solve_model(_normalized_model([1], [[]]))
+        solve_model(model)
 
     assert raised.value.phase == "result-selection"
     assert raised.value.check_count == 2
