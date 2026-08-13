@@ -415,6 +415,30 @@ def test_duplicate_redirect_location_fails_closed_without_following(
     assert response.offset == 0
 
 
+@pytest.mark.parametrize(
+    "location",
+    [
+        "https://[credential-do-not-log",
+        "https://evil.example／credential-do-not-log/path",
+    ],
+)
+def test_malformed_redirect_authority_is_sanitized_without_retry(
+    monkeypatch: pytest.MonkeyPatch,
+    location: str,
+) -> None:
+    response = DownloadResponse(b"not read", status=302, headers={"Location": location})
+    opener = SequenceOpener(response, DownloadResponse(b"not reached"))
+    clock = _install_network(monkeypatch, opener)
+
+    with pytest.raises(release_download.ReleaseDownloadError, match="unapproved redirect target") as raised:
+        release_download.retrying_urlopen(RELEASE_URL)
+
+    assert "credential-do-not-log" not in str(raised.value)
+    assert len(opener.calls) == 1
+    assert response.offset == 0
+    assert clock.sleeps == []
+
+
 def test_redirect_hop_limit_fails_closed_before_following(monkeypatch: pytest.MonkeyPatch) -> None:
     redirect = DownloadResponse(b"", status=302, headers={"Location": RELEASE_ASSET_URL})
     opener = SequenceOpener(redirect, DownloadResponse(b"not reached"))
@@ -1094,6 +1118,19 @@ def test_invalid_per_call_timeout_fails_before_network(monkeypatch: pytest.Monke
     assert opener.calls == []
 
 
+@pytest.mark.parametrize(("requested", "expected"), [(12.0, 12.0), (999.0, 60.0)])
+def test_per_call_timeout_can_reduce_but_not_raise_the_policy_cap(
+    monkeypatch: pytest.MonkeyPatch,
+    requested: float,
+    expected: float,
+) -> None:
+    opener = SequenceOpener(DownloadResponse(b"payload"))
+    _install_network(monkeypatch, opener)
+
+    assert release_download.retrying_urlopen(RELEASE_URL, timeout=requested).read() == b"payload"
+    assert opener.calls == [(RELEASE_URL, expected)]
+
+
 def test_retry_after_parser_rejects_ambiguous_values() -> None:
     assert release_download._retry_after_seconds({}, now=0) is None
     assert release_download._retry_after_seconds(object(), now=0) is None
@@ -1176,6 +1213,34 @@ def test_installers_wrap_retry_failures_with_tool_specific_diagnostics(
 
     assert calls == 1
     assert detail in str(raised.value)
+
+
+@pytest.mark.parametrize(
+    ("tool", "ensure"),
+    [
+        (conftest_tool, conftest_tool.ensure_conftest),
+        (vale_tool, vale_tool.ensure_vale),
+        (gitleaks_tool, gitleaks_tool.ensure_gitleaks),
+        (osv_scanner_tool, osv_scanner_tool.ensure_osv_scanner),
+    ],
+)
+def test_installers_only_reclassify_normalized_boundary_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    tool: ModuleType,
+    ensure: Callable[[Path], Path],
+) -> None:
+    unexpected = URLError("outside the normalized release boundary")
+
+    def fail(_url: str, **_kwargs: object) -> None:
+        raise unexpected
+
+    monkeypatch.setattr(tool, "urlopen", fail)
+
+    with pytest.raises(URLError) as raised:
+        ensure(tmp_path)
+
+    assert raised.value is unexpected
 
 
 @pytest.mark.parametrize(

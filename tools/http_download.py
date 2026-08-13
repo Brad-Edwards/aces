@@ -1,89 +1,62 @@
-"""Bounded resilient downloads for checksum-pinned repository tools."""
+"""Compatibility entry point for governed pinned-tool release downloads.
+
+The retry, redirect, deadline, framing, and response-size policy has one owner:
+``tools.release_download``.  This module preserves the ``download_bytes`` API
+introduced with the repository-tool installers while delegating every network
+request to that boundary.
+"""
 
 from __future__ import annotations
 
-import time
-from collections.abc import Callable
-from typing import Protocol
-from urllib.error import HTTPError
-from urllib.parse import urlsplit
-from urllib.request import Request, build_opener
+from dataclasses import replace
 
-_RETRY_DELAYS_SECONDS = (1.0, 2.0, 4.0, 8.0)
-_RETRYABLE_HTTP_STATUS = frozenset({408, 429, 500, 502, 503, 504})
-
-
-class _Response(Protocol):
-    def __enter__(self) -> _Response: ...
-
-    def __exit__(self, *args: object) -> None: ...
-
-    def read(self, size: int = -1) -> bytes: ...
+from tools.release_download import (
+    DEFAULT_RELEASE_RETRY_POLICY,
+    ReleaseDownloadError,
+    ReleaseRetryPolicy,
+    retrying_urlopen,
+)
 
 
-def _open_https(url: str, *, timeout: float) -> _Response:
-    parsed = urlsplit(url)
-    if parsed.scheme != "https" or not parsed.hostname:
-        raise ValueError("repository-tool downloads require an absolute HTTPS URL")
-    request = Request(url, headers={"User-Agent": "RAES-pinned-tool-installer"})
-    return build_opener().open(request, timeout=timeout)
-
-
-def _validate_download_options(*, attempts: int, max_bytes: int | None) -> None:
+def _compatibility_policy(*, attempts: int, max_bytes: int | None) -> ReleaseRetryPolicy:
     if attempts < 1:
         raise ValueError("download attempts must be positive")
     if max_bytes is not None and max_bytes < 0:
         raise ValueError("download size bound must be non-negative")
-
-
-def _read_response(
-    response: _Response,
-    *,
-    max_bytes: int | None,
-    description: str,
-    url: str,
-) -> bytes:
-    if max_bytes is None:
-        return response.read()
-    payload = response.read(max_bytes + 1)
-    if len(payload) > max_bytes:
-        raise RuntimeError(f"{description} from {url} exceeds the download limit")
-    return payload
+    response_bound = DEFAULT_RELEASE_RETRY_POLICY.maximum_response_bytes
+    if max_bytes is not None:
+        # The governed policy requires a positive transport bound.  A caller's
+        # zero-byte bound is enforced immediately after the bounded read.
+        response_bound = min(response_bound, max(1, max_bytes))
+    return replace(
+        DEFAULT_RELEASE_RETRY_POLICY,
+        max_attempts=min(attempts, DEFAULT_RELEASE_RETRY_POLICY.max_attempts),
+        maximum_response_bytes=response_bound,
+    )
 
 
 def download_bytes(
     url: str,
     *,
     description: str,
-    attempts: int = 5,
+    attempts: int = DEFAULT_RELEASE_RETRY_POLICY.max_attempts,
     timeout_seconds: float = 60,
     max_bytes: int | None = None,
-    _opener: Callable[..., _Response] | None = None,
-    _sleeper: Callable[[float], None] | None = None,
 ) -> bytes:
-    """Download bytes with bounded retries for transient transport failures."""
+    """Return bytes acquired through the single governed release boundary."""
 
-    _validate_download_options(attempts=attempts, max_bytes=max_bytes)
-    opener = _opener or _open_https
-    sleeper = _sleeper or time.sleep
-    last_error: BaseException | None = None
-    for attempt in range(attempts):
-        try:
-            with opener(url, timeout=timeout_seconds) as response:
-                return _read_response(response, max_bytes=max_bytes, description=description, url=url)
-        except HTTPError as exc:
-            last_error = exc
-            if exc.code not in _RETRYABLE_HTTP_STATUS:
-                break
-        except OSError as exc:
-            last_error = exc
-        if attempt + 1 < attempts:
-            sleeper(_RETRY_DELAYS_SECONDS[min(attempt, len(_RETRY_DELAYS_SECONDS) - 1)])
-
-    assert last_error is not None
-    raise RuntimeError(
-        f"failed to download {description} from {url} after {attempt + 1} attempt(s): {type(last_error).__name__}"
-    ) from last_error
+    policy = _compatibility_policy(attempts=attempts, max_bytes=max_bytes)
+    if timeout_seconds <= 0:
+        raise ValueError("download timeout must be positive")
+    request_timeout = min(timeout_seconds, DEFAULT_RELEASE_RETRY_POLICY.request_timeout_seconds)
+    try:
+        with retrying_urlopen(url, timeout=request_timeout, policy=policy) as response:
+            payload = response.read()
+    except ReleaseDownloadError as exc:
+        raise RuntimeError(f"failed to download {description}: {exc}") from exc
+    if max_bytes is not None and len(payload) > max_bytes:
+        raise RuntimeError(f"{description} exceeds the download limit")
+    return payload
 
 
 __all__ = ["download_bytes"]

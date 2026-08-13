@@ -383,8 +383,12 @@ def _approved_release_asset_url(url: str) -> bool:
 
 
 def _approved_vale_relocation(source_url: str, target_url: str) -> bool:
-    source = urlsplit(source_url)
-    target = urlsplit(target_url)
+    parsed_source = _parsed_url_with_port(source_url)
+    parsed_target = _parsed_url_with_port(target_url)
+    if parsed_source is None or parsed_target is None:
+        return False
+    source, _source_port = parsed_source
+    target, _target_port = parsed_target
     if not source.path.startswith(_VALE_LEGACY_PATH_PREFIX):
         return False
     source_suffix = source.path.removeprefix("/errata-ai/vale")
@@ -769,9 +773,10 @@ def retrying_urlopen(
 
     if not _approved_url(url):
         raise ReleaseDownloadError("release download URL is not an approved pinned-tool origin")
-    request_timeout = policy.request_timeout_seconds if timeout is None else timeout
-    if request_timeout <= 0:
+    requested_timeout = policy.request_timeout_seconds if timeout is None else timeout
+    if requested_timeout <= 0:
         raise ValueError("timeout must be positive")
+    request_timeout = min(requested_timeout, policy.request_timeout_seconds)
 
     deadline = _monotonic() + policy.total_timeout_seconds
     attempts_made = 0

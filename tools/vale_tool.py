@@ -7,7 +7,6 @@ import stat
 import tarfile
 from hashlib import sha256
 from pathlib import Path
-from urllib.error import URLError
 
 from tools.release_download import ReleaseDownloadError
 from tools.release_download import retrying_urlopen as urlopen
@@ -85,9 +84,9 @@ def ensure_vale(repo_root: Path = REPO_ROOT, *, version: str = VALE_VERSION) -> 
     base_url = _release_base_url(version)
     asset_url = f"{base_url}/{asset_name}"
     try:
-        with urlopen(asset_url) as response:  # noqa: S310 - pinned HTTPS release asset
+        with urlopen(asset_url) as response:
             archive_bytes = response.read()
-    except (URLError, ReleaseDownloadError) as exc:
+    except ReleaseDownloadError as exc:
         raise RuntimeError(f"failed to download Vale from {asset_url}: {exc}") from exc
     actual = sha256(archive_bytes).hexdigest()
     if actual != expected:

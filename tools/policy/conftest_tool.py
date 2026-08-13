@@ -9,7 +9,6 @@ import tarfile
 import tempfile
 from hashlib import sha256
 from pathlib import Path
-from urllib.error import URLError
 
 from tools.release_download import ReleaseDownloadError
 from tools.release_download import retrying_urlopen as urlopen
@@ -59,9 +58,9 @@ def ensure_conftest(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERS
     checksums_url = f"{base_url}/checksums.txt"
 
     try:
-        with urlopen(checksums_url) as response:  # noqa: S310 - pinned HTTPS release asset
+        with urlopen(checksums_url) as response:
             checksums_text = response.read().decode("utf-8")
-    except (URLError, ReleaseDownloadError) as exc:
+    except ReleaseDownloadError as exc:
         raise RuntimeError(f"failed to download conftest checksums from {checksums_url}: {exc}") from exc
 
     expected_checksum = None
@@ -74,9 +73,9 @@ def ensure_conftest(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERS
         raise RuntimeError(f"missing checksum for conftest asset {asset_name}")
 
     try:
-        with urlopen(asset_url) as response:  # noqa: S310 - pinned HTTPS release asset
+        with urlopen(asset_url) as response:
             archive_bytes = response.read()
-    except (URLError, ReleaseDownloadError) as exc:
+    except ReleaseDownloadError as exc:
         raise RuntimeError(f"failed to download conftest from {asset_url}: {exc}") from exc
 
     actual_checksum = sha256(archive_bytes).hexdigest()

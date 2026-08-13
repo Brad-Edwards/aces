@@ -9,25 +9,36 @@ Issue: #1137. Requirement: GOV-913.
 OpenRAE's required verification lanes acquire pinned Conftest, Vale, Gitleaks,
 and OSV Scanner artifacts from their canonical GitHub Releases repositories.
 The owning installers validate checksums before executing or extracting those
-artifacts. During review of several independent pull requests, GitHub returned
+artifacts. When #1137 was captured during review of several independent pull
+requests, GitHub returned
 temporary disconnects and HTTP 503 responses while acquiring all four tool
 families. A single such response failed the lane before it could inspect the
 pull request's code; rerunning the unchanged commit succeeded once the release
 service recovered.
 
-The integrity checks were behaving correctly, but acquisition had no bounded
-transient-failure policy. This note defines that missing reliability boundary.
-It changes neither the verification graph nor the meaning of a passing gate.
+While this remediation was in flight, PR #1113 merged a shared
+`tools/http_download.py` helper that makes up to five attempts for a small
+HTTP-status set and broad `OSError` failures. That change absorbs common
+single-attempt disconnects, but it does not govern automatic redirects, apply
+one wall-clock deadline across status, header, framing, and body reads, bound
+every response, or prevent chained transport exceptions from reaching
+diagnostics. This note therefore defines the hardened acquisition boundary
+that replaces that coarse retry implementation. It changes neither the
+verification graph nor the meaning of a passing gate.
 
 ## Existing-Surface Review
 
 The review covered the four repository-local installers, their version pins,
-checksum sources, archive extraction, cache paths, nox callers, and required CI
-jobs. The installers previously used separate direct `urllib` calls. There was
-no shared release-acquisition helper to extend. Runtime OCI/module downloads,
-vocabulary-source refreshes, Isabelle's separately governed official-mirror
-policy, and GitHub Actions artifact transfer are different trust or ownership
-boundaries and remain out of scope.
+checksum sources, archive extraction, cache paths, nox callers, required CI
+jobs, and the shared `tools/http_download.py` added by #1113. Rather than leave
+two retry implementations, `tools/release_download.py` is the sole owner of
+retry, redirect, deadline, framing, and response-size policy. The earlier
+`download_bytes` entry point remains only as a compatibility facade: it
+delegates to the governed implementation and caps legacy attempt, timeout, and
+size options at the new policy. Runtime OCI/module downloads, vocabulary-source
+refreshes, Isabelle's separately governed official-mirror policy, and GitHub
+Actions artifact transfer are different trust or ownership boundaries and
+remain out of scope.
 
 PR #1121 independently hardens OSV Scanner's cache type, identity, digest,
 atomic-install, and size checks. The retry helper composes below that work: it
@@ -36,7 +47,10 @@ the OSV installer remains the sole owner of cache and checksum validation.
 
 ## Chosen Policy
 
-All four installers bind their existing `urlopen` seam to one internal helper.
+All four installers bind their release reads to one internal helper. The
+compatibility `download_bytes` entry point delegates to the same helper and has
+no independent retry or redirect implementation.
+
 The initial request accepts only exact HTTPS paths under these GitHub Release
 families:
 
@@ -58,9 +72,10 @@ bodies are closed without being read.
 
 The helper performs at most three attempts. Every connection hop and every
 bounded body read receives a finite 60-second socket timeout capped by the
-remaining 190-second total deadline. Exponential delays are deterministic and
-capped, and a deadline-aware socket reader reapplies the remaining bound to
-every status-line, header, chunk-framing, and body buffer fill. No read,
+remaining 190-second total deadline. A caller may lower that per-operation
+timeout but cannot raise the policy cap. Exponential delays are deterministic
+and capped, and a deadline-aware socket reader reapplies the remaining bound
+to every status-line, header, chunk-framing, and body buffer fill. No read,
 redirect hop, sleep, or new attempt may continue after the deadline. Declared
 response lengths are checked before and after streaming; ambiguous framing and
 oversized bodies fail immediately, while an early EOF is classified as a
@@ -90,6 +105,14 @@ fail closed when every transient attempt fails.
 
 ## Alternatives Rejected
 
+- **Keep the #1113 helper unchanged.** Its automatic redirect behavior, broad
+  transport retry class, per-operation timeout, unbounded default reads, and
+  chained exception diagnostics do not satisfy the issue's trust and total-time
+  acceptance criteria.
+- **Retain both retry implementations.** A permissive legacy path beside the
+  governed path would leave future callers with two conflicting trust
+  boundaries. The compatibility API therefore delegates to the sole hardened
+  implementation and cannot raise its limits.
 - **Retry each installer independently.** This would create four subtly
   different status lists, delays, deadlines, and diagnostics that could drift.
 - **Retry every `URLError` or every HTTP failure.** Certificate, DNS-policy,
@@ -113,10 +136,13 @@ success after transient HTTP and transport failures, incomplete declared
 responses, delta and HTTP-date `Retry-After`, read/backoff/deadline caps, exact
 exhaustion, non-retryable HTTP and URL failures, response-size rejection,
 sanitized diagnostics, and no second request after checksum or archive-type
-failure. Local scripted HTTP servers verify that an early EOF never returns
-partial bytes, redirect bodies are not drained, and a trickling body cannot
-extend the total deadline. The same scripted transport verifies that trickled
-redirect headers and chunk trailers cannot extend that deadline and that a
+failure. Malformed redirect authorities, including parser-error and Unicode
+normalization cases, are rejected through the same sanitized public error
+boundary without reflecting their text. Local scripted HTTP servers verify
+that an early EOF never returns partial bytes, redirect bodies are not drained,
+and a trickling body cannot extend the total deadline. The same scripted
+transport verifies that trickled redirect headers and chunk trailers cannot
+extend that deadline and that a
 malformed status line cannot leak upstream text. A binding test ensures all
 four installers continue to share the helper, and clean-cache smoke tests
 exercise the live current GitHub redirect chain for all four pinned tools.
