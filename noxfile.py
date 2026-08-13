@@ -5,7 +5,9 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -54,6 +56,10 @@ PUBLIC_DOCS_EXAMPLE_TESTS = (
 RUFF_CONFIG = PROJECT_ROOT / "pyproject.toml"
 OSV_LOCKFILE_PATH = PROJECT_ROOT / "uv.lock"
 OSV_REPORT_PATH = PROJECT_ROOT / "osv-scanner-report.json"
+COVERAGE_XML_PATH = PROJECT_ROOT / "coverage.xml"
+COVERAGE_JSON_PATH = PROJECT_ROOT / "coverage.json"
+MINIMUM_LINE_COVERAGE_PERCENT = 90.0
+REQUIREMENT_UID_RE = re.compile(r"(?:^|[^A-Z0-9])[A-Z]{3}-[0-9]{3}(?:$|[^A-Z0-9])")
 TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_repo_policy_tools.py",
     "implementations/python/tests/test_requirement_governance.py",
@@ -268,18 +274,7 @@ def _run_pytest(
     with session.chdir(PROJECT_ROOT):
         _run(session, *command, env=coverage_env)
         if finalize_coverage:
-            _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
-            _run(
-                session,
-                "uv",
-                "run",
-                "--frozen",
-                "coverage",
-                "report",
-                "--fail-under=50",
-                "--format=total",
-                env=coverage_env,
-            )
+            _write_and_check_coverage(session, coverage_env)
 
 
 def _split_policy_session_args(posargs: list[str]) -> tuple[list[str], list[str], bool]:
@@ -306,6 +301,15 @@ def _split_policy_session_args(posargs: list[str]) -> tuple[list[str], list[str]
         requirement_args.append(arg)
         index += 1
     return repo_args, requirement_args, skip_requirement
+
+
+def _requirement_aware_policy_args(*args: str) -> list[str]:
+    if os.environ.get("RAES_REQUIREMENT_UID", "").strip():
+        return list(args)
+    branch = next(iter(_git_lines("branch", "--show-current")), "")
+    if REQUIREMENT_UID_RE.search(branch):
+        return list(args)
+    return [*args, "--skip-requirement"]
 
 
 def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -> HygieneSelection:
@@ -869,6 +873,66 @@ def _run_integration_tests(
     )
 
 
+def _enforce_line_coverage(report_path: Path) -> float:
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        totals = report["totals"]
+        covered_lines = totals["covered_lines"]
+        statements = totals["num_statements"]
+    except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise RuntimeError(f"could not read line coverage totals from {report_path}") from exc
+    if (
+        not isinstance(covered_lines, int)
+        or isinstance(covered_lines, bool)
+        or not isinstance(statements, int)
+        or isinstance(statements, bool)
+        or covered_lines < 0
+        or statements < 0
+        or covered_lines > statements
+    ):
+        raise RuntimeError(f"invalid line coverage totals in {report_path}")
+    percent = 100.0 if statements == 0 else 100.0 * covered_lines / statements
+    if percent + 1e-12 < MINIMUM_LINE_COVERAGE_PERCENT:
+        raise RuntimeError(f"line coverage {percent:.3f}% is below required {MINIMUM_LINE_COVERAGE_PERCENT:.3f}%")
+    return percent
+
+
+def _write_and_check_coverage(session: nox.Session, coverage_env: dict[str, str]) -> None:
+    _run(
+        session,
+        "uv",
+        "run",
+        "--frozen",
+        "coverage",
+        "xml",
+        "-o",
+        str(COVERAGE_XML_PATH),
+        env=coverage_env,
+    )
+    _run(
+        session,
+        "uv",
+        "run",
+        "--frozen",
+        "coverage",
+        "json",
+        "-o",
+        str(COVERAGE_JSON_PATH),
+        env=coverage_env,
+    )
+    _run(
+        session,
+        "uv",
+        "run",
+        "--frozen",
+        "coverage",
+        "report",
+        "--format=total",
+        env=coverage_env,
+    )
+    _enforce_line_coverage(COVERAGE_JSON_PATH)
+
+
 def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path) -> None:
     coverage_file = coverage_dir / ".coverage"
     coverage_env = {"COVERAGE_FILE": str(coverage_file)}
@@ -884,18 +948,7 @@ def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path) -> Non
             str(coverage_dir),
             env=coverage_env,
         )
-        _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
-        _run(
-            session,
-            "uv",
-            "run",
-            "--frozen",
-            "coverage",
-            "report",
-            "--fail-under=50",
-            "--format=total",
-            env=coverage_env,
-        )
+        _write_and_check_coverage(session, coverage_env)
 
 
 def _run_docker_integration_tests(session: nox.Session, reporter: SessionReporter) -> None:
@@ -1192,7 +1245,7 @@ def hook_pre_commit(session: nox.Session) -> None:
     changed_tests = select_changed_python_tests(changed)
     try:
         _run_hygiene(session, reporter, posargs=changed, default_all_files=False)
-        _run_policy(session, reporter, "--staged")
+        _run_policy(session, reporter, *_requirement_aware_policy_args("--staged"))
         _run_changed_lint(session, reporter, changed)
         if _paths_trigger(changed, CONTRACT_TRIGGER_PREFIXES):
             _run_contracts(session, reporter)
@@ -1258,7 +1311,8 @@ def _run_changed_verification(
         plan = plan_for_changes([])
         session.log(f"change classification failed closed to the full local gate: {exc}")
 
-    policy_args = ["--base-rev", base_rev] if base_rev is not None else []
+    base_policy_args = ["--base-rev", base_rev] if base_rev is not None else []
+    policy_args = _requirement_aware_policy_args(*base_policy_args)
     _run_hygiene(session, reporter, posargs=["--all-files"], default_all_files=True)
     _run_policy(session, reporter, *policy_args)
     _run_lint(session, reporter)
