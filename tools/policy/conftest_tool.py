@@ -9,8 +9,8 @@ import tarfile
 import tempfile
 from hashlib import sha256
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
+
+from tools.http_download import download_bytes
 
 from ..tool_versions import CONTFEST_VERSION
 from .common import REPO_ROOT, PolicyFailure
@@ -56,11 +56,7 @@ def ensure_conftest(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERS
     asset_url = f"{base_url}/{asset_name}"
     checksums_url = f"{base_url}/checksums.txt"
 
-    try:
-        with urlopen(checksums_url) as response:  # noqa: S310 - pinned HTTPS release asset
-            checksums_text = response.read().decode("utf-8")
-    except (HTTPError, URLError) as exc:
-        raise RuntimeError(f"failed to download conftest checksums from {checksums_url}: {exc}") from exc
+    checksums_text = download_bytes(checksums_url, description="conftest checksums").decode("utf-8")
 
     expected_checksum = None
     for line in checksums_text.splitlines():
@@ -71,11 +67,7 @@ def ensure_conftest(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERS
     if not expected_checksum:
         raise RuntimeError(f"missing checksum for conftest asset {asset_name}")
 
-    try:
-        with urlopen(asset_url) as response:  # noqa: S310 - pinned HTTPS release asset
-            archive_bytes = response.read()
-    except (HTTPError, URLError) as exc:
-        raise RuntimeError(f"failed to download conftest from {asset_url}: {exc}") from exc
+    archive_bytes = download_bytes(asset_url, description="conftest")
 
     actual_checksum = sha256(archive_bytes).hexdigest()
     if actual_checksum != expected_checksum:

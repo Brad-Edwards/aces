@@ -2,9 +2,9 @@
   "contract_id": "artifact-transformation-report-v1",
   "schema_path": "contracts/schemas/artifact-transformations/artifact-transformation-report-v1.json",
   "stability": "draft",
-  "content_hash": "d645595e96c86e16de9c772b26504e751ba49deed2dda591d094246cbeefc417",
+  "content_hash": "c954c397970b85f1650a26deb9385710d6f2a324633d5936179be79892f8a07b",
   "last_change": {
-    "summary": "Initial publication for safe deterministic artifact transformations under the OpenRAE schema namespace in issue #265.",
-    "content_hash": "d645595e96c86e16de9c772b26504e751ba49deed2dda591d094246cbeefc417"
+    "summary": "Added the generic semantic-omission loss kind emitted by candidate synthesis in issue #988.",
+    "content_hash": "c954c397970b85f1650a26deb9385710d6f2a324633d5936179be79892f8a07b"
   }
 }

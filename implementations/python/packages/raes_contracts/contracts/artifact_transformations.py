@@ -42,6 +42,7 @@ class PreservationOutcome(str, Enum):
 
 class ArtifactTransformationLossKind(str, Enum):
     DECLARATION_REMOVED = "declaration-removed"
+    SEMANTIC_OMISSION = "semantic-omission"
 
 
 class ArtifactTransformationCheckModel(ContractModel):
