@@ -19,8 +19,8 @@ class _Response:
     def __exit__(self, *args: object) -> None:
         return None
 
-    def read(self) -> bytes:
-        return self.payload
+    def read(self, size: int = -1) -> bytes:
+        return self.payload if size < 0 else self.payload[:size]
 
 
 def test_download_retries_transient_disconnects_with_bounded_backoff() -> None:
@@ -81,3 +81,14 @@ def test_download_does_not_retry_non_transient_http_status() -> None:
             _sleeper=lambda _delay: None,
         )
     assert calls == 1
+
+
+def test_download_enforces_the_requested_size_bound() -> None:
+    with pytest.raises(RuntimeError, match="exceeds the download limit"):
+        download_bytes(
+            "https://example.invalid/pinned-tool",
+            description="pinned tool",
+            max_bytes=3,
+            _opener=lambda _url, **_kwargs: _Response(b"four"),
+            _sleeper=lambda _delay: None,
+        )

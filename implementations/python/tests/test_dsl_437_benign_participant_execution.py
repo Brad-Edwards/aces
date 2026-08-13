@@ -2004,6 +2004,8 @@ def test_wall_driver_cannot_advance_during_time_state_readback() -> None:
     reader.start()
     assert time_runtime.read_entered.wait(timeout=1.0)
     predecessor = manager.snapshot
+    assert predecessor.time_model_state is not None
+    predecessor_coordinate = predecessor.time_model_state.clocks[policy.clock_address].coordinate
     time.sleep(0.1)
 
     assert manager.snapshot == predecessor
@@ -2014,7 +2016,7 @@ def test_wall_driver_cannot_advance_during_time_state_readback() -> None:
     assert not isinstance(outcome[0], Exception)
     state = outcome[0]
     assert isinstance(state, TimeRuntimeStateModel)
-    assert state.clocks[policy.clock_address].coordinate.tick == 0
+    assert state.clocks[policy.clock_address].coordinate == predecessor_coordinate
     assert manager.destroy().success
 
 

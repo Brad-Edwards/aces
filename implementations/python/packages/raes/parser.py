@@ -318,8 +318,8 @@ def parse_sdl(
     source_format: str = SDL_SOURCE_FORMAT,
     migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
     limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
-) -> Scenario:
-    """Parse an SDL YAML string into a validated Scenario.
+) -> Scenario | ExpandedScenario:
+    """Parse SDL YAML into a normalized or expanded authoring object.
 
     Handles SDL documents with ``name`` at the top level. Runs
     structural validation (Pydantic) and semantic validation
@@ -336,7 +336,8 @@ def parse_sdl(
         limits: Source and alias-processing resource limits.
 
     Returns:
-        Validated Scenario object.
+        A ``Scenario``, or ``ExpandedScenario`` when file-backed module imports
+        are present. Unless explicitly skipped, semantic validation has run.
 
     Raises:
         SDLParseError: If YAML parsing fails or the data isn't a dict.
@@ -400,8 +401,8 @@ def parse_sdl(
     return scenario
 
 
-def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario:
-    """Parse an SDL YAML file into a validated Scenario.
+def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario | ExpandedScenario:
+    """Parse an SDL file into a normalized or expanded authoring object.
 
     Convenience wrapper around ``parse_sdl()`` that reads from a file.
     """

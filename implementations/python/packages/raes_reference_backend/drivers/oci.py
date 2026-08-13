@@ -36,7 +36,7 @@ from raes_reference_backend.driver import (
     NetworkHandle,
     NetworkSpec,
 )
-from raes_reference_backend.drivers.oci_image_policy import ImageTrustPolicy
+from raes_reference_backend.drivers.oci_image_trust import ImageTrustPolicy
 from raes_reference_backend.drivers.oci_observation import ownership_fields_match, substrate_observations
 
 _DOMAIN = "runtime"
