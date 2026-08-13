@@ -31,10 +31,12 @@ Do not bind the host root, user home, repository workspace, network, ambient
 environment, or any mutable proof input. Existing paths remain conditional so
 minimal distributions without that directory keep the same command shape.
 
-The allowlist membership is covered by a focused regression. Acceptance also
-requires a real Ubuntu 24.04 x86_64 replay of the checksum-pinned archive under
-bubblewrap network isolation. The proof evidence digest and theorem semantics
-must remain unchanged.
+The allowlist membership is covered by a focused regression, while the
+canonical Ubuntu 22.04 job replays the checksum-pinned archive under bubblewrap
+network isolation. Ubuntu 24.04 supplied the reproduced fontconfig layout, but
+is not the canonical replay host because its default namespace policy can deny
+bubblewrap setup. The proof evidence digest and theorem semantics must remain
+unchanged.
 
 If the host denies bubblewrap namespace setup, the runner must report a stable
 sandbox-unavailable error rather than classify pre-prover output as a kernel

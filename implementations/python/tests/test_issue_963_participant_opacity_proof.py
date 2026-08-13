@@ -11,7 +11,6 @@ from types import SimpleNamespace
 from urllib.error import URLError
 
 import pytest
-import tools.isabelle_tool as isabelle_tool
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes_contracts.behavioral_relation_profiles import (
@@ -25,6 +24,8 @@ from raes_contracts.behavioral_relations import (
     load_behavioral_relation_catalog,
     load_behavioral_relation_catalog_revision,
 )
+
+import tools.isabelle_tool as isabelle_tool
 from tools.check_participant_opacity_proof import (
     ProofEvidenceError,
     load_proof_manifest,
@@ -141,11 +142,43 @@ def test_proof_runtime_requires_complete_fontconfig_data(tmp_path: Path) -> None
     for path in existing:
         path.mkdir()
 
-    _require_fontconfig_runtime(existing)
+    _require_fontconfig_runtime(existing, font_query=lambda: True)
 
     existing[-1].rmdir()
     with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig runtime is required"):
-        _require_fontconfig_runtime(existing)
+        _require_fontconfig_runtime(existing, font_query=lambda: True)
+
+
+def test_proof_runtime_requires_a_discoverable_font(tmp_path: Path) -> None:
+    existing = tuple(tmp_path / name for name in ("etc-fonts", "share-fonts"))
+    for path in existing:
+        path.mkdir()
+
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig runtime is required"):
+        _require_fontconfig_runtime(existing, font_query=lambda: False)
+
+
+def test_fontconfig_query_requires_a_successful_nonempty_listing(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    font_list = tmp_path / "fc-list"
+    font_list.write_text("stub", encoding="ascii")
+    font_list.chmod(0o755)
+
+    monkeypatch.setattr(
+        isabelle_tool.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=b"/usr/share/fonts/example.ttf\n"),
+    )
+    assert isabelle_tool._fontconfig_has_fonts(font_list) is True
+
+    monkeypatch.setattr(
+        isabelle_tool.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=b""),
+    )
+    assert isabelle_tool._fontconfig_has_fonts(font_list) is False
 
 
 def test_proof_replay_checks_fontconfig_before_session_entry(

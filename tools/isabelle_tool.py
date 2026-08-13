@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
@@ -58,6 +59,8 @@ ISABELLE_REQUIRED_FONTCONFIG_PATHS = (
     Path("/etc/fonts"),
     Path("/usr/share/fonts"),
 )
+ISABELLE_FONTCONFIG_LIST = Path("/usr/bin/fc-list")
+ISABELLE_FONTCONFIG_QUERY_TIMEOUT_SECONDS = 10
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 
 
@@ -312,12 +315,34 @@ def _proof_sandbox_command(
     return command
 
 
+def _fontconfig_has_fonts(font_list: Path = ISABELLE_FONTCONFIG_LIST) -> bool:
+    """Return whether the fixed host fontconfig tool finds an installed font."""
+
+    if not font_list.is_file() or not os.access(font_list, os.X_OK):
+        return False
+    try:
+        completed = subprocess.run(  # noqa: S603 - fixed system tool and argv
+            [str(font_list), "--format=%{file}\\n"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=ISABELLE_FONTCONFIG_QUERY_TIMEOUT_SECONDS,
+            env={"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0 and bool(completed.stdout.strip())
+
+
 def _require_fontconfig_runtime(
     paths: tuple[Path, ...] = ISABELLE_REQUIRED_FONTCONFIG_PATHS,
+    *,
+    font_query: Callable[[], bool] = _fontconfig_has_fonts,
 ) -> None:
     """Fail before sandbox entry when the pinned prover's font runtime is absent."""
 
-    if any(not path.is_dir() for path in paths):
+    if any(not path.is_dir() for path in paths) or not font_query():
         raise IsabelleToolError("fontconfig runtime is required for offline proof replay")
 
 
