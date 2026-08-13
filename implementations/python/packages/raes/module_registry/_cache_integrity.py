@@ -10,7 +10,7 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from .._errors import SDLParseError
-from ._filesystem import _same_file_identity
+from ._filesystem import _O_BINARY, _O_NOFOLLOW, _same_file_identity
 
 if TYPE_CHECKING:
     from . import _OCIResourceLimits
@@ -40,7 +40,7 @@ def _hash_cache_file(path: Path, expected: os.stat_result) -> tuple[int, str]:
 
     if expected.st_size > _limits().max_member_bytes:
         raise SDLParseError(_CACHE_INTEGRITY_ERROR)
-    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    flags = os.O_RDONLY | _O_BINARY | _O_NOFOLLOW
     try:
         descriptor = os.open(path, flags)
     except OSError as exc:
@@ -209,7 +209,7 @@ def _read_cache_manifest_bytes(path: Path) -> bytes:
         raise SDLParseError(_CACHE_INTEGRITY_ERROR) from exc
     if not stat.S_ISREG(expected.st_mode):
         raise SDLParseError(_CACHE_INTEGRITY_ERROR)
-    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    flags = os.O_RDONLY | _O_BINARY | _O_NOFOLLOW
     descriptor = -1
     try:
         descriptor = os.open(path, flags)

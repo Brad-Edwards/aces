@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from .._errors import SDLParseError
 from .._source_profile import SDLSourceParseOptions
 from ..scenario import ImportDecl
-from ._filesystem import _same_file_identity
+from ._filesystem import _O_BINARY, _O_NOFOLLOW, _same_file_identity
 
 if TYPE_CHECKING:
     from ..parser import SDLSourceDocument
@@ -144,7 +144,7 @@ def _read_verified_cache_source(
     try:
         before = path.lstat()
         _require_expected_cache_file(before, expected_size=expected_size, expected_mode=expected_mode)
-        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDONLY | _O_BINARY | _O_NOFOLLOW
         descriptor = os.open(path, flags)
         with os.fdopen(descriptor, "rb") as source:
             descriptor = -1

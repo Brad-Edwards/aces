@@ -17,6 +17,9 @@ from typing import TYPE_CHECKING, Any, BinaryIO
 from .._errors import SDLParseError
 from ._cache_integrity import _DECOMPRESSION_CHUNK_BYTES, _validated_cache_root
 from ._filesystem import (
+    _O_BINARY,
+    _O_DIRECTORY,
+    _O_NOFOLLOW,
     _iter_version_directories,
     _prune_version_directories,
     _read_version_pointer,
@@ -92,7 +95,7 @@ def _anchored_lock_parent(
     if not _LOCK_DIR_FD_SUPPORTED:
         return -1, parent_expected, lock_path, {}
 
-    parent_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    parent_flags = os.O_RDONLY | _O_DIRECTORY | _O_NOFOLLOW
     parent_descriptor = os.open(lock_path.parent, parent_flags)
     try:
         parent_actual = os.fstat(parent_descriptor)
@@ -182,7 +185,7 @@ def _open_cache_lock(lock_path: Path) -> BinaryIO:
 
     error_message = "Unable to open the OCI module cache lock"
     _require_directory(lock_path.parent, error_message=error_message)
-    common_flags = os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    common_flags = os.O_RDWR | _O_BINARY | _O_NOFOLLOW
     descriptor = -1
     parent_descriptor = -1
     try:

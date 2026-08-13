@@ -25,6 +25,10 @@ _VERSION_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}\Z")
 _VERSION_DIGEST_PREFIX_HEX = 20
 _VERSION_NONCE_HEX = 20
 _DIRECTORY_FSYNC_SUPPORTED = os.name != "nt"
+_O_BINARY = getattr(os, "O_BINARY", 0)
+_O_CLOEXEC = getattr(os, "O_CLOEXEC", 0)
+_O_DIRECTORY = getattr(os, "O_DIRECTORY", 0)
+_O_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
 # Windows implements os.fsync with MSVCRT _commit, which rejects a read-only
 # descriptor. Transaction stages are writable; POSIX retains its read-only open.
 _REGULAR_FILE_FSYNC_ACCESS_MODE = os.O_RDWR if os.name == "nt" else os.O_RDONLY
@@ -61,7 +65,7 @@ def _fsync_directory(path: Path, *, error_message: str) -> None:
 
     if not _DIRECTORY_FSYNC_SUPPORTED:
         return
-    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0)
+    flags = os.O_RDONLY | _O_DIRECTORY | _O_CLOEXEC
     descriptor = -1
     try:
         descriptor = os.open(path, flags)
@@ -104,7 +108,7 @@ def _fsync_tree(root: Path, *, error_message: str) -> None:
                 continue
             if not stat.S_ISREG(expected.st_mode):
                 raise SDLParseError(error_message)
-            flags = _REGULAR_FILE_FSYNC_ACCESS_MODE | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+            flags = _REGULAR_FILE_FSYNC_ACCESS_MODE | _O_BINARY | _O_NOFOLLOW
             descriptor = os.open(path, flags)
             try:
                 actual = os.fstat(descriptor)
@@ -240,7 +244,7 @@ def _read_version_pointer_payload(pointer: Path) -> bytes | None:
     try:
         expected = pointer.lstat()
         if stat.S_ISREG(expected.st_mode):
-            flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+            flags = os.O_RDONLY | _O_BINARY | _O_NOFOLLOW
             descriptor = os.open(pointer, flags)
             with os.fdopen(descriptor, "rb") as handle:
                 descriptor = -1
