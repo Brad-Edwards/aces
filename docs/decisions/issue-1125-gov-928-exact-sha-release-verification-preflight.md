@@ -111,9 +111,13 @@ same-run artifact. Immediately after protected-environment approval and
 artifact download, it freshly revalidates the Release id, draft state, exact
 tag ref, and fully dereferenced commit SHA before invoking the pinned OIDC
 publisher. A separate GitHub publication job runs only after PyPI and repeats
-the identity checks before attachment and public finalization. No status API,
-polling, workflow-name matching, or stale mutable-ref observation is an
-admissible publication gate.
+the identity checks before attachment, re-reads the Release object after the
+tag-addressed upload, and finalizes by the bound numeric Release id. A lost
+successful-finalization response is retryable only when the same Release is
+already public, both downloaded assets byte-match the tested distributions,
+and the id, tag, and commit SHA still match. No status API, polling,
+workflow-name matching, or stale mutable-ref observation is an admissible
+publication gate.
 
 ### Test the built artifact before granting publication authority
 
@@ -196,7 +200,9 @@ assert these structural invariants:
   precede the SHA-pinned PyPI action;
 - only `publish-pypi` has the `pypi` environment and `id-token: write`;
 - GitHub attachment is a separate retryable job that revalidates the Release
-  and tag, attaches artifacts, and only then removes draft state; and
+  and tag, attaches artifacts, revalidates the object after upload, and only
+  then removes draft state by numeric Release id. An already-public retry must
+  byte-match both attached distributions before it can succeed; and
 - proof acquisition, the canonical nox command, coverage upload, trusted
   publishing, and GitHub Release attachment remain present.
 

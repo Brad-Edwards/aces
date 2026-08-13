@@ -40,9 +40,13 @@ verification graph to pass for the exact commit named by the release (GOV-928).
    Release object id, draft state, exact tag ref, and fully dereferenced commit
    SHA immediately before its pinned OIDC publisher runs. A separate GitHub-only
    job performs the same identity checks again, attaches the artifacts, and
-   makes the draft public. Keeping these jobs separate means a failed
+   re-reads the Release identity after attachment before making the exact
+   numeric Release id public. Keeping these jobs separate means a failed
    attachment/finalization can be retried without attempting a second PyPI
-   upload.
+   upload. If the public-finalization response was lost after GitHub applied
+   it, the retry accepts the already-public Release only after downloading and
+   byte-comparing both attached distributions and rechecking the id, tag, and
+   commit SHA.
 
 Nothing is hand-run, and feature PRs never touch `CHANGELOG.md` (release-please
 owns it) — no fragment collisions.

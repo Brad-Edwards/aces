@@ -107,6 +107,116 @@ esac
     )
 
 
+def _run_github_finalization(
+    tmp_path: Path,
+    *,
+    release_states: list[str],
+    mismatched_download: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    if shutil.which("bash") is None or shutil.which("jq") is None:
+        pytest.skip("the release finalization shell policy requires bash and jq")
+
+    script = _named_step(
+        _load(RELEASE_PATH)["jobs"]["publish-github"],
+        "Revalidate, attach, and publish the GitHub Release",
+    )["run"]
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "raes-3.4.5-py3-none-any.whl").write_bytes(b"tested wheel")
+    (dist / "raes-3.4.5.tar.gz").write_bytes(b"tested sdist")
+
+    state_file = tmp_path / "release-states.jsonl"
+    state_file.write_text("\n".join(release_states) + "\n", encoding="utf-8")
+    state_counter = tmp_path / "release-state-counter"
+    state_counter.write_text("0\n", encoding="utf-8")
+    call_log = tmp_path / "gh-calls.log"
+
+    gh_stub = tmp_path / "gh"
+    gh_stub.write_text(
+        """#!/bin/sh
+set -eu
+case "${1-}:${2-}" in
+  release:view)
+    index="$(cat "$STATE_COUNTER")"
+    index=$((index + 1))
+    printf '%s\n' "$index" > "$STATE_COUNTER"
+    sed -n "${index}p" "$STATE_FILE"
+    ;;
+  release:upload)
+    printf '%s\n' upload >> "$CALL_LOG"
+    ;;
+  release:download)
+    printf '%s\n' download >> "$CALL_LOG"
+    shift 2
+    destination=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --dir) destination="$2"; shift 2 ;;
+        *) shift ;;
+      esac
+    done
+    test -n "$destination"
+    mkdir -p "$destination"
+    cp "$TEST_DIST_SOURCE"/* "$destination"/
+    if [ "$MISMATCH_DOWNLOAD" = "1" ]; then
+      printf '%s\n' tampered > "$destination/raes-3.4.5-py3-none-any.whl"
+    fi
+    ;;
+  api:*)
+    printf '%s\n' patch >> "$CALL_LOG"
+    printf '%s\n' '{"id":1234,"tag_name":"v3.4.5","draft":false}'
+    ;;
+  *)
+    echo "unexpected gh request: $*" >&2
+    exit 64
+    ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    gh_stub.chmod(0o700)
+
+    git_stub = tmp_path / "git"
+    git_stub.write_text(
+        """#!/bin/sh
+set -eu
+case "${1-}:${2-}" in
+  fetch:*) exit 0 ;;
+  rev-parse:HEAD) printf '%s\n' "$EXPECTED_SHA" ;;
+  rev-parse:--verify) printf '%s\n' "$EXPECTED_SHA" ;;
+  *) echo "unexpected git request: $*" >&2; exit 64 ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    git_stub.chmod(0o700)
+
+    environment = {
+        **os.environ,
+        "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+        "GH_TOKEN": "test-token",
+        "GITHUB_REPOSITORY": "OpenRAE/rae",
+        "RUNNER_TEMP": str(tmp_path),
+        "EXPECTED_SHA": "a" * 40,
+        "EXPECTED_TAG": "v3.4.5",
+        "EXPECTED_RELEASE_ID": "1234",
+        "EXPECTED_DRAFT": "true",
+        "STATE_FILE": str(state_file),
+        "STATE_COUNTER": str(state_counter),
+        "CALL_LOG": str(call_log),
+        "TEST_DIST_SOURCE": str(dist),
+        "MISMATCH_DOWNLOAD": "1" if mismatched_download else "0",
+    }
+    return subprocess.run(
+        ["bash", "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        env=environment,
+    )
+
+
 def test_canonical_verifier_requires_and_checks_out_an_exact_commit_sha() -> None:
     workflow = _load(CANONICAL_PATH)
     inputs = workflow["on"]["workflow_call"]["inputs"]
@@ -335,8 +445,13 @@ def test_publication_is_split_retry_safe_and_finalizes_the_same_release() -> Non
     finalization = _named_step(publish_github, "Revalidate, attach, and publish the GitHub Release")["run"]
     assert '"${current_release_id}" != "${EXPECTED_RELEASE_ID}"' in finalization
     assert '"${current_tag_sha}" != "${EXPECTED_SHA}"' in finalization
-    assert finalization.index("gh release upload") < finalization.index("gh release edit")
-    assert "--draft=false --verify-tag" in finalization
+    assert finalization.index("gh release upload") < finalization.index("prepublish_json")
+    assert finalization.index("prepublish_json") < finalization.index("--method PATCH")
+    assert '"repos/${GITHUB_REPOSITORY}/releases/${EXPECTED_RELEASE_ID}"' in finalization
+    assert "-F draft=false" in finalization
+    assert "Already-public Release assets do not match the tested distributions" in finalization
+    assert 'gh release download "${EXPECTED_TAG}"' in finalization
+    assert 'cmp -s "${wheels[0]}"' in finalization
 
     sync = jobs["sync-dev"]
     assert set(sync["needs"]) == {"release-please", "publish-github"}
@@ -375,6 +490,60 @@ def test_pre_pypi_identity_revalidation_rejects_moved_tag(tmp_path: Path) -> Non
 
     assert result.returncode != 0
     assert f"Release tag moved: expected {'a' * 40}, got {'c' * 40}" in result.stderr
+
+
+def test_github_finalization_revalidates_release_object_after_attachment(tmp_path: Path) -> None:
+    result = _run_github_finalization(
+        tmp_path,
+        release_states=[
+            '{"databaseId":1234,"isDraft":true,"tagName":"v3.4.5"}',
+            '{"databaseId":9999,"isDraft":true,"tagName":"v3.4.5"}',
+        ],
+    )
+
+    assert result.returncode != 0
+    assert "Release identity changed during attachment; refusing public finalization" in result.stderr
+    assert (tmp_path / "gh-calls.log").read_text(encoding="utf-8").splitlines() == ["upload"]
+
+
+def test_github_finalization_uses_bound_id_and_accepts_verified_response(tmp_path: Path) -> None:
+    result = _run_github_finalization(
+        tmp_path,
+        release_states=[
+            '{"databaseId":1234,"isDraft":true,"tagName":"v3.4.5"}',
+            '{"databaseId":1234,"isDraft":true,"tagName":"v3.4.5"}',
+            '{"databaseId":1234,"isDraft":false,"tagName":"v3.4.5"}',
+        ],
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "gh-calls.log").read_text(encoding="utf-8").splitlines() == ["upload", "patch"]
+
+
+def test_github_finalization_accepts_matching_already_public_retry(tmp_path: Path) -> None:
+    result = _run_github_finalization(
+        tmp_path,
+        release_states=[
+            '{"databaseId":1234,"isDraft":false,"tagName":"v3.4.5"}',
+            '{"databaseId":1234,"isDraft":false,"tagName":"v3.4.5"}',
+        ],
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "was already public with the tested distributions" in result.stdout
+    assert (tmp_path / "gh-calls.log").read_text(encoding="utf-8").splitlines() == ["download"]
+
+
+def test_github_finalization_rejects_mismatched_already_public_assets(tmp_path: Path) -> None:
+    result = _run_github_finalization(
+        tmp_path,
+        release_states=['{"databaseId":1234,"isDraft":false,"tagName":"v3.4.5"}'],
+        mismatched_download=True,
+    )
+
+    assert result.returncode != 0
+    assert "Already-public Release assets do not match the tested distributions" in result.stderr
+    assert (tmp_path / "gh-calls.log").read_text(encoding="utf-8").splitlines() == ["download"]
 
 
 def test_release_gate_does_not_poll_mutable_check_or_branch_status() -> None:

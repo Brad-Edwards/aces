@@ -596,8 +596,17 @@ jobs:
             exit 1
           fi
           if [ "${current_draft}" != "${EXPECTED_DRAFT}" ]; then
-            echo "Release draft state changed: expected ${EXPECTED_DRAFT}, got ${current_draft}" >&2
-            exit 1
+            if [ "${EXPECTED_DRAFT}" = "true" ] && [ "${current_draft}" = "false" ]; then
+              # A previous attempt may have made this exact Release public and
+              # then lost the API response or failed its final read. Prove the
+              # already-public assets byte-for-byte below before accepting it.
+              already_public_retry="true"
+            else
+              echo "Release draft state changed: expected ${EXPECTED_DRAFT}, got ${current_draft}" >&2
+              exit 1
+            fi
+          else
+            already_public_retry="false"
           fi
 
           git fetch --force --tags origin
@@ -614,7 +623,54 @@ jobs:
             echo "Expected one tested wheel and sdist before attachment" >&2
             exit 1
           fi
+
+          if [ "${already_public_retry}" = "true" ]; then
+            retry_dir="$(mktemp -d "${RUNNER_TEMP}/raes-release-retry.XXXXXX")"
+            gh release download "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --dir "${retry_dir}" \
+              --pattern "$(basename "${wheels[0]}")" \
+              --pattern "$(basename "${sdists[0]}")"
+            if ! cmp -s "${wheels[0]}" "${retry_dir}/$(basename "${wheels[0]}")" \
+              || ! cmp -s "${sdists[0]}" "${retry_dir}/$(basename "${sdists[0]}")"; then
+              echo "Already-public Release assets do not match the tested distributions" >&2
+              exit 1
+            fi
+
+            retry_json="$(
+              gh release view "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" \
+                --json databaseId,isDraft,tagName
+            )"
+            if [ "$(jq -r '.databaseId' <<<"${retry_json}")" != "${EXPECTED_RELEASE_ID}" ] \
+              || [ "$(jq -r '.tagName' <<<"${retry_json}")" != "${EXPECTED_TAG}" ] \
+              || [ "$(jq -r '.isDraft' <<<"${retry_json}")" != "false" ]; then
+              echo "Already-public Release identity changed during retry verification" >&2
+              exit 1
+            fi
+            git fetch --force --tags origin
+            current_tag_sha="$(git rev-parse --verify "${EXPECTED_TAG}^{commit}")"
+            if [ "${current_tag_sha}" != "${EXPECTED_SHA}" ]; then
+              echo "Release tag moved during retry verification: expected ${EXPECTED_SHA}, got ${current_tag_sha}" >&2
+              exit 1
+            fi
+            echo "Exact Release ${EXPECTED_RELEASE_ID} was already public with the tested distributions"
+            exit 0
+          fi
+
           gh release upload "${EXPECTED_TAG}" "${wheels[0]}" "${sdists[0]}" --clobber
+
+          # Upload addresses a Release by tag. Re-read the object immediately
+          # afterward so a delete/recreate race cannot make a replacement
+          # Release public. Finalization itself addresses the numeric id.
+          prepublish_json="$(
+            gh release view "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --json databaseId,isDraft,tagName
+          )"
+          if [ "$(jq -r '.databaseId' <<<"${prepublish_json}")" != "${EXPECTED_RELEASE_ID}" ] \
+            || [ "$(jq -r '.tagName' <<<"${prepublish_json}")" != "${EXPECTED_TAG}" ] \
+            || [ "$(jq -r '.isDraft' <<<"${prepublish_json}")" != "${EXPECTED_DRAFT}" ]; then
+            echo "Release identity changed during attachment; refusing public finalization" >&2
+            exit 1
+          fi
 
           git fetch --force --tags origin
           current_tag_sha="$(git rev-parse --verify "${EXPECTED_TAG}^{commit}")"
@@ -623,7 +679,19 @@ jobs:
             exit 1
           fi
           if [ "${EXPECTED_DRAFT}" = "true" ]; then
-            gh release edit "${EXPECTED_TAG}" --repo "${GITHUB_REPOSITORY}" --draft=false --verify-tag
+            finalized_json="$(
+              gh api --method PATCH \
+                -H 'Accept: application/vnd.github+json' \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "repos/${GITHUB_REPOSITORY}/releases/${EXPECTED_RELEASE_ID}" \
+                -F draft=false
+            )"
+            if [ "$(jq -r '.id' <<<"${finalized_json}")" != "${EXPECTED_RELEASE_ID}" ] \
+              || [ "$(jq -r '.tag_name' <<<"${finalized_json}")" != "${EXPECTED_TAG}" ] \
+              || [ "$(jq -r '.draft' <<<"${finalized_json}")" != "false" ]; then
+              echo "GitHub Release finalization response changed the verified identity" >&2
+              exit 1
+            fi
           fi
 
           final_json="$(
