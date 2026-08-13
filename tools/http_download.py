@@ -70,9 +70,7 @@ def download_bytes(
     for attempt in range(attempts):
         try:
             with opener(url, timeout=timeout_seconds) as response:
-                return _read_response(
-                    response, max_bytes=max_bytes, description=description, url=url
-                )
+                return _read_response(response, max_bytes=max_bytes, description=description, url=url)
         except HTTPError as exc:
             last_error = exc
             if exc.code not in _RETRYABLE_HTTP_STATUS:
