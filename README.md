@@ -16,7 +16,10 @@ backend.
 
 ## Validate your first scenario
 
-You need Python 3.11 or newer.
+You need Python 3.11 or newer. OCI module extraction additionally requires
+Python 3.11.4 or newer because earlier 3.11 patch releases lack the mandatory
+safe tar extraction filter. Those releases fail closed instead of extracting
+without it.
 
 ```console
 python -m venv .venv

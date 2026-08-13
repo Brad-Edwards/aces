@@ -72,6 +72,17 @@ def read_sdl_source(
         raise FileNotFoundError(f"SDL file not found: {path}")
     with path.open("rb") as source:
         raw_bytes = source.read(limits.max_input_bytes + 1)
+    return _source_document_from_bytes(raw_bytes, path=path, limits=limits)
+
+
+def _source_document_from_bytes(
+    raw_bytes: bytes,
+    *,
+    path: Path,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+) -> SDLSourceDocument:
+    """Decode already-captured source bytes with the canonical diagnostics."""
+
     if len(raw_bytes) > limits.max_input_bytes:
         _raise_source_limit(
             f"SDL source exceeds the byte limit of {limits.max_input_bytes} bytes.",
