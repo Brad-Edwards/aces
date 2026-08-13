@@ -448,12 +448,13 @@ header identity must pass an explicit `ControlPlaneSecurityConfig`, set
 `trust_proxy_identity_headers=True`, and only trust those headers behind an
 authenticated proxy that strips caller-supplied identity headers.
 
-Bearer and verified-proxy authentication share the same target-binding check.
-An explicitly supplied bearer that is unknown, revoked, or scoped to another
-target is rejected; it never falls back to proxy headers. Request admission is
-also bounded before FastAPI parses or dispatches a body: a public ASGI wrapper
-checks a single non-negative `Content-Length`, then consumes and replays at most
-the configured byte limit. This boundary does not rely on framework-private
+Bearer and verified-proxy authentication require the same exact target binding.
+An identity with no target, and an explicitly supplied bearer that is unknown,
+revoked, or scoped to another target, is rejected; a rejected bearer never
+falls back to proxy headers. Request admission is also bounded before FastAPI
+parses or dispatches a body: a public ASGI wrapper checks one digits-only
+`Content-Length`, then consumes at most the configured byte limit and replays
+one coalesced body message. This boundary does not rely on framework-private
 request caches and returns a stable `413` before a route can run.
 
 The HTTP adapter offloads synchronous backend and store calls to AnyIO's

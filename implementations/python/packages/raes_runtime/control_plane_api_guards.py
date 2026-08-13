@@ -104,12 +104,12 @@ class RequestSizeLimitMiddleware:
             await self._reject(scope, receive, send, status_code=413, detail=_REQUEST_TOO_LARGE_DETAIL)
             return
 
-        messages: list[Message] = []
         body = bytearray()
+        disconnected = False
         while True:
             message = await receive()
-            messages.append(message)
             if message["type"] == "http.disconnect":
+                disconnected = True
                 break
             if message["type"] != "http.request":
                 continue
@@ -121,11 +121,20 @@ class RequestSizeLimitMiddleware:
             if not message.get("more_body", False):
                 break
 
-        scope.setdefault("state", {})["raw_body"] = bytes(body)
+        raw_body = bytes(body)
+        scope.setdefault("state", {})["raw_body"] = raw_body
+        replay_message: Message | None = (
+            {"type": "http.disconnect"}
+            if disconnected
+            else {"type": "http.request", "body": raw_body, "more_body": False}
+        )
 
         async def replay_receive() -> Message:
-            if messages:
-                return messages.pop(0)
+            nonlocal replay_message
+            if replay_message is not None:
+                message = replay_message
+                replay_message = None
+                return message
             return await receive()
 
         await self._app(scope, replay_receive, send)
@@ -161,10 +170,11 @@ def _declared_content_length(headers: Sequence[tuple[bytes, bytes]]) -> int | No
         return None
     if len(values) != 1:
         raise ValueError("content-length must appear at most once")
+    raw_value = values[0]
+    if not raw_value.isdigit():
+        raise ValueError("content-length must be a non-negative integer")
     try:
-        value = int(values[0].decode("ascii"))
+        value = int(raw_value)
     except ValueError as exc:
         raise ValueError("content-length must be a non-negative integer") from exc
-    if value < 0:
-        raise ValueError("content-length must be a non-negative integer")
     return value

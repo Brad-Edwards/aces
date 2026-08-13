@@ -88,9 +88,9 @@ class _ControlPlaneApiAuth:
         return matched
 
     def _require_target_binding(self, identity: ControlPlaneIdentity) -> ControlPlaneIdentity:
-        """Reject an identity scoped to a different target than this control plane."""
+        """Require an identity scoped exactly to this control-plane target."""
 
-        if identity.target_name and identity.target_name != self._control_plane.target_name:
+        if identity.target_name != self._control_plane.target_name:
             raise HTTPException(status_code=403, detail="identity is not authorized for this target")
         return identity
 

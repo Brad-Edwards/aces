@@ -951,6 +951,35 @@ def test_control_plane_api_rejects_bearer_token_bound_to_another_target():
     assert response.json() == {"detail": "identity is not authorized for this target"}
 
 
+@pytest.mark.parametrize("authentication_path", ["bearer", "verified-proxy"])
+def test_control_plane_api_rejects_identity_without_target_binding(authentication_path: str) -> None:
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    identity = ControlPlaneIdentity(
+        identity="unbound-auditor",
+        roles=frozenset({ControlPlaneRole.AUDITOR}),
+    )
+    if authentication_path == "bearer":
+        security = ControlPlaneSecurityConfig(bearer_tokens={"unbound-token": identity})
+        headers = {"authorization": "Bearer unbound-token"}
+    else:
+        security = ControlPlaneSecurityConfig(
+            trust_proxy_identity_headers=True,
+            trusted_identities={"unbound-auditor": identity},
+        )
+        headers = {
+            "x-raes-client-verified": "true",
+            "x-raes-client-identity": "unbound-auditor",
+        }
+    app = create_control_plane_app(control_plane, security=security)
+
+    with TestClient(app) as client:
+        response = client.get("/snapshot", headers=headers)
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "identity is not authorized for this target"}
+
+
 def test_control_plane_security_config_mappings_cannot_be_mutated_after_construction():
     """``strict_defaults`` must stay fail-closed; frozen=True alone does not stop dict mutation."""
     security = ControlPlaneSecurityConfig.strict_defaults()

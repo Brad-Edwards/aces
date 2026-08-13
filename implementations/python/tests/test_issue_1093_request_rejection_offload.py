@@ -106,11 +106,11 @@ def test_request_size_middleware_passes_non_http_scope_through() -> None:
     assert calls == ["websocket"]
 
 
-def test_request_size_middleware_replays_messages_then_delegates_receive() -> None:
+def test_request_size_middleware_coalesces_body_then_delegates_receive() -> None:
     control_plane = RuntimeControlPlane(create_stub_target())
     source_messages: list[Message] = [
-        {"type": "extension.message"},
-        {"type": "http.request", "body": b"x", "more_body": False},
+        {"type": "http.request", "body": b"x", "more_body": True},
+        {"type": "http.request", "body": b"y", "more_body": False},
         {"type": "http.disconnect"},
     ]
     replayed: list[Message] = []
@@ -119,7 +119,37 @@ def test_request_size_middleware_replays_messages_then_delegates_receive() -> No
         return source_messages.pop(0)
 
     async def app(_scope: Scope, replay_receive: Receive, send: Send) -> None:
-        replayed.extend([await replay_receive(), await replay_receive(), await replay_receive()])
+        replayed.extend([await replay_receive(), await replay_receive()])
+        await send({"type": "http.response.start", "status": 204, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    async def send(_message: Message) -> None:
+        return None
+
+    middleware = RequestSizeLimitMiddleware(app, control_plane=control_plane, max_request_bytes=2)
+    scope = _http_scope()
+    _run(middleware(scope, receive, send))
+
+    assert replayed == [
+        {"type": "http.request", "body": b"xy", "more_body": False},
+        {"type": "http.disconnect"},
+    ]
+    assert scope["state"]["raw_body"] == b"xy"
+
+
+def test_request_size_middleware_does_not_retain_empty_transport_messages() -> None:
+    control_plane = RuntimeControlPlane(create_stub_target())
+    source_messages: list[Message] = [
+        *({"type": "http.request", "body": b"", "more_body": True} for _ in range(100)),
+        {"type": "http.request", "body": b"x", "more_body": False},
+    ]
+    replayed: list[Message] = []
+
+    async def receive() -> Message:
+        return source_messages.pop(0)
+
+    async def app(_scope: Scope, replay_receive: Receive, send: Send) -> None:
+        replayed.append(await replay_receive())
         await send({"type": "http.response.start", "status": 204, "headers": []})
         await send({"type": "http.response.body", "body": b""})
 
@@ -127,15 +157,10 @@ def test_request_size_middleware_replays_messages_then_delegates_receive() -> No
         return None
 
     middleware = RequestSizeLimitMiddleware(app, control_plane=control_plane, max_request_bytes=1)
-    scope = _http_scope()
-    _run(middleware(scope, receive, send))
+    _run(middleware(_http_scope(), receive, send))
 
-    assert [message["type"] for message in replayed] == [
-        "extension.message",
-        "http.request",
-        "http.disconnect",
-    ]
-    assert scope["state"]["raw_body"] == b"x"
+    assert replayed == [{"type": "http.request", "body": b"x", "more_body": False}]
+    assert source_messages == []
 
 
 def test_request_size_middleware_accepts_disconnect_before_body() -> None:
@@ -272,9 +297,14 @@ def test_request_size_middleware_enforces_exact_stream_boundary(
     [
         [(b"content-length", b"1"), (b"Content-Length", b"1")],
         [(b"content-length", b"-1")],
+        [(b"content-length", b"+1")],
+        [(b"content-length", b" 1")],
+        [(b"content-length", b"1 ")],
+        [(b"content-length", b"1_0")],
+        [(b"content-length", b"")],
     ],
 )
-def test_declared_content_length_rejects_ambiguous_or_negative_values(
+def test_declared_content_length_rejects_ambiguous_or_non_digit_values(
     headers: list[tuple[bytes, bytes]],
 ) -> None:
     with pytest.raises(ValueError, match="content-length"):
