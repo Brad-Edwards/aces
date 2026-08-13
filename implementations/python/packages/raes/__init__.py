@@ -32,6 +32,8 @@ __all__ = [
     "SDL_CANONICAL_PROFILE",
     "SDLFormatResult",
     "format_sdl_source",
+    "SDLRenderResult",
+    "render_sdl_source",
     "load_sdl_fragment",
     "parse_sdl",
     "parse_sdl_file",
@@ -45,6 +47,8 @@ __all__ = [
     "remove_sdl_declaration",
     "rename_sdl_declaration",
     "SDLTransformationResult",
+    "SDLCandidateSynthesisResult",
+    "synthesize_sdl_candidate",
     "select_scenario_family",
     "Scenario",
     "SDLError",
@@ -83,8 +87,10 @@ def __getattr__(name: str):
         "SDLCanonicalDigest",
     }:
         module = import_module("raes.canonical")
-    elif name in {"format_sdl_source", "SDLFormatResult"}:
+    elif name in {"format_sdl_source", "SDLFormatResult", "render_sdl_source", "SDLRenderResult"}:
         module = import_module("raes.formatting")
+    elif name in {"SDLCandidateSynthesisResult", "synthesize_sdl_candidate"}:
+        module = import_module("raes.candidate_synthesis")
     elif name in {
         "SDL_CANONICAL_PROFILE",
         "SDLMigrationPolicy",

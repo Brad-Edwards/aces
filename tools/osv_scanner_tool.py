@@ -6,9 +6,8 @@ import stat
 import subprocess
 from hashlib import sha256
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
 
+from tools.http_download import download_bytes
 from tools.tool_versions import OSV_SCANNER_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -77,21 +76,13 @@ def ensure_osv_scanner(repo_root: Path = REPO_ROOT, *, version: str = OSV_SCANNE
     asset_url = f"{base_url}/{asset_name}"
     checksums_url = f"{base_url}/{_checksums_asset_name(version)}"
 
-    try:
-        with urlopen(checksums_url) as response:  # noqa: S310 - pinned HTTPS release asset
-            checksums_text = response.read().decode("utf-8")
-    except (HTTPError, URLError) as exc:
-        raise RuntimeError(f"failed to download osv-scanner checksums from {checksums_url}: {exc}") from exc
+    checksums_text = download_bytes(checksums_url, description="osv-scanner checksums").decode("utf-8")
 
     expected_checksum = _expected_checksum(checksums_text, asset_name)
     if not expected_checksum:
         raise RuntimeError(f"missing checksum for osv-scanner asset {asset_name}")
 
-    try:
-        with urlopen(asset_url) as response:  # noqa: S310 - pinned HTTPS release asset
-            binary_bytes = response.read()
-    except (HTTPError, URLError) as exc:
-        raise RuntimeError(f"failed to download osv-scanner from {asset_url}: {exc}") from exc
+    binary_bytes = download_bytes(asset_url, description="osv-scanner")
 
     actual_checksum = sha256(binary_bytes).hexdigest()
     if actual_checksum != expected_checksum:

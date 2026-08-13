@@ -22,6 +22,33 @@ class SDLFormatResult:
     diagnostics: tuple[SDLParseDiagnostic, ...]
 
 
+@dataclass(frozen=True)
+class SDLRenderResult:
+    """Deterministic strict source plus the scenario reparsed from those bytes."""
+
+    content: str
+    scenario: Scenario
+
+
+def render_sdl_source(
+    scenario: Scenario,
+    *,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+) -> SDLRenderResult:
+    """Render an SDL model deterministically and re-admit the emitted bytes."""
+
+    if not isinstance(scenario, Scenario):
+        raise TypeError("SDL rendering requires a Scenario")
+    normalized = scenario.model_dump(mode="json", by_alias=True, exclude_unset=True)
+    content = yaml.safe_dump(
+        normalized,
+        allow_unicode=False,
+        default_flow_style=False,
+        sort_keys=False,
+    )
+    return SDLRenderResult(content=content, scenario=parse_sdl(content, limits=limits))
+
+
 def format_sdl_source(
     content: str,
     *,

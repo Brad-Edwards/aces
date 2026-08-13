@@ -1,5 +1,7 @@
 """Canonical public export manifest for the contracts facade."""
 
+from ._candidate_synthesis_exports import CANDIDATE_SYNTHESIS_EXPORTS
+
 PUBLIC_EXPORTS = [
     "ACTIVITYSTREAMS_ACTIVITY_TYPES_SOURCE_SCHEMA_VERSION",
     "ActivityStreamsActivityTypeSourceTermModel",
@@ -27,6 +29,7 @@ PUBLIC_EXPORTS = [
     "ArtifactTransformationStatus",
     "PreservationOutcome",
     "TransformationCheckOutcome",
+    *CANDIDATE_SYNTHESIS_EXPORTS,
     "ArtifactAcquisitionTimingModel",
     "ArtifactAvailabilityContext",
     "ArtifactMechanismCapability",

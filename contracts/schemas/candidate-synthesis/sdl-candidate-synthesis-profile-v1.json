@@ -1,0 +1,221 @@
+{
+  "$defs": {
+    "CandidateSynthesisProfileLimitsModel": {
+      "additionalProperties": false,
+      "properties": {
+        "max_assertions": {
+          "const": 4096,
+          "default": 4096,
+          "title": "Max Assertions",
+          "type": "integer"
+        },
+        "max_assumptions": {
+          "const": 1024,
+          "default": 1024,
+          "title": "Max Assumptions",
+          "type": "integer"
+        },
+        "max_decisions": {
+          "const": 1024,
+          "default": 1024,
+          "title": "Max Decisions",
+          "type": "integer"
+        },
+        "max_node_identifier_length": {
+          "const": 35,
+          "default": 35,
+          "title": "Max Node Identifier Length",
+          "type": "integer"
+        }
+      },
+      "title": "CandidateSynthesisProfileLimitsModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://openrae.github.io/rae/schemas/sdl-candidate-synthesis-profile-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Canonical content that binds every output-affecting profile decision.",
+  "properties": {
+    "all_or_none": {
+      "const": true,
+      "default": true,
+      "title": "All Or None",
+      "type": "boolean"
+    },
+    "canonicalization_profile": {
+      "const": "raes-sdl-canonical/v1",
+      "default": "raes-sdl-canonical/v1",
+      "title": "Canonicalization Profile",
+      "type": "string"
+    },
+    "default_ids": {
+      "default": [],
+      "items": {
+        "maxLength": 128,
+        "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+        "type": "string"
+      },
+      "title": "Default Ids",
+      "type": "array"
+    },
+    "deterministic_order": {
+      "const": "sorted-target-ref/v1",
+      "default": "sorted-target-ref/v1",
+      "title": "Deterministic Order",
+      "type": "string"
+    },
+    "imports_allowed": {
+      "const": false,
+      "default": false,
+      "title": "Imports Allowed",
+      "type": "boolean"
+    },
+    "limits": {
+      "$ref": "#/$defs/CandidateSynthesisProfileLimitsModel",
+      "default": {
+        "max_assertions": 4096,
+        "max_assumptions": 1024,
+        "max_decisions": 1024,
+        "max_node_identifier_length": 35
+      }
+    },
+    "profile_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Profile Digest",
+      "type": "string"
+    },
+    "profile_id": {
+      "const": "concept-nodes/v1",
+      "default": "concept-nodes/v1",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "profile_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Profile Version",
+      "type": "string"
+    },
+    "refusal_reason_codes": {
+      "default": [
+        "ambiguous-ordering",
+        "missing-native-semantics",
+        "stale-input",
+        "transformation-profile-unavailable",
+        "unresolved-parameterization",
+        "unsupported-relation"
+      ],
+      "items": {
+        "enum": [
+          "ambiguous-ordering",
+          "missing-native-semantics",
+          "stale-input",
+          "transformation-profile-unavailable",
+          "unresolved-parameterization",
+          "unsupported-relation"
+        ],
+        "type": "string"
+      },
+      "title": "Refusal Reason Codes",
+      "type": "array"
+    },
+    "rendering_profile": {
+      "const": "sdl-yaml/v1",
+      "default": "sdl-yaml/v1",
+      "title": "Rendering Profile",
+      "type": "string"
+    },
+    "rule_ids": {
+      "default": [
+        "concept-node-emission"
+      ],
+      "items": {
+        "maxLength": 128,
+        "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+        "type": "string"
+      },
+      "title": "Rule Ids",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "sdl-candidate-synthesis-profile/v1",
+      "default": "sdl-candidate-synthesis-profile/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "semantic_validation_required": {
+      "const": true,
+      "default": true,
+      "title": "Semantic Validation Required",
+      "type": "boolean"
+    },
+    "source_profile": {
+      "const": "sdl-candidate-synthesis-input/v1",
+      "default": "sdl-candidate-synthesis-input/v1",
+      "title": "Source Profile",
+      "type": "string"
+    },
+    "supported_assertion_kinds": {
+      "default": [
+        "concept"
+      ],
+      "items": {
+        "const": "concept",
+        "type": "string"
+      },
+      "title": "Supported Assertion Kinds",
+      "type": "array"
+    },
+    "supported_node_types": {
+      "default": [
+        "compute",
+        "switch"
+      ],
+      "items": {
+        "enum": [
+          "compute",
+          "switch"
+        ],
+        "type": "string"
+      },
+      "title": "Supported Node Types",
+      "type": "array"
+    },
+    "target_profile": {
+      "const": "sdl-authoring-input/v1",
+      "default": "sdl-authoring-input/v1",
+      "title": "Target Profile",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_digest"
+  ],
+  "title": "CandidateSynthesisProfileDefinitionModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "The profile digest covers every output-affecting rule, default, limit, and refusal posture.",
+      "id": "candidate-synthesis-complete-profile-digest",
+      "inputs": [
+        {
+          "contract_id": "sdl-candidate-synthesis-profile-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.CandidateSynthesisProfileDefinitionModel.model_validate"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "sdl-candidate-synthesis-profile-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}
