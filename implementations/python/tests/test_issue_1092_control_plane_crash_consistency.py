@@ -21,9 +21,22 @@ from typing import Any
 
 import pytest
 from raes import parse_sdl
-from raes_backend_stubs.stubs import create_stub_target
+from raes_backend_stubs.stubs import StubProvisioner, create_stub_target
+from raes_contracts.apparatus import RealizationObservationCapability
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ProvisioningPlan, RuntimeDomain
+from raes_contracts.realization_envelope import (
+    BackendRealizationEnvelopeModel,
+    ObservationStrength,
+    RealizationConcern,
+    realization_envelope_digest,
+    realizer_configuration_digest,
+)
+from raes_contracts.realization_observation import (
+    ObservedOperatingSystemIdentity,
+    RealizationObservation,
+    bind_operating_system_observations,
+)
 from raes_contracts.runtime_state import (
     ApplyResult,
     OperationReceipt,
@@ -32,6 +45,7 @@ from raes_contracts.runtime_state import (
     RuntimeSnapshot,
     SnapshotEntry,
 )
+from raes_contracts.vocabulary import RealizationVerificationScope
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import plan
 from raes_runtime import control_plane_store_lease as lease_module
@@ -66,8 +80,15 @@ from raes_runtime.control_plane_store_snapshots import (
 
 
 class _CountingProvisioner:
-    def __init__(self, delegate: object, *, interrupt_before_effect: bool = False) -> None:
+    def __init__(
+        self,
+        delegate: object,
+        *,
+        realization_envelope: BackendRealizationEnvelopeModel,
+        interrupt_before_effect: bool = False,
+    ) -> None:
         self._delegate = delegate
+        self._realization_envelope = realization_envelope
         self._interrupt_before_effect = interrupt_before_effect
         self.apply_count = 0
 
@@ -82,7 +103,47 @@ class _CountingProvisioner:
         self.apply_count += 1
         if self._interrupt_before_effect:
             raise KeyboardInterrupt("injected crash before backend effect")
-        return self._delegate.apply(provisioning_plan, snapshot)
+        result = self._delegate.apply(provisioning_plan, snapshot)
+        if not result.success:
+            return result
+        authority = next(
+            (entry for entry in provisioning_plan.realization_authority if entry.requirement_kind == "os-family"),
+            None,
+        )
+        if authority is None:
+            return result
+        if provisioning_plan.operation_id is None:
+            raise AssertionError("fixture OS observation requires a bound operation")
+        observation = RealizationObservation(
+            address=authority.address,
+            field_path="guest.os-release",
+            concern=RealizationConcern.OPERATING_SYSTEM,
+            source=ObservationStrength.GUEST_OBSERVED,
+            value=ObservedOperatingSystemIdentity(
+                family="linux",
+                distribution="ubuntu",
+                version="24.04",
+            ),
+            operation_id=provisioning_plan.operation_id,
+            envelope_digest=self._realization_envelope.digest,
+            configuration_digest=self._realization_envelope.configuration.configuration_digest,
+            observer_version="issue-1092-fixture/v1",
+            sequence=0,
+            binding_verified=True,
+        )
+        disclosures = bind_operating_system_observations(
+            plan=provisioning_plan,
+            observations=(observation,),
+            envelope=self._realization_envelope,
+            previous=result.snapshot.realization_observations,
+        )
+        return replace(
+            result,
+            snapshot=result.snapshot.with_entries(
+                dict(result.snapshot.entries),
+                realization_observations=disclosures,
+            ),
+        )
 
 
 class _BlockingProvisioner:
@@ -183,13 +244,52 @@ class _PartiallyAtomicControlPlaneStore(_LegacyControlPlaneStore):
         raise AssertionError("a partial atomic capability must not create hybrid semantics")
 
 
+def _durability_fixture_envelope(base_target: object) -> BackendRealizationEnvelopeModel:
+    base_envelope = base_target.manifest.realization_envelope
+    if base_envelope is None:
+        raise AssertionError("fixture requires the governed stub realization envelope")
+    payload = base_envelope.model_dump(mode="json")
+    configuration = payload["configuration"]
+    configuration["operating_systems"] = [{"family": "linux", "distribution": "ubuntu", "versions": ["24.04"]}]
+    configuration["configuration_digest"] = realizer_configuration_digest(configuration)
+    operating_system = next(
+        claim for claim in payload["concerns"] if claim["concern"] == RealizationConcern.OPERATING_SYSTEM.value
+    )
+    operating_system.update(
+        disposition="realized",
+        observation_strength=ObservationStrength.GUEST_OBSERVED.value,
+        mechanism="issue-1092-fixture-guest-os-release",
+    )
+    payload["digest"] = realization_envelope_digest(payload)
+    return BackendRealizationEnvelopeModel.model_validate(payload)
+
+
 def _target_and_plan(*, interrupt_before_effect: bool = False) -> tuple[object, ProvisioningPlan, _CountingProvisioner]:
     base_target = create_stub_target()
+    realization_envelope = _durability_fixture_envelope(base_target)
+    declaration = base_target.manifest.realization_support[0]
+    manifest = replace(
+        base_target.manifest,
+        realization_envelope=realization_envelope,
+        realization_support=(
+            replace(
+                declaration,
+                observation_capabilities={
+                    **declaration.observation_capabilities,
+                    "operating-system": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                },
+            ),
+        ),
+    )
     provisioner = _CountingProvisioner(
-        base_target.provisioner,
+        StubProvisioner(realization_envelope),
+        realization_envelope=realization_envelope,
         interrupt_before_effect=interrupt_before_effect,
     )
-    target = replace(base_target, provisioner=provisioner)
+    target = replace(base_target, manifest=manifest, provisioner=provisioner)
     scenario = parse_sdl(
         """
 name: crash-consistency
@@ -202,6 +302,22 @@ nodes:
     )
     provisioning_plan = plan(compile_runtime_model(scenario), target.manifest).provisioning
     return target, provisioning_plan, provisioner
+
+
+def test_durability_fixture_declares_guest_observed_os_presence_corroboration() -> None:
+    target, _, _ = _target_and_plan()
+
+    capability = target.manifest.realization_support[0].observation_capabilities["operating-system"]
+    envelope_claim = next(
+        claim
+        for claim in target.manifest.realization_envelope.concerns
+        if claim.concern is RealizationConcern.OPERATING_SYSTEM
+    )
+    assert capability == RealizationObservationCapability(
+        verification_scope=RealizationVerificationScope.PRESENCE,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    )
+    assert envelope_claim.observation_strength is ObservationStrength.GUEST_OBSERVED
 
 
 def _running_record(
