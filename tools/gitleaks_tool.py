@@ -7,9 +7,8 @@ import tarfile
 import tempfile
 from hashlib import sha256
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
 
+from tools.http_download import download_bytes
 from tools.tool_versions import GITLEAKS_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -61,11 +60,7 @@ def ensure_gitleaks(repo_root: Path = REPO_ROOT, *, version: str = GITLEAKS_VERS
     asset_url = f"{base_url}/{asset_name}"
     checksums_url = f"{base_url}/{_checksums_asset_name(version)}"
 
-    try:
-        with urlopen(checksums_url) as response:  # noqa: S310 - pinned HTTPS release asset
-            checksums_text = response.read().decode("utf-8")
-    except (HTTPError, URLError) as exc:
-        raise RuntimeError(f"failed to download gitleaks checksums from {checksums_url}: {exc}") from exc
+    checksums_text = download_bytes(checksums_url, description="gitleaks checksums").decode("utf-8")
 
     expected_checksum = None
     for line in checksums_text.splitlines():
@@ -76,11 +71,7 @@ def ensure_gitleaks(repo_root: Path = REPO_ROOT, *, version: str = GITLEAKS_VERS
     if not expected_checksum:
         raise RuntimeError(f"missing checksum for gitleaks asset {asset_name}")
 
-    try:
-        with urlopen(asset_url) as response:  # noqa: S310 - pinned HTTPS release asset
-            archive_bytes = response.read()
-    except (HTTPError, URLError) as exc:
-        raise RuntimeError(f"failed to download gitleaks from {asset_url}: {exc}") from exc
+    archive_bytes = download_bytes(asset_url, description="gitleaks")
 
     actual_checksum = sha256(archive_bytes).hexdigest()
     if actual_checksum != expected_checksum:

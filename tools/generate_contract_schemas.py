@@ -102,6 +102,7 @@ _PREFIX_SCHEMA_DIRECTORIES = (
     ("validation-basis-disclosure-", "profiles"),
     ("experiment-", "experiment-core"),
     ("semantic-comparison-", "semantic-comparison"),
+    ("sdl-candidate-synthesis-", "candidate-synthesis"),
 )
 
 

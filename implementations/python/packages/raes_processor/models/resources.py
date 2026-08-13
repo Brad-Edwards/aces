@@ -82,8 +82,12 @@ class PropositionRuntime(ResolvedResource):
 
     subject_addresses: tuple[str, ...] = ()
     predicate_kind: str = ""
+    quantifier: str = ""
     evaluation_basis: str = ""
     evidence_requirement_refs: tuple[str, ...] = ()
+    evidence_channels: tuple[str, ...] = ()
+    unresolved_evidence_channel_refs: tuple[str, ...] = ()
+    required_time_domain: str = ""
 
 
 @dataclass(frozen=True)

@@ -22,3 +22,7 @@ Portable semantics and contracts need at least one concrete processor implementa
 ## Traceability
 
 - TESTS → TEST `implementations/python/tests/test_reference_processor.py` (Reference processor end-to-end + manifest-evidence tests)
+- IMPLEMENTS → GITHUB_ISSUE `1099` (Materialize SEM-218 explicitness once per reference-processor compile)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/realization_requirements.py` (Pass-local explicitness snapshot for realization lowering)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1099-run-313-compiler-explicitness-performance-preflight.md` (Measured scaling boundary and semantic guardrails)
+- TESTS → TEST `implementations/python/tests/test_issue_1099_compiler_explicitness_performance.py` (Runtime-model and plan equivalence plus deterministic one-build guard)

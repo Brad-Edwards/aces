@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass
 
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.diagnostics import Diagnostic, Severity
@@ -37,6 +36,7 @@ from raes_reference_backend.driver import (
     NetworkHandle,
     NetworkSpec,
 )
+from raes_reference_backend.drivers.oci_image_trust import ImageTrustPolicy
 from raes_reference_backend.drivers.oci_observation import ownership_fields_match, substrate_observations
 
 _DOMAIN = "runtime"
@@ -67,36 +67,6 @@ def _default_runner(argv: list[str], **kwargs) -> subprocess.CompletedProcess:
     # The real subprocess call is the impure IO leaf; tests inject a fake
     # runner, and coverage excludes this function (see pyproject exclude_also).
     return subprocess.run(argv, **kwargs)
-
-
-@dataclass(frozen=True)
-class ImageTrustPolicy:
-    """Operator policy deciding which container images may be realized.
-
-    A plan author controls ``spec.image_ref`` (via ``node.source``) and ``run``
-    pulls+executes it; fixed argv stops shell injection but is not an image
-    trust boundary. Only the operator ``default_image``, an explicit
-    ``allowed_images`` entry, or a digest-pinned ref (``...@sha256:...``) is
-    permitted, so plan submission cannot become arbitrary-image code execution.
-    """
-
-    default_image: str | None = None
-    allowed_images: tuple[str, ...] = ()
-    allow_digest_pinned: bool = True
-
-    def image_for(self, image_ref: str) -> str:
-        # A configured default overrides the synthesized ``raes-reference/*``
-        # placeholder so an image-less plan can still realize against a registry.
-        if self.default_image and image_ref.startswith("raes-reference/"):
-            return self.default_image
-        return image_ref
-
-    def permits(self, image: str) -> bool:
-        if self.default_image is not None and image == self.default_image:
-            return True
-        if image in self.allowed_images:
-            return True
-        return self.allow_digest_pinned and "@sha256:" in image
 
 
 _DEFAULT_IMAGE_POLICY = ImageTrustPolicy()
@@ -161,7 +131,11 @@ class OciDeploymentDriver:
             )
         except subprocess.TimeoutExpired:
             return False, "timeout", ""
-        except FileNotFoundError:
+        except OSError:
+            # A missing runtime binary (FileNotFoundError), a socket/binary the
+            # process may not access (PermissionError), and any other OS-level
+            # spawn failure all collapse to one portable "runtime unavailable"
+            # kind; the native errno/strerror never crosses the boundary.
             return False, "runtime-missing", ""
         kind = None if completed.returncode == 0 else "command-failed"
         stdout = completed.stdout if isinstance(completed.stdout, str) else ""

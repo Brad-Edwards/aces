@@ -8,9 +8,8 @@ import tempfile
 from enum import StrEnum
 from hashlib import sha256
 from pathlib import Path
-from urllib.error import URLError
-from urllib.request import urlopen
 
+from tools.http_download import download_bytes
 from tools.tool_versions import OSV_SCANNER_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -193,14 +192,12 @@ def ensure_osv_scanner(repo_root: Path = REPO_ROOT, *, version: str = OSV_SCANNE
     if not asset_url.startswith("https://github.com/google/osv-scanner/releases/download/"):
         raise RuntimeError(f"unsafe osv-scanner release URL: {asset_url}")
 
-    try:
-        with urlopen(
-            asset_url,
-            timeout=_DOWNLOAD_TIMEOUT_SECONDS,
-        ) as response:
-            binary_bytes = response.read(_MAX_BINARY_BYTES + 1)
-    except (URLError, TimeoutError) as exc:
-        raise RuntimeError(f"failed to download osv-scanner from {asset_url}: {exc}") from exc
+    binary_bytes = download_bytes(
+        asset_url,
+        description="osv-scanner",
+        timeout_seconds=_DOWNLOAD_TIMEOUT_SECONDS,
+        max_bytes=_MAX_BINARY_BYTES,
+    )
     if len(binary_bytes) > _MAX_BINARY_BYTES:
         raise RuntimeError(f"osv-scanner asset {asset_name} exceeds the download limit")
 

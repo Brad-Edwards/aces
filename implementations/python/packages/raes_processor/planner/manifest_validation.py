@@ -1,8 +1,13 @@
 """Backend-manifest capability validation for compiled runtime models."""
 
-from raes_backend_protocols.capabilities import BackendManifest, OrchestratorCapabilities, ProvisionerCapabilities
+from raes_backend_protocols.capabilities import (
+    BackendManifest,
+    EvaluatorCapabilities,
+    OrchestratorCapabilities,
+    ProvisionerCapabilities,
+)
 
-from ..models import Diagnostic, RuntimeModel
+from ..models import Diagnostic, PropositionRuntime, RuntimeModel
 from .capability_domains import (
     _account_features,
     _resource_count_upper_bound,
@@ -310,6 +315,82 @@ def _validate_orchestration_support(model: RuntimeModel, manifest: BackendManife
     return diagnostics
 
 
+def _evaluator_section_support(
+    evaluation_sections: dict[str, bool], supported_sections: frozenset[str]
+) -> list[Diagnostic]:
+    return [
+        Diagnostic(
+            code="evaluator.unsupported-section",
+            domain="evaluation",
+            address=f"evaluation.{section}",
+            message=f"Evaluator does not support '{section}'.",
+        )
+        for section, used in evaluation_sections.items()
+        if used and section not in supported_sections
+    ]
+
+
+def _proposition_evaluator_support(
+    proposition: PropositionRuntime, evaluator: EvaluatorCapabilities
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    if proposition.predicate_kind not in evaluator.supported_predicate_families:
+        diagnostics.append(
+            Diagnostic(
+                code="evaluator.unsupported-predicate-family",
+                domain="evaluation",
+                address=proposition.address,
+                message=f"Evaluator does not support proposition predicate family '{proposition.predicate_kind}'.",
+            )
+        )
+    if proposition.quantifier not in evaluator.supported_quantifiers:
+        diagnostics.append(
+            Diagnostic(
+                code="evaluator.unsupported-quantifier",
+                domain="evaluation",
+                address=proposition.address,
+                message=f"Evaluator does not support proposition quantifier '{proposition.quantifier}'.",
+            )
+        )
+    if proposition.unresolved_evidence_channel_refs:
+        diagnostics.append(
+            Diagnostic(
+                code="evaluator.evidence-channel-unresolved",
+                domain="evaluation",
+                address=proposition.address,
+                message="Evaluator admission requires every cited evidence requirement to declare a channel kind.",
+            )
+        )
+    for channel in proposition.evidence_channels:
+        if channel in evaluator.supported_evidence_channels:
+            continue
+        diagnostics.append(
+            Diagnostic(
+                code="evaluator.unsupported-evidence-channel",
+                domain="evaluation",
+                address=proposition.address,
+                message=f"Evaluator does not support evidence channel '{channel}'.",
+            )
+        )
+    if proposition.required_time_domain and proposition.required_time_domain not in evaluator.supported_time_domains:
+        diagnostics.append(
+            Diagnostic(
+                code="evaluator.unsupported-time-domain",
+                domain="evaluation",
+                address=proposition.address,
+                message=f"Evaluator does not support proposition time domain '{proposition.required_time_domain}'.",
+            )
+        )
+    return diagnostics
+
+
+def _evaluator_proposition_support(model: RuntimeModel, evaluator: EvaluatorCapabilities) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for proposition in model.propositions.values():
+        diagnostics.extend(_proposition_evaluator_support(proposition, evaluator))
+    return diagnostics
+
+
 def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
     evaluation_sections = {
         "conditions": bool(model.condition_bindings),
@@ -330,18 +411,10 @@ def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest)
             )
         ]
 
-    diagnostics: list[Diagnostic] = []
+    evaluator = manifest.evaluator
+    assert evaluator is not None
     supported_sections = manifest.evaluator_supported_sections
-    for section, used in evaluation_sections.items():
-        if used and section not in supported_sections:
-            diagnostics.append(
-                Diagnostic(
-                    code="evaluator.unsupported-section",
-                    domain="evaluation",
-                    address=f"evaluation.{section}",
-                    message=f"Evaluator does not support '{section}'.",
-                )
-            )
+    diagnostics = _evaluator_section_support(evaluation_sections, supported_sections)
     if model.objectives and not manifest.supports_objectives:
         diagnostics.append(
             Diagnostic(
@@ -351,6 +424,8 @@ def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest)
                 message="Evaluator does not support objectives.",
             )
         )
+    if "propositions" in supported_sections:
+        diagnostics.extend(_evaluator_proposition_support(model, evaluator))
     return diagnostics
 
 

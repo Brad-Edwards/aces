@@ -182,6 +182,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "E402", "SIM105", "F841"]
+"tools/http_download.py" = ["S310"]  # validates absolute HTTPS before opening pinned release assets
 "packages/raes_contracts/contracts/__init__.py" = ["F403", "F405"]  # intentional package re-exports
 "packages/raes_cli/**" = ["B008"]      # typer requires function calls in defaults
 "packages/raes_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
