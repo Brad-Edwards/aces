@@ -1,9 +1,16 @@
 """Semantic validation for published realization-observation disclosures."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from raes_contracts.vocabulary import ObservationStrength
 
+if TYPE_CHECKING:
+    from raes_contracts.realization_observation import RealizationObservationDisclosure
 
-def validate_realization_observation_disclosure(disclosure) -> None:
+
+def validate_realization_observation_disclosure(disclosure: RealizationObservationDisclosure) -> None:
     if disclosure.observation_strength is ObservationStrength.NONE:
         raise ValueError("realization observation disclosure must provide non-none evidence")
     if disclosure.requirement_kind == "compute-substrate":
@@ -16,7 +23,7 @@ def validate_realization_observation_disclosure(disclosure) -> None:
         )
 
 
-def _binding_fields(disclosure) -> tuple[object, ...]:
+def _binding_fields(disclosure: RealizationObservationDisclosure) -> tuple[object, ...]:
     return (
         disclosure.operation_id,
         disclosure.envelope_digest,
@@ -26,7 +33,7 @@ def _binding_fields(disclosure) -> tuple[object, ...]:
     )
 
 
-def _require_compute_substrate_evidence(disclosure) -> None:
+def _require_compute_substrate_evidence(disclosure: RealizationObservationDisclosure) -> None:
     from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
 
     if (
@@ -39,7 +46,7 @@ def _require_compute_substrate_evidence(disclosure) -> None:
     validate_controlled_vocabulary_value("compute-substrates", disclosure.observed_value)
 
 
-def _require_operating_system_evidence(disclosure) -> None:
+def _require_operating_system_evidence(disclosure: RealizationObservationDisclosure) -> None:
     if disclosure.observed_value is not None or disclosure.operating_system is None:
         raise ValueError("operating-system disclosure requires one typed observed identity")
     if any(value is None for value in _binding_fields(disclosure)) or not disclosure.binding_verified:
@@ -48,7 +55,7 @@ def _require_operating_system_evidence(disclosure) -> None:
         raise ValueError("operating-system disclosure requires guest-observed evidence")
 
 
-def _has_value_bearing_evidence(disclosure) -> bool:
+def _has_value_bearing_evidence(disclosure: RealizationObservationDisclosure) -> bool:
     return (
         disclosure.observed_value is not None
         or disclosure.operating_system is not None

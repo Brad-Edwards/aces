@@ -96,7 +96,9 @@ def _authority_bounds(
     return _capability_authority_bounds(model, authority)
 
 
-def _process_limit_authority_bounds(requirement):
+def _process_limit_authority_bounds(
+    requirement: CompiledRealizationRequirement,
+) -> tuple[RealizationAuthorityBound, ...]:
     bounds: list[RealizationAuthorityBound] = []
     for constraint in requirement.value_constraints:
         domain = _publication_safe_enum_domain(constraint.allowed_values)
@@ -112,10 +114,16 @@ def _process_limit_authority_bounds(requirement):
     return tuple(bounds)
 
 
-def _operating_system_authority_bounds(model, authority, manifest):
+def _operating_system_authority_bounds(
+    model: RuntimeModel,
+    authority: CompiledRealizationAuthority,
+    manifest: BackendManifest,
+) -> tuple[RealizationAuthorityBound, ...]:
     node = model.node_deployments.get(authority.address)
     feasible, diagnostic = (
-        feasible_operating_system_domains(model, node, manifest.provisioner) if node is not None else (None, None)
+        feasible_operating_system_domains(model, node, manifest.provisioner)
+        if node is not None and manifest.provisioner is not None
+        else (None, None)
     )
     domain = (
         _publication_safe_enum_domain(feasible.values_for(authority.requirement_kind))
@@ -125,7 +133,10 @@ def _operating_system_authority_bounds(model, authority, manifest):
     return (RealizationAuthorityBound(value_pointer="", domain=domain),) if domain is not None else ()
 
 
-def _capability_authority_bounds(model, authority):
+def _capability_authority_bounds(
+    model: RuntimeModel,
+    authority: CompiledRealizationAuthority,
+) -> tuple[RealizationAuthorityBound, ...]:
     concern = _PUBLICATION_SAFE_CAPABILITY_CONCERN_BY_KIND.get(authority.requirement_kind)
     constraint = next(
         (

@@ -1,5 +1,7 @@
 """Coupled operating-system capability-domain validation."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -12,6 +14,10 @@ from ..models import CompiledCapabilityConstraint, Diagnostic, NodeRuntime, Runt
 
 _OS_DISTRIBUTION_DOMAIN_INVALID = "provisioner.os-distribution-variable-domain-invalid"
 _OS_VERSION_DOMAIN_INVALID = "provisioner.os-version-variable-domain-invalid"
+
+_ScalarDomain = tuple[str, ...] | None
+_OperatingSystemDomains = tuple[_ScalarDomain, _ScalarDomain, _ScalarDomain]
+_OperatingSystemChoice = tuple[str, str, str]
 
 
 @dataclass(frozen=True)
@@ -71,20 +77,24 @@ def _family_domain(
     return (None, diagnostic) if diagnostic is not None else (domain, None)
 
 
-def _validated_family_constraint(constraint, address):
+def _validated_family_constraint(
+    constraint: CompiledCapabilityConstraint,
+    address: str,
+) -> tuple[tuple[str, ...], Diagnostic | None]:
     variable_name = ".".join(constraint.parameter)
     validated: list[str] = []
     diagnostic = None
     for raw_value in constraint.allowed_values:
-        parsed, message = _parse_family_domain_value(raw_value, variable_name)
+        token, message = _parse_family_domain_value(raw_value, variable_name)
         if message is not None:
             diagnostic = _error_diagnostic("provisioner.os-family-variable-domain-invalid", address, message)
             break
-        validated.append(parsed.value)
+        if token is not None:
+            validated.append(token)
     return tuple(validated), diagnostic
 
 
-def _parse_family_domain_value(raw_value, variable_name):
+def _parse_family_domain_value(raw_value: object, variable_name: str) -> tuple[str | None, str | None]:
     parsed = None
     message = None
     try:
@@ -95,7 +105,8 @@ def _parse_family_domain_value(raw_value, variable_name):
         message = f"Variable '{variable_name}' has a non-concrete nodes.os domain."
     if message is None and not isinstance(parsed, OSFamily):
         message = f"Variable '{variable_name}' contains an invalid nodes.os value."
-    return parsed, message
+    token = parsed.value if isinstance(parsed, OSFamily) else None
+    return token, message
 
 
 def _scalar_domain_or_open(
@@ -154,11 +165,17 @@ def _validated_scalar_domain(
         if message is not None:
             diagnostic = _error_diagnostic(invalid_code, node.address, message)
             break
-        validated.append(token)
+        if token is not None:
+            validated.append(token)
     return (None, diagnostic) if diagnostic is not None else (tuple(validated), None)
 
 
-def _normalize_scalar_domain_value(raw_value, label, field_name, normalizer):
+def _normalize_scalar_domain_value(
+    raw_value: object,
+    label: str,
+    field_name: str,
+    normalizer: Callable[[object], object],
+) -> tuple[str | None, str | None]:
     parsed = None
     message = None
     try:
@@ -172,7 +189,7 @@ def _normalize_scalar_domain_value(raw_value, label, field_name, normalizer):
     token = getattr(parsed, "value", parsed)
     if message is None and (not isinstance(token, str) or not token):
         message = f"Variable '{label}' contains an invalid nodes.{field_name} value."
-    return token, message
+    return token if isinstance(token, str) else None, message
 
 
 def feasible_operating_system_domains(
@@ -212,7 +229,10 @@ def feasible_operating_system_domains(
     return feasible_domains, diagnostic
 
 
-def _authored_operating_system_domains(model, node):
+def _authored_operating_system_domains(
+    model: RuntimeModel,
+    node: NodeRuntime,
+) -> tuple[_OperatingSystemDomains | None, Diagnostic | None]:
     family_domain, diagnostic = _family_domain(model, node)
     if diagnostic is not None:
         return None, diagnostic
@@ -240,7 +260,13 @@ def _authored_operating_system_domains(model, node):
     return (None, diagnostic) if diagnostic is not None else (domains, None)
 
 
-def _intersect_operating_system_domains(provisioner, *, family_domain, distribution_domain, version_domain):
+def _intersect_operating_system_domains(
+    provisioner: ProvisionerCapabilities,
+    *,
+    family_domain: _ScalarDomain,
+    distribution_domain: _ScalarDomain,
+    version_domain: _ScalarDomain,
+) -> set[_OperatingSystemChoice]:
     return {
         (row.family, row.distribution, version)
         for row in provisioner.operating_systems
@@ -251,7 +277,7 @@ def _intersect_operating_system_domains(provisioner, *, family_domain, distribut
     }
 
 
-def _feasible_domains(feasible):
+def _feasible_domains(feasible: set[_OperatingSystemChoice]) -> FeasibleOperatingSystemDomains:
     return FeasibleOperatingSystemDomains(
         families=tuple(sorted({family for family, _, _ in feasible})),
         distributions=tuple(sorted({distribution for _, distribution, _ in feasible})),

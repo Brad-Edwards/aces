@@ -5,13 +5,19 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.bounded_domains import scalar_in_domain
 from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
 from raes_contracts.operating_systems import OS_VERSION_RE, validate_operating_system_pair
 from raes_contracts.realization_envelope import ConcernDisposition, ObservationStrength, RealizationConcern
+from raes_contracts.realization_observation_binding import operating_system_observation_binding_valid
 from raes_contracts.vocabulary import RealizationVerificationScope
+
+if TYPE_CHECKING:
+    from raes_contracts.planning import PlanOperation, ProvisioningPlan, ResolvedRealizationAuthority
+    from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
 
 @dataclass(frozen=True)
@@ -243,7 +249,15 @@ def _operating_system_observations_by_address(
     return by_address
 
 
-def _bound_operating_system_disclosure(*, address, authorities, operation, native, plan, envelope):
+def _bound_operating_system_disclosure(
+    *,
+    address: str,
+    authorities: Sequence[ResolvedRealizationAuthority],
+    operation: PlanOperation | None,
+    native: RealizationObservation | None,
+    plan: ProvisioningPlan,
+    envelope: BackendRealizationEnvelopeModel,
+) -> RealizationObservationDisclosure | None:
     from raes_contracts.planning import ChangeAction, PlanOperation
 
     eligible = (
@@ -284,7 +298,7 @@ def _native_operating_system_observation_valid(
     return (
         _operating_system_identity_supported(observation.value, envelope.configuration.operating_systems)
         and _operating_system_concern_is_guest_observed(concern)
-        and _operating_system_observation_binding_valid(observation, plan, envelope)
+        and operating_system_observation_binding_valid(observation, plan, envelope)
     )
 
 
@@ -300,19 +314,6 @@ def _operating_system_concern_is_guest_observed(concern: object) -> bool:
         concern is not None
         and concern.disposition is ConcernDisposition.REALIZED
         and concern.observation_strength is ObservationStrength.GUEST_OBSERVED
-    )
-
-
-def _operating_system_observation_binding_valid(observation, plan, envelope) -> bool:
-    return bool(
-        observation.source is ObservationStrength.GUEST_OBSERVED
-        and observation.operation_id == plan.operation_id
-        and observation.envelope_digest == envelope.digest
-        and observation.configuration_digest == envelope.configuration.configuration_digest
-        and observation.observer_version
-        and observation.sequence is not None
-        and observation.sequence >= 0
-        and observation.binding_verified
     )
 
 

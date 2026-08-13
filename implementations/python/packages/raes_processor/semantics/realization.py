@@ -269,7 +269,10 @@ def _constraint_support_diagnostic(
     return diagnostic
 
 
-def _constrained_os_observation_missing(requirement, supporting) -> bool:
+def _constrained_os_observation_missing(
+    requirement: CompiledRealizationRequirement,
+    supporting: list[RealizationSupportDeclaration],
+) -> bool:
     return requirement.requirement_kind in {"os-distribution", "os-version"} and not has_required_observation_support(
         requirement,
         supporting,
