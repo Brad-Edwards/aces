@@ -60,7 +60,7 @@ docs = [
 ]
 
 [project.scripts]
-raes = "raes_cli.main:app"
+raes = "raes_cli.entrypoint:main"
 raes-mcp = "raes_mcp.server:main"
 
 # Version is sourced from the dedicated RAES package file below. Release Please
