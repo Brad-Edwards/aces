@@ -655,7 +655,7 @@ def test_published_maximum_witness_shape_has_a_finite_derived_budget() -> None:
 
 
 def test_operation_deadline_covers_model_construction(monkeypatch: pytest.MonkeyPatch) -> None:
-    clock = iter((0, SOLVER_TIMEOUT_MS * 1_000_000))
+    clock = iter((0, 0, SOLVER_TIMEOUT_MS * 1_000_000))
     monkeypatch.setattr(solver_adapter.time, "monotonic_ns", clock.__next__)
     model = _normalized_model([1], [[]])
 
@@ -663,6 +663,25 @@ def test_operation_deadline_covers_model_construction(monkeypatch: pytest.Monkey
         solve_model(model)
 
     assert raised.value.phase == "model-construction"
+    assert raised.value.check_count == 0
+    assert raised.value.reason == "operation-deadline-exhausted"
+
+
+def test_operation_deadline_starts_before_model_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    clock = {"now": 0}
+    original_validation = solver_adapter._require_unique_clause_ids
+
+    def validation_finishing_at_deadline(model: NormalizedConstraintModel) -> None:
+        original_validation(model)
+        clock["now"] = SOLVER_TIMEOUT_MS * 1_000_000
+
+    monkeypatch.setattr(solver_adapter.time, "monotonic_ns", lambda: clock["now"])
+    monkeypatch.setattr(solver_adapter, "_require_unique_clause_ids", validation_finishing_at_deadline)
+
+    with pytest.raises(SolverOperationalError, match="operation deadline exhausted") as raised:
+        solve_model(_normalized_model([1], [[]]))
+
+    assert raised.value.phase == "model-validation"
     assert raised.value.check_count == 0
     assert raised.value.reason == "operation-deadline-exhausted"
 
@@ -685,4 +704,28 @@ def test_result_returned_after_operation_deadline_is_rejected(monkeypatch: pytes
 
     assert raised.value.phase == "initial-decision"
     assert raised.value.check_count == 1
+    assert raised.value.reason == "operation-deadline-exhausted"
+
+
+def test_result_selection_finishing_at_operation_deadline_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    clock = {"now": 0}
+    original_selection = solver_adapter._select_witness
+
+    def selection_finishing_at_deadline(
+        model: NormalizedConstraintModel,
+        all_clause_ids: tuple[str, ...],
+        session: solver_adapter._SolverSession,
+    ) -> dict[str, str | int | bool]:
+        assignment = original_selection(model, all_clause_ids, session)
+        clock["now"] = SOLVER_TIMEOUT_MS * 1_000_000
+        return assignment
+
+    monkeypatch.setattr(solver_adapter.time, "monotonic_ns", lambda: clock["now"])
+    monkeypatch.setattr(solver_adapter, "_select_witness", selection_finishing_at_deadline)
+
+    with pytest.raises(SolverOperationalError, match="operation deadline exhausted") as raised:
+        solve_model(_normalized_model([1], [[]]))
+
+    assert raised.value.phase == "result-selection"
+    assert raised.value.check_count == 2
     assert raised.value.reason == "operation-deadline-exhausted"

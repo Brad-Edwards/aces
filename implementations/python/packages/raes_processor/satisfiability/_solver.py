@@ -96,21 +96,26 @@ class SolverResult:
 def solve_model(model: NormalizedConstraintModel) -> SolverResult:
     """Solve one normalized model and select deterministic portable evidence."""
 
+    started_ns = _monotonic_ns()
+    budget = _solver_check_budget(model, started_ns=started_ns)
     _require_unique_clause_ids(model)
     all_clause_ids = tuple(clause.clause_id for clause in model.clauses)
-    budget = _solver_check_budget(model)
+    budget.checkpoint("model-validation", check_count=budget.checks_used)
     session = _SolverSession(model, budget)
     # ``_check`` fails loudly on ``z3.unknown``, so a non-satisfiable decision
     # here is decisively unsatisfiable rather than an incomplete timeout.
     if session.check(all_clause_ids, {}, phase="initial-decision") == z3.sat:
-        return SolverResult(
+        result = SolverResult(
             outcome=SatisfiabilityOutcome.SATISFIABLE,
             assignment=_select_witness(model, all_clause_ids, session),
         )
-    return SolverResult(
-        outcome=SatisfiabilityOutcome.UNSATISFIABLE,
-        core=_reduce_unsat_core(all_clause_ids, session),
-    )
+    else:
+        result = SolverResult(
+            outcome=SatisfiabilityOutcome.UNSATISFIABLE,
+            core=_reduce_unsat_core(all_clause_ids, session),
+        )
+    budget.checkpoint("result-selection", check_count=budget.checks_used)
+    return result
 
 
 def _require_unique_clause_ids(model: NormalizedConstraintModel) -> None:
@@ -125,12 +130,19 @@ def _require_unique_clause_ids(model: NormalizedConstraintModel) -> None:
         )
 
 
-def _solver_check_budget(model: NormalizedConstraintModel) -> _CheckBudget:
+def _solver_check_budget(
+    model: NormalizedConstraintModel,
+    *,
+    started_ns: int | None = None,
+) -> _CheckBudget:
     """Bound the two possible finite algorithms without a second profile knob."""
 
     witness_checks = sum(len(symbol.domain) for symbol in model.symbols)
     core_checks = len(model.clauses)
-    return _CheckBudget(max_checks=1 + max(witness_checks, core_checks))
+    return _CheckBudget(
+        max_checks=1 + max(witness_checks, core_checks),
+        started_ns=_monotonic_ns() if started_ns is None else started_ns,
+    )
 
 
 def _select_witness(
