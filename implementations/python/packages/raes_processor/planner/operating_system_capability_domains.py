@@ -55,36 +55,47 @@ def _family_domain(
     node: NodeRuntime,
 ) -> tuple[tuple[str, ...] | None, Diagnostic | None]:
     constraint = _capability_constraint(model, address=node.address, concern="nodes.os")
+    diagnostic = None
     if constraint is None:
         unresolved = extract_variable_name(node.os_family)
         if unresolved is not None:
-            return None, _error_diagnostic(
+            diagnostic = _error_diagnostic(
                 "provisioner.os-family-variable-ref-unbound",
                 node.address,
                 f"Provisioner capability validation cannot resolve undeclared variable '{unresolved}' "
                 "referenced by nodes.os.",
             )
-        return ((node.os_family,) if node.os_family else None), None
+        domain = (node.os_family,) if node.os_family else None
+    else:
+        domain, diagnostic = _validated_family_constraint(constraint, node.address)
+    return (None, diagnostic) if diagnostic is not None else (domain, None)
 
+
+def _validated_family_constraint(constraint, address):
     variable_name = ".".join(constraint.parameter)
     validated: list[str] = []
+    diagnostic = None
     for raw_value in constraint.allowed_values:
-        try:
-            parsed = parse_enum_or_var(raw_value, OSFamily, field_name="os")
-        except ValueError as exc:
-            message = (
-                f"Variable '{variable_name}' allowed_values contain value {raw_value!r} invalid for nodes.os: {exc}."
-            )
-        else:
-            if extract_variable_name(parsed) is not None:
-                message = f"Variable '{variable_name}' has a non-concrete nodes.os domain."
-            elif isinstance(parsed, OSFamily):
-                validated.append(parsed.value)
-                continue
-            else:
-                message = f"Variable '{variable_name}' contains an invalid nodes.os value."
-        return None, _error_diagnostic("provisioner.os-family-variable-domain-invalid", node.address, message)
-    return tuple(validated), None
+        parsed, message = _parse_family_domain_value(raw_value, variable_name)
+        if message is not None:
+            diagnostic = _error_diagnostic("provisioner.os-family-variable-domain-invalid", address, message)
+            break
+        validated.append(parsed.value)
+    return tuple(validated), diagnostic
+
+
+def _parse_family_domain_value(raw_value, variable_name):
+    parsed = None
+    message = None
+    try:
+        parsed = parse_enum_or_var(raw_value, OSFamily, field_name="os")
+    except ValueError as exc:
+        message = f"Variable '{variable_name}' allowed_values contain value {raw_value!r} invalid for nodes.os: {exc}."
+    if message is None and extract_variable_name(parsed) is not None:
+        message = f"Variable '{variable_name}' has a non-concrete nodes.os domain."
+    if message is None and not isinstance(parsed, OSFamily):
+        message = f"Variable '{variable_name}' contains an invalid nodes.os value."
+    return parsed, message
 
 
 def _scalar_domain_or_open(
@@ -136,31 +147,32 @@ def _validated_scalar_domain(
         raw_values = constraint.allowed_values
 
     validated: list[str] = []
+    diagnostic = None
+    label = variable_name or field_name
     for raw_value in raw_values:
-        try:
-            parsed = normalizer(raw_value)
-        except (TypeError, ValueError) as exc:
-            return None, _error_diagnostic(
-                invalid_code,
-                node.address,
-                f"Variable '{variable_name or field_name}' allowed_values contain value {raw_value!r} "
-                f"invalid for nodes.{field_name}: {exc}.",
-            )
-        if extract_variable_name(parsed) is not None:
-            return None, _error_diagnostic(
-                invalid_code,
-                node.address,
-                f"Variable '{variable_name or field_name}' has a non-concrete nodes.{field_name} domain.",
-            )
-        token = getattr(parsed, "value", parsed)
-        if not isinstance(token, str) or not token:
-            return None, _error_diagnostic(
-                invalid_code,
-                node.address,
-                f"Variable '{variable_name or field_name}' contains an invalid nodes.{field_name} value.",
-            )
+        token, message = _normalize_scalar_domain_value(raw_value, label, field_name, normalizer)
+        if message is not None:
+            diagnostic = _error_diagnostic(invalid_code, node.address, message)
+            break
         validated.append(token)
-    return tuple(validated), None
+    return (None, diagnostic) if diagnostic is not None else (tuple(validated), None)
+
+
+def _normalize_scalar_domain_value(raw_value, label, field_name, normalizer):
+    parsed = None
+    message = None
+    try:
+        parsed = normalizer(raw_value)
+    except (TypeError, ValueError) as exc:
+        message = (
+            f"Variable '{label}' allowed_values contain value {raw_value!r} invalid for nodes.{field_name}: {exc}."
+        )
+    if message is None and extract_variable_name(parsed) is not None:
+        message = f"Variable '{label}' has a non-concrete nodes.{field_name} domain."
+    token = getattr(parsed, "value", parsed)
+    if message is None and (not isinstance(token, str) or not token):
+        message = f"Variable '{label}' contains an invalid nodes.{field_name} value."
+    return token, message
 
 
 def feasible_operating_system_domains(
@@ -176,12 +188,35 @@ def feasible_operating_system_domains(
         if requirement.address == node.address
         and requirement.requirement_kind in {"os-family", "os-distribution", "os-version"}
     }
-    if not os_requirements:
-        return None, None
-    family_domain, family_error = _family_domain(model, node)
-    if family_error is not None:
-        return None, family_error
-    distribution_domain, distribution_error = _scalar_domain_or_open(
+    feasible_domains = None
+    diagnostic = None
+    if os_requirements:
+        domains, diagnostic = _authored_operating_system_domains(model, node)
+        if diagnostic is None:
+            family_domain, distribution_domain, version_domain = domains
+            feasible = _intersect_operating_system_domains(
+                provisioner,
+                family_domain=family_domain,
+                distribution_domain=distribution_domain,
+                version_domain=version_domain,
+            )
+            if feasible:
+                feasible_domains = _feasible_domains(feasible)
+            else:
+                diagnostic = _error_diagnostic(
+                    "provisioner.unsupported-operating-system",
+                    node.address,
+                    "Provisioner has no coupled operating-system compatibility row intersecting the authored "
+                    "exact, constrained, and open OS domains.",
+                )
+    return feasible_domains, diagnostic
+
+
+def _authored_operating_system_domains(model, node):
+    family_domain, diagnostic = _family_domain(model, node)
+    if diagnostic is not None:
+        return None, diagnostic
+    distribution_domain, diagnostic = _scalar_domain_or_open(
         model,
         node,
         concern="nodes.os_distribution",
@@ -190,9 +225,9 @@ def feasible_operating_system_domains(
         invalid_code=_OS_DISTRIBUTION_DOMAIN_INVALID,
         normalizer=normalize_os_distribution,
     )
-    if distribution_error is not None:
-        return None, distribution_error
-    version_domain, version_error = _scalar_domain_or_open(
+    if diagnostic is not None:
+        return None, diagnostic
+    version_domain, diagnostic = _scalar_domain_or_open(
         model,
         node,
         concern="nodes.os_version",
@@ -201,10 +236,12 @@ def feasible_operating_system_domains(
         invalid_code=_OS_VERSION_DOMAIN_INVALID,
         normalizer=normalize_os_version,
     )
-    if version_error is not None:
-        return None, version_error
+    domains = (family_domain, distribution_domain, version_domain)
+    return (None, diagnostic) if diagnostic is not None else (domains, None)
 
-    feasible = {
+
+def _intersect_operating_system_domains(provisioner, *, family_domain, distribution_domain, version_domain):
+    return {
         (row.family, row.distribution, version)
         for row in provisioner.operating_systems
         if family_domain is None or row.family in family_domain
@@ -212,20 +249,13 @@ def feasible_operating_system_domains(
         for version in row.versions
         if version_domain is None or version in version_domain
     }
-    if not feasible:
-        return None, _error_diagnostic(
-            "provisioner.unsupported-operating-system",
-            node.address,
-            "Provisioner has no coupled operating-system compatibility row intersecting the authored "
-            "exact, constrained, and open OS domains.",
-        )
-    return (
-        FeasibleOperatingSystemDomains(
-            families=tuple(sorted({family for family, _, _ in feasible})),
-            distributions=tuple(sorted({distribution for _, distribution, _ in feasible})),
-            versions=tuple(sorted({version for _, _, version in feasible})),
-        ),
-        None,
+
+
+def _feasible_domains(feasible):
+    return FeasibleOperatingSystemDomains(
+        families=tuple(sorted({family for family, _, _ in feasible})),
+        distributions=tuple(sorted({distribution for _, distribution, _ in feasible})),
+        versions=tuple(sorted({version for _, _, version in feasible})),
     )
 
 

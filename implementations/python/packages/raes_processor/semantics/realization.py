@@ -241,8 +241,9 @@ def _constraint_support_diagnostic(
         for declaration in declarations
         if requirement.requirement_kind in declaration.supported_constraint_kinds
     ]
+    diagnostic = None
     if not supporting:
-        return Diagnostic(
+        diagnostic = Diagnostic(
             code="realization.unsupported-constraint-requirement",
             domain=requirement.domain,
             address=requirement.address,
@@ -253,24 +254,26 @@ def _constraint_support_diagnostic(
             ),
             severity=Severity.ERROR,
         )
-    if requirement.requirement_kind not in {"os-distribution", "os-version"}:
-        return None
-    if has_required_observation_support(
+    elif _constrained_os_observation_missing(requirement, supporting):
+        diagnostic = Diagnostic(
+            code="realization.under-observed-constraint-requirement",
+            domain=requirement.domain,
+            address=requirement.address,
+            message=(
+                "Backend declares no guest-observed operating-system corroboration "
+                f"for constrained '{requirement.requirement_kind}' at '{requirement.field_path}' "
+                f"in domain '{requirement.domain}'."
+            ),
+            severity=Severity.ERROR,
+        )
+    return diagnostic
+
+
+def _constrained_os_observation_missing(requirement, supporting) -> bool:
+    return requirement.requirement_kind in {"os-distribution", "os-version"} and not has_required_observation_support(
         requirement,
         supporting,
         observation_kind="operating-system",
-    ):
-        return None
-    return Diagnostic(
-        code="realization.under-observed-constraint-requirement",
-        domain=requirement.domain,
-        address=requirement.address,
-        message=(
-            "Backend declares no guest-observed operating-system corroboration "
-            f"for constrained '{requirement.requirement_kind}' at '{requirement.field_path}' "
-            f"in domain '{requirement.domain}'."
-        ),
-        severity=Severity.ERROR,
     )
 
 

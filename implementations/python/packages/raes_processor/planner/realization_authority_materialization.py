@@ -85,34 +85,48 @@ def _authority_bounds(
     requirement: CompiledRealizationRequirement | None,
     manifest: BackendManifest,
 ) -> tuple[RealizationAuthorityBound, ...]:
-    bounds: list[RealizationAuthorityBound] = []
     if (
         requirement is not None
         and requirement.requirement_kind == "process-resource-limits"
         and requirement.value_constraints
     ):
-        for constraint in requirement.value_constraints:
-            domain = _publication_safe_enum_domain(constraint.allowed_values)
-            if domain is None:
-                return ()
-            bounds.append(
-                RealizationAuthorityBound(
-                    identity_digest=constraint.identity_digest,
-                    value_pointer=f"/{constraint.leaf}",
-                    domain=domain,
-                )
-            )
-        return tuple(bounds)
-    concern = _PUBLICATION_SAFE_CAPABILITY_CONCERN_BY_KIND.get(authority.requirement_kind)
+        return _process_limit_authority_bounds(requirement)
     if authority.requirement_kind in {"os-family", "os-distribution", "os-version"}:
-        node = model.node_deployments.get(authority.address)
-        if node is None:
+        return _operating_system_authority_bounds(model, authority, manifest)
+    return _capability_authority_bounds(model, authority)
+
+
+def _process_limit_authority_bounds(requirement):
+    bounds: list[RealizationAuthorityBound] = []
+    for constraint in requirement.value_constraints:
+        domain = _publication_safe_enum_domain(constraint.allowed_values)
+        if domain is None:
             return ()
-        feasible, diagnostic = feasible_operating_system_domains(model, node, manifest.provisioner)
-        if diagnostic is not None or feasible is None:
-            return ()
-        domain = _publication_safe_enum_domain(feasible.values_for(authority.requirement_kind))
-        return (RealizationAuthorityBound(value_pointer="", domain=domain),) if domain is not None else ()
+        bounds.append(
+            RealizationAuthorityBound(
+                identity_digest=constraint.identity_digest,
+                value_pointer=f"/{constraint.leaf}",
+                domain=domain,
+            )
+        )
+    return tuple(bounds)
+
+
+def _operating_system_authority_bounds(model, authority, manifest):
+    node = model.node_deployments.get(authority.address)
+    feasible, diagnostic = (
+        feasible_operating_system_domains(model, node, manifest.provisioner) if node is not None else (None, None)
+    )
+    domain = (
+        _publication_safe_enum_domain(feasible.values_for(authority.requirement_kind))
+        if diagnostic is None and feasible is not None
+        else None
+    )
+    return (RealizationAuthorityBound(value_pointer="", domain=domain),) if domain is not None else ()
+
+
+def _capability_authority_bounds(model, authority):
+    concern = _PUBLICATION_SAFE_CAPABILITY_CONCERN_BY_KIND.get(authority.requirement_kind)
     constraint = next(
         (
             item

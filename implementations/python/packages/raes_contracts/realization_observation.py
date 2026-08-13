@@ -197,7 +197,7 @@ def bind_operating_system_observations(
 ) -> tuple[RealizationObservationDisclosure, ...]:
     """Bind one guest OS identity to the plan operation and selected apparatus."""
 
-    from raes_contracts.planning import ChangeAction, PlanOperation, ProvisioningPlan
+    from raes_contracts.planning import ProvisioningPlan
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
     _require_binding_inputs(plan, envelope, "operating-system observation binding")
@@ -205,47 +205,71 @@ def bind_operating_system_observations(
         raise TypeError("operating-system observation binding requires typed plan and envelope")
     if plan.operation_id is None or plan.realization_envelope != envelope.identity:
         raise ValueError("operating-system observation binding requires matching operation and envelope identity")
-    os_kinds = {"os-family", "os-distribution", "os-version"}
-    authorities_by_address: dict[str, list[object]] = {}
-    for authority in plan.realization_authority:
-        if authority.requirement_kind in os_kinds:
-            authorities_by_address.setdefault(authority.address, []).append(authority)
+    authorities_by_address = _operating_system_authorities_by_address(plan.realization_authority)
     operations = {operation.address: operation for operation in plan.operations}
-    native_items = tuple(item for item in observations if item.concern is RealizationConcern.OPERATING_SYSTEM)
-    native_by_address = {item.address: item for item in native_items}
-    if len(native_by_address) != len(native_items):
-        raise ValueError("operating-system observations must identify unique addresses")
+    native_by_address = _operating_system_observations_by_address(observations)
     retained = tuple(item for item in previous if item.requirement_kind != "operating-system")
     bound: list[RealizationObservationDisclosure] = []
     for address, authorities in authorities_by_address.items():
-        operation = operations.get(address)
-        native = native_by_address.get(address)
-        if (
-            not isinstance(operation, PlanOperation)
-            or operation.action is ChangeAction.DELETE
-            or native is None
-            or not _native_operating_system_observation_valid(native, plan, envelope)
-        ):
-            continue
-        prefix = authorities[0].field_path.rsplit(".", 1)[0]
-        bound.append(
-            RealizationObservationDisclosure(
-                address=address,
-                field_path=f"{prefix}.operating-system",
-                domain=authorities[0].domain,
-                requirement_kind="operating-system",
-                verification_scope=RealizationVerificationScope.PRESENCE,
-                observation_strength=native.source,
-                operating_system=native.value,
-                operation_id=plan.operation_id,
-                envelope_digest=envelope.digest,
-                configuration_digest=envelope.configuration.configuration_digest,
-                observer_version=native.observer_version,
-                sequence=native.sequence,
-                binding_verified=True,
-            )
+        disclosure = _bound_operating_system_disclosure(
+            address=address,
+            authorities=authorities,
+            operation=operations.get(address),
+            native=native_by_address.get(address),
+            plan=plan,
+            envelope=envelope,
         )
+        if disclosure is not None:
+            bound.append(disclosure)
     return (*retained, *bound)
+
+
+def _operating_system_authorities_by_address(authorities: Sequence[object]) -> dict[str, list[object]]:
+    os_kinds = {"os-family", "os-distribution", "os-version"}
+    by_address: dict[str, list[object]] = {}
+    for authority in authorities:
+        if authority.requirement_kind in os_kinds:
+            by_address.setdefault(authority.address, []).append(authority)
+    return by_address
+
+
+def _operating_system_observations_by_address(
+    observations: Sequence[RealizationObservation],
+) -> dict[str, RealizationObservation]:
+    native = tuple(item for item in observations if item.concern is RealizationConcern.OPERATING_SYSTEM)
+    by_address = {item.address: item for item in native}
+    if len(by_address) != len(native):
+        raise ValueError("operating-system observations must identify unique addresses")
+    return by_address
+
+
+def _bound_operating_system_disclosure(*, address, authorities, operation, native, plan, envelope):
+    from raes_contracts.planning import ChangeAction, PlanOperation
+
+    eligible = (
+        isinstance(operation, PlanOperation)
+        and operation.action is not ChangeAction.DELETE
+        and native is not None
+        and _native_operating_system_observation_valid(native, plan, envelope)
+    )
+    if not eligible:
+        return None
+    prefix = authorities[0].field_path.rsplit(".", 1)[0]
+    return RealizationObservationDisclosure(
+        address=address,
+        field_path=f"{prefix}.operating-system",
+        domain=authorities[0].domain,
+        requirement_kind="operating-system",
+        verification_scope=RealizationVerificationScope.PRESENCE,
+        observation_strength=native.source,
+        operating_system=native.value,
+        operation_id=plan.operation_id,
+        envelope_digest=envelope.digest,
+        configuration_digest=envelope.configuration.configuration_digest,
+        observer_version=native.observer_version,
+        sequence=native.sequence,
+        binding_verified=True,
+    )
 
 
 def _native_operating_system_observation_valid(
@@ -253,21 +277,35 @@ def _native_operating_system_observation_valid(
     plan: object,
     envelope: object,
 ) -> bool:
-    identity = observation.value
     concern = next(
         (claim for claim in envelope.concerns if claim.concern is RealizationConcern.OPERATING_SYSTEM),
         None,
     )
-    supported_identity = isinstance(identity, ObservedOperatingSystemIdentity) and any(
-        row.family == identity.family and row.distribution == identity.distribution and identity.version in row.versions
-        for row in envelope.configuration.operating_systems
+    return (
+        _operating_system_identity_supported(observation.value, envelope.configuration.operating_systems)
+        and _operating_system_concern_is_guest_observed(concern)
+        and _operating_system_observation_binding_valid(observation, plan, envelope)
     )
+
+
+def _operating_system_identity_supported(identity: object, rows: Sequence[object]) -> bool:
+    return isinstance(identity, ObservedOperatingSystemIdentity) and any(
+        row.family == identity.family and row.distribution == identity.distribution and identity.version in row.versions
+        for row in rows
+    )
+
+
+def _operating_system_concern_is_guest_observed(concern: object) -> bool:
     return bool(
-        supported_identity
-        and concern is not None
+        concern is not None
         and concern.disposition is ConcernDisposition.REALIZED
         and concern.observation_strength is ObservationStrength.GUEST_OBSERVED
-        and observation.source is ObservationStrength.GUEST_OBSERVED
+    )
+
+
+def _operating_system_observation_binding_valid(observation, plan, envelope) -> bool:
+    return bool(
+        observation.source is ObservationStrength.GUEST_OBSERVED
         and observation.operation_id == plan.operation_id
         and observation.envelope_digest == envelope.digest
         and observation.configuration_digest == envelope.configuration.configuration_digest

@@ -49,6 +49,7 @@ from .participant_runtime import (
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
 )
+from .realization_observation_validation import validate_realization_observation_disclosure
 from .time_model import TimeRuntimeStateModel
 
 
@@ -298,40 +299,7 @@ class RealizationObservationDisclosureModel(ContractModel):
 
     @model_validator(mode="after")
     def _require_evidence(self) -> RealizationObservationDisclosureModel:
-        if self.observation_strength is ObservationStrength.NONE:
-            raise ValueError("realization observation disclosure must provide non-none evidence")
-        substrate_fields = (
-            self.observed_value,
-            self.operating_system,
-            self.operation_id,
-            self.envelope_digest,
-            self.configuration_digest,
-            self.observer_version,
-            self.sequence,
-        )
-        if self.requirement_kind == "compute-substrate":
-            compute_fields = (self.observed_value, *substrate_fields[2:])
-            if (
-                any(value is None for value in compute_fields)
-                or self.operating_system is not None
-                or not self.binding_verified
-            ):
-                raise ValueError("compute-substrate disclosure requires governed value and verified execution binding")
-            from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
-
-            validate_controlled_vocabulary_value("compute-substrates", self.observed_value)
-        elif self.requirement_kind == "operating-system":
-            binding_fields = (*substrate_fields[2:],)
-            if self.observed_value is not None or self.operating_system is None:
-                raise ValueError("operating-system disclosure requires one typed observed identity")
-            if any(value is None for value in binding_fields) or not self.binding_verified:
-                raise ValueError("operating-system disclosure requires a verified execution binding")
-            if self.observation_strength is not ObservationStrength.GUEST_OBSERVED:
-                raise ValueError("operating-system disclosure requires guest-observed evidence")
-        elif any(value is not None for value in substrate_fields) or self.binding_verified:
-            raise ValueError(
-                "value-bearing execution bindings are reserved for compute-substrate and operating-system disclosures"
-            )
+        validate_realization_observation_disclosure(self)
         return self
 
 

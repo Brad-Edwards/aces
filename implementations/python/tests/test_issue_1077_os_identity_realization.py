@@ -150,19 +150,22 @@ class TestCoupledOperatingSystemCapabilities:
             ProvisionerCapabilities,
         )
 
+        compatibility = OperatingSystemCompatibility("windows", "windows-server", frozenset({"2022"}))
+        kwargs = {
+            "name": "mismatched-os",
+            "supported_node_types": frozenset({"compute"}),
+            "supported_os_families": frozenset({"linux"}),
+            "operating_systems": (compatibility,),
+        }
         with pytest.raises(ValueError, match="supported_os_families"):
-            ProvisionerCapabilities(
-                name="mismatched-os",
-                supported_node_types=frozenset({"compute"}),
-                supported_os_families=frozenset({"linux"}),
-                operating_systems=(OperatingSystemCompatibility("windows", "windows-server", frozenset({"2022"})),),
-            )
+            ProvisionerCapabilities(**kwargs)
 
     def test_core_distribution_cannot_be_paired_with_wrong_family(self) -> None:
         from raes_backend_protocols.capabilities import OperatingSystemCompatibility
 
+        versions = frozenset({"22.04"})
         with pytest.raises(ValueError, match="requires family 'linux'"):
-            OperatingSystemCompatibility("windows", "ubuntu", frozenset({"22.04"}))
+            OperatingSystemCompatibility("windows", "ubuntu", versions)
 
     def test_manifest_contract_roundtrip_preserves_coupled_rows(self) -> None:
         from raes_backend_protocols.capabilities import (
