@@ -82,10 +82,19 @@ def test_summary_bullets_reject_placeholders(field: str) -> None:
     assert RULE_SUMMARY in _rules(body)
 
 
-def test_only_standalone_closing_lines_count() -> None:
-    body = _body().replace("Closes #123", "Related: Closes #123")
+@pytest.mark.parametrize(
+    "invalid_line",
+    ["Related: Closes #123", "123", "Closes #0123", "Closes #123 extra"],
+)
+def test_only_standalone_closing_lines_count(invalid_line: str) -> None:
+    body = _body().replace("Closes #123", invalid_line)
     assert closing_issue_numbers(body) == ()
     assert RULE_ISSUES in _rules(body)
+
+
+def test_closing_line_allows_whitespace_and_deduplicates() -> None:
+    body = _body().replace("Closes #123", "Closes   #123\n\tCloses\t#123")
+    assert closing_issue_numbers(body) == (123,)
 
 
 @pytest.mark.parametrize("state", ["closed", "missing"])
@@ -166,29 +175,31 @@ def test_cli_uses_event_and_issue_fixture(tmp_path: Path) -> None:
 
 
 def test_lookup_failures_and_http_shapes_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeOpener:
+        def __init__(self, payload: str) -> None:
+            self._payload = payload
+
+        def open(self, *_args, **_kwargs) -> io.StringIO:
+            return io.StringIO(self._payload)
+
+    def use_payload(payload: str) -> None:
+        monkeypatch.setattr(
+            pr_body.urllib.request,
+            "build_opener",
+            lambda *_args, **_kwargs: FakeOpener(payload),
+        )
+
     with pytest.raises(ValueError, match="owner/repository"):
         pr_body.GitHubIssueLookup("invalid", "token")
     with pytest.raises(ValueError, match="GH_TOKEN"):
         pr_body.GitHubIssueLookup("OpenRAE/rae", "")
 
     lookup = pr_body.GitHubIssueLookup("OpenRAE/rae", "token")
-    monkeypatch.setattr(
-        pr_body.urllib.request,
-        "urlopen",
-        lambda *_args, **_kwargs: io.StringIO('{"state":"open"}'),
-    )
+    use_payload('{"state":"open"}')
     assert lookup(12) == (True, True)
-    monkeypatch.setattr(
-        pr_body.urllib.request,
-        "urlopen",
-        lambda *_args, **_kwargs: io.StringIO('{"state":"open","pull_request":{}}'),
-    )
+    use_payload('{"state":"open","pull_request":{}}')
     assert lookup(12) == (False, False)
-    monkeypatch.setattr(
-        pr_body.urllib.request,
-        "urlopen",
-        lambda *_args, **_kwargs: io.StringIO("[]"),
-    )
+    use_payload("[]")
     with pytest.raises(RuntimeError, match="malformed"):
         lookup(12)
 
@@ -200,16 +211,21 @@ def test_validation_and_report_record_lookup_errors() -> None:
     violations = validate_pr_body(_body(), failing)
     assert any("Could not verify issue #123" in item.message for item in violations)
     report = pr_body._open_issue_report(_body(), failing, 7)
-    assert "Inspection errors" in report and "never closes issues" in report
+    assert "Inspection errors" in report
+    assert "never closes issues" in report
     assert "All declared closing issues are closed" in pr_body._open_issue_report(_body(), _lookup({123: "closed"}), 7)
     assert "No standalone" in pr_body._open_issue_report("No references", _lookup({}), 7)
 
 
 def test_cli_rejects_missing_or_malformed_events(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main([]) == 2
+    assert main(["--event-path", str(tmp_path / "missing.json")]) == 2
     malformed = tmp_path / "event.json"
     malformed.write_text("[]", encoding="utf-8")
     assert main(["--event-path", str(malformed)]) == 2
+    linked = tmp_path / "linked.json"
+    linked.symlink_to(malformed)
+    assert main(["--event-path", str(linked)]) == 2
     assert "configuration error" in capsys.readouterr().err
 
 
@@ -272,6 +288,32 @@ def test_report_mode_is_read_only_and_lists_open_issues(tmp_path: Path) -> None:
     )
     assert "`#123`" in summary.read_text(encoding="utf-8")
     assert "read-only" in summary.read_text(encoding="utf-8")
+
+
+def test_report_mode_rejects_symbolic_link_destination(tmp_path: Path) -> None:
+    event = tmp_path / "event.json"
+    issues = tmp_path / "issues.json"
+    target = tmp_path / "target.md"
+    summary = tmp_path / "summary.md"
+    event.write_text(json.dumps({"pull_request": {"number": 7, "body": _body()}}), encoding="utf-8")
+    issues.write_text(json.dumps({"123": "open"}), encoding="utf-8")
+    target.write_text("unchanged", encoding="utf-8")
+    summary.symlink_to(target)
+
+    result = main(
+        [
+            "--event-path",
+            str(event),
+            "--issues-file",
+            str(issues),
+            "--report-open-closing-issues",
+            "--summary-file",
+            str(summary),
+        ]
+    )
+
+    assert result == 2
+    assert target.read_text(encoding="utf-8") == "unchanged"
 
 
 def test_workflows_use_trusted_code_and_read_only_permissions() -> None:

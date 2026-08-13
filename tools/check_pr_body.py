@@ -25,12 +25,6 @@ RULE_SUMMARY = "plain-language-summary"
 RULE_ISSUES = "open-same-repository-issue"
 RULE_VERIFICATION = "substantive-verification"
 
-_SECTION_PATTERN = re.compile(r"^##[ \t]+(.+?)[ \t]*$", re.MULTILINE)
-_SUMMARY_BULLET = re.compile(
-    r"^[ \t]*[-*][ \t]+(?:\*\*)?(Context|Problem|Fix)(?:\*\*)?[ \t]*:[ \t]*(.+?)\s*$",
-    re.IGNORECASE | re.MULTILINE,
-)
-_CLOSING_LINE = re.compile(r"^[ \t]*Closes[ \t]+#([1-9][0-9]*)[ \t]*$", re.MULTILINE)
 _CHECKBOX_ONLY = re.compile(r"^[ \t]*[-*][ \t]+\[[ xX]\][ \t]*", re.MULTILINE)
 _PLACEHOLDER = re.compile(
     r"(?:\b(?:todo|tbd|placeholder|n/?a)\b|brief description|add (?:context|details)|"
@@ -76,14 +70,45 @@ def _strip_ignored(text: str) -> str:
     return "\n".join(kept)
 
 
+def _level_two_heading(line: str) -> str | None:
+    if not line.startswith("##") or len(line) < 3 or line[2] not in " \t":
+        return None
+    name = line[3:].strip().casefold()
+    return name or None
+
+
 def _sections(text: str) -> dict[str, list[str]]:
-    matches = list(_SECTION_PATTERN.finditer(text))
     sections: dict[str, list[str]] = {}
-    for index, match in enumerate(matches):
-        name = match.group(1).strip().casefold()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        sections.setdefault(name, []).append(text[match.end() : end].strip())
+    current_name: str | None = None
+    current_lines: list[str] = []
+    for line in text.splitlines():
+        name = _level_two_heading(line)
+        if name is None:
+            current_lines.append(line)
+            continue
+        if current_name is not None:
+            sections.setdefault(current_name, []).append("\n".join(current_lines).strip())
+        current_name = name
+        current_lines = []
+    if current_name is not None:
+        sections.setdefault(current_name, []).append("\n".join(current_lines).strip())
     return sections
+
+
+def _summary_fields(text: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for line in text.splitlines():
+        bullet = line.lstrip()
+        if len(bullet) < 3 or bullet[0] not in "-*" or not bullet[1].isspace():
+            continue
+        label, separator, value = bullet[2:].lstrip().partition(":")
+        if not separator:
+            continue
+        label = label.strip().removeprefix("**").removesuffix("**").casefold()
+        value = value.lstrip().removeprefix("**").lstrip()
+        if label in {"context", "problem", "fix"}:
+            fields[label] = value
+    return fields
 
 
 def _meaningful(text: str, *, minimum_words: int = 3) -> bool:
@@ -96,7 +121,15 @@ def closing_issue_numbers(body: str) -> tuple[int, ...]:
     """Return unique standalone ``Closes #N`` references in source order."""
 
     cleaned = _strip_ignored(body)
-    return tuple(dict.fromkeys(int(match.group(1)) for match in _CLOSING_LINE.finditer(cleaned)))
+    numbers: list[int] = []
+    for line in cleaned.splitlines():
+        parts = line.strip(" \t").split()
+        if len(parts) != 2 or parts[0] != "Closes" or not parts[1].startswith("#"):
+            continue
+        reference = parts[1].removeprefix("#")
+        if reference.isdecimal() and not reference.startswith("0"):
+            numbers.append(int(reference))
+    return tuple(dict.fromkeys(numbers))
 
 
 def is_exempt_automation(event: dict[str, Any]) -> bool:
@@ -108,23 +141,15 @@ def is_exempt_automation(event: dict[str, Any]) -> bool:
         return False
     author = str(pull_request.get("user", {}).get("login", ""))
     login = actor or author
-    if login == "dependabot[bot]":
-        return True
-    if login == "release-please[bot]":
-        return True
     head = pull_request.get("head", {})
     head_ref = str(head.get("ref", "")) if isinstance(head, dict) else ""
-    return login == "github-actions[bot]" and head_ref.startswith("release-please--branches--")
+    trusted_release_action = login == "github-actions[bot]" and head_ref.startswith("release-please--branches--")
+    return login in {"dependabot[bot]", "release-please[bot]"} or trusted_release_action
 
 
-def validate_pr_body(body: str, issue_lookup: IssueLookup) -> list[BodyViolation]:
-    """Validate the human-authored body against the repository policy."""
-
-    cleaned = _strip_ignored(body)
-    sections = _sections(cleaned)
+def _validate_required_sections(sections: dict[str, list[str]]) -> list[BodyViolation]:
     violations: list[BodyViolation] = []
-    required = ("plain-language summary", "issues closed", "verification")
-    for name in required:
+    for name in ("plain-language summary", "issues closed", "verification"):
         count = len(sections.get(name, []))
         if count != 1:
             violations.append(
@@ -133,62 +158,84 @@ def validate_pr_body(body: str, issue_lookup: IssueLookup) -> list[BodyViolation
                     f"PR body must contain exactly one '## {name.title()}' section; found {count}.",
                 )
             )
+    return violations
 
+
+def _validate_summary(sections: dict[str, list[str]]) -> list[BodyViolation]:
     summaries = sections.get("plain-language summary", [])
-    if len(summaries) == 1:
-        fields: dict[str, str] = {}
-        for match in _SUMMARY_BULLET.finditer(summaries[0]):
-            fields[match.group(1).casefold()] = match.group(2)
-        for field in ("context", "problem", "fix"):
-            if field not in fields or not _meaningful(fields[field]):
-                violations.append(
-                    BodyViolation(
-                        RULE_SUMMARY,
-                        f"Plain-language summary needs a non-placeholder {field.title()} bullet.",
-                    )
-                )
+    if len(summaries) != 1:
+        return []
+    fields = _summary_fields(summaries[0])
+    return [
+        BodyViolation(
+            RULE_SUMMARY,
+            f"Plain-language summary needs a non-placeholder {field.title()} bullet.",
+        )
+        for field in ("context", "problem", "fix")
+        if field not in fields or not _meaningful(fields[field])
+    ]
 
+
+def _inspect_issue(number: int, issue_lookup: IssueLookup) -> BodyViolation | None:
+    # Fail closed on API and configuration errors from the injected lookup.
+    try:
+        exists, is_open = issue_lookup(number)
+    except Exception as exc:
+        violation = BodyViolation(RULE_ISSUES, f"Could not verify issue #{number}: {exc}")
+    else:
+        violation = None
+        if not exists:
+            violation = BodyViolation(
+                RULE_ISSUES,
+                f"Closes #{number} does not target an issue in this repository.",
+            )
+        elif not is_open:
+            violation = BodyViolation(
+                RULE_ISSUES,
+                f"Closes #{number} targets an issue that is not open.",
+            )
+    return violation
+
+
+def _validate_issues(sections: dict[str, list[str]], issue_lookup: IssueLookup) -> list[BodyViolation]:
     issues = sections.get("issues closed", [])
-    if len(issues) == 1:
-        numbers = closing_issue_numbers(f"## Issues closed\n{issues[0]}")
-        if not numbers:
-            violations.append(
-                BodyViolation(
-                    RULE_ISSUES,
-                    "Issues closed must contain at least one standalone 'Closes #N' line.",
-                )
+    if len(issues) != 1:
+        return []
+    numbers = closing_issue_numbers(f"## Issues closed\n{issues[0]}")
+    if not numbers:
+        return [
+            BodyViolation(
+                RULE_ISSUES,
+                "Issues closed must contain at least one standalone 'Closes #N' line.",
             )
-        for number in numbers:
-            try:
-                exists, is_open = issue_lookup(number)
-            except Exception as exc:  # fail closed on API/configuration errors
-                violations.append(BodyViolation(RULE_ISSUES, f"Could not verify issue #{number}: {exc}"))
-                continue
-            if not exists:
-                violations.append(
-                    BodyViolation(
-                        RULE_ISSUES,
-                        f"Closes #{number} does not target an issue in this repository.",
-                    )
-                )
-            elif not is_open:
-                violations.append(
-                    BodyViolation(
-                        RULE_ISSUES,
-                        f"Closes #{number} targets an issue that is not open.",
-                    )
-                )
+        ]
+    return [violation for number in numbers if (violation := _inspect_issue(number, issue_lookup)) is not None]
 
+
+def _validate_verification(sections: dict[str, list[str]]) -> list[BodyViolation]:
     verification = sections.get("verification", [])
-    if len(verification) == 1:
-        content = _CHECKBOX_ONLY.sub("", verification[0]).strip()
-        if not _meaningful(content, minimum_words=2) or not _EVIDENCE_HINT.search(content):
-            violations.append(
-                BodyViolation(
-                    RULE_VERIFICATION,
-                    "Verification must record substantive commands, checks, or a reason a check was not run.",
-                )
-            )
+    if len(verification) != 1:
+        return []
+    content = _CHECKBOX_ONLY.sub("", verification[0]).strip()
+    if _meaningful(content, minimum_words=2) and _EVIDENCE_HINT.search(content):
+        return []
+    return [
+        BodyViolation(
+            RULE_VERIFICATION,
+            "Verification must record substantive commands, checks, or a reason a check was not run.",
+        )
+    ]
+
+
+def validate_pr_body(body: str, issue_lookup: IssueLookup) -> list[BodyViolation]:
+    """Validate the human-authored body against the repository policy."""
+
+    cleaned = _strip_ignored(body)
+    sections = _sections(cleaned)
+    violations = _validate_required_sections(sections)
+    violations.extend(_validate_summary(sections))
+    violations.extend(_validate_issues(sections, issue_lookup))
+    violations.extend(_validate_verification(sections))
     return violations
 
 
@@ -214,7 +261,8 @@ class GitHubIssueLookup:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
+            opener = urllib.request.build_opener(urllib.request.HTTPSHandler())
+            with opener.open(request, timeout=15) as response:
                 payload = json.load(response)
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
@@ -228,17 +276,26 @@ class GitHubIssueLookup:
         return exists, exists and payload.get("state") == "open"
 
 
-def _event(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+def _read_json_object(path: Path, description: str) -> dict[str, Any]:
+    candidate = path.expanduser()
+    if candidate.is_symlink():
+        raise ValueError(f"{description} must not be a symbolic link")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_file():
+        raise ValueError(f"{description} must be a regular file")
+    with resolved.open(encoding="utf-8") as stream:
+        payload = json.load(stream)
     if not isinstance(payload, dict):
-        raise ValueError("event payload must be a JSON object")
+        raise ValueError(f"{description} must be a JSON object")
     return payload
 
 
+def _event(path: Path) -> dict[str, Any]:
+    return _read_json_object(path, "event payload")
+
+
 def _fixture_lookup(path: Path) -> IssueLookup:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError("issues fixture must be a JSON object")
+    payload = _read_json_object(path, "issues fixture")
 
     def lookup(number: int) -> tuple[bool, bool]:
         state = payload.get(str(number))
@@ -252,6 +309,7 @@ def _open_issue_report(body: str, issue_lookup: IssueLookup, pr_number: int | st
     open_numbers: list[int] = []
     errors: list[str] = []
     for number in numbers:
+        # A failed lookup must be visible in the audit without mutating issues.
         try:
             exists, is_open = issue_lookup(number)
         except Exception as exc:
@@ -282,50 +340,69 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
-    event_path = args.event_path or (Path(os.environ["GITHUB_EVENT_PATH"]) if os.getenv("GITHUB_EVENT_PATH") else None)
-    if event_path is None:
-        print(
-            "pr-body-guard: GITHUB_EVENT_PATH or --event-path is required",
-            file=sys.stderr,
-        )
-        return 2
-    try:
-        event = _event(event_path)
-        pull_request = event.get("pull_request")
-        if not isinstance(pull_request, dict):
-            raise ValueError("event has no pull_request object")
-        body = pull_request.get("body")
-        if not isinstance(body, str):
-            raise ValueError("event pull_request.body must be a string")
-        if not args.report_open_closing_issues and is_exempt_automation(event):
-            print("pr-body-guard: exempt trusted automation")
-            return 0
-        repository = str(event.get("repository", {}).get("full_name") or os.getenv("GITHUB_REPOSITORY", ""))
-        lookup = (
-            _fixture_lookup(args.issues_file)
-            if args.issues_file
-            else GitHubIssueLookup(repository, os.getenv("GH_TOKEN", ""))
-        )
-        if args.report_open_closing_issues:
-            report = _open_issue_report(body, lookup, pull_request.get("number", "unknown"))
-            if args.summary_file:
-                args.summary_file.write_text(report, encoding="utf-8")
-            else:
-                print(report, end="")
-            return 0
-        violations = validate_pr_body(body, lookup)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"pr-body-guard: configuration error: {exc}", file=sys.stderr)
-        return 2
+def _event_path(argument: Path | None) -> Path:
+    configured = os.getenv("GITHUB_EVENT_PATH")
+    path = argument or (Path(configured) if configured else None)
+    if path is None:
+        raise ValueError("GITHUB_EVENT_PATH or --event-path is required")
+    return path
+
+
+def _write_report(args: argparse.Namespace, body: str, lookup: IssueLookup, pr_number: int | str) -> None:
+    report = _open_issue_report(body, lookup, pr_number)
+    if args.summary_file:
+        requested = args.summary_file.expanduser()
+        destination = requested.parent.resolve(strict=True) / requested.name
+        if destination.is_symlink() or (destination.exists() and not destination.is_file()):
+            raise ValueError("summary file must be a regular file and not a symbolic link")
+        destination.write_text(report, encoding="utf-8")
+    else:
+        print(report, end="")
+
+
+def _validation_result(violations: list[BodyViolation]) -> int:
+    result = 0
     if violations:
         print("pr-body-guard: rejected pull request body", file=sys.stderr)
         for violation in violations:
             print(f"- [{violation.rule_id}] {violation.message}", file=sys.stderr)
-        return 1
-    print("pr-body-guard: OK")
-    return 0
+        result = 1
+    else:
+        print("pr-body-guard: OK")
+    return result
+
+
+def _run(args: argparse.Namespace) -> int:
+    event = _event(_event_path(args.event_path))
+    pull_request = event.get("pull_request")
+    if not isinstance(pull_request, dict):
+        raise ValueError("event has no pull_request object")
+    body = pull_request.get("body")
+    if not isinstance(body, str):
+        raise ValueError("event pull_request.body must be a string")
+    if not args.report_open_closing_issues and is_exempt_automation(event):
+        print("pr-body-guard: exempt trusted automation")
+        return 0
+    repository = str(event.get("repository", {}).get("full_name") or os.getenv("GITHUB_REPOSITORY", ""))
+    lookup = (
+        _fixture_lookup(args.issues_file)
+        if args.issues_file
+        else GitHubIssueLookup(repository, os.getenv("GH_TOKEN", ""))
+    )
+    if args.report_open_closing_issues:
+        _write_report(args, body, lookup, pull_request.get("number", "unknown"))
+        return 0
+    return _validation_result(validate_pr_body(body, lookup))
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        result = _run(args)
+    except (OSError, ValueError) as exc:
+        print(f"pr-body-guard: configuration error: {exc}", file=sys.stderr)
+        result = 2
+    return result
 
 
 if __name__ == "__main__":
