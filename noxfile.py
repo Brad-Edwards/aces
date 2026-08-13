@@ -19,7 +19,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from tools.gitleaks_tool import ensure_gitleaks
 from tools.osv_scanner_tool import (
-    OSV_ADVISORY_EXIT_CODES,
+    OSVScanOutcome,
+    classify_osv_exit_code,
     ensure_osv_scanner,
     run_osv_scanner,
 )
@@ -904,7 +905,7 @@ def _run_docker_integration_tests(session: nox.Session, reporter: SessionReporte
     )
 
 
-def _run_osv_scan(session: nox.Session, reporter: SessionReporter, *, gating: bool = False) -> None:
+def _run_osv_scan(_session: nox.Session, reporter: SessionReporter) -> None:
     def _scan() -> None:
         lockfile = OSV_LOCKFILE_PATH
         if not lockfile.exists():
@@ -912,13 +913,13 @@ def _run_osv_scan(session: nox.Session, reporter: SessionReporter, *, gating: bo
         binary = ensure_osv_scanner(REPO_ROOT)
         exit_code = run_osv_scanner(lockfile, OSV_REPORT_PATH, binary=binary)
         report_rel = OSV_REPORT_PATH.relative_to(REPO_ROOT)
-        if exit_code not in OSV_ADVISORY_EXIT_CODES:
-            raise RuntimeError(f"osv-scanner failed with exit code {exit_code}; report at {report_rel}")
-        if exit_code == 1:
-            message = f"osv-scanner reported vulnerabilities; see {report_rel}"
-            if gating:
-                raise RuntimeError(message)
-            session.warn(message)
+        outcome = classify_osv_exit_code(exit_code)
+        if outcome is OSVScanOutcome.FINDINGS:
+            raise RuntimeError(f"osv-scanner reported vulnerabilities (exit code {exit_code}); see {report_rel}")
+        if outcome is OSVScanOutcome.SCANNER_ERROR:
+            raise RuntimeError(
+                f"osv-scanner failed with scanner/setup error exit code {exit_code}; report at {report_rel}"
+            )
 
     reporter.run(
         "osv-scan / uv.lock",
@@ -1170,19 +1171,16 @@ def docs_links(session: nox.Session) -> None:
 
 @nox.session(name="osv_scan")
 def osv_scan(session: nox.Session) -> None:
-    """Advisory OSV-Scanner sweep over the Python dependency lockfile (issue #34).
+    """Required OSV-Scanner sweep over the Python dependency lockfile (#1098).
 
-    Intentionally NOT wired into `verify` / `hook-pre-push`: findings are
-    advisory, so this runs as a standalone, non-gating CI job that publishes a
-    JSON report artifact. Genuine scanner/setup failures (missing lockfile,
-    error exit codes) still fail the session so they are never hidden. Pass
-    `-- --gating` to fail on discovered vulnerabilities once branch protection
-    promotes it from advisory to blocking.
+    This remains outside `verify` / `hook-pre-push` because acquiring and running
+    OSV-Scanner requires network access. The standalone CI job is gating: both
+    findings and scanner/setup errors fail, with distinct diagnostics, while CI
+    still publishes the JSON report artifact.
     """
     reporter = SessionReporter(session, "osv_scan")
-    gating = "--gating" in session.posargs
     try:
-        _run_osv_scan(session, reporter, gating=gating)
+        _run_osv_scan(session, reporter)
     finally:
         reporter.summary()
 

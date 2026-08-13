@@ -18,7 +18,7 @@ class _Response(Protocol):
 
     def __exit__(self, *args: object) -> None: ...
 
-    def read(self) -> bytes: ...
+    def read(self, size: int = -1) -> bytes: ...
 
 
 def _open_https(url: str, *, timeout: float) -> _Response:
@@ -29,26 +29,48 @@ def _open_https(url: str, *, timeout: float) -> _Response:
     return build_opener().open(request, timeout=timeout)
 
 
+def _validate_download_options(*, attempts: int, max_bytes: int | None) -> None:
+    if attempts < 1:
+        raise ValueError("download attempts must be positive")
+    if max_bytes is not None and max_bytes < 0:
+        raise ValueError("download size bound must be non-negative")
+
+
+def _read_response(
+    response: _Response,
+    *,
+    max_bytes: int | None,
+    description: str,
+    url: str,
+) -> bytes:
+    if max_bytes is None:
+        return response.read()
+    payload = response.read(max_bytes + 1)
+    if len(payload) > max_bytes:
+        raise RuntimeError(f"{description} from {url} exceeds the download limit")
+    return payload
+
+
 def download_bytes(
     url: str,
     *,
     description: str,
     attempts: int = 5,
     timeout_seconds: float = 60,
+    max_bytes: int | None = None,
     _opener: Callable[..., _Response] | None = None,
     _sleeper: Callable[[float], None] | None = None,
 ) -> bytes:
     """Download bytes with bounded retries for transient transport failures."""
 
-    if attempts < 1:
-        raise ValueError("download attempts must be positive")
+    _validate_download_options(attempts=attempts, max_bytes=max_bytes)
     opener = _opener or _open_https
     sleeper = _sleeper or time.sleep
     last_error: BaseException | None = None
     for attempt in range(attempts):
         try:
             with opener(url, timeout=timeout_seconds) as response:
-                return response.read()
+                return _read_response(response, max_bytes=max_bytes, description=description, url=url)
         except HTTPError as exc:
             last_error = exc
             if exc.code not in _RETRYABLE_HTTP_STATUS:
