@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from ..artifact_requirements import ArtifactMechanismCapability
+from ..operating_systems import OS_VERSION_PATTERN, validate_operating_system_pair
 from ..vocabulary import (
     GeneratedArtifactKind,
     ObservationStrength,
@@ -20,11 +23,47 @@ from ..vocabulary import (
 from .base import ContractModel, NonEmptyString
 from .validators import _validate_controlled_vocabulary_terms
 
+OSReleaseString = Annotated[str, Field(min_length=1, max_length=128, pattern=OS_VERSION_PATTERN)]
+
+
+class OperatingSystemCompatibilityModel(ContractModel):
+    """One portable, coupled OS family/distribution/release capability row."""
+
+    family: NonEmptyString
+    distribution: NonEmptyString
+    versions: list[OSReleaseString] = Field(min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def _validate_terms(self) -> OperatingSystemCompatibilityModel:
+        _validate_controlled_vocabulary_terms(
+            "capabilities.provisioner.supported_os_families",
+            [self.family],
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.provisioner.operating_systems.distribution",
+            [self.distribution],
+        )
+        validate_operating_system_pair(self.family, self.distribution)
+        if len(self.versions) != len(set(self.versions)):
+            raise ValueError("versions must not contain duplicates")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler.resolve_ref_schema(handler(core_schema))
+        json_schema["properties"]["versions"]["uniqueItems"] = True
+        return json_schema
+
 
 class ProvisionerCapabilitiesModel(ContractModel):
     name: NonEmptyString
     supported_node_types: list[NonEmptyString] = Field(min_length=1)
     supported_os_families: list[NonEmptyString] = Field(min_length=1)
+    operating_systems: list[OperatingSystemCompatibilityModel] = Field(default_factory=list)
     supported_node_architectures: list[NonEmptyString] = Field(default_factory=list)
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
@@ -51,6 +90,17 @@ class ProvisionerCapabilitiesModel(ContractModel):
             "capabilities.provisioner.supported_os_families",
             self.supported_os_families,
         )
+        os_keys = [(entry.family, entry.distribution) for entry in self.operating_systems]
+        if len(os_keys) != len(set(os_keys)):
+            raise ValueError("operating_systems must not contain duplicate family/distribution rows")
+        undeclared_families = {
+            entry.family for entry in self.operating_systems if entry.family not in self.supported_os_families
+        }
+        if undeclared_families:
+            raise ValueError(
+                "operating_systems families must be present in supported_os_families: "
+                + ", ".join(sorted(undeclared_families))
+            )
         _validate_controlled_vocabulary_terms(
             "capabilities.provisioner.supported_node_architectures",
             self.supported_node_architectures,
@@ -93,6 +143,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema["properties"]["operating_systems"]["uniqueItems"] = True
         json_schema.setdefault("allOf", []).extend(
             [
                 {

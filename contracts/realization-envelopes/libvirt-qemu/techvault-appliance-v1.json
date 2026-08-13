@@ -12,12 +12,13 @@
   },
   "configuration": {
     "mode": "techvault-appliance",
-    "configuration_digest": "sha256:6a502f097764f96394a465833f421ccaad21bb5bb94860db8b831722d4febe74",
+    "configuration_digest": "sha256:c90445ed25f95a37dc28a2b9fc33053aa9febd532a350187cf9722408e14bbca",
     "architecture": "x86_64",
     "image_policy": "generated-initramfs-appliance",
     "network_policy": "generated-appliance-network",
     "supported_node_types": ["switch", "compute"],
     "supported_os_families": ["linux"],
+    "operating_systems": [],
     "supported_content_types": [],
     "supported_account_features": [],
     "supported_domain_profiles": [],
@@ -27,6 +28,7 @@
   },
   "concerns": [
     {"concern": "compute-substrate", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "virtual-machine", "transformations": []},
+    {"concern": "operating-system", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "topology", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-network-readback", "transformations": []},
     {"concern": "architecture", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-xml-readback", "transformations": []},
     {"concern": "image", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "generated-initramfs-attachment-readback", "transformations": []},
@@ -38,5 +40,5 @@
     {"concern": "service", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "acl", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []}
   ],
-  "digest": "sha256:8876bb4288509288260aa39bc47a5f0aa8c10087a709fcf5f2d5565450b4d548"
+  "digest": "sha256:a0b7164802d10fe929c1cf1115c969eaaf69041ce497ccce6d289f44ac36fe05"
 }

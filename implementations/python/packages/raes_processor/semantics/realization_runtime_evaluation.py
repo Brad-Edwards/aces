@@ -14,6 +14,7 @@ from raes_contracts.apparatus import (
     ProcessResourceLimitCapability,
     RealizationSupportDeclaration,
 )
+from raes_contracts.bounded_domains import scalar_in_domain
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisioningPlan
 from raes_contracts.runtime_state import (
@@ -31,6 +32,7 @@ from .realization_process_limits import bound_process_resource_limit_capabilitie
 from .realization_runtime_common import (
     BACKEND_CONTRACT_INVALID,
     MISSING_CONCERN_VALUE,
+    OPERATING_SYSTEM_REQUIREMENT_KINDS,
     concern_value,
     manifest_corroborates,
     matching_observation,
@@ -77,10 +79,13 @@ def _evaluate_non_compute_registered_realization(
     op = declared_ops.get(requirement.address)
     if requirement.explicitness is None or path is None or op is None or op.action is ChangeAction.DELETE:
         return None, None
-    snapshot_entry = returned_snapshot.entries.get(requirement.address)
-    realized_value = (
-        concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else MISSING_CONCERN_VALUE
-    )
+    if requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS:
+        realized_value = _observed_operating_system_value(requirement, returned_snapshot)
+    else:
+        snapshot_entry = returned_snapshot.entries.get(requirement.address)
+        realized_value = (
+            concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else MISSING_CONCERN_VALUE
+        )
     if requirement.explicitness is ExplicitnessClass.OPEN:
         return _evaluate_open_realization(requirement, realized_value, returned_snapshot, manifest)
     return _evaluate_declared_realization(
@@ -170,7 +175,13 @@ def _projected_declared_realization_result(
     else:
         if honoured is None:
             honoured = realized_projection == declared_projection
-        if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
+        constrained_os_rejected = (
+            requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS
+            and requirement.explicitness is ExplicitnessClass.CONSTRAINED
+            and requirement.value_domain is not None
+            and not scalar_in_domain(realized_projection, requirement.value_domain)
+        )
+        if constrained_os_rejected or (requirement.explicitness is ExplicitnessClass.EXACT and not honoured):
             result = (silent_approximation_diagnostic(requirement), None)
         elif realized_value is not MISSING_CONCERN_VALUE:
             result = (None, realization_provenance_entry(requirement, honoured))
@@ -187,8 +198,10 @@ def _corroboration_diagnostic(
     """Reject exact inventory equality that lacks its declared observation basis."""
 
     required_scope = requirement.verification_scope
-    requires_process_limit_evidence = requirement.requirement_kind == "process-resource-limits"
-    if (requirement.explicitness is not ExplicitnessClass.EXACT and not requires_process_limit_evidence) or (
+    requires_bound_evidence = requirement.requirement_kind in (
+        {"process-resource-limits"} | OPERATING_SYSTEM_REQUIREMENT_KINDS
+    )
+    if (requirement.explicitness is not ExplicitnessClass.EXACT and not requires_bound_evidence) or (
         required_scope is None and requirement.required_observation_strength is None
     ):
         return None
@@ -217,6 +230,22 @@ def _corroboration_diagnostic(
         ),
         severity=Severity.ERROR,
     )
+
+
+def _observed_operating_system_value(
+    requirement: CompiledRealizationRequirement,
+    returned_snapshot: RuntimeSnapshot,
+) -> object:
+    observation = matching_observation(requirement, returned_snapshot)
+    identity = observation.operating_system if observation is not None else None
+    if identity is None:
+        return MISSING_CONCERN_VALUE
+    attribute = {
+        "os-family": "family",
+        "os-distribution": "distribution",
+        "os-version": "version",
+    }[requirement.requirement_kind]
+    return getattr(identity, attribute)
 
 
 def _process_limit_declaration_supported(

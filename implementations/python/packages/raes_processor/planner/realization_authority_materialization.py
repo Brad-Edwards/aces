@@ -19,12 +19,15 @@ from ..semantics.realization import (
     CompiledRealizationAuthority,
     CompiledRealizationRequirement,
 )
+from .operating_system_capability_domains import feasible_operating_system_domains
 
 # These concerns are validated against closed semantic vocabularies before
 # capability constraints are compiled, so their finite domains are safe to
 # publish. Generic variable/value constraints are deliberately excluded.
 _PUBLICATION_SAFE_CAPABILITY_CONCERN_BY_KIND = {
     "os-family": "nodes.os",
+    "os-distribution": "nodes.os_distribution",
+    "os-version": "nodes.os_version",
     "node-architecture": "nodes.architecture",
 }
 
@@ -80,6 +83,7 @@ def _authority_bounds(
     model: RuntimeModel,
     authority: CompiledRealizationAuthority,
     requirement: CompiledRealizationRequirement | None,
+    manifest: BackendManifest,
 ) -> tuple[RealizationAuthorityBound, ...]:
     bounds: list[RealizationAuthorityBound] = []
     if (
@@ -100,6 +104,15 @@ def _authority_bounds(
             )
         return tuple(bounds)
     concern = _PUBLICATION_SAFE_CAPABILITY_CONCERN_BY_KIND.get(authority.requirement_kind)
+    if authority.requirement_kind in {"os-family", "os-distribution", "os-version"}:
+        node = model.node_deployments.get(authority.address)
+        if node is None:
+            return ()
+        feasible, diagnostic = feasible_operating_system_domains(model, node, manifest.provisioner)
+        if diagnostic is not None or feasible is None:
+            return ()
+        domain = _publication_safe_enum_domain(feasible.values_for(authority.requirement_kind))
+        return (RealizationAuthorityBound(value_pointer="", domain=domain),) if domain is not None else ()
     constraint = next(
         (
             item
@@ -137,7 +150,9 @@ def materialize_realization_authority(
             diagnostics.append(_unresolved_authority_diagnostic(authority))
             continue
         bounds = (
-            _authority_bounds(model, authority, requirement) if mode is RealizationAuthorityMode.CONSTRAINED else ()
+            _authority_bounds(model, authority, requirement, manifest)
+            if mode is RealizationAuthorityMode.CONSTRAINED
+            else ()
         )
         if mode is RealizationAuthorityMode.CONSTRAINED and not bounds:
             diagnostics.append(_unsafe_bound_diagnostic(authority))

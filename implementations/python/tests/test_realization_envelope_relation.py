@@ -543,7 +543,9 @@ def test_record_domain_membership_and_witness() -> None:
     assert result.scenario is not None
     assert member(result.scenario, env).holds
     # A closed record rejects an undeclared field on the node.
-    extra = _instantiate('name: rec\nnodes:\n  web:\n    type: compute\n    os: linux\n    os_version: "9"\n')
+    extra = _instantiate(
+        'name: rec\nnodes:\n  web:\n    type: compute\n    os: linux\n    os_distribution: rocky-linux\n    os_version: "9"\n'
+    )
     rejected = member(extra, env)
     assert not rejected.holds
     assert any(d.code == "realization-envelope.membership.closed-world-extra" for d in rejected.diagnostics)
@@ -668,7 +670,9 @@ def test_open_world_overlay_removes_inherited_closed_state() -> None:
             )
         ],
     )
-    instance = _instantiate('name: open-overlay\nnodes:\n  web: {type: compute, os: linux, os_version: "9"}\n')
+    instance = _instantiate(
+        'name: open-overlay\nnodes:\n  web: {type: compute, os: linux, os_distribution: rocky-linux, os_version: "9"}\n'
+    )
 
     assert member(instance, env).holds
 

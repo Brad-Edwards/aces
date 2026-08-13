@@ -120,18 +120,14 @@ def _node_os_with_constraint(
 
     diagnostics: list[Diagnostic] = []
     if finite_domain is not None:
-        unsupported_values = sorted({value for value in finite_domain if value not in supported_os_families})
-        if unsupported_values:
-            rendered = ", ".join(repr(value) for value in unsupported_values)
+        supported_values = sorted({value for value in finite_domain if value in supported_os_families})
+        if not supported_values:
             diagnostics.append(
                 Diagnostic(
                     code="provisioner.unsupported-os-family",
                     domain="provisioning",
                     address=node.address,
-                    message=(
-                        "Provisioner does not support all OS families allowed by "
-                        f"variable '{variable_name}': {rendered}."
-                    ),
+                    message=(f"Provisioner supports no OS family allowed by variable '{variable_name}'."),
                 )
             )
     return diagnostics
@@ -149,6 +145,28 @@ def _validate_node_os_family(
     if constraint is None:
         return _node_os_without_constraint(node, supported_os_families)
     return _node_os_with_constraint(constraint, node, supported_os_families)
+
+
+def _node_os_domain(
+    model: RuntimeModel,
+    node: NodeRuntime,
+) -> tuple[tuple[str, ...] | None, Diagnostic | None]:
+    constraint = _capability_constraint(model, address=node.address, concern="nodes.os")
+    if constraint is None:
+        unresolved = extract_variable_name(node.os_family)
+        if unresolved is not None:
+            return None, _error_diagnostic(
+                "provisioner.os-family-variable-ref-unbound",
+                node.address,
+                f"Provisioner capability validation cannot resolve undeclared variable '{unresolved}' "
+                "referenced by nodes.os.",
+            )
+        return (node.os_family,), None
+    return _validate_os_allowed_values(
+        ".".join(constraint.parameter),
+        constraint.allowed_values,
+        address=node.address,
+    )
 
 
 def _architecture_allowed_value(

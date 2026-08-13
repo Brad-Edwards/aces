@@ -28,7 +28,9 @@ from ._payload import (
     NODE_RESOURCE_TYPE,
     _architecture,
     _node_kind,
+    _os_distribution,
     _os_family,
+    _os_version,
     _spec,
     _str,
 )
@@ -41,6 +43,7 @@ _SWITCH_NODE_TYPE = "switch"
 
 _CODE_UNSUPPORTED_NODE_TYPE = "libvirt-backend.realization.unsupported-node-type"
 _CODE_UNSUPPORTED_OS_FAMILY = "libvirt-backend.realization.unsupported-os-family"
+_CODE_UNSUPPORTED_OPERATING_SYSTEM = "libvirt-backend.realization.unsupported-operating-system"
 _CODE_UNSUPPORTED_NODE_ARCHITECTURE = "libvirt-backend.realization.unsupported-node-architecture"
 _CODE_UNSUPPORTED_CONTENT_TYPE = "libvirt-backend.realization.unsupported-content-type"
 _CODE_UNSUPPORTED_SERVICE_MATERIALIZATION_PROFILE = (
@@ -182,6 +185,26 @@ def _out_of_envelope_terms(
         for term in dimension.extract(payload):
             if term and term not in supported:
                 yield (dimension.code, address, term), _envelope_diagnostic(dimension, address, term)
+    if resource_type == NODE_RESOURCE_TYPE:
+        family = _os_family(payload)
+        distribution = _os_distribution(payload)
+        version = _os_version(payload) or None
+        if distribution and not capabilities.supports_operating_system(
+            family=family,
+            distribution=distribution,
+            version=version,
+        ):
+            identity = "/".join((family, distribution, version or "<open-release>"))
+            yield (
+                (_CODE_UNSUPPORTED_OPERATING_SYSTEM, address, identity),
+                Diagnostic(
+                    code=_CODE_UNSUPPORTED_OPERATING_SYSTEM,
+                    domain=_DOMAIN,
+                    address=address,
+                    message=f"Libvirt backend does not realize operating-system identity '{identity}'.",
+                    severity=Severity.ERROR,
+                ),
+            )
 
 
 def _materialized_payloads(plan: ProvisioningPlan) -> Iterator[tuple[str, str, Mapping[str, object]]]:

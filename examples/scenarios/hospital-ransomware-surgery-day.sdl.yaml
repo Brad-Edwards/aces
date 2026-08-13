@@ -81,7 +81,8 @@ nodes:
       ram: 4294967296
       cpu: 2
     os: windows
-    os_version: Server 2022
+    os_distribution: windows-server
+    os_version: '2022'
     features:
       hospital-ad: domain-admin
       hospital-adfs: federation-admin
@@ -211,7 +212,8 @@ nodes:
       ram: 4294967296
       cpu: 2
     os: windows
-    os_version: Server 2019
+    os_distribution: windows-server
+    os_version: '2019'
     features:
       exchange-mailbox: exchange-admin
     conditions:
@@ -387,6 +389,7 @@ nodes:
       ram: 2147483648
       cpu: 2
     os: windows
+    os_distribution: windows-client
     os_version: '11'
     conditions:
       vendor-jump-online: support

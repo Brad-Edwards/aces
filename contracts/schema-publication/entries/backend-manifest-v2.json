@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "7a0b8682ca0dee26b1df767a1c0e86bd2b0dc6d8125dc6ef67aeab3367a7d2ef",
+  "content_hash": "45a269d3dd15d4c864ae210d1bfa258412b0e33a8a542eedfc16fa9fc26913c6",
   "last_change": {
-    "summary": "Added typed process-resource-limit apparatus domains for issue #1066, including portable resource terms, process/subtree scope, finite bounds, and unlimited-value support.",
-    "content_hash": "7a0b8682ca0dee26b1df767a1c0e86bd2b0dc6d8125dc6ef67aeab3367a7d2ef"
+    "summary": "Added coupled operating-system family, distribution, and bounded release capability rows for issue #1077.",
+    "content_hash": "45a269d3dd15d4c864ae210d1bfa258412b0e33a8a542eedfc16fa9fc26913c6"
   }
 }

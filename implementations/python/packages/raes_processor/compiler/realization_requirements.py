@@ -37,6 +37,7 @@ from .addresses import (
     _persistent_volume_address,
 )
 from .realization_authority_posture import designated_registered_posture, explicit_registered_posture
+from .realization_value_domains import compiled_os_value_domain, nested_authored_value
 
 
 def _append_source_artifact_requirement(
@@ -68,8 +69,6 @@ def _append_source_artifact_requirements(
     requirements: list[CompiledRealizationRequirement],
     scenario: InstantiatedScenario,
 ) -> None:
-    """Lower every realized ``Source`` carrier into the existing demand graph."""
-
     _append_resource_source_artifact_requirements(requirements, scenario)
     _append_bound_source_artifact_requirements(requirements, scenario)
     _append_action_source_artifact_requirements(requirements, scenario)
@@ -179,15 +178,6 @@ def _realization_requirement_address(
     raise ValueError("realization concern must resolve to one compiled resource address")
 
 
-def _nested_authored_value(source: object, path: tuple[str, ...]) -> object:
-    current = source
-    for token in path:
-        if current is None:
-            return None
-        current = getattr(current, token, None)
-    return current
-
-
 def _append_domain_topology_requirements(
     requirements: list[CompiledRealizationRequirement],
     domain_analysis: DomainTopologyAnalysis,
@@ -293,17 +283,24 @@ def _compiled_registered_realization(
     field_pointer = f"/{section_name}/{encoded_name}/{'/'.join(descriptor.authored_path)}"
     record = scenario.explicitness.get(registered.field_path)
     declarations = getattr(scenario, section_name)
-    authored_value = _nested_authored_value(
+    authored_value = nested_authored_value(
         declarations[declaration_name],
         descriptor.authored_path,
     )
     value_constraints: tuple[RealizationValueConstraint, ...] = ()
     process_resource_limits: tuple[ProcessResourceLimitDemand, ...] = ()
+    value_domain = None
+    constraint_provenance = None
     if descriptor.concern_kind == "process-resource-limits":
         value_constraints, process_resource_limits = _compiled_process_resource_limits(
             scenario,
             field_pointer=field_pointer,
             authored_value=authored_value,
+        )
+    elif descriptor.concern_kind in {"os-family", "os-distribution", "os-version"}:
+        value_domain, constraint_provenance = compiled_os_value_domain(
+            scenario,
+            field_pointer=field_pointer,
         )
     if record is not None and not descriptor.includes_authored_value(authored_value):
         return None, None
@@ -348,6 +345,8 @@ def _compiled_registered_realization(
         delegated=posture.delegated,
         verification_scope=descriptor.required_verification_scope(authored_value),
         required_observation_strength=descriptor.required_observation_strength(),
+        value_domain=value_domain,
+        constraint_provenance=constraint_provenance,
         value_constraints=value_constraints,
         process_resource_limits=process_resource_limits,
     )

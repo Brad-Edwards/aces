@@ -14,7 +14,7 @@ from raes_contracts.account_credentials import (
     value_free_account_placement_payload,
 )
 from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
-from raes_contracts.contracts import RealizationEnvelopeIdentityModel, RealizationObservationDisclosureModel
+from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
 from raes_contracts.participant_autonomous_state import require_participant_autonomous_runtime_snapshot
 from raes_contracts.planning import RuntimeDomain
@@ -23,13 +23,13 @@ from raes_contracts.runtime_state import (
     ExplicitnessProvenance,
     OperationReceipt,
     OperationStatus,
-    RealizationObservationDisclosure,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
     SnapshotEntry,
 )
-from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
+
+from .control_plane_store_observations import realization_observation_from_payload
 
 if TYPE_CHECKING:
     from .control_plane_store_local import LocalControlPlaneStore
@@ -257,6 +257,15 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
                 **(
                     {
                         "observed_value": entry.observed_value,
+                        "operating_system": (
+                            {
+                                "family": entry.operating_system.family,
+                                "distribution": entry.operating_system.distribution,
+                                "version": entry.operating_system.version,
+                            }
+                            if entry.operating_system is not None
+                            else None
+                        ),
                         "operation_id": entry.operation_id,
                         "envelope_digest": entry.envelope_digest,
                         "configuration_digest": entry.configuration_digest,
@@ -264,7 +273,7 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
                         "sequence": entry.sequence,
                         "binding_verified": entry.binding_verified,
                     }
-                    if entry.requirement_kind == "compute-substrate"
+                    if entry.requirement_kind in {"compute-substrate", "operating-system"}
                     else {}
                 ),
             }
@@ -366,7 +375,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             if isinstance(item, dict)
         ),
         realization_observations=tuple(
-            _realization_observation_from_payload(item)
+            realization_observation_from_payload(item)
             for item in payload.get("realization_observations", [])
             if isinstance(item, dict)
         ),
@@ -379,25 +388,6 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
     )
     require_participant_autonomous_runtime_snapshot(snapshot)
     return snapshot
-
-
-def _realization_observation_from_payload(payload: dict[str, Any]) -> RealizationObservationDisclosure:
-    model = RealizationObservationDisclosureModel.model_validate(payload)
-    return RealizationObservationDisclosure(
-        address=model.address,
-        field_path=model.field_path,
-        domain=model.domain,
-        requirement_kind=model.requirement_kind,
-        verification_scope=RealizationVerificationScope(model.verification_scope),
-        observation_strength=ObservationStrength(model.observation_strength),
-        observed_value=model.observed_value,
-        operation_id=model.operation_id,
-        envelope_digest=model.envelope_digest,
-        configuration_digest=model.configuration_digest,
-        observer_version=model.observer_version,
-        sequence=model.sequence,
-        binding_verified=model.binding_verified,
-    )
 
 
 class InMemoryControlPlaneStore:

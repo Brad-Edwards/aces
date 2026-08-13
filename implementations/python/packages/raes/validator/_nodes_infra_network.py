@@ -27,7 +27,18 @@ class _NodesInfraNetworkMixin:
                     continue
                 if vuln_name not in self._s.vulnerabilities:
                     self._err(f"Node '{name}' references undefined vulnerability '{vuln_name}'")
+            self._verify_node_operating_system(name, node)
             self._verify_node_architecture(name, node)
+
+    def _verify_node_operating_system(self, name: str, node: object) -> None:
+        """Enforce the family -> distribution -> release dependency chain."""
+
+        distribution = node.os_distribution
+        version = node.os_version
+        if distribution is not None and node.os is None:
+            self._err(f"Node '{name}' OS distribution requires an OS family")
+        if version and distribution is None:
+            self._err(f"Node '{name}' OS version requires an OS distribution")
 
     def _verify_node_architecture(self, name: str, node: object) -> None:
         """Enforce target-node/runtime-package CPU architecture compatibility.

@@ -164,7 +164,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -247,7 +246,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -402,7 +400,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
 """)
     target = create_stub_target()
@@ -621,7 +618,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -703,7 +699,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -796,7 +791,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -922,7 +916,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}

@@ -69,6 +69,7 @@ from .capabilities import (
     ApparatusIdentityModel,
     BackendCompatibilityModel,
     EvaluatorCapabilitiesModel,
+    OperatingSystemCompatibilityModel,
     OrchestratorCapabilitiesModel,
     ProcessorCompatibilityModel,
     ProcessResourceLimitCapabilityModel,
@@ -359,6 +360,7 @@ from .random_stream import (
 )
 from .realization_plans import (
     EvaluationPlanModel,
+    ObservedOperatingSystemIdentityModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,

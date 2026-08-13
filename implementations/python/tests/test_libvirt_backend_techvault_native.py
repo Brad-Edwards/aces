@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import replace
 from pathlib import Path
@@ -206,7 +207,6 @@ nodes:
   lab: {type: switch}
   demo:
     type: compute
-    os: linux
     resources: {ram: 128 MiB, cpu: 1}
     services: []
 infrastructure:
@@ -252,7 +252,8 @@ def _submit_native_scenario(path: Path, tmp_path: Path):
     )
     target = create_libvirt_target(driver=driver, name_prefix="native-test")
     manager = RuntimeManager(target)
-    scenario = parse_sdl(path.read_text(encoding="utf-8"))
+    content = re.sub(r"(?m)^\s+os(?:_distribution|_version)?:.*\n", "", path.read_text(encoding="utf-8"))
+    scenario = parse_sdl(content)
     execution_plan = manager.plan(scenario)
     control_plane = RuntimeControlPlane(target)
     receipt = control_plane.submit_provisioning(execution_plan.provisioning)

@@ -23,14 +23,21 @@ from dataclasses import replace
 
 from raes import parse_sdl
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_backend_protocols.capabilities import OperatingSystemCompatibility
 from raes_backend_stubs.manifest import load_stub_realization_envelope
 from raes_backend_stubs.stubs import StubProvisioner, create_stub_target
+from raes_contracts.apparatus import RealizationObservationCapability
+from raes_contracts.realization_observation import (
+    ObservedOperatingSystemIdentity,
+    RealizationObservationDisclosure,
+)
 from raes_contracts.runtime_state import (
     ApplyResult,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
 )
 from raes_contracts.versions import RUNTIME_SNAPSHOT_SCHEMA_VERSION
+from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 from raes_runtime.control_plane_store import _snapshot_from_payload, _snapshot_payload
 from raes_runtime.manager import RuntimeManager
 from raes_runtime.registry import RuntimeTarget
@@ -62,9 +69,34 @@ def _plan_exact(manager: RuntimeManager):
 
 def _target_with_provisioner(provisioner) -> RuntimeTarget:
     base = create_stub_target()
+    manifest = replace(
+        base.manifest,
+        realization_support=(
+            replace(
+                base.manifest.realization_support[0],
+                observation_capabilities={
+                    **base.manifest.realization_support[0].observation_capabilities,
+                    "operating-system": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                },
+            ),
+        ),
+        capabilities=replace(
+            base.manifest.capabilities,
+            provisioner=replace(
+                base.manifest.provisioner,
+                operating_systems=(
+                    OperatingSystemCompatibility("linux", "ubuntu", frozenset({"22.04"})),
+                    OperatingSystemCompatibility("windows", "windows-server", frozenset({"2022"})),
+                ),
+            ),
+        ),
+    )
     return RuntimeTarget(
         name=base.name,
-        manifest=base.manifest,
+        manifest=manifest,
         provisioner=provisioner,
         orchestrator=base.orchestrator,
         evaluator=base.evaluator,
@@ -73,7 +105,51 @@ def _target_with_provisioner(provisioner) -> RuntimeTarget:
     )
 
 
-class _WeakeningProvisioner:
+class _ObservedProvisioner:
+    """In-memory provisioner that supplies one typed guest OS identity."""
+
+    def __init__(self, *, family: str = "linux", include_observation: bool = True) -> None:
+        self._family = family
+        self._include_observation = include_observation
+
+    def validate(self, plan) -> list:
+        return []
+
+    def apply(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
+        result = StubProvisioner(load_stub_realization_envelope()).apply(plan, snapshot)
+        if not self._include_observation:
+            return result
+        operation = next(operation for operation in plan.operations if operation.resource_type == "node")
+        distribution, version = ("ubuntu", "22.04") if self._family == "linux" else ("windows-server", "2022")
+        observation = RealizationObservationDisclosure(
+            address=operation.address,
+            field_path="nodes.web.operating-system",
+            domain="runtime-realization",
+            requirement_kind="operating-system",
+            verification_scope=RealizationVerificationScope.PRESENCE,
+            observation_strength=ObservationStrength.GUEST_OBSERVED,
+            operating_system=ObservedOperatingSystemIdentity(
+                family=self._family,
+                distribution=distribution,
+                version=version,
+            ),
+            operation_id=plan.operation_id,
+            envelope_digest="sha256:" + "a" * 64,
+            configuration_digest="sha256:" + "b" * 64,
+            observer_version="test-guest-os-release/v1",
+            sequence=1,
+            binding_verified=True,
+        )
+        return replace(
+            result,
+            snapshot=result.snapshot.with_entries(
+                result.snapshot.entries,
+                realization_observations=(*result.snapshot.realization_observations, observation),
+            ),
+        )
+
+
+class _WeakeningProvisioner(_ObservedProvisioner):
     """A provisioner that silently downgrades an exact ``os`` declaration.
 
     It honours the plan structurally (delegating to the reference stub) but
@@ -81,25 +157,11 @@ class _WeakeningProvisioner:
     the silent-approximation failure mode the runtime gate must reject.
     """
 
-    def validate(self, plan) -> list:
-        return []
-
-    def apply(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
-        honest = StubProvisioner(load_stub_realization_envelope()).apply(plan, snapshot)
-        entries = dict(honest.snapshot.entries)
-        for address, entry in entries.items():
-            if entry.payload.get("os_family") == "linux":
-                weakened = dict(entry.payload)
-                weakened["os_family"] = "other"
-                entries[address] = replace(entry, payload=weakened)
-        return ApplyResult(
-            success=True,
-            snapshot=honest.snapshot.with_entries(entries),
-            changed_addresses=honest.changed_addresses,
-        )
+    def __init__(self) -> None:
+        super().__init__(family="windows")
 
 
-class _OmittingProvisioner:
+class _OmittingProvisioner(_ObservedProvisioner):
     """A provisioner that realizes the node but silently omits its exact ``os``.
 
     It drops the ``os_family`` key from the realized entry payload — the
@@ -108,21 +170,8 @@ class _OmittingProvisioner:
     an unrealized exact declaration as an I2 violation, not a non-event.
     """
 
-    def validate(self, plan) -> list:
-        return []
-
-    def apply(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
-        honest = StubProvisioner(load_stub_realization_envelope()).apply(plan, snapshot)
-        entries = dict(honest.snapshot.entries)
-        for address, entry in entries.items():
-            if "os_family" in entry.payload:
-                stripped = {key: value for key, value in entry.payload.items() if key != "os_family"}
-                entries[address] = replace(entry, payload=stripped)
-        return ApplyResult(
-            success=True,
-            snapshot=honest.snapshot.with_entries(entries),
-            changed_addresses=honest.changed_addresses,
-        )
+    def __init__(self) -> None:
+        super().__init__(include_observation=False)
 
 
 def test_runtime_gate_rejects_silently_weakened_exact_value():
@@ -172,7 +221,7 @@ def test_runtime_gate_rejects_silently_omitted_exact_value():
 def test_honest_apply_records_realization_provenance():
     """I5: an honoured exact realization is recorded as author-declared/exact."""
 
-    manager = RuntimeManager(create_stub_target())
+    manager = RuntimeManager(_target_with_provisioner(_ObservedProvisioner()))
     result = manager.apply(_plan_exact(manager))
 
     assert result.success
@@ -187,7 +236,7 @@ def test_honest_apply_records_realization_provenance():
 def test_honoured_parameter_substitution_records_processor_derived_provenance():
     """I5: an honoured substituted value retains its processor-derived origin."""
 
-    manager = RuntimeManager(_target_with_provisioner(create_stub_target().provisioner))
+    manager = RuntimeManager(_target_with_provisioner(_ObservedProvisioner()))
     plan = manager.plan(parse_sdl(textwrap.dedent(_PARAMETERIZED_SCENARIO)))
 
     result = manager.apply(plan)

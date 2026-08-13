@@ -9,6 +9,7 @@ from raes_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     BackendCapabilitySet,
     BackendManifest,
+    OperatingSystemCompatibility,
     ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
@@ -57,6 +58,14 @@ def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilitie
         ),
         supported_node_types=frozenset(configuration.supported_node_types),
         supported_os_families=frozenset(configuration.supported_os_families),
+        operating_systems=tuple(
+            OperatingSystemCompatibility(
+                family=entry.family,
+                distribution=entry.distribution,
+                versions=frozenset(entry.versions),
+            )
+            for entry in configuration.operating_systems
+        ),
         supported_node_architectures=frozenset({realized_architecture}),
         supported_content_types=frozenset(configuration.supported_content_types),
         supported_account_features=account_features,

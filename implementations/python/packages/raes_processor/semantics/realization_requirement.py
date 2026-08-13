@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from raes_contracts.addressing import require_compiled_address
+from raes_contracts.bounded_domains import EnumDomain
 from raes_contracts.compute_substrate import validate_compute_substrate_constraint
 from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 
@@ -70,6 +71,13 @@ class CompiledRealizationRequirement:
     def _validate_constraint_metadata(self) -> None:
         if self.requirement_kind == "compute-substrate":
             validate_compute_substrate_constraint(self.explicitness, self.value_domain)
+        elif self.requirement_kind in {"os-family", "os-distribution", "os-version"}:
+            if self.value_domain is not None and not isinstance(self.value_domain, EnumDomain):
+                raise ValueError("operating-system constraint domain must be a finite enum")
+            if self.value_domain is not None and self.explicitness is not ExplicitnessClass.CONSTRAINED:
+                raise ValueError("operating-system constraint domain requires constrained explicitness")
+            if self.constraint_provenance is not None and self.value_domain is None:
+                raise ValueError("operating-system constraint provenance requires a finite domain")
         elif self.value_domain is not None or self.constraint_provenance is not None:
             raise ValueError("constraint domain metadata requires compute-substrate")
 

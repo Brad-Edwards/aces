@@ -59,6 +59,8 @@ class NodeRuntime(ResolvedResource):
     node_name: str = ""
     node_kind: str = ""
     os_family: str = ""
+    os_distribution: str = ""
+    os_version: str = ""
     architecture: str = ""
     count: int | str | None = None
     network_namespace_target: str = ""

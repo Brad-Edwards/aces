@@ -468,6 +468,7 @@ nodes:
   target:
     type: compute
     os: windows
+    os_distribution: windows-client
     os_version: "10"
     resources: {ram: 4 gib, cpu: 2}
     vulnerabilities: [lsass-access]
@@ -1015,7 +1016,8 @@ nodes:
   exchange:
     type: compute
     os: windows
-    os_version: "Server 2019"
+    os_distribution: windows-server
+    os_version: "2019"
     source: exchange-2019
     resources: {ram: 8 gib, cpu: 4}
     features: [exchange-server, outlook-web]
@@ -1037,7 +1039,8 @@ nodes:
   dc:
     type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     source: windows-server-2022
     resources: {ram: 4 gib, cpu: 2}
     features: [ad-ds]
@@ -1399,14 +1402,16 @@ nodes:
   dc01:
     type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-forest-root: admin}
     roles: {admin: Administrator}
   dc02:
     type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-child-domain: admin}
     roles: {admin: Administrator}

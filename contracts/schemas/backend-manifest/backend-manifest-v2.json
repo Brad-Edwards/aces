@@ -729,6 +729,42 @@
       "title": "ObservationStrength",
       "type": "string"
     },
+    "OperatingSystemCompatibilityModel": {
+      "additionalProperties": false,
+      "description": "One portable, coupled OS family/distribution/release capability row.",
+      "properties": {
+        "distribution": {
+          "minLength": 1,
+          "title": "Distribution",
+          "type": "string"
+        },
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "versions": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[!-~](?:[ -~]{0,126}[!-~])?$",
+            "type": "string"
+          },
+          "maxItems": 128,
+          "minItems": 1,
+          "title": "Versions",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "family",
+        "distribution",
+        "versions"
+      ],
+      "title": "OperatingSystemCompatibilityModel",
+      "type": "object"
+    },
     "OrchestratorCapabilitiesModel": {
       "additionalProperties": false,
       "allOf": [
@@ -1924,6 +1960,14 @@
           "minLength": 1,
           "title": "Name",
           "type": "string"
+        },
+        "operating_systems": {
+          "items": {
+            "$ref": "#/$defs/OperatingSystemCompatibilityModel"
+          },
+          "title": "Operating Systems",
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_account_features": {
           "items": {

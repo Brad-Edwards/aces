@@ -5121,6 +5121,59 @@
     },
     "Node": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "os_version": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "os_version"
+            ]
+          },
+          "then": {
+            "properties": {
+              "os_distribution": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "os_distribution"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "os_distribution": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "os_distribution"
+            ]
+          },
+          "then": {
+            "properties": {
+              "os": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "os"
+            ]
+          }
+        }
+      ],
       "description": "A scenario node \u2014 either a compute endpoint or a strict switch.\n\nThe ``type`` field determines which structural variant is active. Compute\nfields are only valid for compute nodes; switches carry no extra data.",
       "properties": {
         "architecture": {
@@ -5206,8 +5259,25 @@
           "default": null,
           "title": "Os"
         },
+        "os_distribution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OSDistribution"
+            },
+            {
+              "pattern": "^(?:x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*|\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Os Distribution"
+        },
         "os_version": {
           "default": "",
+          "pattern": "^(?:[!-~](?:[ -~]{0,126}[!-~])?|\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\})?$",
           "title": "Os Version",
           "type": "string"
         },
@@ -5422,6 +5492,20 @@
         "number"
       ],
       "title": "NumericType",
+      "type": "string"
+    },
+    "OSDistribution": {
+      "description": "Canonical portable distribution or product-line identifiers.",
+      "enum": [
+        "ubuntu",
+        "debian",
+        "rocky-linux",
+        "red-hat-enterprise-linux",
+        "windows-server",
+        "windows-client",
+        "solaris"
+      ],
+      "title": "OSDistribution",
       "type": "string"
     },
     "OSFamily": {

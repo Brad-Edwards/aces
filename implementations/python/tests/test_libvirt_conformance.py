@@ -46,7 +46,6 @@ _PROVISIONING_SCENARIO = dedent(
     nodes:
       vm:
         type: compute
-        os: linux
         resources: {ram: 1 gib, cpu: 1}
     """
 )
@@ -87,7 +86,10 @@ def _bounded_report_payload(report) -> dict:
 
 
 def _libvirt_conformance_report():
-    return run_target_conformance(create_libvirt_target(driver=RecordingLibvirtDriver()))
+    return run_target_conformance(
+        create_libvirt_target(driver=RecordingLibvirtDriver()),
+        reference_scenario=_PROVISIONING_SCENARIO,
+    )
 
 
 # ---------------------------------------------------------------------------

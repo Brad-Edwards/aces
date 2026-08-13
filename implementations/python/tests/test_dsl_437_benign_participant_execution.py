@@ -87,6 +87,10 @@ def _advance_stepped_clock_to_tick(manager: RuntimeManager, target_tick: int) ->
 
 def _scenario_yaml(*, role: str = "green") -> str:
     payload = yaml.safe_load(EXAMPLE.read_text(encoding="utf-8"))
+    for node in payload["nodes"].values():
+        node.pop("os", None)
+        node.pop("os_distribution", None)
+        node.pop("os_version", None)
     payload["entities"]["enterprise-participant"]["role"] = role
     payload["objectives"] = {}
     payload["workflows"] = {}

@@ -22,6 +22,7 @@
     "supported_os_families": [
       "linux"
     ],
+    "operating_systems": [],
     "supported_content_types": [
       "file"
     ],
@@ -41,7 +42,7 @@
       "minimum": 1,
       "maximum": 2
     },
-    "configuration_digest": "sha256:bc4987adb1c0a8b179ff3953649bea10347d9662a756c7193f21081084f1ddcb"
+    "configuration_digest": "sha256:bc773acad54a27a26f63ddaae96d7c8b0f8d37226dc19815fc146fa092884dbf"
   },
   "concerns": [
     {
@@ -49,6 +50,13 @@
       "disposition": "realized",
       "observation_strength": "daemon-observed",
       "mechanism": "virtual-machine",
+      "transformations": []
+    },
+    {
+      "concern": "operating-system",
+      "disposition": "unsupported",
+      "observation_strength": "none",
+      "mechanism": null,
       "transformations": []
     },
     {
@@ -122,5 +130,5 @@
       "transformations": []
     }
   ],
-  "digest": "sha256:dbb1aff11bd4666561a2823f8d8d6da449af2332976fcc5d301da14fdb4c84d2"
+  "digest": "sha256:39becb940224f84350d4c16bfa0c2159e5aae3478004265b0cb675423c339aba"
 }

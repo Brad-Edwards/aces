@@ -52,7 +52,7 @@ MINIMAL_SDL = """\
 name: test-scenario
 nodes:
   net: {type: Switch}
-  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}}
+  web: {type: compute, resources: {ram: 2 GiB, cpu: 1}}
 infrastructure:
   net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
   web: {count: 1, links: [net]}
@@ -69,8 +69,8 @@ variables:
 
 nodes:
   corp-net: {type: Switch}
-  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}, conditions: {alive: admin}}
-  db:  {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}, features: {pg: dba}, roles: {dba: postgres}, services: [{port: 5432, name: pg-port}]}
+  web: {type: compute, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}, conditions: {alive: admin}}
+  db:  {type: compute, resources: {ram: 1 GiB, cpu: 1}, features: {pg: dba}, roles: {dba: postgres}, services: [{port: 5432, name: pg-port}]}
 
 infrastructure:
   corp-net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}

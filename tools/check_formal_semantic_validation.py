@@ -166,11 +166,11 @@ _RENAMED_FORMAL_REPLAY_DIGESTS = {
     ),
     "compile-repeatability-control": (
         "23b9d84fa757bd80436357ed52569b5445b0e4161641598e4b15c3b18cf6e668",
-        "0c301c3abc83d7c510b7f2a822521efcc3930c0b442cf6c36d345342306e7b55",
+        "4bb77034a8f2b1a577700ad03772a80acc0f4515a6831c8a35ac1bf50482d760",
     ),
     "compile-non-vacuity-control": (
         "2e92bdb90a218c29201312052b64b7fb88e8a65e887f05168e2273d9710a5080",
-        "c5a892924200a197dccaffefbfd8c90186f419c8f258ef9706e1651276226706",
+        "6cdc44529a87fb9addaf4040795c7f9ae702c5f6ae30e29a5086ee60072ded73",
     ),
 }
 _HISTORICAL_VM_REPLAY_INPUTS = {
@@ -212,7 +212,7 @@ _RENAMED_SATISFIABILITY_MODEL_DIGESTS = {
 _MIGRATED_PRODUCTION_EVIDENCE_DIGESTS = {
     "finite-domain-satisfiable-v2": (
         "sha256:03925bfe0b209c3c77069c97061aa63e8795389be7ed7b78376020b7dc87853c",
-        "sha256:fc049a7288a9ad3b6fcc1f37f181cb3625db7ad79e57b04fa09dec12a01bf839",
+        "sha256:60495371aecdd9dff463726e54af424359e09429f8283cd31c1de847bbc38cba",
     ),
     "finite-domain-unsatisfiable-v2": (
         "sha256:c2dc067c406ee9c26837e9565b6b52f8a6268e06e95dbc5937a455700b0c8109",
@@ -220,11 +220,11 @@ _MIGRATED_PRODUCTION_EVIDENCE_DIGESTS = {
     ),
     "typed-exploit-path-valid-v2": (
         "sha256:0683b55cd2a52ba626bb5cfbf10de109798d8d31ba467aabd13d4930df204798",
-        "sha256:e621c00851c9065288f34dd316ea039d6600340cc1f8ff993091813451770096",
+        "sha256:00a7d75ddaf8e21fb82de2ecbff3dfafc29660d0e60829610fcb607d3da5ef0f",
     ),
     "typed-exploit-path-invalid-v2": (
         "sha256:1ec2ff4423088ad2ac6328aba7fbced5cd89b1569cff057e44ad30ef5c5befc0",
-        "sha256:e8f0619f48501384e48e59b66e08a8478c80e0341ad9e9d2015e89aab7e6896a",
+        "sha256:74db3e5df9c19fe7a9a203ad3440656229af9df56164d63ec90f0c55e0aab8f2",
     ),
 }
 _RENAMED_SOLVER_CONFIGURATION_DIGEST = (

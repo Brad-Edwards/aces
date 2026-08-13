@@ -153,6 +153,7 @@
         "other",
         "windows"
       ],
+      "operating_systems": [],
       "supported_node_architectures": [
         "aarch64",
         "x86_64"

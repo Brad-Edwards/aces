@@ -241,6 +241,7 @@ nodes:
   workstation:
     type: compute
     os: windows
+    os_distribution: windows-client
     os_version: "10"
     resources: {ram: 4 gib, cpu: 2}
     services: [{port: 3389, name: rdp}]
@@ -248,7 +249,8 @@ nodes:
   ad-server:
     type: compute
     os: windows
-    os_version: "Server 2019"
+    os_distribution: windows-server
+    os_version: "2019"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-ds: admin, dns-server: admin}
     services:
@@ -261,7 +263,8 @@ nodes:
   fileshare:
     type: compute
     os: windows
-    os_version: "Server 2019"
+    os_distribution: windows-server
+    os_version: "2019"
     resources: {ram: 2 gib, cpu: 1}
     features: {smb-shares: admin}
     services: [{port: 445, name: smb}]
@@ -335,7 +338,8 @@ nodes:
   win2003-ad:
     type: compute
     os: windows
-    os_version: "Server 2003"
+    os_distribution: windows-server
+    os_version: "2003"
     resources: {ram: 1 gib, cpu: 1}
     features: {ad-ds: admin, iis-web: admin}
     services:
@@ -347,6 +351,7 @@ nodes:
   win2000-dns:
     type: compute
     os: windows
+    os_distribution: windows-server
     os_version: "2000"
     resources: {ram: 512 mib, cpu: 1}
     features: {dns-server: admin, iis-web-2: admin}
@@ -358,7 +363,8 @@ nodes:
   solaris-ecom:
     type: compute
     os: other
-    os_version: "Solaris 10"
+    os_distribution: solaris
+    os_version: "10"
     resources: {ram: 1 gib, cpu: 1}
     features: {ecom-frontend: app}
     services:
@@ -369,7 +375,8 @@ nodes:
   ubuntu-backend:
     type: compute
     os: linux
-    os_version: "Ubuntu 6.06"
+    os_distribution: ubuntu
+    os_version: "6.06"
     resources: {ram: 1 gib, cpu: 1}
     features: {ecom-backend: app, mysql-db: dba}
     services:
@@ -451,7 +458,8 @@ nodes:
   mssql-server:
     type: compute
     os: windows
-    os_version: "Server 2019"
+    os_distribution: windows-server
+    os_version: "2019"
     resources: {ram: 4 gib, cpu: 2}
     features: {mssql: dba}
     services: [{port: 1433, name: mssql}]
@@ -461,7 +469,8 @@ nodes:
   dc-corp:
     type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-corp: admin}
     services: [{port: 389, name: ldap}, {port: 88, name: kerberos}, {port: 445, name: smb}]
@@ -471,7 +480,8 @@ nodes:
   dc-dev:
     type: compute
     os: windows
-    os_version: "Server 2019"
+    os_distribution: windows-server
+    os_version: "2019"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-dev: admin}
     services: [{port: 389, name: ldap}, {port: 88, name: kerberos}]
@@ -590,7 +600,8 @@ nodes:
   metasploitable:
     type: compute
     os: linux
-    os_version: "Ubuntu 8.04"
+    os_distribution: ubuntu
+    os_version: "8.04"
     resources: {ram: 512 mib, cpu: 1}
     features: [vsftpd, openssh, apache-web, samba-smb, mysql-db, postgres-db, unrealirc, distccd, java-rmi, tomcat-mgr, vnc-server]
     services:
@@ -698,7 +709,8 @@ nodes:
   ad-dc:
     type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-berylia: admin}
     services: [{port: 389, name: ldap}, {port: 88, name: kerberos}, {port: 445, name: smb}]
@@ -732,7 +744,8 @@ nodes:
   hmi-server:
     type: compute
     os: windows
-    os_version: "Server 2008 R2"
+    os_distribution: windows-server
+    os_version: "2008 R2"
     resources: {ram: 2 gib, cpu: 1}
     description: "SCADA Human-Machine Interface"
     features: {scada-hmi: operator}
@@ -743,7 +756,6 @@ nodes:
   plc-power:
     type: compute
     os: other
-    os_version: "SIEMENS S7-300"
     resources: {ram: 256 mib, cpu: 1}
     description: "Power grid PLC controller"
     services: [{port: 102, name: s7comm}]
@@ -752,7 +764,6 @@ nodes:
   plc-water:
     type: compute
     os: other
-    os_version: "SIEMENS S7-300"
     resources: {ram: 256 mib, cpu: 1}
     description: "Water treatment PLC controller"
     services: [{port: 102, name: s7comm}]

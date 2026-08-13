@@ -85,6 +85,16 @@ def _node_capability_constraints(
             variables=variables,
         ),
         _finite_domain_constraint(
+            field_pointer=f"{node_pointer}/os_distribution",
+            value=node.os_distribution,
+            variables=variables,
+        ),
+        _finite_domain_constraint(
+            field_pointer=f"{node_pointer}/os_version",
+            value=node.os_version,
+            variables=variables,
+        ),
+        _finite_domain_constraint(
             field_pointer=f"{node_pointer}/architecture",
             value=node.architecture,
             variables=variables,
