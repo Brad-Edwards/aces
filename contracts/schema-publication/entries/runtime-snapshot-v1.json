@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "cdb549ce727995c8e14775096bfc927e34fb22a639b83a85be5f115069d11073",
+  "content_hash": "4388410c8e7536fef3f1251b7649b7d2cefef3764bf9da31d221430c92935879",
   "last_change": {
-    "summary": "Added value-bearing compute-substrate observations bound to operation, envelope, configuration, observer, and sequence for issue #1076.",
-    "content_hash": "cdb549ce727995c8e14775096bfc927e34fb22a639b83a85be5f115069d11073"
+    "summary": "Added typed guest-observed operating-system identity bound to operation, envelope, configuration, observer, and sequence for issue #1077.",
+    "content_hash": "4388410c8e7536fef3f1251b7649b7d2cefef3764bf9da31d221430c92935879"
   }
 }

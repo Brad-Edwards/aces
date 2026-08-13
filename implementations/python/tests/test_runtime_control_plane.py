@@ -272,7 +272,6 @@ name: provision
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
 """)
     execution_plan = plan(compile_runtime_model(scenario), create_stub_target().manifest)
@@ -576,7 +575,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}

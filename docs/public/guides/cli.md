@@ -61,8 +61,22 @@ conformance report.
 Use `raes sdl format --check` to check the source format. The old `raes sdl
 resolve`, `verify-imports`, and `publish` commands maintain module packages.
 `sdl resolve` writes a lockfile. `verify-imports` checks locked imports.
-`publish` writes an OCI layout. These commands are not part of the offline
-`raes semantic` contract. Pack-aware workflows belong in env-packs.
+`publish` writes an OCI layout. Publication resolves relative and symlinked
+entrypoints to one canonical module root and produces deterministic tar+gzip
+bytes: identical module bytes produce identical bundle and manifest digests.
+The completed layout replaces an older layout transactionally, so stale blobs
+or files are not retained and a failed commit preserves the prior layout.
+
+Signing is explicit. Pass `--signer-id` and `--private-key` together to produce
+an Ed25519 signature, or omit both for unsigned publication. Supplying only one,
+an unreadable/invalid key, or a signer id with surrounding whitespace fails
+closed rather than silently publishing unsigned content.
+
+These commands are not part of the offline `raes semantic` contract. Pack-aware
+workflows belong in env-packs. OCI resolution uses bounded configured timeouts;
+its digest-bound extraction cache is committed only after complete validation,
+and malformed registry JSON is reported as a stable `SDLParseError` without
+including response bodies or decoder internals.
 
 Use `raes processor --help` and `raes conformance --help` for the processor and
 backend-contract surfaces. The [CLI API reference](../api/cli.rst) lists the

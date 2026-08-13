@@ -66,6 +66,15 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 
 Nodes are the compute and network elements of the scenario.
 
+Operating-system identity is split into three independent fields: `os` is the
+family, `os_distribution` is the governed distribution or product line, and
+`os_version` is only the release token. A version requires a distribution, and
+a distribution requires a family. Backends admit distribution/version pairs as
+coupled compatibility rows; they must not infer support by cross-pairing values
+from different rows. Runtime proof for these fields is guest-observed evidence
+bound to the executing operation and selected realization envelope—not an image
+tag, boot success, or a copied plan/snapshot value.
+
 ```yaml
 nodes:
   corp-switch:
@@ -76,7 +85,8 @@ nodes:
     type: compute
     os: linux                           # windows, linux, macos, freebsd, other
     architecture: x86_64                 # target-node CPU architecture: x86_64, aarch64
-    os_version: "Ubuntu 22.04"
+    os_distribution: ubuntu
+    os_version: "22.04"
     source: ubuntu-22.04                # provider-neutral image reference
     resources:
       ram: 4 GiB                        # human-readable: GiB, MiB, GB, MB
@@ -684,7 +694,7 @@ nodes:
           domain_name: TECHVAULT
           realm: TECHVAULT.LOCAL
           base_dn: DC=techvault,DC=local
-          services:
+    services:
             - service_id: ldap-endpoint
               service: ldap             # owning same-node Node.services[].name
               protocol: ldap

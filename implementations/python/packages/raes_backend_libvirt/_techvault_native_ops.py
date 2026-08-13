@@ -22,10 +22,13 @@ from .techvault_lifecycle import (
 
 _DOMAIN = "runtime"
 _CODE_OPERATION_FAILED = "libvirt-backend.techvault-native.operation-failed"
+_CODE_KERNEL_UNAVAILABLE = "libvirt-backend.techvault-native.kernel-unavailable"
+_CODE_GUEST_FRESHNESS_UNAVAILABLE = "libvirt-backend.guest.freshness-preflight-failed"
 _CODE_OWNERSHIP_CONFLICT = "libvirt-backend.techvault-native.ownership-conflict"
 _CODE_READBACK_FAILED = "libvirt-backend.techvault-native.readback-failed"
 _CODE_RESIDUAL_STATE = "libvirt-backend.techvault-native.residual-state"
 _CODE_UNAVAILABLE = "libvirt-backend.techvault-native.unavailable"
+_CODE_TOOLCHAIN_UNAVAILABLE = "libvirt-backend.techvault-native.initramfs-toolchain-unavailable"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
 
 
@@ -64,6 +67,13 @@ def _artifact_token(address: str) -> str:
 
 
 _MESSAGES = {
+    _CODE_GUEST_FRESHNESS_UNAVAILABLE: (
+        "A fresh guest challenge and empty fact channel could not be established before native mutation."
+    ),
+    _CODE_KERNEL_UNAVAILABLE: "The configured kernel is not a readable regular file; refusing native mutation.",
+    _CODE_TOOLCHAIN_UNAVAILABLE: (
+        "The injected or discovered initramfs executable failed static target-toolchain preflight."
+    ),
     _CODE_UNAVAILABLE: "Libvirt connection is unavailable for native TechVault realization.",
     _CODE_RESIDUAL_STATE: "TechVault rollback could not verify cleanup for '{address}'; residual state may remain.",
     _CODE_OWNERSHIP_CONFLICT: "Native object for '{address}' is not owned by that RAES address; refusing mutation.",

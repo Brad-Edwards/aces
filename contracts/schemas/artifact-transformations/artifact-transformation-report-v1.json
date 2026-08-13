@@ -65,7 +65,8 @@
     },
     "ArtifactTransformationLossKind": {
       "enum": [
-        "declaration-removed"
+        "declaration-removed",
+        "semantic-omission"
       ],
       "title": "ArtifactTransformationLossKind",
       "type": "string"

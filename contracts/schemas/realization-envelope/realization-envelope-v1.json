@@ -315,6 +315,42 @@
       "title": "ObservationStrength",
       "type": "string"
     },
+    "OperatingSystemCompatibilityModel": {
+      "additionalProperties": false,
+      "description": "One portable, coupled OS family/distribution/release capability row.",
+      "properties": {
+        "distribution": {
+          "minLength": 1,
+          "title": "Distribution",
+          "type": "string"
+        },
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "versions": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[!-~](?:[ -~]{0,126}[!-~])?$",
+            "type": "string"
+          },
+          "maxItems": 128,
+          "minItems": 1,
+          "title": "Versions",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "family",
+        "distribution",
+        "versions"
+      ],
+      "title": "OperatingSystemCompatibilityModel",
+      "type": "object"
+    },
     "Posture": {
       "description": "Author/backend intent for a bound value or child scope.",
       "enum": [
@@ -404,7 +440,8 @@
         "feature-binding",
         "service",
         "acl",
-        "compute-substrate"
+        "compute-substrate",
+        "operating-system"
       ],
       "title": "RealizationConcern",
       "type": "string"
@@ -667,6 +704,14 @@
           "minLength": 1,
           "title": "Network Policy",
           "type": "string"
+        },
+        "operating_systems": {
+          "items": {
+            "$ref": "#/$defs/OperatingSystemCompatibilityModel"
+          },
+          "title": "Operating Systems",
+          "type": "array",
+          "uniqueItems": true
         },
         "process_resource_limits": {
           "items": {
@@ -1007,13 +1052,28 @@
           },
           "maxContains": 1,
           "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "operating-system"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
         }
       ],
       "items": {
         "$ref": "#/$defs/RealizationConcernDisclosureModel"
       },
-      "maxItems": 11,
-      "minItems": 11,
+      "maxItems": 12,
+      "minItems": 12,
       "title": "Concerns",
       "type": "array"
     },

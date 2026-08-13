@@ -44,7 +44,6 @@ _SCENARIO = dedent(
     nodes:
       vm1:
         type: compute
-        os: linux
         resources: {ram: 1 gib, cpu: 1}
         conditions: {health: ops}
         roles: {ops: operator}
@@ -81,7 +80,6 @@ _PARAM_SCENARIO = dedent(
     nodes:
       vm1:
         type: compute
-        os: linux
         resources:
           ram: 1 gib
           cpu: ${cpu_count}

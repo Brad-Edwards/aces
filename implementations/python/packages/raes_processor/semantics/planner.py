@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol, TypeVar
@@ -123,7 +123,7 @@ def dependency_cycles(
     on_stack: set[str] = set()
     cycles: list[tuple[str, ...]] = []
 
-    def strongconnect(node: str) -> None:
+    def visit(node: str) -> None:
         nonlocal index
         indices[node] = index
         lowlinks[node] = index
@@ -131,16 +131,7 @@ def dependency_cycles(
         stack.append(node)
         on_stack.add(node)
 
-        for dependency in graph[node]:
-            if dependency not in indices:
-                strongconnect(dependency)
-                lowlinks[node] = min(lowlinks[node], lowlinks[dependency])
-            elif dependency in on_stack:
-                lowlinks[node] = min(lowlinks[node], indices[dependency])
-
-        if lowlinks[node] != indices[node]:
-            return
-
+    def close_component(node: str) -> None:
         component: list[str] = []
         while stack:
             member = stack.pop()
@@ -152,6 +143,33 @@ def dependency_cycles(
         component = sorted(component)
         if len(component) > 1 or component[0] in graph[component[0]]:
             cycles.append(tuple(component))
+
+    # Tarjan is driven from an explicit stack rather than recursion: DFS depth
+    # reaches the longest dependency path, so a recursive walk raises
+    # RecursionError on scenarios with more than roughly a thousand chained
+    # resources, aborting planning instead of reporting cycles.
+    def strongconnect(root: str) -> None:
+        visit(root)
+        frames: list[tuple[str, Iterator[str]]] = [(root, iter(graph[root]))]
+        while frames:
+            node, dependencies = frames[-1]
+            descended = False
+            for dependency in dependencies:
+                if dependency not in indices:
+                    visit(dependency)
+                    frames.append((dependency, iter(graph[dependency])))
+                    descended = True
+                    break
+                if dependency in on_stack:
+                    lowlinks[node] = min(lowlinks[node], indices[dependency])
+            if descended:
+                continue
+            frames.pop()
+            if frames:
+                parent = frames[-1][0]
+                lowlinks[parent] = min(lowlinks[parent], lowlinks[node])
+            if lowlinks[node] == indices[node]:
+                close_component(node)
 
     for node in sorted(graph, key=canonical_resource_identity):
         if node not in indices:

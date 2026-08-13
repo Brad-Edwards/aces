@@ -1,0 +1,725 @@
+{
+  "$defs": {
+    "CandidateSynthesisAssumptionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_ids": {
+          "items": {
+            "maxLength": 128,
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Assertion Ids",
+          "type": "array"
+        },
+        "assumption_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Assumption Id",
+          "type": "string"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assumption_id",
+        "assertion_ids",
+        "statement"
+      ],
+      "title": "CandidateSynthesisAssumptionModel",
+      "type": "object"
+    },
+    "CandidateSynthesisDecisionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_kind": {
+          "enum": [
+            "author",
+            "governed-policy"
+          ],
+          "title": "Actor Kind",
+          "type": "string"
+        },
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "assertion_ids": {
+          "items": {
+            "maxLength": 128,
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Assertion Ids",
+          "type": "array"
+        },
+        "basis": {
+          "minLength": 1,
+          "title": "Basis",
+          "type": "string"
+        },
+        "decision_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "node_type": {
+          "enum": [
+            "compute",
+            "switch"
+          ],
+          "title": "Node Type",
+          "type": "string"
+        },
+        "target_ref": {
+          "maxLength": 128,
+          "pattern": "^nodes\\.[a-z][a-z0-9-]*$",
+          "title": "Target Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "decision_id",
+        "actor_kind",
+        "actor_ref",
+        "assertion_ids",
+        "target_ref",
+        "node_type",
+        "basis"
+      ],
+      "title": "CandidateSynthesisDecisionModel",
+      "type": "object"
+    },
+    "CandidateSynthesisProfileCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Exact coordinate for a governed, caller-supplied profile artifact.",
+      "properties": {
+        "digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*/v[1-9][0-9]*$",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile_id",
+        "version",
+        "digest"
+      ],
+      "title": "CandidateSynthesisProfileCoordinateModel",
+      "type": "object"
+    },
+    "CandidateSynthesisSourceModel": {
+      "additionalProperties": false,
+      "description": "Pinned source, extraction, and adaptation boundary.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/CandidateSynthesisProfileCoordinateModel"
+        },
+        "assertion_format": {
+          "minLength": 1,
+          "title": "Assertion Format",
+          "type": "string"
+        },
+        "assertion_set_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Assertion Set Digest",
+          "type": "string"
+        },
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "content_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Content Digest",
+          "type": "string"
+        },
+        "extraction_query": {
+          "$ref": "#/$defs/CandidateSynthesisProfileCoordinateModel"
+        },
+        "information_flow_policy_refs": {
+          "items": {
+            "$ref": "#/$defs/CandidateSynthesisProfileCoordinateModel"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Information Flow Policy Refs",
+          "type": "array"
+        },
+        "revision": {
+          "minLength": 1,
+          "title": "Revision",
+          "type": "string"
+        },
+        "scheme_id": {
+          "minLength": 1,
+          "title": "Scheme Id",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Source Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "authority",
+        "scheme_id",
+        "assertion_format",
+        "revision",
+        "content_digest",
+        "assertion_set_digest",
+        "extraction_query",
+        "adapter",
+        "information_flow_policy_refs"
+      ],
+      "title": "CandidateSynthesisSourceModel",
+      "type": "object"
+    },
+    "CandidateSynthesisTargetModel": {
+      "additionalProperties": false,
+      "properties": {
+        "scenario_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_version": {
+          "minLength": 1,
+          "title": "Scenario Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_id",
+        "scenario_version"
+      ],
+      "title": "CandidateSynthesisTargetModel",
+      "type": "object"
+    },
+    "ConceptSourceAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "concept": {
+          "$ref": "#/$defs/ExternalConceptSchemeCoordinateModel"
+        },
+        "kind": {
+          "const": "concept",
+          "default": "concept",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "concept"
+      ],
+      "title": "ConceptSourceAssertionModel",
+      "type": "object"
+    },
+    "ExampleSourceAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "example_ref": {
+          "$ref": "#/$defs/ExternalConceptSchemeCoordinateModel"
+        },
+        "kind": {
+          "const": "example",
+          "default": "example",
+          "title": "Kind",
+          "type": "string"
+        },
+        "subject_assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Subject Assertion Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "subject_assertion_id",
+        "example_ref"
+      ],
+      "title": "ExampleSourceAssertionModel",
+      "type": "object"
+    },
+    "ExternalConceptSchemeCoordinateModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "source_locator": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_locator"
+              ]
+            },
+            {
+              "properties": {
+                "source_digest": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_digest"
+              ]
+            }
+          ]
+        }
+      ],
+      "description": "Versioned and inert coordinate for one concept in an external scheme.",
+      "properties": {
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "concept_id": {
+          "minLength": 1,
+          "title": "Concept Id",
+          "type": "string"
+        },
+        "revision": {
+          "minLength": 1,
+          "title": "Revision",
+          "type": "string"
+        },
+        "scheme_id": {
+          "minLength": 1,
+          "title": "Scheme Id",
+          "type": "string"
+        },
+        "source_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Digest"
+        },
+        "source_locator": {
+          "anyOf": [
+            {
+              "allOf": [
+                {
+                  "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:"
+                },
+                {
+                  "not": {
+                    "pattern": "^[Ff][Ii][Ll][Ee]:"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "^[Dd][Aa][Tt][Aa]:"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://[^/?#]*@"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "#"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "[?&][^#&=]*(?:[Aa][Pp][Ii][-_]?[Kk][Ee][Yy]|[Cc][Rr][Ee][Dd][Ee][Nn][Tt][Ii][Aa][Ll]|[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Ss][Ii][Gg][Nn][Aa][Tt][Uu][Rr][Ee]|[Tt][Oo][Kk][Ee][Nn])[^#&=]*="
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "[?&](?:[Aa][Uu][Tt][Hh]|[Kk][Ee][Yy]|[Ss][Ii][Gg])="
+                  }
+                },
+                {
+                  "if": {
+                    "pattern": "^[Hh][Tt][Tt][Pp][Ss]?:"
+                  },
+                  "then": {
+                    "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://[^/?#]+"
+                  }
+                }
+              ],
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Locator"
+        }
+      },
+      "required": [
+        "scheme_id",
+        "authority",
+        "revision",
+        "concept_id"
+      ],
+      "title": "ExternalConceptSchemeCoordinateModel",
+      "type": "object"
+    },
+    "OrderingSourceAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "left-before-right",
+            "right-before-left",
+            "unspecified"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "kind": {
+          "const": "ordering",
+          "default": "ordering",
+          "title": "Kind",
+          "type": "string"
+        },
+        "left_assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Left Assertion Id",
+          "type": "string"
+        },
+        "ordering_term": {
+          "$ref": "#/$defs/ExternalConceptSchemeCoordinateModel"
+        },
+        "right_assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Right Assertion Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "left_assertion_id",
+        "right_assertion_id",
+        "ordering_term",
+        "direction"
+      ],
+      "title": "OrderingSourceAssertionModel",
+      "type": "object"
+    },
+    "ParameterizationSourceAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "candidate_values": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Candidate Values",
+          "type": "array"
+        },
+        "kind": {
+          "const": "parameterization",
+          "default": "parameterization",
+          "title": "Kind",
+          "type": "string"
+        },
+        "parameter_term": {
+          "$ref": "#/$defs/ExternalConceptSchemeCoordinateModel"
+        },
+        "subject_assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Subject Assertion Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "subject_assertion_id",
+        "parameter_term",
+        "candidate_values"
+      ],
+      "title": "ParameterizationSourceAssertionModel",
+      "type": "object"
+    },
+    "PreconditionSourceAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "precondition",
+          "default": "precondition",
+          "title": "Kind",
+          "type": "string"
+        },
+        "predicate_term": {
+          "$ref": "#/$defs/ExternalConceptSchemeCoordinateModel"
+        },
+        "subject_assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Subject Assertion Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "subject_assertion_id",
+        "predicate_term"
+      ],
+      "title": "PreconditionSourceAssertionModel",
+      "type": "object"
+    },
+    "RelationshipSourceAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "relationship",
+          "default": "relationship",
+          "title": "Kind",
+          "type": "string"
+        },
+        "relationship_term": {
+          "$ref": "#/$defs/ExternalConceptSchemeCoordinateModel"
+        },
+        "source_assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Source Assertion Id",
+          "type": "string"
+        },
+        "target_assertion_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+          "title": "Target Assertion Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "source_assertion_id",
+        "target_assertion_id",
+        "relationship_term"
+      ],
+      "title": "RelationshipSourceAssertionModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://openrae.github.io/rae/schemas/sdl-candidate-synthesis-input-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Bounded, source-neutral input to one trusted synthesis profile.",
+  "properties": {
+    "assertions": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "concept": "#/$defs/ConceptSourceAssertionModel",
+            "example": "#/$defs/ExampleSourceAssertionModel",
+            "ordering": "#/$defs/OrderingSourceAssertionModel",
+            "parameterization": "#/$defs/ParameterizationSourceAssertionModel",
+            "precondition": "#/$defs/PreconditionSourceAssertionModel",
+            "relationship": "#/$defs/RelationshipSourceAssertionModel"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/ConceptSourceAssertionModel"
+          },
+          {
+            "$ref": "#/$defs/RelationshipSourceAssertionModel"
+          },
+          {
+            "$ref": "#/$defs/PreconditionSourceAssertionModel"
+          },
+          {
+            "$ref": "#/$defs/OrderingSourceAssertionModel"
+          },
+          {
+            "$ref": "#/$defs/ParameterizationSourceAssertionModel"
+          },
+          {
+            "$ref": "#/$defs/ExampleSourceAssertionModel"
+          }
+        ]
+      },
+      "maxItems": 4096,
+      "minItems": 1,
+      "title": "Assertions",
+      "type": "array"
+    },
+    "assumptions": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CandidateSynthesisAssumptionModel"
+      },
+      "maxItems": 1024,
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "decisions": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CandidateSynthesisDecisionModel"
+      },
+      "maxItems": 1024,
+      "title": "Decisions",
+      "type": "array"
+    },
+    "input_id": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "title": "Input Id",
+      "type": "string"
+    },
+    "input_version": {
+      "minLength": 1,
+      "title": "Input Version",
+      "type": "string"
+    },
+    "policy_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Policy Digest",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "sdl-candidate-synthesis-input/v1",
+      "default": "sdl-candidate-synthesis-input/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/CandidateSynthesisSourceModel"
+    },
+    "target": {
+      "$ref": "#/$defs/CandidateSynthesisTargetModel"
+    },
+    "transformation_profile": {
+      "$ref": "#/$defs/CandidateSynthesisProfileCoordinateModel"
+    }
+  },
+  "required": [
+    "input_id",
+    "input_version",
+    "source",
+    "assertions",
+    "target",
+    "transformation_profile",
+    "policy_digest"
+  ],
+  "title": "CandidateSynthesisInputModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "Every assertion and reference resolves inside one digest-pinned source envelope and assertion set.",
+      "id": "candidate-synthesis-pinned-source-join",
+      "inputs": [
+        {
+          "contract_id": "sdl-candidate-synthesis-input-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.CandidateSynthesisInputModel.model_validate"
+    },
+    {
+      "description": "Assertions, assumptions, decisions, references, values, and target identities use stable unique ordering.",
+      "id": "candidate-synthesis-stable-input-order",
+      "inputs": [
+        {
+          "contract_id": "sdl-candidate-synthesis-input-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.CandidateSynthesisInputModel.model_validate"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "sdl-candidate-synthesis-input-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

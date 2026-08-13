@@ -101,6 +101,9 @@ def _validate_guest_metadata(guest: Mapping[str, Any]) -> list[str]:
         problems.append("guest observation requires a canonical operation reference")
     if not isinstance(guest.get("certifying"), bool):
         problems.append("guest observation requires an explicit certifying flag")
+    tolerance = guest.get("memory_tolerance_mib")
+    if isinstance(tolerance, bool) or not isinstance(tolerance, int) or tolerance < 0:
+        problems.append("guest observation requires an explicit non-negative memory tolerance")
     problems.extend(
         f"guest observation requires a {label}"
         for label, field_name in _GUEST_METADATA_FIELDS

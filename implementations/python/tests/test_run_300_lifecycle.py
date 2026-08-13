@@ -41,7 +41,7 @@ NODE_NAME = "vm1"
 EXPECTED_NODE_ADDRESS = f"provision.node.{NODE_NAME}"
 EXPECTED_WORKFLOW_ADDRESS = "orchestration.workflow.response"
 DRIFT_DIAGNOSTIC_CODE = "runtime.plan-snapshot-mismatch"
-PARAM_OS_KIND = "linux"
+PARAM_NODE_DESCRIPTION = "primary-node"
 PARAM_CPU_COUNT = 2
 
 
@@ -56,7 +56,7 @@ def _raw_scenario():
     the parser explicitly rejects ``${var}`` in user-defined mapping
     keys (see ``_reject_variable_mapping_keys`` in the SDL parser).
     The meaning-preservation probe therefore lives in value positions:
-    the ``os_kind`` and ``cpu_count`` variables must flow through
+    the ``node_description`` and ``cpu_count`` variables must flow through
     instantiation and land, fully substituted, inside the compiled
     model, the planner's operation payload, and the applied snapshot
     entry for ``provision.node.vm1``.
@@ -71,17 +71,17 @@ def _raw_scenario():
             f"""
             name: run-300-lifecycle
             variables:
-              os_kind:
+              node_description:
                 type: string
-                default: linux
-                allowed_values: [linux]
+                default: primary-node
+                allowed_values: [primary-node]
               cpu_count:
                 type: integer
                 default: 1
             nodes:
               {NODE_NAME}:
                 type: compute
-                os: ${{os_kind}}
+                description: ${{node_description}}
                 resources:
                   ram: 1 gib
                   cpu: ${{cpu_count}}
@@ -130,7 +130,7 @@ class TestRun300Lifecycle:
     def test_valid_scenario_flows_through_all_five_stages_preserving_identity(self):
         """One parameterized scenario → instantiate → compile → plan → apply → observe.
 
-        Asserts that the values substituted for ``${os_kind}`` and
+        Asserts that the values substituted for ``${node_description}`` and
         ``${cpu_count}`` at instantiation time, and the canonical node
         and workflow addresses, survive unchanged into the downstream
         typed contracts that publish them. Substituted values must remain
@@ -144,7 +144,7 @@ class TestRun300Lifecycle:
         raw = _raw_scenario()
         instantiated = instantiate_scenario(
             raw,
-            parameters={"os_kind": PARAM_OS_KIND, "cpu_count": PARAM_CPU_COUNT},
+            parameters={"node_description": PARAM_NODE_DESCRIPTION, "cpu_count": PARAM_CPU_COUNT},
         )
 
         assert isinstance(instantiated, InstantiatedScenario), (
@@ -153,7 +153,7 @@ class TestRun300Lifecycle:
             "meaning across stages."
         )
         assert instantiated.instantiation_provenance.root_binding_values == {
-            "os_kind": PARAM_OS_KIND,
+            "node_description": PARAM_NODE_DESCRIPTION,
             "cpu_count": PARAM_CPU_COUNT,
         }, (
             "Instantiation parameters must be captured in portable provenance "
@@ -169,8 +169,8 @@ class TestRun300Lifecycle:
             "The canonical node identity must appear under its literal key after instantiation."
         )
         instantiated_node = instantiated_payload["nodes"][NODE_NAME]
-        assert instantiated_node["os"] == PARAM_OS_KIND, (
-            "Instantiation must substitute os_kind before compilation begins."
+        assert instantiated_node["description"] == PARAM_NODE_DESCRIPTION, (
+            "Instantiation must substitute node_description before compilation begins."
         )
         assert instantiated_node["resources"]["cpu"] == PARAM_CPU_COUNT, (
             "Instantiation must substitute cpu_count before compilation begins."
@@ -190,10 +190,9 @@ class TestRun300Lifecycle:
         )
         compiled_node = model.node_deployments[EXPECTED_NODE_ADDRESS]
         assert compiled_node.node_name == NODE_NAME
-        assert compiled_node.os_family == PARAM_OS_KIND, (
-            f"os_kind parameter ({PARAM_OS_KIND!r}) must survive "
-            f"substitution through into the compiled node's os_family; "
-            f"got {compiled_node.os_family!r}."
+        assert compiled_node.spec["node"]["description"] == PARAM_NODE_DESCRIPTION, (
+            f"node_description parameter ({PARAM_NODE_DESCRIPTION!r}) must survive "
+            "substitution through into the compiled node specification."
         )
         assert compiled_node.spec["node"]["resources"]["cpu"] == PARAM_CPU_COUNT, (
             f"cpu_count parameter ({PARAM_CPU_COUNT!r}) must survive "
@@ -239,8 +238,8 @@ class TestRun300Lifecycle:
             "the compiled model."
         )
         create_op = create_ops[0]
-        assert create_op.payload["os_family"] == PARAM_OS_KIND, (
-            "Planner payload must preserve the compiled os_family without rewriting or reinterpreting it."
+        assert create_op.payload["spec"]["node"]["description"] == PARAM_NODE_DESCRIPTION, (
+            "Planner payload must preserve the compiled node description without rewriting or reinterpreting it."
         )
         assert create_op.payload["spec"]["node"]["resources"]["cpu"] == PARAM_CPU_COUNT, (
             "Planner payload must preserve the compiled cpu_count without rewriting or reinterpreting it."
@@ -280,8 +279,8 @@ class TestRun300Lifecycle:
             "ApplyResult must report the canonical address as changed so "
             "live-observation consumers can subscribe by canonical identity."
         )
-        assert applied_entry.payload["os_family"] == PARAM_OS_KIND, (
-            "Apply must preserve the planned os_family in the stored snapshot entry."
+        assert applied_entry.payload["spec"]["node"]["description"] == PARAM_NODE_DESCRIPTION, (
+            "Apply must preserve the planned node description in the stored snapshot entry."
         )
         assert applied_entry.payload["spec"]["node"]["resources"]["cpu"] == PARAM_CPU_COUNT, (
             "Apply must preserve the planned cpu_count in the stored snapshot entry."
@@ -352,7 +351,7 @@ class TestRun300Lifecycle:
         raw = _raw_scenario()
         instantiated = instantiate_scenario(
             raw,
-            parameters={"os_kind": PARAM_OS_KIND, "cpu_count": PARAM_CPU_COUNT},
+            parameters={"node_description": PARAM_NODE_DESCRIPTION, "cpu_count": PARAM_CPU_COUNT},
         )
         model = compile_runtime_model(instantiated)
         target = _enveloped_stub_target()
@@ -408,12 +407,12 @@ class TestRun300Lifecycle:
                 """
                 name: run-300-unresolved
                 variables:
-                  os_kind:
+                  node_description:
                     type: string
                 nodes:
                   vm1:
                     type: compute
-                    os: ${os_kind}
+                    description: ${node_description}
                     resources: {ram: 1 gib, cpu: 1}
                 """
             )

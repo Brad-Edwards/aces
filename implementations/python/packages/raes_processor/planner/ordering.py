@@ -2,18 +2,12 @@
 
 from ..models import Diagnostic, PlannedResource, RuntimeDomain, SnapshotEntry
 from ..semantics.planner import (
-    DependencyKind,
-    dependency_graph_for_resources,
     resource_delete_order,
     resource_dependency_cycles,
     resource_topological_order,
 )
 from ..semantics.realization import CompiledRealizationRequirement
 from ..semantics.realization_snapshot_sanitization import realization_payloads_match
-
-
-def _ordering_graph(resources: dict[str, PlannedResource]) -> dict[str, tuple[str, ...]]:
-    return dependency_graph_for_resources(resources, kind=DependencyKind.ORDERING)
 
 
 def _ordering_cycles(resources: dict[str, PlannedResource]) -> list[tuple[str, ...]]:

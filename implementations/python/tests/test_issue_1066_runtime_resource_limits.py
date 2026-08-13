@@ -72,7 +72,6 @@ def _scenario(process_limits: str, *, variables: str = "", realization: str = ""
 nodes:
   worker:
     type: compute
-    os: linux
     resources: {{ram: 1 gib, cpu: 1}}
     runtime:
       processes:
@@ -323,7 +322,6 @@ name: issue-1066-absent-process-limits
 nodes:
   worker:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     runtime:
       processes:

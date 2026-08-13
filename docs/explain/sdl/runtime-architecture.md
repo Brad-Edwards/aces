@@ -416,6 +416,42 @@ Composition is registry-ready as well:
 - `raes sdl verify-imports` verifies lockfile, trust, digests, and signatures
 - `raes sdl publish` packages a publishable SDL module as an OCI image layout
 
+OCI acquisition bounds the compressed response and the complete decoded tar
+stream before parsing any tar header. The decoded-stream limit includes PAX/GNU
+metadata and padding and has both absolute and expansion-ratio ceilings. Safe
+extraction requires the standard-library `data` filter; Python 3.11.0 through
+3.11.3 fail closed for OCI extraction rather than using unfiltered extraction.
+
+Resolved module caches and published layouts use immutable version directories
+under a logical slot plus one atomically replaced `.raes-current` pointer. A
+cache hit streams a trusted expected inventory directly from the verified,
+bounded tar, then re-hashes the exact extracted tree against its canonical
+completion manifest. The comparison covers every path and entry type plus each
+file's filtered mode, size, and digest. The cache's own writable manifest is not
+its authority. A hit performs no extraction or version staging; only the
+bounded decoded-tar spool may spill beyond its memory threshold. Missing,
+extra, linked, mode-changed, byte-changed, or coordinated tree-plus-manifest
+edits rebuild cleanly.
+Publication returns the selected immutable OCI-layout version path; a failed
+writer leaves the prior pointer and every extant reader path intact. Startup
+repair removes incomplete stages and can repoint to a complete validated orphan
+version left by process death.
+
+For publication, the stable `<module>-<version>.oci` name is the private logical
+slot, not a directly consumable OCI layout. CLI/API `layout_dir` points to the
+selected immutable `versions/<id>` child, which contains the standard
+`oci-layout`, `index.json`, and `blobs/` inventory. Consumers should use that
+reported path rather than infer the slot. Each slot retains at most eight
+complete versions: current, the immediately prior pointer target, and the
+newest remaining versions. This window protects an in-flight prior reader but
+is not archival retention; push or copy layouts that must outlive later
+publications.
+
+An older root-level OCI layout at the stable slot name is not silently upgraded
+into a dual layout. Publication fails with instructions to move or remove that
+legacy output first, preventing older consumers from continuing to read stale
+root `index.json` and `blobs/` while newer consumers use a version child.
+
 Resolution and trust happen before instantiation and semantic validation.
 Planner/runtime semantics see one admitted concrete scenario; replay-relevant
 resolution and binding facts remain under its typed provenance rather than in

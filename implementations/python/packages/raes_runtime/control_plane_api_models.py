@@ -250,6 +250,15 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
                 **(
                     {
                         "observed_value": entry.observed_value,
+                        "operating_system": (
+                            {
+                                "family": entry.operating_system.family,
+                                "distribution": entry.operating_system.distribution,
+                                "version": entry.operating_system.version,
+                            }
+                            if entry.operating_system is not None
+                            else None
+                        ),
                         "operation_id": entry.operation_id,
                         "envelope_digest": entry.envelope_digest,
                         "configuration_digest": entry.configuration_digest,
@@ -257,7 +266,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
                         "sequence": entry.sequence,
                         "binding_verified": entry.binding_verified,
                     }
-                    if entry.requirement_kind == "compute-substrate"
+                    if entry.requirement_kind in {"compute-substrate", "operating-system"}
                     else {}
                 ),
             }

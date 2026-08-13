@@ -87,6 +87,10 @@ def _advance_stepped_clock_to_tick(manager: RuntimeManager, target_tick: int) ->
 
 def _scenario_yaml(*, role: str = "green") -> str:
     payload = yaml.safe_load(EXAMPLE.read_text(encoding="utf-8"))
+    for node in payload["nodes"].values():
+        node.pop("os", None)
+        node.pop("os_distribution", None)
+        node.pop("os_version", None)
     payload["entities"]["enterprise-participant"]["role"] = role
     payload["objectives"] = {}
     payload["workflows"] = {}
@@ -2000,6 +2004,8 @@ def test_wall_driver_cannot_advance_during_time_state_readback() -> None:
     reader.start()
     assert time_runtime.read_entered.wait(timeout=1.0)
     predecessor = manager.snapshot
+    assert predecessor.time_model_state is not None
+    predecessor_coordinate = predecessor.time_model_state.clocks[policy.clock_address].coordinate
     time.sleep(0.1)
 
     assert manager.snapshot == predecessor
@@ -2010,7 +2016,7 @@ def test_wall_driver_cannot_advance_during_time_state_readback() -> None:
     assert not isinstance(outcome[0], Exception)
     state = outcome[0]
     assert isinstance(state, TimeRuntimeStateModel)
-    assert state.clocks[policy.clock_address].coordinate.tick == 0
+    assert state.clocks[policy.clock_address].coordinate == predecessor_coordinate
     assert manager.destroy().success
 
 

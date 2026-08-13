@@ -10,16 +10,20 @@ image bytes (and therefore their digest) are independent of the challenge.
 
 from __future__ import annotations
 
-import gzip
 import json
 import os
 import shutil
+import stat
 import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from .techvault_appliance import _cpio_newc, _shell_quote
+from ._initramfs import InitramfsPreflight, atomic_write, deterministic_gzip, resolve_static_busybox
+from .techvault_appliance import _cpio_newc, _interface_case_lines, _shell_quote
+
+_BOOT_ARTIFACT_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+_PRIVATE_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR
 
 _APPLETS = (
     "sh", "mount", "mdev", "ip", "ifconfig", "sleep", "cat", "hostname", "printf", "echo",
@@ -42,16 +46,21 @@ _SKIP_IF_NO_NAME = '  [ -n "$name" ] || continue'
 class GuestObservingInitramfsBuilder:
     """Build a guest-observing appliance that certifies concerns from inside."""
 
-    busybox_path: Path = Path("/usr/bin/busybox")
+    busybox_path: Path | None = None
+    search_path: str | None = None
+
+    def preflight(self) -> InitramfsPreflight:
+        """Resolve and validate the static target BusyBox before mutation."""
+
+        return resolve_static_busybox(self.busybox_path, search_path=self.search_path)
 
     def build(self, *, domain: Mapping[str, object], target: Path) -> Path:
+        busybox_path = self.preflight().require_executable()
         with tempfile.TemporaryDirectory(prefix="raes-guest-initramfs-") as tmp:
             root = Path(tmp)
-            _write_guest_root(root, self.busybox_path, domain)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            payload = _cpio_newc(root)
-            target.write_bytes(gzip.compress(payload, compresslevel=6))
-        return target
+            _write_guest_root(root, busybox_path, domain)
+            payload = deterministic_gzip(_cpio_newc(root), compresslevel=6)
+            return atomic_write(target, payload, mode=_BOOT_ARTIFACT_MODE)
 
 
 def _write_guest_root(root: Path, busybox_path: Path, domain: Mapping[str, object]) -> None:
@@ -70,16 +79,17 @@ def _write_guest_root(root: Path, busybox_path: Path, domain: Mapping[str, objec
         root / "home",
     ):
         directory.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(busybox_path, bin_dir / "busybox")
+    shutil.copyfile(busybox_path, bin_dir / "busybox")
     for applet in _APPLETS:
         (bin_dir / applet).symlink_to("busybox")
-    (etc_dir / "passwd").write_text(_ROOT_ACCOUNT_LINE, encoding="utf-8")
-    (etc_dir / "group").write_text(_ROOT_GROUP_LINE, encoding="utf-8")
-    (etc_dir / "shadow").write_text(_ROOT_SHADOW_LINE, encoding="utf-8")
+    _write_text(etc_dir / "passwd", _ROOT_ACCOUNT_LINE)
+    _write_text(etc_dir / "group", _ROOT_GROUP_LINE)
+    _write_text(etc_dir / "shadow", _ROOT_SHADOW_LINE)
     _write_placement_specs(guest_dir, files_dir, domain)
-    (guest_dir / "domain.json").write_text(json.dumps(domain, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (root / "init").write_text(_init_script(domain), encoding="utf-8")
-    os.chmod(root / "init", 0o700)
+    _write_text(guest_dir / "domain.json", json.dumps(domain, indent=2, sort_keys=True) + "\n")
+    init_path = root / "init"
+    _write_text(init_path, _init_script(domain))
+    os.chmod(init_path, 0o700)
     os.chmod(bin_dir / "busybox", 0o700)
 
 
@@ -101,16 +111,27 @@ def _write_placement_specs(guest_dir: Path, files_dir: Path, domain: Mapping[str
     for index, item in enumerate(_as_sequence(domain.get("content"))):
         if not isinstance(item, Mapping):
             continue
-        (files_dir / str(index)).write_text(str(item.get("content", "")), encoding="utf-8")
+        _write_text(files_dir / str(index), str(item.get("content", "")))
         content_lines.append("|".join((str(item.get("path", "")), str(item.get("mode", "0644")), str(index))))
     services = [
-        "|".join((str(item.get("name", "")), str(item.get("port", ""))))
+        "|".join(
+            (
+                str(item.get("name", "")),
+                str(item.get("protocol", "")),
+                str(item.get("port", "")),
+            )
+        )
         for item in _as_sequence(domain.get("services"))
         if isinstance(item, Mapping)
     ]
-    (guest_dir / "accounts").write_text("\n".join(accounts) + ("\n" if accounts else ""), encoding="utf-8")
-    (guest_dir / "content").write_text("\n".join(content_lines) + ("\n" if content_lines else ""), encoding="utf-8")
-    (guest_dir / "services").write_text("\n".join(services) + ("\n" if services else ""), encoding="utf-8")
+    _write_text(guest_dir / "accounts", "\n".join(accounts) + ("\n" if accounts else ""))
+    _write_text(guest_dir / "content", "\n".join(content_lines) + ("\n" if content_lines else ""))
+    _write_text(guest_dir / "services", "\n".join(services) + ("\n" if services else ""))
+
+
+def _write_text(path: Path, content: str) -> None:
+    path.write_text(content, encoding="utf-8")
+    os.chmod(path, _PRIVATE_FILE_MODE)
 
 
 def _init_script(domain: Mapping[str, object]) -> str:
@@ -132,13 +153,7 @@ def _init_script(domain: Mapping[str, object]) -> str:
     for interface in _as_sequence(domain.get("interfaces")):
         if not isinstance(interface, Mapping):
             continue
-        lines.extend(
-            [
-                f"    {interface.get('mac')})",
-                f'      ip addr add {interface.get("ip")}/{interface.get("cidr_prefix")} dev "$iface"',
-                "      ;;",
-            ]
-        )
+        lines.extend(_interface_case_lines(interface))
     lines.extend(["  esac", "done"])
     lines.extend(_REALIZE_SNIPPET)
     lines.append("sleep 1")
@@ -185,8 +200,9 @@ _REALIZE_SNIPPET = [
     "done < /etc/raes/guest/content",
     "fi",
     "if [ -f /etc/raes/guest/services ]; then",
-    "while IFS='|' read name port; do",
+    "while IFS='|' read name protocol port; do",
     _SKIP_IF_NO_NAME,
+    '  [ "$protocol" = tcp ] || continue',
     '  ( while true; do echo raes-guest-service | nc -l -p "$port" >/dev/null 2>&1 || sleep 1; done ) &',
     "  echo $! > /run/raes-svc-$name.pid",
     "done < /etc/raes/guest/services",
@@ -232,11 +248,11 @@ _REPORT_SNIPPET = [
     "done < /etc/raes/guest/accounts",
     "fi",
     "if [ -f /etc/raes/guest/services ]; then",
-    "while IFS='|' read name port; do",
+    "while IFS='|' read name protocol port; do",
     _SKIP_IF_NO_NAME,
-    '  lis=0; netstat -ln 2>/dev/null | grep -q ":$port " && lis=1',
+    '  lis=0; [ "$protocol" = tcp ] && netstat -lnt 2>/dev/null | grep -q ":$port " && lis=1',
     '  pid=0; [ -f "/run/raes-svc-$name.pid" ] && kill -0 "$(cat /run/raes-svc-$name.pid)" 2>/dev/null && pid=1',
-    '  echo "service $name $port $lis $pid"',
+    '  echo "service $name $protocol $port $lis $pid"',
     "done < /etc/raes/guest/services",
     "fi",
     "echo 'init complete'",

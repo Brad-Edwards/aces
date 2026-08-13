@@ -71,7 +71,6 @@ name: full
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -100,7 +99,6 @@ name: provisioning-only
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
 """)
 
@@ -111,7 +109,6 @@ name: workflow
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -149,7 +146,6 @@ name: workflow-call
 nodes:
   vm:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -1464,8 +1460,7 @@ name: provisioning-only
 nodes:
   vm:
     type: compute
-    os: windows
-    resources: {ram: 1 gib, cpu: 1}
+    resources: {ram: 2 gib, cpu: 1}
 """)
 
         manager = RuntimeManager(target, initial_snapshot=initial_snapshot)
@@ -1473,7 +1468,7 @@ nodes:
 
         assert result.success
         assert calls == ["provision-apply"]
-        assert manager.snapshot.entries["provision.node.vm"].payload["os_family"] == "windows"
+        assert manager.snapshot.entries["provision.node.vm"].payload["spec"]["node"]["resources"]["ram"] == 2**31
 
     def test_identical_second_apply_skips_runtime_service_restarts(self):
         calls: list[str] = []

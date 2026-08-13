@@ -85,6 +85,7 @@ def _payload() -> dict[str, object]:
                     "transformations": [],
                 }
                 for concern in (
+                    "operating-system",
                     "architecture",
                     "image",
                     "network",
@@ -164,6 +165,34 @@ def test_backend_realization_envelope_rejects_missing_concern_disclosure():
     payload["digest"] = realization_envelope_digest(payload)
 
     with pytest.raises(ValidationError, match="must disclose every governed concern"):
+        BackendRealizationEnvelopeModel.model_validate(payload)
+
+
+def test_operating_system_capability_rows_require_realized_guest_observed_claim():
+    payload = _payload()
+    payload["configuration"]["operating_systems"] = [  # type: ignore[index]
+        {"family": "linux", "distribution": "ubuntu", "versions": ["22.04"]}
+    ]
+    payload["configuration"]["configuration_digest"] = realizer_configuration_digest(  # type: ignore[index]
+        payload["configuration"]
+    )
+    payload["digest"] = realization_envelope_digest(payload)
+
+    with pytest.raises(ValidationError, match="capability rows require a realized guest-observed"):
+        BackendRealizationEnvelopeModel.model_validate(payload)
+
+
+def test_operating_system_claim_requires_coupled_capability_rows():
+    payload = _payload()
+    operating_system = next(claim for claim in payload["concerns"] if claim["concern"] == "operating-system")  # type: ignore[index]
+    operating_system.update(
+        disposition="realized",
+        observation_strength="guest-observed",
+        mechanism="guest-os-release",
+    )
+    payload["digest"] = realization_envelope_digest(payload)
+
+    with pytest.raises(ValidationError, match="support requires coupled operating_systems capability rows"):
         BackendRealizationEnvelopeModel.model_validate(payload)
 
 

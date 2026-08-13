@@ -147,6 +147,7 @@ nodes:
       ram: 4294967296
       cpu: 2
     os: windows
+    os_distribution: windows-client
     os_version: '10'
     features:
       yard-hmi-app: hmi-admin
@@ -194,6 +195,7 @@ nodes:
       ram: 2147483648
       cpu: 1
     os: windows
+    os_distribution: windows-client
     os_version: '11'
     conditions:
       gate-processing-healthy: kiosk-admin

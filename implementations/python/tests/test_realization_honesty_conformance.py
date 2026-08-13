@@ -26,7 +26,6 @@ from raes_conformance.realization import (
 from raes_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
     ConcernDisposition,
-    EnumDomain,
     EnvelopeBinding,
     EnvelopeScope,
     ExactDomain,
@@ -45,7 +44,6 @@ name: honesty
 nodes:
   vm:
     type: compute
-    os: linux
 """
 
 
@@ -56,12 +54,10 @@ def _constructive_expression() -> RealizationEnvelopeModel:
         domains={
             "name": ExactDomain(value="honesty"),
             "type": ExactDomain(value="compute"),
-            "os": EnumDomain(values=["linux"]),
         },
         bindings=[
             EnvelopeBinding(path="name", scope=EnvelopeScope.SCENARIO, posture=Posture.EXACT, domain="name"),
             EnvelopeBinding(path="nodes.vm.type", scope=EnvelopeScope.NODE, posture=Posture.EXACT, domain="type"),
-            EnvelopeBinding(path="nodes.vm.os", scope=EnvelopeScope.FIELD, posture=Posture.CONSTRAINED, domain="os"),
         ],
     )
 

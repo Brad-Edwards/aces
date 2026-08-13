@@ -686,7 +686,10 @@ def test_shared_plan_analysis_rejects_account_binding_that_disagrees_with_node()
 
 
 def test_control_plane_rejects_incoherent_domain_topology_before_backend_validation() -> None:
-    model = compile_runtime_model(_parse_payload(_valid_payload()))
+    payload = _valid_payload()
+    for node in payload["nodes"].values():
+        node.pop("os", None)
+    model = compile_runtime_model(_parse_payload(payload))
     provisioning = plan(model, _manifest_with_domain_profiles("active_directory")).provisioning
     operations = [
         replace(operation, ordering_dependencies=(), refresh_dependencies=())

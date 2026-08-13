@@ -762,6 +762,48 @@
         }
       }
     },
+    "os-distributions": {
+      "title": "Operating System Distributions and Product Lines",
+      "description": "Portable operating-system distribution or product-line identifiers shared by SDL and backend compatibility declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "nodes.os_distribution",
+        "capabilities.provisioner.operating_systems.distribution",
+        "runtime.snapshot.realization_observations.operating-system.distribution"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "ubuntu": {
+          "title": "Ubuntu",
+          "description": "Ubuntu Linux distribution."
+        },
+        "debian": {
+          "title": "Debian",
+          "description": "Debian GNU/Linux distribution."
+        },
+        "rocky-linux": {
+          "title": "Rocky Linux",
+          "description": "Rocky Linux distribution."
+        },
+        "red-hat-enterprise-linux": {
+          "title": "Red Hat Enterprise Linux",
+          "description": "Red Hat Enterprise Linux product line."
+        },
+        "windows-server": {
+          "title": "Windows Server",
+          "description": "Microsoft Windows Server product line."
+        },
+        "windows-client": {
+          "title": "Windows Client",
+          "description": "Microsoft Windows client product line."
+        },
+        "solaris": {
+          "title": "Solaris",
+          "description": "Oracle Solaris operating-system product line."
+        }
+      }
+    },
     "provisioner-node-architectures": {
       "title": "Provisioner Node CPU Architectures",
       "description": "Target-node CPU architecture vocabulary shared by SDL Node.architecture and provisioner capability declarations.",

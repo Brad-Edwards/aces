@@ -15,9 +15,13 @@ from raes.parser import parse_sdl
 from raes_backend_libvirt.driver import DriverResult as LibvirtDriverResult
 from raes_backend_libvirt.manifest import create_libvirt_manifest
 from raes_backend_libvirt.provisioner import LibvirtProvisioner
-from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
+from raes_backend_protocols.capabilities import (
+    BackendManifest,
+    OperatingSystemCompatibility,
+    ProvisionerCapabilities,
+)
 from raes_backend_stubs.stubs import create_stub_target
-from raes_contracts.apparatus import ConceptBinding
+from raes_contracts.apparatus import ConceptBinding, RealizationObservationCapability
 from raes_contracts.bounded_domains import EnumDomain
 from raes_contracts.contracts import ProvisioningPlanModel, ResolvedRealizationAuthorityModel, schema_bundle
 from raes_contracts.plan_projection import provisioning_plan_model
@@ -33,7 +37,12 @@ from raes_contracts.planning import (
 )
 from raes_contracts.realization_authority import planned_realization_selection_diagnostics
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
-from raes_contracts.vocabulary import Closure, RealizationSupportMode
+from raes_contracts.vocabulary import (
+    Closure,
+    ObservationStrength,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import (
     plan,
@@ -73,6 +82,13 @@ def _manifest(mode: RealizationSupportMode = RealizationSupportMode.OPEN_REALIZA
             if mode is RealizationSupportMode.EXACT_ONLY
             else frozenset({*base.realization_support[0].supported_constraint_kinds, "os-family", "node-architecture"})
         ),
+        observation_capabilities={
+            **base.realization_support[0].observation_capabilities,
+            "operating-system": RealizationObservationCapability(
+                verification_scope=RealizationVerificationScope.PRESENCE,
+                observation_strength=ObservationStrength.GUEST_OBSERVED,
+            ),
+        },
     )
     return BackendManifest(
         name="authority-handoff",
@@ -85,6 +101,10 @@ def _manifest(mode: RealizationSupportMode = RealizationSupportMode.OPEN_REALIZA
             name="authority-handoff",
             supported_node_types=frozenset({"compute"}),
             supported_os_families=frozenset({"linux", "windows"}),
+            operating_systems=(
+                OperatingSystemCompatibility("linux", "ubuntu", frozenset({"22.04"})),
+                OperatingSystemCompatibility("windows", "windows-server", frozenset({"2022"})),
+            ),
         ),
         realization_envelope=base.realization_envelope,
     )
@@ -137,14 +157,22 @@ def test_planner_resolves_delegation_and_carries_complete_authority() -> None:
         apparatus_realization_default=lambda _requirement, _manifest: Closure.OPEN_WORLD,
     )
     os_authority = _planned_authority(execution, "nodes.web.os")
+    distribution_authority = _planned_authority(execution, "nodes.web.os_distribution")
+    version_authority = _planned_authority(execution, "nodes.web.os_version")
 
     assert os_authority.mode is RealizationAuthorityMode.OPEN
     assert os_authority.source is RealizationResolutionSource.APPARATUS_DEFAULT
+    assert distribution_authority.mode is RealizationAuthorityMode.OPEN
+    assert distribution_authority.source is RealizationResolutionSource.APPARATUS_DEFAULT
+    assert version_authority.mode is RealizationAuthorityMode.OPEN
+    assert version_authority.source is RealizationResolutionSource.APPARATUS_DEFAULT
     assert not hasattr(os_authority, "delegated")
-    assert len(execution.provisioning.realization_authority) == 10
+    assert len(execution.provisioning.realization_authority) == 12
     assert {entry.requirement_kind for entry in execution.provisioning.realization_authority} >= {
         "node-type",
         "os-family",
+        "os-distribution",
+        "os-version",
         "node-architecture",
         "runtime-environment",
     }
@@ -506,6 +534,11 @@ def test_closed_omission_rejects_backend_materialization_and_emits_no_provenance
 
 
 def test_open_selection_uses_plan_authority_and_discloses_backend_origin() -> None:
+    from raes_contracts.realization_observation import (
+        ObservedOperatingSystemIdentity,
+        RealizationObservationDisclosure,
+    )
+
     execution = plan(
         compile_runtime_model(
             _scenario("realization:\n  default: closed\n  scopes:\n    - {field_pointer: /nodes/web/os, posture: open}")
@@ -517,6 +550,30 @@ def test_open_selection_uses_plan_authority_and_discloses_backend_origin() -> No
     payload = deepcopy(entry.payload)
     payload["os_family"] = "linux"
     snapshot = snapshot.with_entries({**snapshot.entries, entry.address: replace(entry, payload=payload)})
+    snapshot = replace(
+        snapshot,
+        realization_observations=(
+            RealizationObservationDisclosure(
+                address=entry.address,
+                field_path="nodes.web.operating-system",
+                domain="runtime-realization",
+                requirement_kind="operating-system",
+                verification_scope=RealizationVerificationScope.PRESENCE,
+                observation_strength=ObservationStrength.GUEST_OBSERVED,
+                operating_system=ObservedOperatingSystemIdentity(
+                    family="linux",
+                    distribution="ubuntu",
+                    version="22.04",
+                ),
+                operation_id="op-open-authority-1",
+                envelope_digest="sha256:" + "a" * 64,
+                configuration_digest="sha256:" + "b" * 64,
+                observer_version="guest-os-release/v1",
+                sequence=1,
+                binding_verified=True,
+            ),
+        ),
+    )
 
     diagnostics, provenance = realization_authority_disclosure(
         execution.provisioning,
@@ -534,6 +591,11 @@ def test_open_selection_uses_plan_authority_and_discloses_backend_origin() -> No
 
 
 def test_in_bound_constrained_selection_passes_pre_mutation_and_runtime_gates() -> None:
+    from raes_contracts.realization_observation import (
+        ObservedOperatingSystemIdentity,
+        RealizationObservationDisclosure,
+    )
+
     manifest = _manifest()
     execution = plan(compile_runtime_model(_scenario(web_os="linux")), manifest)
     plan_value = _constrained_os_selection(
@@ -548,6 +610,30 @@ def test_in_bound_constrained_selection_passes_pre_mutation_and_runtime_gates() 
     payload = deepcopy(entry.payload)
     payload["os_family"] = "windows"
     snapshot = snapshot.with_entries({**snapshot.entries, entry.address: replace(entry, payload=payload)})
+    snapshot = replace(
+        snapshot,
+        realization_observations=(
+            RealizationObservationDisclosure(
+                address=entry.address,
+                field_path="nodes.web.operating-system",
+                domain="runtime-realization",
+                requirement_kind="operating-system",
+                verification_scope=RealizationVerificationScope.PRESENCE,
+                observation_strength=ObservationStrength.GUEST_OBSERVED,
+                operating_system=ObservedOperatingSystemIdentity(
+                    family="windows",
+                    distribution="windows-server",
+                    version="2022",
+                ),
+                operation_id="op-constrained-authority-1",
+                envelope_digest="sha256:" + "a" * 64,
+                configuration_digest="sha256:" + "b" * 64,
+                observer_version="guest-os-release/v1",
+                sequence=1,
+                binding_verified=True,
+            ),
+        ),
+    )
     diagnostics, provenance = realization_authority_disclosure(
         plan_value,
         snapshot,

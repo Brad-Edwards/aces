@@ -96,7 +96,10 @@ def test_ac2_conformance_requires_constructive_envelope_with_participant_runtime
     # The participant and hermetic target surfaces remain valid, but the
     # published libvirt envelope cannot produce native ASR-519 probes.
     target = _libvirt_target_with_participant_runtime(driver=RecordingLibvirtDriver())
-    report = run_target_conformance(target)
+    report = run_target_conformance(
+        target,
+        reference_scenario="name: conformance\nnodes:\n  vm: {type: compute}\n",
+    )
 
     assert report.passed is False
     assert report.unsupported_contract_gaps == ()

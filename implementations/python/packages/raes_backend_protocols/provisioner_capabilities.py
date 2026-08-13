@@ -2,13 +2,40 @@
 
 from dataclasses import dataclass, field
 
-from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
+from raes_contracts.controlled_vocabularies import (
+    validate_controlled_vocabulary_scope_values,
+    validate_controlled_vocabulary_value,
+)
+from raes_contracts.operating_systems import OS_VERSION_RE, validate_operating_system_pair
 from raes_contracts.vocabulary import GeneratedArtifactKind
 
 PROVISIONER_DOMAIN_PROFILE_SCOPE = "capabilities.provisioner.supported_domain_profiles"
 PROVISIONER_SERVICE_MATERIALIZATION_PROFILE_SCOPE = (
     "capabilities.provisioner.supported_service_materialization_profiles"
 )
+
+
+@dataclass(frozen=True)
+class OperatingSystemCompatibility:
+    """One inseparable OS family, distribution, and bounded release domain."""
+
+    family: str
+    distribution: str
+    versions: frozenset[str]
+
+    def __post_init__(self) -> None:
+        validate_controlled_vocabulary_scope_values(
+            "capabilities.provisioner.supported_os_families",
+            (self.family,),
+        )
+        validate_controlled_vocabulary_value("os-distributions", self.distribution)
+        validate_operating_system_pair(self.family, self.distribution)
+        if not self.versions:
+            raise ValueError("OperatingSystemCompatibility.versions must not be empty")
+        if any(OS_VERSION_RE.fullmatch(version) is None for version in self.versions):
+            raise ValueError(
+                "OperatingSystemCompatibility.versions must contain bounded non-empty printable release tokens"
+            )
 
 
 def _require_string_values(name: str, values: frozenset[str], *, required: bool = False) -> None:
@@ -30,6 +57,7 @@ class ProvisionerCapabilities:
     name: str
     supported_node_types: frozenset[str] = frozenset()
     supported_os_families: frozenset[str] = frozenset()
+    operating_systems: tuple[OperatingSystemCompatibility, ...] = ()
     supported_node_architectures: frozenset[str] = frozenset()
     supported_content_types: frozenset[str] = frozenset()
     supported_account_features: frozenset[str] = frozenset()
@@ -64,6 +92,19 @@ class ProvisionerCapabilities:
             "capabilities.provisioner.supported_os_families",
             self.supported_os_families,
         )
+        os_keys = [(entry.family, entry.distribution) for entry in self.operating_systems]
+        if len(os_keys) != len(set(os_keys)):
+            raise ValueError(
+                "ProvisionerCapabilities.operating_systems must not contain duplicate family/distribution rows"
+            )
+        undeclared_families = {
+            entry.family for entry in self.operating_systems if entry.family not in self.supported_os_families
+        }
+        if undeclared_families:
+            raise ValueError(
+                "ProvisionerCapabilities.operating_systems families must be present in supported_os_families: "
+                + ", ".join(sorted(undeclared_families))
+            )
         validate_controlled_vocabulary_scope_values(
             "capabilities.provisioner.supported_node_architectures",
             self.supported_node_architectures,
@@ -104,9 +145,30 @@ class ProvisionerCapabilities:
                 "ProvisionerCapabilities supported_generated_artifact_kinds require supports_generated_artifacts=True"
             )
 
+    def supports_operating_system(
+        self,
+        *,
+        family: str,
+        distribution: str | None = None,
+        version: str | None = None,
+    ) -> bool:
+        """Return whether one coupled capability row admits the requested identity."""
+
+        if family not in self.supported_os_families:
+            return False
+        if distribution is None:
+            return version is None
+        return any(
+            entry.family == family
+            and entry.distribution == distribution
+            and (version is None or version in entry.versions)
+            for entry in self.operating_systems
+        )
+
 
 __all__ = [
     "PROVISIONER_DOMAIN_PROFILE_SCOPE",
     "PROVISIONER_SERVICE_MATERIALIZATION_PROFILE_SCOPE",
+    "OperatingSystemCompatibility",
     "ProvisionerCapabilities",
 ]

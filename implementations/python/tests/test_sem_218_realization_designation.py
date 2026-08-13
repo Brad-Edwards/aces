@@ -21,7 +21,11 @@ from raes.realization_designation import (
     resolve_json_pointer_surface,
 )
 from raes_backend_libvirt.manifest import create_libvirt_manifest
-from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
+from raes_backend_protocols.capabilities import (
+    BackendManifest,
+    OperatingSystemCompatibility,
+    ProvisionerCapabilities,
+)
 from raes_contracts.apparatus import (
     ConceptBinding,
     ProcessResourceLimitCapability,
@@ -54,6 +58,8 @@ from raes_runtime.control_plane_api_models import _snapshot_model
 
 _OPEN_NODE_REALIZATION_SUFFIXES = {
     "os",
+    "os_distribution",
+    "os_version",
     "architecture",
     "runtime.environment",
     "runtime.mounts",
@@ -111,6 +117,10 @@ def _manifest(mode: RealizationSupportMode) -> BackendManifest:
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset({"runtime-snapshot-v1"}),
                 observation_capabilities={
+                    "operating-system": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
                     "process-resource-limits": RealizationObservationCapability(
                         verification_scope=RealizationVerificationScope.CONFIGURATION,
                         observation_strength=ObservationStrength.GUEST_OBSERVED,
@@ -124,6 +134,7 @@ def _manifest(mode: RealizationSupportMode) -> BackendManifest:
             name="designation-test",
             supported_node_types=frozenset({"compute"}),
             supported_os_families=frozenset({"linux"}),
+            operating_systems=(OperatingSystemCompatibility("linux", "ubuntu", frozenset({"22.04"})),),
         ),
         realization_envelope=_envelope_with_process_limit_capability(envelope, capability),
     )
@@ -178,7 +189,16 @@ def _open_manifest_with_envelope(*, path: str, value: str) -> BackendManifest:
         },
         process_resource_limits=(capability,),
     )
-    return replace(manifest, realization_support=(support,), realization_envelope=envelope)
+    provisioner = replace(
+        manifest.provisioner,
+        operating_systems=(OperatingSystemCompatibility("linux", "ubuntu", frozenset({"22.04"})),),
+    )
+    return replace(
+        manifest,
+        realization_support=(support,),
+        capabilities=replace(manifest.capabilities, provisioner=provisioner),
+        realization_envelope=envelope,
+    )
 
 
 def test_root_open_is_typed_and_carried_to_compilation():
@@ -429,10 +449,16 @@ def test_root_delegation_uses_injected_selected_apparatus_default():
 
 
 def test_delegated_open_posture_is_materialized_through_runtime_disclosure():
+    from raes_contracts.realization_observation import (
+        ObservedOperatingSystemIdentity,
+        RealizationObservationDisclosure,
+    )
+
+    manifest = _manifest(RealizationSupportMode.OPEN_REALIZATION)
     model = compile_runtime_model(_scenario("realization:\n  default: unspecified"))
     execution = plan(
         model,
-        _manifest(RealizationSupportMode.OPEN_REALIZATION),
+        manifest,
         apparatus_realization_default=lambda _requirement, _manifest: Closure.OPEN_WORLD,
     )
     requirement = _requirement(execution.model, "nodes.web.os")
@@ -447,10 +473,30 @@ def test_delegated_open_posture_is_materialized_through_runtime_disclosure():
         if operation.action is not ChangeAction.DELETE
     }
 
+    os_observation = RealizationObservationDisclosure(
+        address=requirement.address,
+        field_path="nodes.web.operating-system",
+        domain=requirement.domain,
+        requirement_kind="operating-system",
+        verification_scope=RealizationVerificationScope.PRESENCE,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+        operating_system=ObservedOperatingSystemIdentity(
+            family="linux",
+            distribution="ubuntu",
+            version="22.04",
+        ),
+        operation_id="op-open-os-1",
+        envelope_digest="sha256:" + "a" * 64,
+        configuration_digest="sha256:" + "b" * 64,
+        observer_version="guest-os-release/v1",
+        sequence=1,
+        binding_verified=True,
+    )
     diagnostics, provenance = realization_disclosure(
         (requirement,),
         execution.provisioning,
-        RuntimeSnapshot(entries=entries),
+        RuntimeSnapshot(entries=entries, realization_observations=(os_observation,)),
+        manifest=manifest,
     )
 
     assert execution.is_valid
@@ -486,6 +532,11 @@ def test_open_request_uses_envelope_subsumption_only_for_open_concern_paths():
 
 
 def test_backend_realized_open_slot_discloses_governing_scope_through_api():
+    from raes_contracts.realization_observation import (
+        ObservedOperatingSystemIdentity,
+        RealizationObservationDisclosure,
+    )
+
     model = compile_runtime_model(_scenario("realization:\n  default: open"))
     requirement = _requirement(model, "nodes.web.os")
     plan_payload = ProvisioningPlan(
@@ -506,10 +557,36 @@ def test_backend_realized_open_slot_discloses_governing_scope_through_api():
                 resource_type="node",
                 payload={"node_kind": "compute", "os_family": "linux"},
             )
-        }
+        },
+        realization_observations=(
+            RealizationObservationDisclosure(
+                address=requirement.address,
+                field_path="nodes.web.operating-system",
+                domain=requirement.domain,
+                requirement_kind="operating-system",
+                verification_scope=RealizationVerificationScope.PRESENCE,
+                observation_strength=ObservationStrength.GUEST_OBSERVED,
+                operating_system=ObservedOperatingSystemIdentity(
+                    family="linux",
+                    distribution="ubuntu",
+                    version="22.04",
+                ),
+                operation_id="op-open-api-1",
+                envelope_digest="sha256:" + "a" * 64,
+                configuration_digest="sha256:" + "b" * 64,
+                observer_version="guest-os-release/v1",
+                sequence=1,
+                binding_verified=True,
+            ),
+        ),
     )
 
-    diagnostics, provenance = realization_disclosure((requirement,), plan_payload, snapshot)
+    diagnostics, provenance = realization_disclosure(
+        (requirement,),
+        plan_payload,
+        snapshot,
+        manifest=_manifest(RealizationSupportMode.OPEN_REALIZATION),
+    )
     delivered = _snapshot_model(RuntimeSnapshotEnvelope(snapshot=RuntimeSnapshot(realization_provenance=provenance)))
 
     assert diagnostics == []

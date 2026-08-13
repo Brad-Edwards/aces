@@ -12,12 +12,13 @@
   },
   "configuration": {
     "mode": "oci-container",
-    "configuration_digest": "sha256:bedcd981f7c28030e5ae6b845ead667727a75c995d45f81a84ff0d1a0922b851",
+    "configuration_digest": "sha256:5af65c08e8530288ba7d471d69a3e6856dc4bac783aa0beb80f1c1b3eff09d23",
     "architecture": "x86_64",
     "image_policy": "operator-trusted-oci-image",
     "network_policy": "oci-runtime-managed",
     "supported_node_types": ["switch", "compute"],
     "supported_os_families": ["linux"],
+    "operating_systems": [],
     "supported_content_types": ["file", "dataset", "directory"],
     "supported_account_features": ["auth_method", "disabled", "groups", "home", "mail", "shell"],
     "supported_domain_profiles": [],
@@ -27,6 +28,7 @@
   },
   "concerns": [
     {"concern": "compute-substrate", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "operating-system-container", "transformations": []},
+    {"concern": "operating-system", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "topology", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "oci-daemon-inspect", "transformations": []},
     {"concern": "architecture", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
     {"concern": "image", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "oci-daemon-inspect", "transformations": []},
@@ -38,5 +40,5 @@
     {"concern": "service", "disposition": "descriptor-only", "observation_strength": "driver-reported", "mechanism": "portable-descriptor", "transformations": []},
     {"concern": "acl", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []}
   ],
-  "digest": "sha256:62f5cf073d4fa35f323be024c9e16e195a0bf8aad2f1067e4f2863fa200029a0"
+  "digest": "sha256:e62aa8c27ec68ce7384c559d27e75b5cc6253335e552b139e6a37c9c91321b76"
 }

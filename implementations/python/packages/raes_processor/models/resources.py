@@ -59,6 +59,8 @@ class NodeRuntime(ResolvedResource):
     node_name: str = ""
     node_kind: str = ""
     os_family: str = ""
+    os_distribution: str = ""
+    os_version: str = ""
     architecture: str = ""
     count: int | str | None = None
     network_namespace_target: str = ""
@@ -82,8 +84,12 @@ class PropositionRuntime(ResolvedResource):
 
     subject_addresses: tuple[str, ...] = ()
     predicate_kind: str = ""
+    quantifier: str = ""
     evaluation_basis: str = ""
     evidence_requirement_refs: tuple[str, ...] = ()
+    evidence_channels: tuple[str, ...] = ()
+    unresolved_evidence_channel_refs: tuple[str, ...] = ()
+    required_time_domain: str = ""
 
 
 @dataclass(frozen=True)
