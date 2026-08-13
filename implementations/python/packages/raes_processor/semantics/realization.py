@@ -32,7 +32,6 @@ from raes_contracts.vocabulary import (
     Closure,
     RealizationSupportMode,
     observation_strength_satisfies,
-    verification_scope_satisfies,
 )
 
 from .artifact_realization import (
@@ -54,6 +53,7 @@ from .realization_concerns import (
     registered_realization_concerns,
     resolve_realization_concern,
 )
+from .realization_observation_admission import has_required_observation_support
 from .realization_process_limits import (
     ProcessResourceLimitDemand,
     RealizationValueConstraint,
@@ -208,10 +208,15 @@ def _exact_support_diagnostic(
             ),
             severity=Severity.ERROR,
         )
-    if requirement.verification_scope is None or any(
-        (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
-        and verification_scope_satisfies(capability.verification_scope, requirement.verification_scope)
-        for declaration in exact_declarations
+    observation_kind = (
+        "operating-system"
+        if requirement.requirement_kind in {"os-family", "os-distribution", "os-version"}
+        else requirement.requirement_kind
+    )
+    if requirement.verification_scope is None or has_required_observation_support(
+        requirement,
+        exact_declarations,
+        observation_kind=observation_kind,
     ):
         return None
     return Diagnostic(
@@ -231,18 +236,47 @@ def _constraint_support_diagnostic(
     requirement: CompiledRealizationRequirement,
     declarations: list[RealizationSupportDeclaration],
 ) -> Diagnostic | None:
-    if any(requirement.requirement_kind in declaration.supported_constraint_kinds for declaration in declarations):
-        return None
-    return Diagnostic(
-        code="realization.unsupported-constraint-requirement",
-        domain=requirement.domain,
-        address=requirement.address,
-        message=(
-            "Backend declares no constraint realization support "
-            f"for constraint kind '{requirement.requirement_kind}' at "
-            f"'{requirement.field_path}' in domain '{requirement.domain}'."
-        ),
-        severity=Severity.ERROR,
+    supporting = [
+        declaration
+        for declaration in declarations
+        if requirement.requirement_kind in declaration.supported_constraint_kinds
+    ]
+    diagnostic = None
+    if not supporting:
+        diagnostic = Diagnostic(
+            code="realization.unsupported-constraint-requirement",
+            domain=requirement.domain,
+            address=requirement.address,
+            message=(
+                "Backend declares no constraint realization support "
+                f"for constraint kind '{requirement.requirement_kind}' at "
+                f"'{requirement.field_path}' in domain '{requirement.domain}'."
+            ),
+            severity=Severity.ERROR,
+        )
+    elif _constrained_os_observation_missing(requirement, supporting):
+        diagnostic = Diagnostic(
+            code="realization.under-observed-constraint-requirement",
+            domain=requirement.domain,
+            address=requirement.address,
+            message=(
+                "Backend declares no guest-observed operating-system corroboration "
+                f"for constrained '{requirement.requirement_kind}' at '{requirement.field_path}' "
+                f"in domain '{requirement.domain}'."
+            ),
+            severity=Severity.ERROR,
+        )
+    return diagnostic
+
+
+def _constrained_os_observation_missing(
+    requirement: CompiledRealizationRequirement,
+    supporting: list[RealizationSupportDeclaration],
+) -> bool:
+    return requirement.requirement_kind in {"os-distribution", "os-version"} and not has_required_observation_support(
+        requirement,
+        supporting,
+        observation_kind="operating-system",
     )
 
 

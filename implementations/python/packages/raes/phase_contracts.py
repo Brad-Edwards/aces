@@ -171,6 +171,8 @@ class CapabilityConstraint(FrozenPhaseModel):
         parts = self.field_pointer.split("/")
         ordinary_pointer = len(parts) == 4 and (parts[1], parts[3]) in {
             ("nodes", "os"),
+            ("nodes", "os_distribution"),
+            ("nodes", "os_version"),
             ("nodes", "architecture"),
             ("infrastructure", "count"),
         }
@@ -183,7 +185,7 @@ class CapabilityConstraint(FrozenPhaseModel):
         )
         if not ordinary_pointer and not process_limit_pointer:
             raise ValueError(
-                "field_pointer must address /nodes/<id>/os, /nodes/<id>/architecture, "
+                "field_pointer must address /nodes/<id>/(os|os_distribution|os_version|architecture), "
                 "/infrastructure/<id>/count, or "
                 "/nodes/<id>/runtime/operational_policy/resource_limits/process_limits/<index>/(soft|hard)"
             )

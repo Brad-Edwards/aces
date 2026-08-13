@@ -45,6 +45,24 @@ def _os_family(payload: Mapping[str, object]) -> str:
     return node_os if isinstance(node_os, str) else ""
 
 
+def _os_distribution(payload: Mapping[str, object]) -> str:
+    distribution = payload.get("os_distribution")
+    if isinstance(distribution, str) and distribution:
+        return distribution
+    node = _spec(payload).get("node")
+    nested = node.get("os_distribution") if isinstance(node, Mapping) else None
+    return nested if isinstance(nested, str) else ""
+
+
+def _os_version(payload: Mapping[str, object]) -> str:
+    version = payload.get("os_version")
+    if isinstance(version, str) and version:
+        return version
+    node = _spec(payload).get("node")
+    nested = node.get("os_version") if isinstance(node, Mapping) else None
+    return nested if isinstance(nested, str) else ""
+
+
 def _architecture(payload: Mapping[str, object]) -> str:
     architecture = payload.get("architecture")
     if isinstance(architecture, str) and architecture:

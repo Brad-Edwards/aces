@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 
 from libvirt_conformance_fixtures import daemon_compute_substrate_observations
@@ -19,6 +20,10 @@ _TECHVAULT_PARAMETERS = {
     "webapp_conf_sha256": "d" * 64,
     "wazuh_conf_sha256": "e" * 64,
 }
+
+
+def _without_os_identity(source: str):
+    return parse_sdl(re.sub(r"(?m)^\s+os(?:_distribution|_version)?:.*\n", "", source))
 
 
 class _RecordingLibvirtDriver:
@@ -56,7 +61,7 @@ def test_techvault_scenario_plans_and_applies_through_libvirt_provisioning():
     driver = _RecordingLibvirtDriver()
     target = create_libvirt_target(driver=driver, name_prefix="techvault-test")
     manager = RuntimeManager(target)
-    scenario = parse_sdl((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
+    scenario = _without_os_identity((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
 
     execution_plan = manager.plan(scenario, parameters=_TECHVAULT_PARAMETERS)
 
@@ -108,7 +113,7 @@ def test_techvault_operational_scenario_drives_full_libvirt_surface():
     driver = _RecordingLibvirtDriver()
     target = create_libvirt_target(driver=driver, name_prefix="techvault-operational")
     manager = RuntimeManager(target)
-    scenario = parse_sdl((EXAMPLES_DIR / "techvault-operational.sdl.yaml").read_text(encoding="utf-8"))
+    scenario = _without_os_identity((EXAMPLES_DIR / "techvault-operational.sdl.yaml").read_text(encoding="utf-8"))
 
     admission_plan = manager.plan(scenario)
 
@@ -215,7 +220,7 @@ def _techvault_manager() -> tuple[RuntimeManager, _RecordingLibvirtDriver, objec
     driver = _RecordingLibvirtDriver()
     target = create_libvirt_target(driver=driver, name_prefix="techvault-recon")
     manager = RuntimeManager(target)
-    scenario = parse_sdl((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
+    scenario = _without_os_identity((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
     return manager, driver, scenario
 
 

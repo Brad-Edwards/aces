@@ -1286,13 +1286,12 @@ class _NoopProvisioner(_FixedTopologyProvisioner):
         return ApplyResult(success=True, snapshot=snapshot, changed_addresses=[])
 
 
-def _reference_scenario(node_name: str, *, os_family: str = "linux") -> str:
+def _reference_scenario(node_name: str) -> str:
     return f"""
 name: conformance
 nodes:
   {node_name}:
     type: compute
-    os: {os_family}
     resources: {{ram: 1 gib, cpu: 1}}
     conditions: {{health: ops}}
     roles: {{ops: operator}}

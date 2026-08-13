@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "0b4f45eca295ce8a3b3113b4dc208267d1d32fa4bf644f8ee912ef8f307c6c84",
+  "content_hash": "3e60ed2a2878f49d0aa3db325c82f2e61b5b2caa2be204298b31099d950dcc93",
   "last_change": {
-    "summary": "Separated compute resource kind from substrate constraints and preserved exact legacy virtual-machine intent during historical v1 snapshot migration for issue #1076.",
-    "content_hash": "0b4f45eca295ce8a3b3113b4dc208267d1d32fa4bf644f8ee912ef8f307c6c84"
+    "summary": "Separated governed operating-system distribution from release-only version values for issue #1077.",
+    "content_hash": "3e60ed2a2878f49d0aa3db325c82f2e61b5b2caa2be204298b31099d950dcc93"
   }
 }

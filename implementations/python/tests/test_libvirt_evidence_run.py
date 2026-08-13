@@ -171,7 +171,6 @@ nodes:
     type: switch
   demo:
     type: compute
-    os: linux
     resources: {ram: 128 MiB, cpu: 1}
     services: []
 infrastructure:

@@ -341,6 +341,13 @@ def _request(*, run_count: int = 2, sample: bool = False) -> TrialCompilationReq
     manifest_payload["identity"] = {"name": "backend-a", "version": "1"}
     manifest_payload["supported_contract_versions"].append("realization-envelope-v1")
     manifest_payload["realization_envelope"] = envelope.identity.model_dump(mode="json")
+    manifest_payload["capabilities"]["provisioner"]["operating_systems"] = [
+        {"family": "linux", "distribution": "ubuntu", "versions": ["22.04"]}
+    ]
+    manifest_payload["realization_support"][0]["observation_capabilities"]["operating-system"] = {
+        "verification_scope": "presence",
+        "observation_strength": "guest-observed",
+    }
     manifest = BackendManifestV2Model.model_validate(manifest_payload)
     manifest_ref = ExperimentManifestReferenceModel(
         ref_kind="manifest",

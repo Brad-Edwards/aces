@@ -39,7 +39,7 @@ class RealizationConcernDescriptor:
     projector: Callable[[object, bool], object] | None = None
     sanitizer: Callable[[object, bool], object] | None = None
     observed_validator: Callable[[object], None] | None = None
-    verification_scope: Callable[[object], RealizationVerificationScope] | None = None
+    verification_scope: Callable[[object], RealizationVerificationScope | None] | None = None
     observation_strength: ObservationStrength | None = None
     non_stateful_mounts_only: bool = False
 
@@ -125,6 +125,24 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         authored_path=("os",),
         concern_kind="os-family",
         payload_path=("os_family",),
+        verification_scope=lambda value: RealizationVerificationScope.PRESENCE if value else None,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    ),
+    RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("os_distribution",),
+        concern_kind="os-distribution",
+        payload_path=("os_distribution",),
+        verification_scope=lambda value: RealizationVerificationScope.PRESENCE if value else None,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    ),
+    RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("os_version",),
+        concern_kind="os-version",
+        payload_path=("os_version",),
+        verification_scope=lambda value: RealizationVerificationScope.PRESENCE if value else None,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
     ),
     RealizationConcernDescriptor(
         section="nodes",

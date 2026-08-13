@@ -185,6 +185,8 @@ def _record_node_runtime(
         node_name=node_name,
         node_kind=node_spec.get("type", ""),
         os_family=node_spec.get("os", "") or "",
+        os_distribution=node_spec.get("os_distribution", "") or "",
+        os_version=node_spec.get("os_version", "") or "",
         architecture=node_spec.get("architecture", "") or "",
         count=infra_spec.get("count"),
         network_namespace_target=network_namespace_target,

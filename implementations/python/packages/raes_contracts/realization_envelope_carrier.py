@@ -13,7 +13,10 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from raes_contracts.contracts import ContractModel, NonEmptyString, RealizationEnvelopeIdentityModel
-from raes_contracts.contracts.capabilities import ProcessResourceLimitCapabilityModel
+from raes_contracts.contracts.capabilities import (
+    OperatingSystemCompatibilityModel,
+    ProcessResourceLimitCapabilityModel,
+)
 from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
 from raes_contracts.realization_envelope import RealizationEnvelopeModel
 from raes_contracts.vocabulary import ObservationStrength
@@ -47,6 +50,7 @@ class RealizationConcern(str, Enum):
     SERVICE = "service"
     ACL = "acl"
     COMPUTE_SUBSTRATE = "compute-substrate"
+    OPERATING_SYSTEM = "operating-system"
 
 
 class TransformationKind(str, Enum):
@@ -82,6 +86,7 @@ class RealizerConfigurationModel(ContractModel):
     network_policy: NonEmptyString
     supported_node_types: list[NonEmptyString] = Field(min_length=1)
     supported_os_families: list[NonEmptyString] = Field(min_length=1)
+    operating_systems: list[OperatingSystemCompatibilityModel] = Field(default_factory=list)
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
     supported_domain_profiles: list[NonEmptyString] = Field(default_factory=list)
@@ -105,6 +110,17 @@ class RealizerConfigurationModel(ContractModel):
         resources = [capability.resource for capability in self.process_resource_limits]
         if len(resources) != len(set(resources)):
             raise ValueError("process_resource_limits must not contain duplicate resource terms")
+        os_keys = [(entry.family, entry.distribution) for entry in self.operating_systems]
+        if len(os_keys) != len(set(os_keys)):
+            raise ValueError("operating_systems must not contain duplicate family/distribution rows")
+        undeclared_families = {
+            entry.family for entry in self.operating_systems if entry.family not in self.supported_os_families
+        }
+        if undeclared_families:
+            raise ValueError(
+                "operating_systems families must be present in supported_os_families: "
+                + ", ".join(sorted(undeclared_families))
+            )
         # The configuration-bound realized target architecture is a governed
         # canonical CPU-architecture term (issue #674), so a backend's declared
         # realization architecture stays in the same portable vocabulary as the
@@ -132,6 +148,7 @@ class RealizerConfigurationModel(ContractModel):
         ):
             properties[field_name]["uniqueItems"] = True
         properties["process_resource_limits"]["uniqueItems"] = True
+        properties["operating_systems"]["uniqueItems"] = True
         return json_schema
 
 
@@ -267,6 +284,19 @@ class BackendRealizationEnvelopeModel(ContractModel):
         if missing_concerns:
             missing = ", ".join(sorted(concern.value for concern in missing_concerns))
             raise ValueError(f"concerns must disclose every governed concern; missing: {missing}")
+        operating_system_claim = next(
+            claim for claim in self.concerns if claim.concern is RealizationConcern.OPERATING_SYSTEM
+        )
+        if self.configuration.operating_systems:
+            if (
+                operating_system_claim.disposition is not ConcernDisposition.REALIZED
+                or operating_system_claim.observation_strength is not ObservationStrength.GUEST_OBSERVED
+            ):
+                raise ValueError(
+                    "operating_systems capability rows require a realized guest-observed operating-system concern"
+                )
+        elif operating_system_claim.disposition is not ConcernDisposition.UNSUPPORTED:
+            raise ValueError("operating-system concern support requires coupled operating_systems capability rows")
         if self.configuration.configuration_digest != realizer_configuration_digest(self.configuration):
             raise ValueError("realizer configuration digest does not match canonical content")
         expected = realization_envelope_digest(self)

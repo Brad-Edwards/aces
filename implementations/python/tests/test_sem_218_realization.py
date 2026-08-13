@@ -15,10 +15,21 @@ import textwrap
 
 from raes import instantiate_scenario, parse_sdl
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
-from raes_backend_stubs.stubs import create_stub_manifest
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.vocabulary import RealizationSupportMode
+from raes_backend_protocols.capabilities import (
+    BackendManifest,
+    OperatingSystemCompatibility,
+    ProvisionerCapabilities,
+)
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
+from raes_contracts.vocabulary import (
+    ObservationStrength,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import plan
 
@@ -71,6 +82,35 @@ def _manifest(
             name="realization-gate-provisioner",
             supported_node_types=node_types,
             supported_os_families=os_families,
+            operating_systems=tuple(
+                OperatingSystemCompatibility(
+                    family=family,
+                    distribution=("ubuntu" if family == "linux" else "windows-server"),
+                    versions=frozenset({"22.04" if family == "linux" else "2022"}),
+                )
+                for family in sorted(os_families & {"linux", "windows"})
+            ),
+        ),
+    )
+
+
+def _supporting_manifest(*, constrained: bool = False) -> BackendManifest:
+    return _manifest(
+        os_families=frozenset({"linux", "windows"}) if constrained else frozenset({"linux"}),
+        realization_support=(
+            RealizationSupportDeclaration(
+                domain="runtime-realization",
+                support_mode=RealizationSupportMode.CONSTRAINED,
+                supported_constraint_kinds=frozenset({"node-type", "os-family"}),
+                supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
+                disclosure_kinds=frozenset({"runtime-snapshot-v1"}),
+                observation_capabilities={
+                    "operating-system": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    )
+                },
+            ),
         ),
     )
 
@@ -150,7 +190,7 @@ def test_planner_accepts_exact_declaration_when_backend_supports_it():
     """The stub manifest declares declared-capability-match, so an exact
     declaration plans without a realization diagnostic."""
 
-    execution_plan = plan(compile_runtime_model(_scenario(_EXACT_SCENARIO)), create_stub_manifest())
+    execution_plan = plan(compile_runtime_model(_scenario(_EXACT_SCENARIO)), _supporting_manifest())
 
     codes = {diag.code for diag in execution_plan.diagnostics}
     assert not any(code.startswith("realization.") for code in codes)
@@ -192,7 +232,10 @@ def test_planner_rejects_unsupported_constraint_kind():
 def test_planner_accepts_constrained_declaration_when_backend_supports_it():
     """Constrained (and open) declarations plan as before against a supporting backend."""
 
-    execution_plan = plan(compile_runtime_model(_scenario(_CONSTRAINED_SCENARIO)), create_stub_manifest())
+    execution_plan = plan(
+        compile_runtime_model(_scenario(_CONSTRAINED_SCENARIO)),
+        _supporting_manifest(constrained=True),
+    )
 
     codes = {diag.code for diag in execution_plan.diagnostics}
     assert not any(code.startswith("realization.") for code in codes)

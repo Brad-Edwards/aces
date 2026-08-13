@@ -19,12 +19,15 @@ from ..semantics.realization import (
     CompiledRealizationAuthority,
     CompiledRealizationRequirement,
 )
+from .operating_system_capability_domains import feasible_operating_system_domains
 
 # These concerns are validated against closed semantic vocabularies before
 # capability constraints are compiled, so their finite domains are safe to
 # publish. Generic variable/value constraints are deliberately excluded.
 _PUBLICATION_SAFE_CAPABILITY_CONCERN_BY_KIND = {
     "os-family": "nodes.os",
+    "os-distribution": "nodes.os_distribution",
+    "os-version": "nodes.os_version",
     "node-architecture": "nodes.architecture",
 }
 
@@ -80,25 +83,60 @@ def _authority_bounds(
     model: RuntimeModel,
     authority: CompiledRealizationAuthority,
     requirement: CompiledRealizationRequirement | None,
+    manifest: BackendManifest,
 ) -> tuple[RealizationAuthorityBound, ...]:
-    bounds: list[RealizationAuthorityBound] = []
     if (
         requirement is not None
         and requirement.requirement_kind == "process-resource-limits"
         and requirement.value_constraints
     ):
-        for constraint in requirement.value_constraints:
-            domain = _publication_safe_enum_domain(constraint.allowed_values)
-            if domain is None:
-                return ()
-            bounds.append(
-                RealizationAuthorityBound(
-                    identity_digest=constraint.identity_digest,
-                    value_pointer=f"/{constraint.leaf}",
-                    domain=domain,
-                )
+        return _process_limit_authority_bounds(requirement)
+    if authority.requirement_kind in {"os-family", "os-distribution", "os-version"}:
+        return _operating_system_authority_bounds(model, authority, manifest)
+    return _capability_authority_bounds(model, authority)
+
+
+def _process_limit_authority_bounds(
+    requirement: CompiledRealizationRequirement,
+) -> tuple[RealizationAuthorityBound, ...]:
+    bounds: list[RealizationAuthorityBound] = []
+    for constraint in requirement.value_constraints:
+        domain = _publication_safe_enum_domain(constraint.allowed_values)
+        if domain is None:
+            return ()
+        bounds.append(
+            RealizationAuthorityBound(
+                identity_digest=constraint.identity_digest,
+                value_pointer=f"/{constraint.leaf}",
+                domain=domain,
             )
-        return tuple(bounds)
+        )
+    return tuple(bounds)
+
+
+def _operating_system_authority_bounds(
+    model: RuntimeModel,
+    authority: CompiledRealizationAuthority,
+    manifest: BackendManifest,
+) -> tuple[RealizationAuthorityBound, ...]:
+    node = model.node_deployments.get(authority.address)
+    feasible, diagnostic = (
+        feasible_operating_system_domains(model, node, manifest.provisioner)
+        if node is not None and manifest.provisioner is not None
+        else (None, None)
+    )
+    domain = (
+        _publication_safe_enum_domain(feasible.values_for(authority.requirement_kind))
+        if diagnostic is None and feasible is not None
+        else None
+    )
+    return (RealizationAuthorityBound(value_pointer="", domain=domain),) if domain is not None else ()
+
+
+def _capability_authority_bounds(
+    model: RuntimeModel,
+    authority: CompiledRealizationAuthority,
+) -> tuple[RealizationAuthorityBound, ...]:
     concern = _PUBLICATION_SAFE_CAPABILITY_CONCERN_BY_KIND.get(authority.requirement_kind)
     constraint = next(
         (
@@ -137,7 +175,9 @@ def materialize_realization_authority(
             diagnostics.append(_unresolved_authority_diagnostic(authority))
             continue
         bounds = (
-            _authority_bounds(model, authority, requirement) if mode is RealizationAuthorityMode.CONSTRAINED else ()
+            _authority_bounds(model, authority, requirement, manifest)
+            if mode is RealizationAuthorityMode.CONSTRAINED
+            else ()
         )
         if mode is RealizationAuthorityMode.CONSTRAINED and not bounds:
             diagnostics.append(_unsafe_bound_diagnostic(authority))

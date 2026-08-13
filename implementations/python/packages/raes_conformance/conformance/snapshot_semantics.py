@@ -21,6 +21,7 @@ from raes_contracts.participant_information_state_history import (
 )
 from raes_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
 from raes_contracts.planning import RuntimeDomain
+from raes_contracts.realization_observation import ObservedOperatingSystemIdentity
 from raes_contracts.runtime_state import RealizationObservationDisclosure, RuntimeSnapshot, SnapshotEntry
 from raes_processor.models import (
     ParticipantActionContractRuntime,
@@ -127,6 +128,15 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
                 verification_scope=entry.verification_scope,
                 observation_strength=entry.observation_strength,
                 observed_value=entry.observed_value,
+                operating_system=(
+                    ObservedOperatingSystemIdentity(
+                        family=entry.operating_system.family,
+                        distribution=entry.operating_system.distribution,
+                        version=entry.operating_system.version,
+                    )
+                    if entry.operating_system is not None
+                    else None
+                ),
                 operation_id=entry.operation_id,
                 envelope_digest=entry.envelope_digest,
                 configuration_digest=entry.configuration_digest,

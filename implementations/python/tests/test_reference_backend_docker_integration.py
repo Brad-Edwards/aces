@@ -33,7 +33,6 @@ name: ref-docker
 nodes:
   web:
     type: compute
-    os: linux
     source: {_IMAGE}
     resources: {{ram: 1 gib, cpu: 1}}
 """
@@ -121,6 +120,7 @@ def test_real_driver_conformance_executes_native_cases_and_fails_closed_for_nonc
         report = run_target_conformance(
             target,
             participant_opacity_harness=ReferenceParticipantOpacityHarness(),
+            reference_scenario=_SCENARIO,
         )
 
         assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE

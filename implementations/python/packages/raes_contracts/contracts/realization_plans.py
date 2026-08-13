@@ -28,6 +28,7 @@ from .execution_state import (
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
 )
+from .operating_systems import ObservedOperatingSystemIdentityModel
 from .participant_control import ParticipantControlOccurrenceModel
 from .participant_crossing import ParticipantCrossingOccurrenceModel
 from .participant_envelopes import (
@@ -48,6 +49,7 @@ from .participant_runtime import (
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
 )
+from .realization_observation_validation import validate_realization_observation_disclosure
 from .time_model import TimeRuntimeStateModel
 
 
@@ -287,6 +289,7 @@ class RealizationObservationDisclosureModel(ContractModel):
     verification_scope: RealizationVerificationScope
     observation_strength: ObservationStrength = Field(json_schema_extra={"not": {"const": "none"}})
     observed_value: NonEmptyString | None = None
+    operating_system: ObservedOperatingSystemIdentityModel | None = None
     operation_id: NonEmptyString | None = None
     envelope_digest: str | None = Field(default=None, pattern=r"^sha256:[a-f0-9]{64}$")
     configuration_digest: str | None = Field(default=None, pattern=r"^sha256:[a-f0-9]{64}$")
@@ -296,24 +299,7 @@ class RealizationObservationDisclosureModel(ContractModel):
 
     @model_validator(mode="after")
     def _require_evidence(self) -> RealizationObservationDisclosureModel:
-        if self.observation_strength is ObservationStrength.NONE:
-            raise ValueError("realization observation disclosure must provide non-none evidence")
-        substrate_fields = (
-            self.observed_value,
-            self.operation_id,
-            self.envelope_digest,
-            self.configuration_digest,
-            self.observer_version,
-            self.sequence,
-        )
-        if self.requirement_kind == "compute-substrate":
-            if any(value is None for value in substrate_fields) or not self.binding_verified:
-                raise ValueError("compute-substrate disclosure requires governed value and verified execution binding")
-            from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
-
-            validate_controlled_vocabulary_value("compute-substrates", self.observed_value)
-        elif any(value is not None for value in substrate_fields) or self.binding_verified:
-            raise ValueError("value-bearing execution bindings are reserved for compute-substrate disclosures")
+        validate_realization_observation_disclosure(self)
         return self
 
 

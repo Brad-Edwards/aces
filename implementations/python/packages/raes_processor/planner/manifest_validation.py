@@ -14,6 +14,7 @@ from .capability_domains import (
     _validate_node_architecture,
     _validate_node_os_family,
 )
+from .operating_system_capability_domains import validate_node_operating_system
 from .stateful_admission import generated_artifact_payload_diagnostic
 
 _ORCHESTRATION_WORKFLOWS_ADDRESS = "orchestration.workflows"
@@ -68,6 +69,7 @@ def _validate_node_kind_support(model: RuntimeModel, provisioner: ProvisionerCap
                 provisioner.supported_os_families,
             )
         )
+        diagnostics.extend(validate_node_operating_system(model, node, provisioner))
         diagnostics.extend(
             _validate_node_architecture(
                 model,

@@ -30,12 +30,24 @@ if TYPE_CHECKING:
 
 BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
 MISSING_CONCERN_VALUE = object()
+OPERATING_SYSTEM_REQUIREMENT_KINDS = frozenset({"os-family", "os-distribution", "os-version"})
 
 
 def matching_observation(
     requirement: CompiledRealizationRequirement,
     returned_snapshot: RuntimeSnapshot,
 ) -> RealizationObservationDisclosure | None:
+    if requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS:
+        return next(
+            (
+                entry
+                for entry in returned_snapshot.realization_observations
+                if entry.address == requirement.address
+                and entry.domain == requirement.domain
+                and entry.requirement_kind == "operating-system"
+            ),
+            None,
+        )
     return next(
         (
             entry
@@ -64,8 +76,13 @@ def manifest_corroborates(
 ) -> bool:
     if manifest is None:
         return False
+    capability_kind = (
+        "operating-system"
+        if requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS
+        else requirement.requirement_kind
+    )
     return any(
-        (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
+        (capability := declaration.observation_capabilities.get(capability_kind)) is not None
         and observation_posture_supported(requirement, declaration)
         and verification_scope_satisfies(capability.verification_scope, observation.verification_scope)
         and observation_strength_satisfies(capability.observation_strength, observation.observation_strength)
@@ -78,7 +95,9 @@ def observation_posture_supported(
     requirement: CompiledRealizationRequirement,
     declaration: RealizationSupportDeclaration,
 ) -> bool:
-    if requirement.requirement_kind == "compute-substrate" and requirement.explicitness in {
+    if requirement.requirement_kind in (
+        {"compute-substrate"} | OPERATING_SYSTEM_REQUIREMENT_KINDS
+    ) and requirement.explicitness in {
         ExplicitnessClass.OPEN,
         ExplicitnessClass.CONSTRAINED,
     }:
@@ -155,6 +174,7 @@ def concern_value(payload: dict[str, object], path: tuple[str, ...]) -> object:
 __all__ = [
     "BACKEND_CONTRACT_INVALID",
     "MISSING_CONCERN_VALUE",
+    "OPERATING_SYSTEM_REQUIREMENT_KINDS",
     "concern_value",
     "manifest_corroborates",
     "matching_observation",

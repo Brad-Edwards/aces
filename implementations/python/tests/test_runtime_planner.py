@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+from dataclasses import replace
 
 import pytest
 from paths import EXAMPLES_DIR
@@ -10,14 +11,23 @@ from raes import SDLInstantiationError, parse_sdl
 from raes_backend_protocols.capabilities import (
     BackendManifest,
     EvaluatorCapabilities,
+    OperatingSystemCompatibility,
     OrchestratorCapabilities,
     ProvisionerCapabilities,
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
 from raes_backend_stubs.stubs import create_stub_manifest
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.vocabulary import RealizationSupportMode
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
+from raes_contracts.vocabulary import (
+    ObservationStrength,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
 from raes_processor.planner import plan
@@ -85,12 +95,39 @@ def _limited_backend_manifest(
                 ),
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset({"runtime-snapshot-v1"}),
+                observation_capabilities={
+                    "operating-system": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    )
+                },
             ),
         ),
         concept_bindings=(ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),),
-        provisioner=provisioner,
+        provisioner=replace(
+            provisioner,
+            operating_systems=tuple(
+                OperatingSystemCompatibility(family, distribution, frozenset({version}))
+                for family, distribution, version in (
+                    ("linux", "ubuntu", "22.04"),
+                    ("windows", "windows-server", "2022"),
+                    ("other", "solaris", "11.4"),
+                )
+                if family in provisioner.supported_os_families
+            ),
+        ),
         orchestrator=orchestrator,
         evaluator=evaluator,
+    )
+
+
+def _os_capable_stub_manifest() -> BackendManifest:
+    base = create_stub_manifest()
+    return _limited_backend_manifest(
+        name="os-capable-stub",
+        provisioner=base.provisioner,
+        orchestrator=base.orchestrator,
+        evaluator=base.evaluator,
     )
 
 
@@ -318,13 +355,11 @@ name: ambiguous
 nodes:
   a:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
   b:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -358,7 +393,6 @@ name: injects
 nodes:
   web:
     type: compute
-    os: linux
     resources: {ram: 1 gib, cpu: 1}
 injects:
   mail: {source: inbox}
@@ -843,7 +877,7 @@ workflows:
         )
 
         objective = model.objectives["evaluation.objective.initial"]
-        execution_plan = plan(model, create_stub_manifest())
+        execution_plan = plan(model, _os_capable_stub_manifest())
 
         assert "orchestration.workflow.flow" not in objective.ordering_dependencies
         assert "orchestration.workflow.flow" in objective.refresh_dependencies
@@ -1299,7 +1333,7 @@ nodes:
         assert "provisioner.unsupported-os-family" not in codes
         assert execution_plan.is_valid
 
-    def test_variable_backed_os_allowed_values_fail_when_any_are_unsupported(self):
+    def test_variable_backed_os_allowed_values_pass_with_nonempty_supported_intersection(self):
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
@@ -1327,8 +1361,8 @@ nodes:
 
         codes = {diag.code for diag in execution_plan.diagnostics}
 
-        assert "provisioner.unsupported-os-family" in codes
-        assert not execution_plan.is_valid
+        assert "provisioner.unsupported-os-family" not in codes
+        assert execution_plan.is_valid
 
     def test_variable_backed_os_defaults_must_be_valid_for_nodes_os(self):
         with pytest.raises(SDLInstantiationError) as exc:
@@ -1346,7 +1380,7 @@ nodes:
             )
         assert "/nodes/vm/os" in str(exc.value)
 
-    def test_variable_backed_os_without_allowed_values_fails_closed_at_portable_authority(self):
+    def test_variable_backed_os_without_allowed_values_is_narrowed_to_feasible_authority(self):
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
@@ -1375,8 +1409,14 @@ nodes:
 
         assert "provisioner.os-family-validation-deferred" not in codes
         assert "provisioner.unsupported-os-family" not in codes
-        assert "realization.authority-bound-unavailable" in codes
-        assert not execution_plan.is_valid
+        assert "realization.authority-bound-unavailable" not in codes
+        assert execution_plan.is_valid
+        authority = next(
+            entry
+            for entry in execution_plan.provisioning.realization_authority
+            if entry.requirement_kind == "os-family"
+        )
+        assert authority.bounds[0].domain.values == ["linux"]
 
     def test_variable_backed_os_with_undeclared_variable_fails_instantiation(self):
         manifest = _limited_backend_manifest(
@@ -1434,7 +1474,7 @@ infrastructure:
         assert "provisioner.max-total-nodes-exceeded" in codes
         assert not execution_plan.is_valid
 
-    def test_imported_module_allowed_values_enforce_against_backend(self, tmp_path):
+    def test_imported_module_allowed_values_retain_supported_intersection(self, tmp_path):
         # SDL module-import composition strips imported variables from the
         # merged payload, so the side-channel provenance must carry both the
         # imported variable spec AND the imported nodes' captured refs onto
@@ -1495,8 +1535,8 @@ imports:
 
         codes = {diag.code for diag in execution_plan.diagnostics}
 
-        assert "provisioner.unsupported-os-family" in codes
-        assert not execution_plan.is_valid
+        assert "provisioner.unsupported-os-family" not in codes
+        assert execution_plan.is_valid
 
     def test_variable_backed_counts_defaults_must_be_valid_for_infrastructure_count(self):
         manifest = _limited_backend_manifest(
@@ -1526,11 +1566,11 @@ infrastructure:
             )
         assert "/infrastructure/vm/count" in str(exc.value)
 
-    def test_variable_backed_os_allowed_values_fail_when_pre_instantiated(self):
+    def test_variable_backed_os_allowed_values_retain_intersection_when_pre_instantiated(self):
         # Manager-path coverage: when the caller instantiates upstream and
         # passes an InstantiatedScenario to compile_runtime_model, the
         # captured-ref snapshot must still flow through so the
-        # allowed_values-vs-supported_os_families check fires.
+        # allowed_values-vs-supported_os_families intersection remains available.
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
@@ -1558,8 +1598,8 @@ nodes:
 
         codes = {diag.code for diag in execution_plan.diagnostics}
 
-        assert "provisioner.unsupported-os-family" in codes
-        assert not execution_plan.is_valid
+        assert "provisioner.unsupported-os-family" not in codes
+        assert execution_plan.is_valid
 
     def test_variable_backed_switch_count_enforces_max_nodes(self):
         # Switch (network) resources go through the same max_total_nodes
@@ -1748,7 +1788,7 @@ workflows:
         scenario_path = EXAMPLES_DIR / "satcom-release-poisoning.sdl.yaml"
         content = scenario_path.read_text(encoding="utf-8")
         model = compile_runtime_model(parse_sdl(content))
-        execution_plan = plan(model, create_stub_manifest())
+        execution_plan = plan(model, _os_capable_stub_manifest())
 
         # Pinned counts from the satcom example. A partial regression
         # (e.g. half the nodes failing to compile) keeps `> 5` green; exact

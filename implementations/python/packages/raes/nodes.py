@@ -7,6 +7,8 @@ backend-agnostic Source references.
 from enum import Enum
 
 from pydantic import Field, field_validator, model_validator
+from pydantic.json_schema import GetJsonSchemaHandler, JsonSchemaValue
+from pydantic_core import CoreSchema
 
 from ._base import (
     SDLModel,
@@ -38,6 +40,13 @@ from .image_provenance import (
     ImageLayer,
     ImageSourceInput,
     ImageVerificationStatus,
+)
+from .operating_systems import (
+    AuthoredOSDistributionString,
+    AuthoredOSVersionString,
+    OSDistribution,
+    normalize_os_distribution,
+    normalize_os_version,
 )
 from .runtime_configuration import (
     RuntimeCapabilityOverrideScope,
@@ -291,7 +300,8 @@ class Node(SDLModel):
 
     resources: Resources | None = None
     os: OSFamily | str | None = None
-    os_version: str = ""
+    os_distribution: OSDistribution | AuthoredOSDistributionString | None = None
+    os_version: AuthoredOSVersionString = ""
     architecture: NodeArchitecture | AuthoredNodeArchitectureString | None = None
     features: dict[str, str] = Field(default_factory=dict)
     conditions: dict[str, str] = Field(default_factory=dict)
@@ -303,10 +313,55 @@ class Node(SDLModel):
     endpoint_persona: EndpointPersona | str | None = None
     runtime: RuntimeConfiguration | None = None
 
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        """Publish the same OS dependency chain enforced by semantic validation."""
+
+        json_schema = handler.resolve_ref_schema(handler(core_schema))
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "required": ["os_version"],
+                        "properties": {"os_version": {"type": "string", "minLength": 1}},
+                    },
+                    "then": {
+                        "required": ["os_distribution"],
+                        "properties": {"os_distribution": {"not": {"type": "null"}}},
+                    },
+                },
+                {
+                    "if": {
+                        "required": ["os_distribution"],
+                        "properties": {"os_distribution": {"not": {"type": "null"}}},
+                    },
+                    "then": {
+                        "required": ["os"],
+                        "properties": {"os": {"not": {"type": "null"}}},
+                    },
+                },
+            ]
+        )
+        return json_schema
+
     @field_validator("os", mode="before")
     @classmethod
     def normalize_os(cls, v):
         return parse_enum_or_var(v, OSFamily, field_name="os") if v is not None else v
+
+    @field_validator("os_distribution", mode="before")
+    @classmethod
+    def normalize_os_distribution_value(cls, v: object) -> object:
+        return normalize_os_distribution(v) if v is not None else v
+
+    @field_validator("os_version", mode="before")
+    @classmethod
+    def normalize_os_version_value(cls, v: object) -> object:
+        return normalize_os_version(v)
 
     @field_validator("architecture", mode="before")
     @classmethod
@@ -334,6 +389,7 @@ class Node(SDLModel):
             "source": self.source is not None,
             "resources": self.resources is not None,
             "os": self.os is not None,
+            "os_distribution": self.os_distribution is not None,
             "os_version": bool(self.os_version),
             "architecture": self.architecture is not None,
             "features": bool(self.features),
