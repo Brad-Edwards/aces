@@ -1,6 +1,8 @@
 """Realization-requirement compilation (SEM-218)."""
 
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from collections.abc import Mapping
+
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance, ExplicitnessRecord
 from raes.nodes import NodeType
 from raes.realization_designation import RealizationConstraintPosture
 from raes.runtime_resource_limits import (
@@ -285,13 +287,14 @@ def _append_service_materialization_requirements(
 def _compiled_registered_realization(
     scenario: InstantiatedScenario,
     registered: RegisteredRealizationConcern,
+    explicitness: Mapping[str, ExplicitnessRecord],
 ) -> tuple[CompiledRealizationRequirement | None, CompiledRealizationAuthority | None]:
     descriptor = registered.descriptor
     section_name = descriptor.section
     declaration_name = registered.declaration_name
     encoded_name = declaration_name.replace("~", "~0").replace("/", "~1")
     field_pointer = f"/{section_name}/{encoded_name}/{'/'.join(descriptor.authored_path)}"
-    record = scenario.explicitness.get(registered.field_path)
+    record = explicitness.get(registered.field_path)
     declarations = getattr(scenario, section_name)
     authored_value = _nested_authored_value(
         declarations[declaration_name],
@@ -401,21 +404,16 @@ def _compile_realization(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
 ) -> tuple[tuple[CompiledRealizationRequirement, ...], tuple[CompiledRealizationAuthority, ...]]:
-    """SEM-218 typed compiler emission: lower each authored realization concern
-    into a compiled requirement carrying its classifier explicitness class.
-
-    Explicit leaves always win. Missing admitted concerns are lowered through
-    the typed lexical designation cascade; omitted designation preserves the
-    legacy closed fallback while explicit root delegation remains typed.
-    """
+    """Lower explicit leaves before typed fallbacks; omitted stays closed and explicit root delegation stays typed."""
 
     requirements: list[CompiledRealizationRequirement] = []
     _append_compute_substrate_requirements(requirements, scenario)
     authority: list[CompiledRealizationAuthority] = []
+    explicitness = scenario.explicitness
     for registered in registered_realization_concern_descriptors(
         declaration_names={"nodes": scenario.nodes, "content": scenario.content}
     ):
-        requirement, authority_entry = _compiled_registered_realization(scenario, registered)
+        requirement, authority_entry = _compiled_registered_realization(scenario, registered, explicitness)
         if requirement is not None:
             requirements.append(requirement)
         if authority_entry is not None:
