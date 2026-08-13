@@ -15,9 +15,17 @@ from pathlib import Path
 import pytest
 from raes_backend_libvirt.cloudinit import CloudInitFile, CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkSpec, ServiceSpec
-from raes_backend_libvirt.guest_appliance import GuestObservingInitramfsBuilder
+from raes_backend_libvirt.guest_appliance import _init_script, _write_placement_specs
 from raes_backend_libvirt.guest_certified_driver import GuestCertifiedLibvirtDriver
-from raes_backend_libvirt.techvault_matrix import mac_address
+from raes_backend_libvirt.guest_observation import (
+    GuestObservationConfig,
+    expected_guest_observations,
+    guest_observation,
+    guest_observation_diagnostics,
+)
+from raes_backend_libvirt.guest_transport import parse_guest_facts
+from raes_backend_libvirt.techvault_matrix import domain_placements, mac_address
+from raes_contracts.realization_envelope import RealizationConcern
 
 _CHALLENGE = "deadbeefcafef00d"
 
@@ -108,7 +116,7 @@ class _GuestFacts:
     interfaces: list[tuple[str, str, int]] = field(default_factory=list)
     content: list[tuple[str, str, str]] = field(default_factory=list)
     accounts: list[tuple[str, int, str, str, int, str]] = field(default_factory=list)
-    services: list[tuple[str, int, int, int]] = field(default_factory=list)
+    services: list[tuple[str, str, int, int, int]] = field(default_factory=list)
     init_complete: bool = True
 
     def render(self) -> str:
@@ -125,7 +133,9 @@ class _GuestFacts:
             f"account {name} {uid} {home} {shell} {dis} {groups}"
             for name, uid, home, shell, dis, groups in self.accounts
         )
-        lines.extend(f"service {name} {port} {lis} {pid}" for name, port, lis, pid in self.services)
+        lines.extend(
+            f"service {name} {protocol} {port} {lis} {pid}" for name, protocol, port, lis, pid in self.services
+        )
         if self.init_complete:
             lines.append("init complete")
         return "\n".join(lines) + "\n"
@@ -171,11 +181,18 @@ def _matching_facts() -> _GuestFacts:
         interfaces=[(mac, "10.9.0.10", 1)],
         content=[("/etc/raes/marker", _sha("hello"), "644")],
         accounts=[("analyst", 1000, "/home/analyst", "/bin/sh", 1, "raes")],
-        services=[("beacon", 9000, 1, 1)],
+        services=[("beacon", "tcp", 9000, 1, 1)],
     )
 
 
-def _driver(tmp_path: Path, connection: _FakeConnection, transport: _StubTransport) -> GuestCertifiedLibvirtDriver:
+def _driver(
+    tmp_path: Path,
+    connection: _FakeConnection,
+    transport: _StubTransport,
+    *,
+    challenge_factory=None,
+    guest_config: GuestObservationConfig | None = None,
+) -> GuestCertifiedLibvirtDriver:
     kernel = tmp_path / "vmlinuz"
     kernel.write_bytes(b"kernel-bytes")
     return GuestCertifiedLibvirtDriver(
@@ -183,9 +200,10 @@ def _driver(tmp_path: Path, connection: _FakeConnection, transport: _StubTranspo
         connection=connection,
         name_prefix="raes-gc",
         kernel_path=kernel,
-        initramfs_builder=GuestObservingInitramfsBuilder(busybox_path=Path("/usr/bin/busybox")),
+        initramfs_builder=_FakeBuilder(),
         guest_transport=transport,
-        challenge=_CHALLENGE,
+        challenge_factory=challenge_factory or (lambda: _CHALLENGE),
+        guest_config=guest_config or GuestObservationConfig(),
     )
 
 
@@ -210,15 +228,93 @@ def test_guest_certified_happy_path_realizes_and_certifies(tmp_path: Path) -> No
     assert {
         "guest-architecture",
         "guest-vcpus",
+        "guest-memory-mib",
         "guest-network",
         "guest-content",
         "guest-account",
         "guest-service",
     } <= guest_fields
     assert driver.last_guest_binding["challenge"] == _CHALLENGE
+    assert driver.last_guest_binding["memory_tolerance_mib"] == 16
     assert "scn.vm" in driver.last_guest_facts
+    memory = next(obs for obs in result.observations if obs.field_path == "guest-memory-mib")
+    assert memory.value == 120
+    service = next(obs for obs in result.observations if obs.field_path == "guest-service")
+    assert service.value == ("beacon|tcp|9000|1|1",)
     # Native objects remain (committed), not rolled back.
     assert all(not native.destroyed for native in connection.domains.values())
+
+
+def test_guest_service_protocol_is_bound_through_projection_artifact_and_facts(tmp_path: Path) -> None:
+    placement = domain_placements(_domain())
+    assert placement["services"] == [{"name": "beacon", "protocol": "tcp", "port": 9000}]
+
+    guest_dir = tmp_path / "guest"
+    files_dir = guest_dir / "files"
+    files_dir.mkdir(parents=True)
+    _write_placement_specs(guest_dir, files_dir, placement)
+    assert (guest_dir / "services").read_text(encoding="utf-8") == "beacon|tcp|9000\n"
+
+    script = _init_script({"name": "vm", "interfaces": [], **placement})
+    assert "read name protocol port" in script
+    assert "netstat -lnt" in script
+    assert 'echo "service $name $protocol $port $lis $pid"' in script
+
+    parsed = parse_guest_facts(_matching_facts().render())
+    assert parsed is not None
+    assert parsed["services"] == [
+        {"name": "beacon", "protocol": "tcp", "port": 9000, "listening": True, "pid_present": True}
+    ]
+
+
+def test_guest_service_fact_without_protocol_is_not_accepted() -> None:
+    text = _matching_facts().render().replace("service beacon tcp 9000 1 1", "service beacon 9000 1 1")
+    parsed = parse_guest_facts(text)
+
+    assert parsed is not None
+    assert parsed["services"] == []
+
+
+def test_udp_guest_service_is_rejected_before_native_mutation(tmp_path: Path) -> None:
+    connection = _FakeConnection()
+    driver = _driver(tmp_path, connection, _StubTransport(facts_by_address={}))
+    domain = DomainSpec(
+        address="scn.vm",
+        name="vm",
+        image_ref=None,
+        memory_mib=128,
+        vcpus=1,
+        networks=("scn.net",),
+        services=(ServiceSpec(name="beacon", protocol="udp", port=9000),),
+    )
+
+    result = driver.realize(networks=(_network(),), domains=(domain,))
+
+    assert _codes(result) == {"libvirt-backend.techvault.service-unsupported"}
+    assert connection.networks == {}
+    assert connection.domains == {}
+
+
+def test_default_challenge_factory_and_invalid_factory_are_explicit(tmp_path: Path) -> None:
+    driver = GuestCertifiedLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connection=_FakeConnection(),
+        kernel_path=tmp_path / "kernel",
+        initramfs_builder=_FakeBuilder(),
+        guest_transport=_StubTransport(facts_by_address={}),
+    )
+
+    assert len(driver.challenge_factory()) == 32
+    invalid_driver = {
+        "state_dir": tmp_path / "bad-state",
+        "connection": _FakeConnection(),
+        "kernel_path": tmp_path / "kernel",
+        "initramfs_builder": _FakeBuilder(),
+        "guest_transport": _StubTransport(facts_by_address={}),
+        "challenge_factory": None,
+    }
+    with pytest.raises(ValueError, match="must be callable"):
+        GuestCertifiedLibvirtDriver(**invalid_driver)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -250,6 +346,111 @@ def test_stale_challenge_is_rejected(tmp_path: Path) -> None:
     assert "libvirt-backend.guest.challenge-mismatch" in _codes(result)
 
 
+def test_prior_fact_channel_is_removed_before_native_mutation(tmp_path: Path) -> None:
+    connection = _FakeConnection()
+    transport = _StubTransport(facts_by_address={"scn.vm": _matching_facts().render()})
+    driver = _driver(tmp_path, connection, transport)
+    channel = driver._fact_channel_path("scn.vm")
+    channel.parent.mkdir(parents=True)
+    channel.write_text("stale completed report", encoding="utf-8")
+
+    result = driver.realize(networks=(_network(),), domains=(_domain(),))
+
+    assert result.diagnostics == ()
+    assert not channel.exists()
+
+
+def test_each_realize_operation_uses_a_new_challenge(tmp_path: Path) -> None:
+    challenges = iter(("1111111111111111", "2222222222222222"))
+    first_facts = _matching_facts()
+    first_facts.challenge = "1111111111111111"
+    transport = _StubTransport(facts_by_address={"scn.vm": first_facts.render()})
+    driver = _driver(tmp_path, _FakeConnection(), transport, challenge_factory=challenges.__next__)
+
+    first = driver.realize(networks=(_network(),), domains=(_domain(),))
+    first_challenge = driver.challenge
+    assert first.diagnostics == ()
+    assert not driver.destroy(networks=("scn.net",), domains=("scn.vm",)).diagnostics
+    driver.connection = _FakeConnection()
+    second_facts = _matching_facts()
+    second_facts.challenge = "2222222222222222"
+    transport.facts_by_address["scn.vm"] = second_facts.render()
+    second = driver.realize(networks=(_network(),), domains=(_domain(),))
+
+    assert second.diagnostics == ()
+    assert first_challenge == "1111111111111111"
+    assert driver.challenge == "2222222222222222"
+
+
+def test_reused_challenge_is_rejected_before_libvirt_mutation(tmp_path: Path) -> None:
+    transport = _StubTransport(facts_by_address={"scn.vm": _matching_facts().render()})
+    driver = _driver(tmp_path, _FakeConnection(), transport)
+    assert not driver.realize(networks=(_network(),), domains=(_domain(),)).diagnostics
+    assert not driver.destroy(networks=("scn.net",), domains=("scn.vm",)).diagnostics
+    replacement = _FakeConnection()
+    driver.connection = replacement
+
+    second = driver.realize(networks=(_network(),), domains=(_domain(),))
+
+    assert _codes(second) == {"libvirt-backend.guest.freshness-preflight-failed"}
+    assert replacement.networks == {}
+    assert replacement.domains == {}
+
+
+def test_challenge_factory_failure_is_typed_before_libvirt_mutation(tmp_path: Path) -> None:
+    def fail_challenge() -> str:
+        raise RuntimeError("entropy unavailable")
+
+    connection = _FakeConnection()
+    driver = _driver(
+        tmp_path,
+        connection,
+        _StubTransport(facts_by_address={}),
+        challenge_factory=fail_challenge,
+    )
+
+    result = driver.realize(networks=(_network(),), domains=(_domain(),))
+
+    assert _codes(result) == {"libvirt-backend.guest.freshness-preflight-failed"}
+    assert connection.networks == {}
+    assert connection.domains == {}
+
+
+def test_fact_channel_directory_and_unlink_failure_fail_preflight(tmp_path: Path, monkeypatch) -> None:
+    connection = _FakeConnection()
+    driver = _driver(tmp_path, connection, _StubTransport(facts_by_address={}))
+    channel = driver._fact_channel_path("scn.vm")
+    channel.mkdir(parents=True)
+
+    directory_result = driver.realize(networks=(_network(),), domains=(_domain(),))
+    assert _codes(directory_result) == {"libvirt-backend.guest.freshness-preflight-failed"}
+    assert connection.networks == {}
+    channel.rmdir()
+    channel.write_text("stale", encoding="utf-8")
+    replacement = _FakeConnection()
+    driver.connection = replacement
+    driver.challenge_factory = lambda: "2222222222222222"
+    original_unlink = Path.unlink
+
+    def fail_channel_unlink(path: Path, *args, **kwargs):
+        if path == channel:
+            raise OSError("blocked")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", fail_channel_unlink)
+    unlink_result = driver.realize(networks=(_network(),), domains=(_domain(),))
+
+    assert _codes(unlink_result) == {"libvirt-backend.guest.freshness-preflight-failed"}
+    assert replacement.networks == {}
+
+
+def test_nonmapping_matrix_entry_is_ignored_during_fact_channel_preparation(tmp_path: Path) -> None:
+    driver = _driver(tmp_path, _FakeConnection(), _StubTransport(facts_by_address={}))
+
+    assert driver._prepare_operation({"domains": ["not-a-mapping"]}) == []
+    assert driver.challenge == _CHALLENGE
+
+
 def test_malformed_report_is_rejected(tmp_path: Path) -> None:
     connection = _FakeConnection()
     transport = _StubTransport(facts_by_address={"scn.vm": "not a fact report"})
@@ -258,7 +459,10 @@ def test_malformed_report_is_rejected(tmp_path: Path) -> None:
     assert "libvirt-backend.guest.observation-malformed" in _codes(result)
 
 
-@pytest.mark.parametrize("mutate", ["ip", "vcpus", "memory", "content", "account", "service", "missing_content"])
+@pytest.mark.parametrize(
+    "mutate",
+    ["ip", "vcpus", "memory", "content", "account", "service", "protocol", "missing_content"],
+)
 def test_concern_mismatches_are_falsified(tmp_path: Path, mutate: str) -> None:
     facts = _matching_facts()
     mac = mac_address("scn.vm", "scn.net")
@@ -273,12 +477,93 @@ def test_concern_mismatches_are_falsified(tmp_path: Path, mutate: str) -> None:
     elif mutate == "account":
         facts.accounts = [("analyst", 1000, "/home/analyst", "/bin/bash", 1, "raes")]
     elif mutate == "service":
-        facts.services = [("beacon", 9000, 0, 1)]
+        facts.services = [("beacon", "tcp", 9000, 0, 1)]
+    elif mutate == "protocol":
+        facts.services = [("beacon", "udp", 9000, 1, 1)]
     elif mutate == "missing_content":
         facts.content = []
     _, connection, result = _realize(tmp_path, facts)
     assert "libvirt-backend.guest.observation-mismatch" in _codes(result)
     assert all(native.destroyed for native in connection.domains.values())
+
+
+@pytest.mark.parametrize(("observed", "passes"), ((112, True), (111, False), (64, False), (129, False)))
+def test_memory_appraisal_uses_disclosed_one_sided_tolerance(tmp_path: Path, observed: int, passes: bool) -> None:
+    facts = _matching_facts()
+    facts.memory_mib = observed
+    _, _, result = _realize(tmp_path, facts)
+
+    assert (result.diagnostics == ()) is passes
+    if not passes:
+        assert "libvirt-backend.guest.observation-mismatch" in _codes(result)
+
+
+def test_memory_tolerance_is_configurable_without_coarsening_evidence(tmp_path: Path) -> None:
+    facts = _matching_facts()
+    connection = _FakeConnection()
+    transport = _StubTransport(facts_by_address={"scn.vm": facts.render()})
+    driver = _driver(
+        tmp_path,
+        connection,
+        transport,
+        guest_config=GuestObservationConfig(memory_tolerance_mib=8),
+    )
+
+    result = driver.realize(networks=(_network(),), domains=(_domain(),))
+
+    assert result.diagnostics == ()
+    memory = next(obs for obs in result.observations if obs.field_path == "guest-memory-mib")
+    assert memory.value == 120
+    assert driver.last_guest_binding["memory_tolerance_mib"] == 8
+
+
+@pytest.mark.parametrize("tolerance", (-1, True, "16"))
+def test_invalid_memory_tolerance_is_rejected(tolerance) -> None:
+    with pytest.raises(ValueError, match="non-negative integer"):
+        GuestObservationConfig(memory_tolerance_mib=tolerance)
+
+
+def test_guest_observation_diagnostics_distinguish_missing_and_wrong_typed_facts() -> None:
+    memory_key = ("scn.vm", "guest-memory-mib", RealizationConcern.RESOURCE_ALLOCATION)
+
+    missing = guest_observation_diagnostics(expected={memory_key: 128}, observations=())
+    wrong_type = guest_observation_diagnostics(
+        expected={memory_key: 128},
+        observations=(guest_observation("scn.vm", "guest-memory-mib", memory_key[2], "128"),),
+    )
+
+    assert [diagnostic.code for diagnostic in missing] == ["libvirt-backend.guest.observation-missing"]
+    assert [diagnostic.code for diagnostic in wrong_type] == ["libvirt-backend.guest.observation-mismatch"]
+
+
+def test_expected_guest_observations_ignore_nonmapping_accounts() -> None:
+    expected = expected_guest_observations(
+        [{"address": "scn.vm", "memory_mib": 128, "vcpus": 1, "accounts": ["not-a-mapping"]}]
+    )
+
+    key = ("scn.vm", "guest-account", RealizationConcern.ACCOUNT_PLACEMENT)
+    assert expected[key] == ()
+
+
+def test_failed_new_attempt_clears_prior_guest_evidence(tmp_path: Path) -> None:
+    driver, _, first = _realize(tmp_path, _matching_facts())
+    assert first.diagnostics == ()
+    invalid = DomainSpec(
+        address="scn.vm",
+        name="vm",
+        image_ref="unsupported.qcow2",
+        memory_mib=128,
+        vcpus=1,
+        networks=("scn.net",),
+    )
+
+    second = driver.realize(networks=(_network(),), domains=(invalid,))
+
+    assert "libvirt-backend.techvault.image-unsupported" in _codes(second)
+    assert driver.challenge is None
+    assert driver.last_guest_observations == ()
+    assert driver.last_guest_facts == {}
+    assert driver.last_guest_binding == {}
 
 
 @pytest.mark.parametrize("second", ["vcpus 9", "vcpus 1", "challenge deadbeefcafef00d"])
@@ -418,7 +703,7 @@ def _guest_matrix(scenario: Path):
         kernel_path=_write_kernel(scenario.parent),
         initramfs_builder=_FakeBuilder(),
         guest_transport=_StubTransport(facts_by_address={}),
-        challenge=_CHALLENGE,
+        challenge_factory=lambda: _CHALLENGE,
     )
     from raes_backend_libvirt import create_libvirt_target
 
@@ -449,7 +734,7 @@ def _guest_factory(tmp_path: Path, transport: _StubTransport):
             kernel_path=_write_kernel(tmp_path),
             initramfs_builder=_FakeBuilder(),
             guest_transport=transport,
-            challenge=_CHALLENGE,
+            challenge_factory=lambda: _CHALLENGE,
         )
 
     return factory
@@ -479,6 +764,7 @@ def test_evidence_run_guest_certified_publishes_bound_observations(tmp_path: Pat
     guest = artifact["realization_facts"]["guest_observed"]
     assert guest["source"] == "guest-observed"
     assert guest["challenge"] == _CHALLENGE
+    assert guest["memory_tolerance_mib"] == 16
     assert guest["operation_ref"].startswith("sha256:")
     # Native-proof boundary: an injected fake driver factory can exercise the
     # orchestration but must be marked non-certifying so its evidence can never be
@@ -531,7 +817,7 @@ def test_evidence_run_guest_certified_residual_probe_artifacts_fail_closed(tmp_p
             kernel_path=_write_kernel(tmp_path),
             initramfs_builder=_FakeBuilder(),
             guest_transport=transport,
-            challenge=_CHALLENGE,
+            challenge_factory=lambda: _CHALLENGE,
         )
 
     report = run_libvirt_evidence_run(

@@ -66,6 +66,11 @@ inside the guest** (resource allocation, network addressing, file content, and
 service state), freshness-bound to a per-run challenge, then verifies teardown.
 Domain existence alone never satisfies it.
 
+The generated appliance requires a **static x86_64 BusyBox** named `busybox` on
+the command's `PATH` (on Ubuntu, install `busybox-static`) and a readable kernel
+at the configured/default kernel path. The driver validates both before opening
+libvirt. It encodes `newc` itself, so no host `cpio` executable is required.
+
 The reproducible operator/self-hosted command is:
 
 ```sh
@@ -83,7 +88,9 @@ is validated (source separation, binding, redaction) **before** it is written, s
 it contains no host paths, connection URIs, raw domain UUIDs, XML, or secrets; the
 guest report is bound to a redacted control-plane operation reference, the fresh
 challenge, the selected envelope/configuration + appliance digests, and a
-`sha256:` native correlation. The equivalent gate also runs as an opt-in pytest:
+`sha256:` native correlation. The report preserves the exact guest-observed
+memory MiB value and separately discloses the configured one-sided memory
+tolerance (16 MiB by default). The equivalent gate also runs as an opt-in pytest:
 
 ```sh
 RAES_REAL_LIBVIRT_URI=qemu:///system \

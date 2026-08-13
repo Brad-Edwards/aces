@@ -62,6 +62,15 @@ class GuestObservationConfig:
 
     probe_policy: str = "serial-fact-channel/v1"
     transport_deadline_seconds: float = 120.0
+    memory_tolerance_mib: int = 16
+
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.memory_tolerance_mib, bool)
+            or not isinstance(self.memory_tolerance_mib, int)
+            or self.memory_tolerance_mib < 0
+        ):
+            raise ValueError("guest memory tolerance must be a non-negative integer")
 
 
 @dataclass(frozen=True)
@@ -110,7 +119,13 @@ def observe_guest(
         facts_by_address[address] = _bounded_facts(parsed)
     if not diagnostics:
         expected = expected_guest_observations(domains)
-        diagnostics.extend(guest_observation_diagnostics(expected=expected, observations=tuple(observations)))
+        diagnostics.extend(
+            guest_observation_diagnostics(
+                expected=expected,
+                observations=tuple(observations),
+                memory_tolerance_mib=config.memory_tolerance_mib,
+            )
+        )
     return _GuestOutcome(tuple(observations), tuple(diagnostics), facts_by_address)
 
 
@@ -157,15 +172,13 @@ def _domain_observations(
     domain: Mapping[str, object], parsed: Mapping[str, object]
 ) -> tuple[RealizationObservation, ...]:
     address = str(domain.get("address", ""))
-    requested_memory = _as_int(domain.get("memory_mib"))
     guest_memory = _as_int(parsed.get("memory_mib"))
-    corroborated = requested_memory > 0 and requested_memory // 2 <= guest_memory <= requested_memory
     return (
         guest_observation(
             address, "guest-architecture", RealizationConcern.ARCHITECTURE, str(parsed.get("architecture") or "")
         ),
         guest_observation(address, "guest-vcpus", RealizationConcern.RESOURCE_ALLOCATION, _as_int(parsed.get("vcpus"))),
-        guest_observation(address, "guest-memory-corroborated", RealizationConcern.RESOURCE_ALLOCATION, corroborated),
+        guest_observation(address, "guest-memory-mib", RealizationConcern.RESOURCE_ALLOCATION, guest_memory),
         guest_observation(address, "guest-network", RealizationConcern.NETWORK, _observed_network(parsed)),
         guest_observation(address, "guest-content", RealizationConcern.CONTENT_PLACEMENT, _observed_content(parsed)),
         guest_observation(address, "guest-account", RealizationConcern.ACCOUNT_PLACEMENT, _observed_accounts(parsed)),
@@ -181,7 +194,9 @@ def expected_guest_observations(domains: Sequence[Mapping[str, object]]) -> dict
         address = str(domain.get("address", ""))
         expected[(address, "guest-architecture", RealizationConcern.ARCHITECTURE)] = "x86_64"
         expected[(address, "guest-vcpus", RealizationConcern.RESOURCE_ALLOCATION)] = _as_int(domain.get("vcpus"))
-        expected[(address, "guest-memory-corroborated", RealizationConcern.RESOURCE_ALLOCATION)] = True
+        expected[(address, "guest-memory-mib", RealizationConcern.RESOURCE_ALLOCATION)] = _as_int(
+            domain.get("memory_mib")
+        )
         expected[(address, "guest-network", RealizationConcern.NETWORK)] = _expected_network(domain)
         expected[(address, "guest-content", RealizationConcern.CONTENT_PLACEMENT)] = _expected_content(domain)
         expected[(address, "guest-account", RealizationConcern.ACCOUNT_PLACEMENT)] = _expected_accounts(domain)
@@ -193,8 +208,9 @@ def guest_observation_diagnostics(
     *,
     expected: Mapping[_Key, object],
     observations: tuple[RealizationObservation, ...],
+    memory_tolerance_mib: int = 0,
 ) -> list[Diagnostic]:
-    """Require exactly one matching guest-observed fact per expected concern field."""
+    """Compare exact facts, applying only the disclosed one-sided memory tolerance."""
 
     observed: dict[_Key, list[RealizationObservation]] = {}
     for item in observations:
@@ -205,15 +221,30 @@ def guest_observation_diagnostics(
         candidates = observed.get(key, [])
         if not candidates or any(item.source is not ObservationStrength.GUEST_OBSERVED for item in candidates):
             missing.add(key[0])
-        elif (
-            len(candidates) != 1
-            or type(candidates[0].value) is not type(expected_value)
-            or candidates[0].value != expected_value
+        elif len(candidates) != 1 or not _observation_matches(
+            key,
+            candidates[0].value,
+            expected_value,
+            memory_tolerance_mib=memory_tolerance_mib,
         ):
             mismatched.add(key[0])
     diagnostics = [_diagnostic(_CODE_OBSERVATION_MISSING, address) for address in sorted(missing)]
     diagnostics.extend(_diagnostic(_CODE_OBSERVATION_MISMATCH, address) for address in sorted(mismatched - missing))
     return diagnostics
+
+
+def _observation_matches(
+    key: _Key,
+    observed: object,
+    expected: object,
+    *,
+    memory_tolerance_mib: int,
+) -> bool:
+    if type(observed) is not type(expected):
+        return False
+    if key[1] == "guest-memory-mib" and isinstance(observed, int) and isinstance(expected, int):
+        return max(0, expected - memory_tolerance_mib) <= observed <= expected
+    return observed == expected
 
 
 def correlation_digest(native_identity: str) -> str:
@@ -254,7 +285,8 @@ def _observed_accounts(parsed: Mapping[str, object]) -> tuple[str, ...]:
 def _observed_services(parsed: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(
         sorted(
-            f"{item.get('name')}|{item.get('port')}|{_flag(item.get('listening'))}|{_flag(item.get('pid_present'))}"
+            f"{item.get('name')}|{item.get('protocol')}|{item.get('port')}|"
+            f"{_flag(item.get('listening'))}|{_flag(item.get('pid_present'))}"
             for item in as_sequence(parsed.get("services"))
             if isinstance(item, Mapping)
         )
@@ -299,7 +331,7 @@ def _expected_accounts(domain: Mapping[str, object]) -> tuple[str, ...]:
 def _expected_services(domain: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(
         sorted(
-            f"{item.get('name')}|{item.get('port')}|1|1"
+            f"{item.get('name')}|{item.get('protocol')}|{item.get('port')}|1|1"
             for item in as_sequence(domain.get("services"))
             if isinstance(item, Mapping)
         )

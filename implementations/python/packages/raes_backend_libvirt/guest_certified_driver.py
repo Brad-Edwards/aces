@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 import secrets
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +22,7 @@ from typing import ClassVar
 
 from raes_contracts.diagnostics import Diagnostic
 
+from ._techvault_native_ops import _CODE_GUEST_FRESHNESS_UNAVAILABLE, _diagnostic
 from .driver import DomainSpec, NetworkSpec, RealizationObservation
 from .drivers.libvirt import _raes_uuid
 from .guest_appliance import GuestObservingInitramfsBuilder
@@ -34,6 +35,11 @@ from .techvault_matrix import native_matrix as _native_matrix
 from .techvault_native import DriverResult, TechVaultNativeLibvirtDriver, _artifact_token
 
 _SAFE_CHALLENGE_RE = re.compile(r"^[a-f0-9]{16,64}$")
+_GUEST_FACTS_ADDRESS = "runtime.libvirt.guest-facts"
+
+
+def _fresh_challenge() -> str:
+    return secrets.token_hex(16)
 
 
 @dataclass
@@ -45,17 +51,17 @@ class GuestCertifiedLibvirtDriver(TechVaultNativeLibvirtDriver):
     initramfs_builder: InitramfsBuilder = field(default_factory=GuestObservingInitramfsBuilder)
     guest_transport: GuestFactTransport = field(default_factory=FileSerialGuestFactTransport)
     guest_config: GuestObservationConfig = field(default_factory=GuestObservationConfig)
-    challenge: str | None = None
+    challenge_factory: Callable[[], str] = field(default=_fresh_challenge, repr=False)
+    challenge: str | None = field(default=None, init=False)
     last_guest_observations: tuple[RealizationObservation, ...] = ()
     last_guest_facts: dict[str, object] = field(default_factory=dict)
     last_guest_binding: dict[str, object] = field(default_factory=dict)
+    _used_challenges: set[str] = field(default_factory=set, init=False, repr=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if self.challenge is None:
-            self.challenge = secrets.token_hex(16)
-        elif not _SAFE_CHALLENGE_RE.match(self.challenge):
-            raise ValueError("guest-certified challenge must be a lowercase hex token")
+        if not callable(self.challenge_factory):
+            raise ValueError("guest-certified challenge_factory must be callable")
 
     def _admission_diagnostics(
         self,
@@ -84,6 +90,55 @@ class GuestCertifiedLibvirtDriver(TechVaultNativeLibvirtDriver):
             name_prefix=self.name_prefix,
             include_placements=True,
         )
+
+    def _prepare_operation(self, matrix: Mapping[str, object]) -> list[Diagnostic]:
+        """Rotate freshness state and remove every prior fact before libvirt I/O."""
+
+        self._begin_operation()
+        diagnostics: list[Diagnostic] = []
+        try:
+            candidate = self.challenge_factory()
+        except Exception:
+            candidate = None
+        if (
+            not isinstance(candidate, str)
+            or not _SAFE_CHALLENGE_RE.match(candidate)
+            or candidate in self._used_challenges
+        ):
+            diagnostics.append(_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, _GUEST_FACTS_ADDRESS))
+        else:
+            diagnostics.extend(self._clear_prior_fact_channels(matrix))
+        if not diagnostics:
+            assert isinstance(candidate, str)
+            self.challenge = candidate
+            self._used_challenges.add(candidate)
+        return diagnostics
+
+    def _clear_prior_fact_channels(self, matrix: Mapping[str, object]) -> list[Diagnostic]:
+        diagnostics: list[Diagnostic] = []
+        for domain in matrix.get("domains", ()):
+            if not isinstance(domain, Mapping):
+                continue
+            channel = self._fact_channel_path(str(domain.get("address", "")))
+            try:
+                channel.parent.mkdir(parents=True, exist_ok=True)
+                if channel.is_symlink() or (channel.exists() and not channel.is_dir()):
+                    channel.unlink()
+                elif channel.exists():
+                    diagnostics.append(_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, _GUEST_FACTS_ADDRESS))
+                    break
+            except OSError:
+                diagnostics.append(_diagnostic(_CODE_GUEST_FRESHNESS_UNAVAILABLE, _GUEST_FACTS_ADDRESS))
+                break
+        return diagnostics
+
+    def _begin_operation(self) -> None:
+        """Prevent prior guest evidence from surviving into a new attempt."""
+
+        self.challenge = None
+        self.last_guest_observations = ()
+        self.last_guest_facts = {}
+        self.last_guest_binding = {}
 
     def _render_domain_xml(self, domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> str:
         address = str(domain.get("address", ""))
@@ -146,6 +201,7 @@ class GuestCertifiedLibvirtDriver(TechVaultNativeLibvirtDriver):
         return {
             "challenge": self.challenge,
             "probe_policy": self.guest_config.probe_policy,
+            "memory_tolerance_mib": self.guest_config.memory_tolerance_mib,
             "correlations": correlations,
         }
 

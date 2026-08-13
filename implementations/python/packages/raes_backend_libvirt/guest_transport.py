@@ -189,9 +189,10 @@ def _account_entry(fields: list[str]) -> dict[str, object]:
 def _service_entry(fields: list[str]) -> dict[str, object]:
     return {
         "name": fields[0],
-        "port": _to_int(fields[1]),
-        "listening": fields[2] == "1",
-        "pid_present": fields[3] == "1",
+        "protocol": fields[1],
+        "port": _to_int(fields[2]),
+        "listening": fields[3] == "1",
+        "pid_present": fields[4] == "1",
     }
 
 
@@ -203,7 +204,7 @@ _LINE_HANDLERS = {
     "iface": _append("interfaces", 3, _iface_entry),
     "content": _append("content", 3, _content_entry),
     "account": _append("accounts", 5, _account_entry),
-    "service": _append("services", 4, _service_entry),
+    "service": _append("services", 5, _service_entry),
 }
 
 

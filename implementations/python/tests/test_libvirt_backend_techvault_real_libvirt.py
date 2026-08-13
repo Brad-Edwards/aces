@@ -5,11 +5,11 @@ from __future__ import annotations
 import importlib
 import json
 import os
-import shutil
 from pathlib import Path
 
 import pytest
 from paths import EXAMPLES_DIR
+from raes_backend_libvirt._initramfs import resolve_static_busybox
 from raes_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
 
 
@@ -24,8 +24,8 @@ def test_bounded_techvault_real_libvirt_readback_and_cleanup(tmp_path):
         libvirt = importlib.import_module("libvirt")
     except ImportError:
         pytest.skip("libvirt-python is unavailable")
-    if shutil.which("cpio") is None or not Path("/usr/bin/busybox").is_file():
-        pytest.skip("cpio and static BusyBox are required for native appliance certification")
+    if not resolve_static_busybox(None).ready:
+        pytest.skip("a static x86_64 BusyBox on PATH is required for native appliance certification")
     if not tuple(Path("/boot").glob("vmlinuz-*")):
         pytest.skip("a readable host kernel is required for native appliance certification")
 

@@ -134,6 +134,7 @@ def _guest_observed_report(
         "observed_at": datetime.now(UTC).isoformat(),
         "certifying": certifying,
         "probe_policy": binding.get("probe_policy") if isinstance(binding, Mapping) else None,
+        "memory_tolerance_mib": binding.get("memory_tolerance_mib") if isinstance(binding, Mapping) else None,
         "challenge": binding.get("challenge") if isinstance(binding, Mapping) else None,
         "domains": domains,
     }

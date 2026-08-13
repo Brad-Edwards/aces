@@ -6,7 +6,7 @@ type: FUNCTIONAL
 priority: MUST
 wave: 3
 created_at: 2026-04-05T00:55:45.357920Z
-updated_at: 2026-06-15T02:32:29.792706Z
+updated_at: 2026-08-11T00:00:00Z
 ---
 
 # ASR-519 — Realization Honesty And Disclosure Conformance
@@ -61,3 +61,17 @@ Current state: identified gap. Honest portability needs executable checks agains
 - TESTS → TEST `implementations/python/tests/test_libvirt_conformance.py` (ASR-519 libvirt conformance mode tests)
 - TESTS → TEST `implementations/python/tests/test_libvirt_participant_runtime.py` (ASR-519 libvirt realization observation tests)
 - TESTS → TEST `implementations/python/tests/test_realization_envelope_relation.py` (ASR-519 envelope probe relation tests)
+- IMPLEMENTS → GITHUB_ISSUE `1116` (Root-run libvirt init-script interface validation)
+- IMPLEMENTS → GITHUB_ISSUE `1094` (Deterministic, preflighted, content-identified boot artifacts)
+- IMPLEMENTS → GITHUB_ISSUE `1095` (Fresh operation-bound guest facts and exact memory evidence)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_backend_libvirt/guest_certified_driver.py` (Per-operation freshness lifecycle)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_backend_libvirt/guest_observation.py` (Exact memory observation and explicit tolerance appraisal)
+- IMPLEMENTS → DOCUMENTATION `docs/decisions/issue-1094-libvirt-boot-artifact-reliability.md` (Boot-artifact evidence reliability)
+- IMPLEMENTS → DOCUMENTATION `docs/decisions/issue-1095-libvirt-guest-evidence-freshness.md` (Freshness and memory evidence architecture)
+- TESTS → TEST `implementations/python/tests/test_libvirt_boot_artifacts.py` (Artifact identity and preflight falsification)
+- TESTS → TEST `implementations/python/tests/test_libvirt_backend_guest_certified.py` (Freshness, stale-fact, exact-memory, and evidence-binding falsification)
+- TESTS → TEST `implementations/python/tests/test_libvirt_guest_appliance_init_script.py` (Shared root-run interface injection regressions)
+- DOCUMENTS → GITHUB_ISSUE `1105` (Guest service protocol honesty defect)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1105-libvirt-guest-service-protocol.md` (Protocol evidence boundary)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_backend_libvirt/guest_observation.py` (Protocol-bound expected and observed service evidence)
+- TESTS → TEST `implementations/python/tests/test_libvirt_backend_guest_certified.py` (Wrong-protocol evidence rejection)
