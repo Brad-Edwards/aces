@@ -500,3 +500,6 @@ adrs:
   - id: ADR-102
     path: docs/decisions/adrs/adr-102-mixed-cross-backend-participant-control.md
     pin: cfcb0f5b7291b47fe6ff6096bb18dd9063b83ee5d4f7f6a9cafbdd06f21bf716
+  - id: ADR-103
+    path: docs/decisions/adrs/adr-103-branch-aware-python-coverage-policy.md
+    pin: a44acbc2db1b5349ba316ba0d09bd9b46310db016cb87937b08bc6bc107755aa

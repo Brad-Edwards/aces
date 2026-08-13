@@ -124,6 +124,7 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
     assert kwargs["env"] == {"COVERAGE_FILE": str(coverage_file)}
 
     session.commands.clear()
+    monkeypatch.setattr(noxfile, "_enforce_line_coverage", lambda _path: 90.0)
     noxfile._run_pytest(
         session,
         "-m",
@@ -143,8 +144,8 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["xml", "report"]
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert [command[4] for command, _options in coverage_commands] == ["xml", "json", "report"]
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
 
 
@@ -299,6 +300,7 @@ def test_parallel_coverage_is_combined_before_reporting(
             return nullcontext()
 
     session = FakeSession()
+    monkeypatch.setattr(noxfile, "_enforce_line_coverage", lambda _path: 90.0)
     noxfile._finalize_parallel_coverage(session, tmp_path)
 
     coverage_commands = [
@@ -306,12 +308,88 @@ def test_parallel_coverage_is_combined_before_reporting(
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "report"]
+    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "json", "report"]
     assert coverage_commands[0][0][5:] == ("--keep", str(tmp_path))
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(
         options["env"] == {"COVERAGE_FILE": str(tmp_path / ".coverage")} for _command, options in coverage_commands
     )
+
+
+def test_coverage_configuration_measures_branches_and_repository_python() -> None:
+    config = tomllib.loads((REPO_ROOT / "implementations" / "python" / "pyproject.toml").read_text(encoding="utf-8"))
+    run = config["tool"]["coverage"]["run"]
+    report = config["tool"]["coverage"]["report"]
+
+    assert run["branch"] is True
+    assert run["source"] == ["../.."]
+    assert set(run["omit"]) == {
+        "*/.cache/*",
+        "*/docs/*",
+        "*/implementations/python/.venv/*",
+        "*/implementations/python/tests/*",
+    }
+    assert report["include_namespace_packages"] is True
+
+
+def test_line_coverage_threshold_is_fixed_at_ninety_percent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    report_path = tmp_path / "coverage.json"
+    report_path.write_text(
+        json.dumps({"totals": {"covered_lines": 90, "num_statements": 100}}),
+        encoding="utf-8",
+    )
+
+    assert noxfile._enforce_line_coverage(report_path) == 90.0
+
+    report_path.write_text(
+        json.dumps({"totals": {"covered_lines": 899, "num_statements": 1000}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="89.900% is below required 90.000%"):
+        noxfile._enforce_line_coverage(report_path)
+
+
+def test_make_policy_skips_only_requirement_governance_without_a_uid() -> None:
+    environment = os.environ.copy()
+    environment.pop("RAES_REQUIREMENT_UID", None)
+    requirement_free = subprocess.run(
+        ("make", "--dry-run", "policy"),
+        cwd=REPO_ROOT,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    environment["RAES_REQUIREMENT_UID"] = "ASR-505"
+    requirement_scoped = subprocess.run(
+        ("make", "--dry-run", "policy"),
+        cwd=REPO_ROOT,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+    assert requirement_free.rstrip().endswith("-- --skip-requirement")
+    assert "--skip-requirement" not in requirement_scoped
+
+
+def test_hook_policy_context_skips_only_requirement_free_branches(monkeypatch: pytest.MonkeyPatch) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    monkeypatch.delenv("RAES_REQUIREMENT_UID", raising=False)
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged", "--skip-requirement"]
+
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-ASR-505-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
+
+    monkeypatch.setenv("RAES_REQUIREMENT_UID", "ASR-505")
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
 
 
 def test_docs_graph_uses_curated_root_and_reader_style_gate(
