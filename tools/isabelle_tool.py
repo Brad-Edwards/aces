@@ -32,6 +32,7 @@ ISABELLE_ARCHIVE_SHA256 = "a20a507bc7c1270d8be96a9f3fbec06345387789d2dc2c4d3df62
 ISABELLE_ARCHIVE_BYTES = 1_228_480_874
 ISABELLE_SESSION = "Participant_Opacity"
 ISABELLE_SESSION_RELATIVE_PATH = Path("specs/formal/participant-semantics/isabelle")
+ISABELLE_LOCALE = "C.UTF-8"
 ISABELLE_BUILD_TIMEOUT_SECONDS = 600
 ISABELLE_OUTPUT_LIMIT_BYTES = 64 * 1024
 ISABELLE_FILE_LIMIT_BYTES = 4 * 1024 * 1024 * 1024
@@ -218,7 +219,7 @@ def expected_isabelle_result() -> dict[str, object]:
         "result": "kernel-checked",
         "network": "blocked-by-bubblewrap-network-namespace",
         "filesystem": "allowlisted-runtime-session-and-private-state-only",
-        "locale": "C.UTF-8",
+        "locale": ISABELLE_LOCALE,
         "platform_boundary": "linux-x86_64",
     }
     encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -295,10 +296,10 @@ def _proof_sandbox_command(
             "/state/isabelle-user",
             "--setenv",
             "LANG",
-            "C.UTF-8",
+            ISABELLE_LOCALE,
             "--setenv",
             "LC_ALL",
-            "C.UTF-8",
+            ISABELLE_LOCALE,
             "--setenv",
             "TZ",
             "UTC",
@@ -321,14 +322,14 @@ def _fontconfig_has_fonts(font_list: Path = ISABELLE_FONTCONFIG_LIST) -> bool:
     if not font_list.is_file() or not os.access(font_list, os.X_OK):
         return False
     try:
-        completed = subprocess.run(  # noqa: S603 - fixed system tool and argv
+        completed = subprocess.run(
             [str(font_list), "--format=%{file}\\n"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             check=False,
             timeout=ISABELLE_FONTCONFIG_QUERY_TIMEOUT_SECONDS,
-            env={"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"},
+            env={"LANG": ISABELLE_LOCALE, "LC_ALL": ISABELLE_LOCALE},
         )
     except (OSError, subprocess.TimeoutExpired):
         return False
