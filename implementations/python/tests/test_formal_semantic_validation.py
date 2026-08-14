@@ -76,7 +76,10 @@ def test_historical_release_validation_does_not_replay_current_code(
     def fail_if_replayed(*_args: object, **_kwargs: object) -> dict[str, object]:
         raise AssertionError("historical evidence must not replay current code")
 
-    monkeypatch.setattr(formal_validation, "replay_case", fail_if_replayed)
+    from tools.formal_semantic_validation import _retest, _snapshot
+
+    monkeypatch.setattr(_snapshot, "replay_case", fail_if_replayed)
+    monkeypatch.setattr(_retest, "replay_case", fail_if_replayed)
 
     assert validate_release_bundle(REPO_ROOT, release) == []
 
@@ -201,7 +204,9 @@ def test_retest_gate_authenticates_immutable_evidence_payload_before_migration(
             return replacement
         return original_loader(repo_root, relative_path, max_bytes=max_bytes)
 
-    monkeypatch.setattr(formal_validation, "load_bounded_json_object", replace_stored_evidence)
+    from tools.formal_semantic_validation import _production
+
+    monkeypatch.setattr(_production, "load_bounded_json_object", replace_stored_evidence)
 
     failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
 
@@ -364,7 +369,7 @@ def test_participant_test_replay_maps_pytest_status(
     expected: tuple[bool, str],
 ) -> None:
     monkeypatch.setattr(
-        "tools.check_formal_semantic_validation.subprocess.run",
+        "tools.formal_semantic_validation._replay.subprocess.run",
         lambda *_args, **_kwargs: SimpleNamespace(returncode=returncode),
     )
 
@@ -375,7 +380,7 @@ def test_participant_test_replay_fails_closed_on_timeout(monkeypatch: pytest.Mon
     def timed_out(*_args: object, **_kwargs: object) -> None:
         raise subprocess.TimeoutExpired(cmd="pytest", timeout=600)
 
-    monkeypatch.setattr("tools.check_formal_semantic_validation.subprocess.run", timed_out)
+    monkeypatch.setattr("tools.formal_semantic_validation._replay.subprocess.run", timed_out)
 
     ok, message = _replay_participant_tests(REPO_ROOT, ["tests/test_example.py::test_case"])
 
