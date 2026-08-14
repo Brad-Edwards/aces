@@ -117,12 +117,15 @@ jobs:
       - name: Test exact interpreter and clean distribution
         run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s python-compatibility
 
-  # Opt-in, non-blocking, runtime-gated container integration tests (RUN-314).
-  # Kept out of the hermetic `verify` graph; the `docker` marker tests self-skip
-  # when no runtime is present, and this whole job never fails the build.
+  # Runtime-gated container integration tests (RUN-314). Kept out of the
+  # hermetic `verify` graph; the probe step skips the session when no container
+  # runtime exists (so forks and constrained runners stay green), but when a
+  # runtime is present -- as on every GitHub-hosted runner -- a failing docker
+  # integration session fails the build. The reference OCI driver's real
+  # container IO is exercised only here, so a non-gating lane would leave it
+  # unguarded.
   integration-docker:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
