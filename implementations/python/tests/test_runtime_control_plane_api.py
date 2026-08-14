@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import textwrap
 from collections.abc import Coroutine
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
 from typing import Any, TypeVar
@@ -446,6 +447,46 @@ def test_control_plane_api_operational_apparatus_summary_requires_read_role():
     assert response.status_code == 401
     assert control_plane.audit_log()
     assert control_plane.audit_log()[-1].allowed is False
+
+
+def test_operational_apparatus_summary_snapshots_operations_safely_during_mutation() -> None:
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    control_plane._persist_record(_participant_operation_record("existing", "participant.alice"))
+    iteration_started = Event()
+    mutation_completed = Event()
+
+    class PausingOperationRecords(dict[str, ControlPlaneOperationRecord]):
+        def values(self):  # type: ignore[override]
+            live_values = super().values()
+
+            def iter_values():
+                iterator = iter(live_values)
+                yield next(iterator)
+                iteration_started.set()
+                mutation_completed.wait(timeout=2)
+                yield from iterator
+
+            return iter_values()
+
+        def __setitem__(self, key: str, value: ControlPlaneOperationRecord) -> None:
+            super().__setitem__(key, value)
+            mutation_completed.set()
+
+    control_plane._operations = PausingOperationRecords(control_plane._operations)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        summary = executor.submit(control_plane.operational_apparatus_summary)
+        assert iteration_started.wait(timeout=2)
+        persistence = executor.submit(
+            control_plane._persist_record,
+            _participant_operation_record("concurrent", "participant.bob"),
+        )
+        result = summary.result(timeout=3)
+        persistence.result(timeout=3)
+
+    assert result["operations"]["total"] == 1
+    assert control_plane.get_operation("concurrent") is not None
 
 
 def test_control_plane_api_rejects_unauthenticated_mutations():
