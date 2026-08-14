@@ -7695,8 +7695,25 @@
       "additionalProperties": false,
       "description": "Declared interaction semantics for a participant action contract.",
       "properties": {
+        "commutative": {
+          "default": false,
+          "title": "Commutative",
+          "type": "boolean"
+        },
         "interaction_class": {
           "$ref": "#/$defs/ParticipantInteractionClass"
+        },
+        "merge_rule_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Merge Rule Ref"
         },
         "rationale": {
           "title": "Rationale",

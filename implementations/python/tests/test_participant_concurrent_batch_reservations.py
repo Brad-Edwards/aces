@@ -23,8 +23,10 @@ from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
 from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
 from raes_contracts.participant_binding import ParticipantActionApplyResult
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
+from raes_processor.models import ParticipantExecutionBindingRuntime
 from raes_runtime.participant_clock_driver import ParticipantClockDriver
 from raes_runtime.participant_scheduler_concurrency import (
+    _bindings_semantically_conflict,
     _execute_concurrent_batch,
     run_policy_due_concurrently,
 )
@@ -402,6 +404,39 @@ def test_iterative_pass_snapshot_isolation_failure_prevents_dispatch(monkeypatch
     assert batch.run.failure.diagnostics[0].code == "runtime.participant-concurrent-snapshot-isolation-failed"
 
 
+def test_policy_wide_binding_mutation_fails_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = False
+
+    def _backend(requests, snapshot, workers):
+        nonlocal called
+        del requests, snapshot, workers
+        called = True
+        return ()
+
+    def _mutating_binding(context, working, state):
+        working.metadata["mutated"] = context.participant_address
+        return SimpleNamespace(
+            participant_address=context.participant_address,
+            execution_scope_ref=None,
+            action_instance_id=f"{context.participant_address}:attempt-{state.attempted_actions}",
+        )
+
+    batch = _batch(SimpleNamespace(admit_actions_concurrently=_backend))
+    policy = SimpleNamespace(
+        **vars(batch.policy),
+        profile="participant-autonomous-execution/v1",
+        participant_addresses=_PARTICIPANTS,
+    )
+    before = deepcopy(batch.run.working)
+    monkeypatch.setattr(scheduler_operations, "_bound_action_request", _mutating_binding)
+
+    assert run_policy_due_concurrently(policy, None, batch.participant_runtime, 0, 1, batch.run) is True
+    assert called is False
+    assert batch.run.failure is not None
+    assert batch.run.failure.diagnostics[0].code == "runtime.participant-concurrent-binding-failed"
+    assert batch.run.failure.snapshot == before
+
+
 def test_reservation_failure_before_dispatch_restores_exact_snapshot():
     called = False
 
@@ -772,6 +807,126 @@ def test_non_v1_policy_is_left_for_the_serial_scheduler() -> None:
     assert batch.run.failure is None
 
 
+def test_declared_action_interactions_gate_concurrent_snapshot_merge() -> None:
+    def _binding(
+        action: str,
+        *,
+        shared_state_refs: tuple[str, ...] = (),
+        related: tuple[str, ...] = (),
+        commutative: tuple[str, ...] = (),
+        merge_rules: tuple[tuple[str, str], ...] = (),
+    ) -> ParticipantExecutionBindingRuntime:
+        return ParticipantExecutionBindingRuntime(
+            action_contract_address=action,
+            target_addresses=(),
+            participant_implementation_ref=_IMPLEMENTATION_REF,
+            max_action_attempts=2,
+            max_in_flight=2,
+            interaction_classes=("shared_state_change",) if shared_state_refs else (),
+            shared_state_refs=shared_state_refs,
+            related_action_contract_addresses=related,
+            commutative_shared_state_refs=commutative,
+            merge_rule_refs=tuple(dict.fromkeys(rule for _ref, rule in merge_rules)),
+            shared_state_merge_rules=merge_rules,
+        )
+
+    left = _binding("participant.action-contract.left", shared_state_refs=("state.shared",))
+    same_state = _binding("participant.action-contract.right", shared_state_refs=("state.shared",))
+    disjoint = _binding("participant.action-contract.disjoint", shared_state_refs=("state.other",))
+    related = _binding(
+        "participant.action-contract.related",
+        related=(left.action_contract_address,),
+    )
+    commutative_left = _binding(
+        "participant.action-contract.commutative-left",
+        shared_state_refs=("state.shared",),
+        commutative=("state.shared",),
+    )
+    commutative_right = _binding(
+        "participant.action-contract.commutative-right",
+        shared_state_refs=("state.shared",),
+        commutative=("state.shared",),
+    )
+    merge_left = _binding(
+        "participant.action-contract.merge-left",
+        shared_state_refs=("state.shared",),
+        merge_rules=(("state.shared", "merge-rule.shared-state-v1"),),
+    )
+    merge_right = _binding(
+        "participant.action-contract.merge-right",
+        shared_state_refs=("state.shared",),
+        merge_rules=(("state.shared", "merge-rule.shared-state-v1"),),
+    )
+
+    assert _bindings_semantically_conflict(left, same_state) is True
+    assert _bindings_semantically_conflict(left, related) is True
+    assert _bindings_semantically_conflict(left, disjoint) is False
+    assert _bindings_semantically_conflict(commutative_left, commutative_right) is False
+    assert _bindings_semantically_conflict(merge_left, merge_right) is False
+
+
+def test_semantically_conflicting_due_actions_use_serial_execution(monkeypatch: pytest.MonkeyPatch) -> None:
+    action_address = "participant.action-contract.shared-writer"
+    binding = ParticipantExecutionBindingRuntime(
+        action_contract_address=action_address,
+        target_addresses=(),
+        participant_implementation_ref=_IMPLEMENTATION_REF,
+        max_action_attempts=1,
+        max_in_flight=2,
+        interaction_classes=("shared_state_change",),
+        shared_state_refs=("state.shared",),
+    )
+    policy = SimpleNamespace(
+        address=_POLICY_ADDRESS,
+        profile="participant-autonomous-execution/v1",
+        participant_addresses=_PARTICIPANTS,
+        max_in_flight=2,
+        max_action_attempts=1,
+        action_contract_addresses=(action_address,),
+        execution_bindings=(binding,),
+        failure_policy="continue",
+        clock_address="time.clock.scenario-clock",
+    )
+    states = {_state_key(address): _execution_state(address).model_dump(mode="json") for address in _PARTICIPANTS}
+    run = SchedulerRunState(
+        working=RuntimeSnapshot(
+            participant_autonomous_execution_states=states,
+            participant_execution_services={_POLICY_ADDRESS: _service_state().model_dump(mode="json")},
+        ),
+        diagnostics=[],
+        changed=[],
+    )
+    concurrent_calls = 0
+    serial_calls = 0
+
+    def _concurrent(*args):
+        nonlocal concurrent_calls
+        concurrent_calls += 1
+        raise AssertionError("semantic conflicts must not enter concurrent dispatch")
+
+    def _serial(request, snapshot):
+        nonlocal serial_calls
+        serial_calls += 1
+        return ParticipantActionApplyResult(
+            success=True,
+            snapshot=snapshot,
+            action_result=SimpleNamespace(status="succeeded"),
+        )
+
+    monkeypatch.setattr(scheduler_operations, "autonomous_action_result_violation", lambda *args, **kwargs: None)
+    participant_runtime = SimpleNamespace(
+        admit_actions_concurrently=_concurrent,
+        admit_action=_serial,
+    )
+
+    handled = run_policy_due_concurrently(policy, None, participant_runtime, 0, 1, run)
+
+    assert handled is True
+    assert concurrent_calls == 0
+    assert serial_calls == 2
+    assert run.result().success is True
+
+
 def test_single_available_slot_falls_back_to_serial_and_stops_after_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -943,6 +1098,14 @@ def test_value_three_way_merge_preserves_prior_commit_and_rejects_conflict():
             incoming="second",
             field_name="time_model_state",
         )
+
+    with pytest.raises(ValueError, match="time_model_state"):
+        _merge_value_revision_checked(
+            base="base",
+            current="same-write",
+            incoming="same-write",
+            field_name="time_model_state",
+        )
     provenance = RealizationProvenanceEntry(
         address="node.green",
         field_path="nodes.green.os",
@@ -974,6 +1137,18 @@ def test_metadata_conflict_diagnostic_does_not_include_backend_key():
         _merge_concurrent_action_snapshot(base, current, conflicting)
 
     assert secret_key not in str(exc_info.value)
+
+
+def test_identical_concurrent_mapping_writes_require_declared_merge_semantics():
+    base = {"shared": "base"}
+
+    with pytest.raises(ValueError, match="metadata"):
+        _merge_mapping_revision_checked(
+            base=base,
+            current={"shared": "same-write"},
+            incoming={"shared": "same-write"},
+            field_name="metadata",
+        )
 
 
 def test_rejected_conflicting_result_contributes_no_backend_changed_address(
@@ -1032,6 +1207,60 @@ def test_final_concurrent_materialization_failure_is_normalized(monkeypatch: pyt
     _execute_concurrent_batch(batch)
 
     result = batch.run.result()
+    assert result.success is False
+    assert result.diagnostics[-1].code == "runtime.participant-concurrent-commit-invalid"
+
+
+def test_deferred_policy_materialization_failure_is_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    participant_count = 2
+    participants = tuple(f"participant.behavior.deferred-{index}" for index in range(participant_count))
+    policy = SimpleNamespace(
+        address=_POLICY_ADDRESS,
+        profile="participant-autonomous-execution/v1",
+        participant_addresses=participants,
+        max_in_flight=2,
+        max_action_attempts=1,
+        action_contract_addresses=("participant.action-contract.green-action",),
+        failure_policy="continue",
+        clock_address="time.clock.scenario-clock",
+    )
+    states = {_state_key(address): _execution_state(address).model_dump(mode="json") for address in participants}
+    run = SchedulerRunState(
+        working=RuntimeSnapshot(
+            participant_autonomous_execution_states=states,
+            participant_execution_services={_POLICY_ADDRESS: _service_state().model_dump(mode="json")},
+        ),
+        diagnostics=[],
+        changed=[],
+    )
+
+    def _complete(requests, snapshot, workers):
+        del workers
+        result = ParticipantActionApplyResult(
+            success=True,
+            snapshot=snapshot,
+            action_result=SimpleNamespace(status="succeeded"),
+        )
+        return tuple(result for _request in requests)
+
+    def _materialization_failure(snapshot):
+        del snapshot
+        raise ValueError("final validation failed")
+
+    monkeypatch.setattr(scheduler_commit, "autonomous_action_result_violation", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler_concurrency, "_materialize_concurrent_snapshot", _materialization_failure)
+
+    handled = run_policy_due_concurrently(
+        policy,
+        None,
+        SimpleNamespace(admit_actions_concurrently=_complete),
+        0,
+        1,
+        run,
+    )
+
+    result = run.result()
+    assert handled is True
     assert result.success is False
     assert result.diagnostics[-1].code == "runtime.participant-concurrent-commit-invalid"
 
@@ -1253,7 +1482,9 @@ def test_many_participants_use_one_iterative_due_scan_and_real_settlement(monkey
     assert handled is True
     assert due_scans == 1
     assert batch_sizes == [2] * (participant_count // 2)
-    assert snapshot_copy_calls == 1 + 2 * len(batch_sizes)
+    # One policy isolation, one policy-wide binding predecessor, and one
+    # backend-dispatch isolation per capacity-bounded chunk.
+    assert snapshot_copy_calls == 2 + len(batch_sizes)
     assert validated_state_entries == participant_count
     assert all(
         (

@@ -113,6 +113,16 @@ def _compile_action_contracts(scenario: InstantiatedScenario) -> dict[str, Parti
             backend_failure_mappings=_backend_failure_mappings(contract_spec),
             interaction_classes=_dedupe_field(interactions, "interaction_class"),
             shared_state_refs=_shared_state_refs(interactions),
+            commutative_interaction_targets=_dedupe(
+                str(interaction.get("target", ""))
+                for interaction in interactions
+                if interaction.get("commutative") is True
+            ),
+            merge_rule_refs=_dedupe(
+                str(interaction["merge_rule_ref"])
+                for interaction in interactions
+                if interaction.get("merge_rule_ref") is not None
+            ),
             temporal_contract_ids=_dedupe_field(temporal_contracts, "temporal_id"),
             temporal_kinds=_dedupe_field(temporal_contracts, "temporal_kind"),
             time_domains=_dedupe_field(temporal_contracts, "time_domain"),

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "81714a436a72b511cdc61b2599af1327ad07d96520569718cc3d53b121d81074",
+  "content_hash": "8136627d5cddf9220703786b90b90ad748cc8e484a2bace65e0eebf2d40050d3",
   "last_change": {
-    "summary": "Added governed operating-system distribution authoring and release-only version semantics for issue #1077.",
-    "content_hash": "81714a436a72b511cdc61b2599af1327ad07d96520569718cc3d53b121d81074"
+    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
+    "content_hash": "8136627d5cddf9220703786b90b90ad748cc8e484a2bace65e0eebf2d40050d3"
   }
 }

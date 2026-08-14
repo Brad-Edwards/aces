@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "d3f83594bc9f7dfbe05e6c2ad522e6e0d3c099b563a07a3cf955a8a62e7eef62",
+  "content_hash": "d8e5b7097a9d0c81b9154e1e6e54908a03e55664e7cbb6ad23d1160753c9493f",
   "last_change": {
-    "summary": "Added governed operating-system distribution identity and release-only version constraints for issue #1077.",
-    "content_hash": "d3f83594bc9f7dfbe05e6c2ad522e6e0d3c099b563a07a3cf955a8a62e7eef62"
+    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
+    "content_hash": "d8e5b7097a9d0c81b9154e1e6e54908a03e55664e7cbb6ad23d1160753c9493f"
   }
 }

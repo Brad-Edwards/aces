@@ -179,6 +179,34 @@ def test_compiler_preserves_exact_action_to_target_execution_binding() -> None:
     assert "provision.node.customer-portal.service.http" in binding.target_addresses
     assert binding.participant_implementation_ref == policy.participant_implementation_ref
     assert binding.max_in_flight == policy.max_in_flight
+    assert binding.commutative_shared_state_refs == ("nodes.customer-portal.services.http",)
+    assert binding.merge_rule_refs == ()
+
+
+def test_compiler_preserves_action_interaction_footprint_for_concurrency_admission() -> None:
+    scenario_payload = yaml.safe_load(_scenario_yaml())
+    action = scenario_payload["action_contracts"]["probe-customer-portal-login"]
+    action["interactions"] = [
+        {
+            "interaction_class": "shared_state_change",
+            "target": "nodes.customer-portal.services.http",
+            "rationale": "Concurrent login probes update one governed service state.",
+            "shared_state_refs": ["nodes.customer-portal.services.http"],
+        }
+    ]
+
+    runtime_model = compile_runtime_model(parse_sdl(yaml.safe_dump(scenario_payload, sort_keys=False)))
+    policy = runtime_model.behavior_specifications[
+        "participant.behavior-specification.participant-behavior"
+    ].autonomous_execution
+
+    assert policy is not None
+    binding = policy.execution_bindings[0]
+    assert binding.interaction_classes == ("shared_state_change",)
+    assert binding.shared_state_refs == ("nodes.customer-portal.services.http",)
+    assert binding.related_action_contract_addresses == ()
+    assert binding.commutative_shared_state_refs == ()
+    assert binding.merge_rule_refs == ()
 
 
 def test_autonomous_manifest_requires_execution_control_and_relational_bindings() -> None:

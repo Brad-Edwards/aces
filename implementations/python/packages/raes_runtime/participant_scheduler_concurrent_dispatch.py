@@ -64,6 +64,7 @@ class _ConcurrentBatch:
     run: SchedulerRunState
     contexts: tuple[_DueActionContext, ...]
     states: tuple[ParticipantAutonomousExecutionStateModel, ...]
+    requests: tuple[ParticipantActionAdmissionRequest, ...] | None = None
     pre_batch: RuntimeSnapshot | None = None
     materialize: bool = True
 
@@ -94,7 +95,7 @@ def _isolate_concurrent_batch_predecessors(
     try:
         provided_pre_batch = getattr(batch, "pre_batch", None)
         pre_batch = provided_pre_batch if provided_pre_batch is not None else deepcopy(batch.run.working)
-        binding_snapshot = deepcopy(pre_batch)
+        binding_snapshot = pre_batch if getattr(batch, "requests", None) is not None else deepcopy(pre_batch)
     except (Exception, CancelledError):  # NOSONAR - local snapshot isolation must fail closed
         _fail_concurrent_batch_before_dispatch(
             batch.run,
@@ -173,8 +174,22 @@ def _prepare_concurrent_batch(
     if isolated is None:
         return None
     pre_batch, binding_snapshot = isolated
-    requests = _bind_concurrent_batch_requests(batch, binding_snapshot, pre_batch)
+    provided_requests = getattr(batch, "requests", None)
+    requests = (
+        tuple(provided_requests)
+        if provided_requests is not None
+        else _bind_concurrent_batch_requests(batch, binding_snapshot, pre_batch)
+    )
     if requests is None:
+        return None
+    if len(requests) != len(batch.contexts):
+        _fail_concurrent_batch_before_dispatch(
+            batch.run,
+            pre_batch,
+            policy_address=batch.policy.address,
+            code="runtime.participant-concurrent-binding-failed",
+            message="Backend concurrent participant request binding did not complete.",
+        )
         return None
     reserved = _reserve_concurrent_batch_for_dispatch(batch, pre_batch)
     prepared = None

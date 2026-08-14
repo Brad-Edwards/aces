@@ -34,4 +34,6 @@ Requirement inventory expansion. Multi-participant experiments require runtime s
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/participant_scheduler_concurrency.py` (Batch-scoped reservation and snapshot rollback)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/participant_scheduler_concurrent_state.py` (Revision-safe snapshot merge and delta service accounting)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/participant_scheduler_concurrent_settlement.py` (Pre-dispatch rollback and post-dispatch indeterminate settlement)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/participant_autonomous_execution.py` (Compiled action-interaction footprints and explicit concurrent composition authority)
+- IMPLEMENTS → SPEC `contracts/schemas/sdl/sdl-authoring-input-v1.json` (Authored participant-interaction commutativity and merge-rule declarations)
 - TESTS → TEST `implementations/python/tests/test_participant_concurrent_batch_reservations.py` (Concurrent reservation failure and rollback regressions)

@@ -109,9 +109,13 @@ def _merge_mapping_revision_checked(
         value = changed[key]
         current_value = current.get(key, _MISSING)
         base_value = base.get(key, _MISSING)
-        if current_value != base_value and current_value != value:
+        if current_value != base_value:
             # Mapping keys are backend-controlled. Keep diagnostics stable and
             # never copy a key (which may contain participant data) into them.
+            # Any second write is a concurrent conflict, including an
+            # apparently identical value. Treating identical writes as a
+            # successful merge would assert commutativity without a governed
+            # action-contract merge rule (ADR-054 section 8).
             raise ValueError(f"concurrent participant commit conflict in {field_name}")
         if value is _MISSING:
             merged.pop(key, None)
@@ -129,7 +133,7 @@ def _merge_value_revision_checked(
 ) -> object:
     if incoming == base:
         return deepcopy(current)
-    if current != base and current != incoming:
+    if current != base:
         raise ValueError(f"concurrent participant commit conflict in {field_name}")
     return deepcopy(incoming)
 
