@@ -120,6 +120,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         self._store = store or InMemoryControlPlaneStore(initial_snapshot)
         self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
         self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
+        self._operation_lock = RLock()
         self._behavior_specifications = dict(behavior_specifications or {})
         self._crossing_policy_resolver = crossing_policy_resolver
         self._information_state_context_resolver = information_state_context_resolver
@@ -150,7 +151,8 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         """Return a compact operational view over existing control-plane carriers."""
 
         audit_events = self._store.read_audit()
-        operation_records = list(self._operations.values())
+        with self._operation_lock:
+            operation_records = list(self._operations.values())
         return operational_apparatus_summary(
             target_name=self._target.name,
             snapshot=self._snapshot,
@@ -289,7 +291,8 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         )
 
     def get_operation(self, operation_id: str) -> OperationStatus | None:
-        record = self._operations.get(operation_id)
+        with self._operation_lock:
+            record = self._operations.get(operation_id)
         return None if record is None else record.status
 
     def get_snapshot(self) -> RuntimeSnapshotEnvelope:
@@ -388,9 +391,11 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             return None
         if record.request_fingerprint and request_fingerprint and record.request_fingerprint != request_fingerprint:
             raise ValueError("Idempotency-Key was reused with a different request body.")
-        self._operations[record.receipt.operation_id] = record
+        with self._operation_lock:
+            self._operations[record.receipt.operation_id] = record
         return record.receipt
 
     def _persist_record(self, record: ControlPlaneOperationRecord) -> None:
-        self._operations[record.receipt.operation_id] = record
+        with self._operation_lock:
+            self._operations[record.receipt.operation_id] = record
         self._store.save_record(record)
