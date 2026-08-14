@@ -15,6 +15,7 @@ from implementations.python.tests.test_dsl_437_benign_participant_execution impo
 )
 from implementations.python.tests.test_runtime_control_plane_api import _test_security
 from raes import parse_sdl
+from raes.participant_behavior import ParticipantFailureClass
 from raes_backend_protocols.capability_admission import (
     participant_autonomous_execution_capability_gaps,
 )
@@ -26,11 +27,18 @@ from raes_backend_protocols.participant_runtime_base import BaseParticipantRunti
 from raes_backend_stubs.stubs import create_stub_target
 from raes_conformance.conformance.profiles import BackendCapabilityProfile
 from raes_conformance.conformance.target_probes import _target_adapter_cases
-from raes_contracts.contracts import ParticipantTemporalRuntimeContextModel
+from raes_contracts.contracts import (
+    ParticipantAutonomousExecutionStateModel,
+    ParticipantTemporalRuntimeContextModel,
+)
 from raes_contracts.contracts.participant_execution import (
     ParticipantExecutionBindingModel,
     ParticipantExecutionControlRequestModel,
     ParticipantExecutionServiceStateModel,
+)
+from raes_contracts.participant_binding import (
+    ParticipantActionAdmissionRequest,
+    ParticipantNativeActionExecution,
 )
 from raes_contracts.participant_episode import ParticipantEpisodeInitializeRequest
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
@@ -38,7 +46,7 @@ from raes_processor.compiler import compile_runtime_model
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_api import create_control_plane_app
 from raes_runtime.manager import RuntimeManager
-from raes_runtime.participant_scheduler_concurrency import (
+from raes_runtime.participant_scheduler_concurrent_commit import (
     participant_generation_commit_diagnostic,
 )
 from starlette.testclient import TestClient
@@ -171,6 +179,34 @@ def test_compiler_preserves_exact_action_to_target_execution_binding() -> None:
     assert "provision.node.customer-portal.service.http" in binding.target_addresses
     assert binding.participant_implementation_ref == policy.participant_implementation_ref
     assert binding.max_in_flight == policy.max_in_flight
+    assert binding.commutative_shared_state_refs == ("nodes.customer-portal.services.http",)
+    assert binding.merge_rule_refs == ()
+
+
+def test_compiler_preserves_action_interaction_footprint_for_concurrency_admission() -> None:
+    scenario_payload = yaml.safe_load(_scenario_yaml())
+    action = scenario_payload["action_contracts"]["probe-customer-portal-login"]
+    action["interactions"] = [
+        {
+            "interaction_class": "shared_state_change",
+            "target": "nodes.customer-portal.services.http",
+            "rationale": "Concurrent login probes update one governed service state.",
+            "shared_state_refs": ["nodes.customer-portal.services.http"],
+        }
+    ]
+
+    runtime_model = compile_runtime_model(parse_sdl(yaml.safe_dump(scenario_payload, sort_keys=False)))
+    policy = runtime_model.behavior_specifications[
+        "participant.behavior-specification.participant-behavior"
+    ].autonomous_execution
+
+    assert policy is not None
+    binding = policy.execution_bindings[0]
+    assert binding.interaction_classes == ("shared_state_change",)
+    assert binding.shared_state_refs == ("nodes.customer-portal.services.http",)
+    assert binding.related_action_contract_addresses == ()
+    assert binding.commutative_shared_state_refs == ()
+    assert binding.merge_rule_refs == ()
 
 
 def test_autonomous_manifest_requires_execution_control_and_relational_bindings() -> None:
@@ -483,17 +519,123 @@ class _OverlappingParticipantRuntime(_NativeParticipantRuntime):
             self.peak_active = max(self.peak_active, self._active)
         try:
             self._barrier.wait(timeout=2)
-            return super()._model_action(
+            execution = super()._model_action(
                 request,
                 snapshot,
                 episode_id=episode_id,
+            )
+            metadata = dict(execution.apply_result.snapshot.metadata)
+            action_instance_id = metadata.pop("last_native_action")
+            metadata[f"last_native_action:{request.participant_address}"] = action_instance_id
+            return replace(
+                execution,
+                apply_result=replace(
+                    execution.apply_result,
+                    snapshot=execution.apply_result.snapshot.with_entries(
+                        dict(execution.apply_result.snapshot.entries),
+                        metadata=metadata,
+                    ),
+                ),
             )
         finally:
             with self._active_lock:
                 self._active -= 1
 
 
-def _two_green_participant_scenario():
+class _OneFailedOverlappingParticipantRuntime(_OverlappingParticipantRuntime):
+    def _model_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+        *,
+        episode_id: str,
+    ) -> ParticipantNativeActionExecution:
+        execution = super()._model_action(request, snapshot, episode_id=episode_id)
+        if request.participant_address.endswith("participant-agent"):
+            assert execution.action_result is not None
+            return replace(
+                execution,
+                action_result=execution.action_result.model_copy(
+                    update={
+                        "status": "failed",
+                        "failure_class": ParticipantFailureClass.TARGET_UNAVAILABLE,
+                    }
+                ),
+            )
+        return execution
+
+
+class _SnapshotProjectionParticipantRuntime(_NativeParticipantRuntime):
+    """Backend that writes a portable field outside the historical merge allowlist."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._retained_results: list[object] = []
+
+    def _model_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+        *,
+        episode_id: str,
+    ) -> ParticipantNativeActionExecution:
+        execution = super()._model_action(request, snapshot, episode_id=episode_id)
+        result_address = f"evaluation.result.native-{request.participant_address.rsplit('.', 1)[-1]}"
+        metadata = dict(execution.apply_result.snapshot.metadata)
+        action_instance_id = metadata.pop("last_native_action")
+        metadata[f"last_native_action:{request.participant_address}"] = action_instance_id
+        evaluation_results = {
+            **execution.apply_result.snapshot.evaluation_results,
+            result_address: {
+                "participant_address": request.participant_address,
+                "nested": {"state": "committed"},
+            },
+        }
+        modeled = replace(
+            execution.apply_result,
+            snapshot=execution.apply_result.snapshot.with_entries(
+                dict(execution.apply_result.snapshot.entries),
+                evaluation_results=evaluation_results,
+                metadata=metadata,
+            ),
+            changed_addresses=[*execution.apply_result.changed_addresses, result_address],
+        )
+        return replace(execution, apply_result=modeled)
+
+    def admit_action(self, request, snapshot):
+        result = super().admit_action(request, snapshot)
+        self._retained_results.append(result)
+        return result
+
+
+class _ProtectedStateMutationParticipantRuntime(_NativeParticipantRuntime):
+    """Backend that attempts to write serialized scheduler-owned state."""
+
+    def _model_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+        *,
+        episode_id: str,
+    ) -> ParticipantNativeActionExecution:
+        execution = super()._model_action(request, snapshot, episode_id=episode_id)
+        services = {
+            **execution.apply_result.snapshot.participant_execution_services,
+            "participant.autonomous-execution.injected": {},
+        }
+        return replace(
+            execution,
+            apply_result=replace(
+                execution.apply_result,
+                snapshot=execution.apply_result.snapshot.with_entries(
+                    dict(execution.apply_result.snapshot.entries),
+                    participant_execution_services=services,
+                ),
+            ),
+        )
+
+
+def _two_green_participant_scenario(*, max_in_flight: int = 2):
     payload = yaml.safe_load(_scenario_yaml())
     payload["entities"]["enterprise-participant-2"] = {
         **payload["entities"]["enterprise-participant"],
@@ -506,7 +648,7 @@ def _two_green_participant_scenario():
     }
     specification = payload["behavior_specifications"]["participant-behavior"]
     specification["participant_refs"].append("participant-agent-2")
-    specification["autonomous_execution"]["max_in_flight"] = 2
+    specification["autonomous_execution"]["max_in_flight"] = max_in_flight
     return parse_sdl(yaml.safe_dump(payload, sort_keys=False))
 
 
@@ -534,6 +676,99 @@ def test_scheduler_executes_two_due_green_participants_with_bounded_overlap() ->
     assert states[0].capacity == 2
     assert states[0].reserved == 0
     assert states[0].in_flight == 0
+
+
+def test_serial_and_concurrent_actions_commit_the_same_backend_owned_projection() -> None:
+    def _apply(max_in_flight: int):
+        scenario = _two_green_participant_scenario(max_in_flight=max_in_flight)
+        runtime_model = compile_runtime_model(scenario)
+        participant_runtime = _SnapshotProjectionParticipantRuntime()
+        target = replace(
+            create_stub_target(),
+            manifest=_autonomous_manifest(runtime_model),
+            participant_runtime=participant_runtime,
+        )
+        manager = RuntimeManager(target)
+        return manager.apply(manager.plan(scenario)), participant_runtime
+
+    serial, _serial_runtime = _apply(1)
+    concurrent, concurrent_runtime = _apply(2)
+    prefix = "evaluation.result.native-"
+    serial_projection = {
+        key: value for key, value in serial.snapshot.evaluation_results.items() if key.startswith(prefix)
+    }
+    concurrent_projection = {
+        key: value for key, value in concurrent.snapshot.evaluation_results.items() if key.startswith(prefix)
+    }
+
+    assert serial.success is True
+    assert concurrent.success is True
+    assert concurrent_projection == serial_projection
+    assert len(concurrent_projection) == 2
+    assert set(concurrent_projection) <= set(concurrent.changed_addresses)
+
+    retained = next(
+        result
+        for result in concurrent_runtime._retained_results
+        if any(key.startswith(prefix) for key in result.snapshot.evaluation_results)
+    )
+    retained_key = next(key for key in retained.snapshot.evaluation_results if key.startswith(prefix))
+    retained.snapshot.evaluation_results[retained_key]["nested"]["state"] = "mutated-after-return"
+    assert concurrent.snapshot.evaluation_results[retained_key]["nested"]["state"] == "committed"
+
+
+def test_serial_action_rejects_backend_mutation_of_scheduler_owned_state() -> None:
+    scenario = _two_green_participant_scenario(max_in_flight=1)
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _ProtectedStateMutationParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target)
+
+    applied = manager.apply(manager.plan(scenario))
+
+    assert applied.success is False
+    assert any(
+        diagnostic.code == "runtime.participant-autonomous-action-protocol-invalid"
+        for diagnostic in applied.diagnostics
+    )
+    assert "participant.autonomous-execution.injected" not in applied.snapshot.participant_execution_services
+
+
+def test_stop_policy_settles_every_already_dispatched_peer() -> None:
+    scenario = _two_green_participant_scenario()
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _OneFailedOverlappingParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target)
+
+    applied = manager.apply(manager.plan(scenario))
+
+    assert applied.success is False
+    assert len(participant_runtime.native_actions) == 2
+    scheduler_states = {
+        state.participant_address: state
+        for state in (
+            ParticipantAutonomousExecutionStateModel.model_validate(payload)
+            for payload in applied.snapshot.participant_autonomous_execution_states.values()
+        )
+    }
+    failed = scheduler_states["participant.behavior.participant-agent"]
+    succeeded = scheduler_states["participant.behavior.participant-agent-2"]
+    assert (failed.lifecycle_state, failed.failed_actions, failed.in_flight) == ("failed", 1, 0)
+    assert (succeeded.succeeded_actions, succeeded.in_flight) == (1, 0)
+    assert set(applied.snapshot.participant_behavior_history) == set(scheduler_states)
+    service = ParticipantExecutionServiceStateModel.model_validate(
+        applied.snapshot.participant_execution_services["participant.autonomous-execution.participant-behavior"]
+    )
+    assert (service.reserved, service.in_flight, service.quiescent) == (0, 0, True)
 
 
 def test_control_plane_exposes_authenticated_generation_bound_execution_control() -> None:

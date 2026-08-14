@@ -399,6 +399,17 @@ is only portable when represented as an explicit serialization policy with
 realized ordering, read/write revisions, and evidence. Merge is portable only
 when the action contract declares commutativity or a merge rule.
 
+The authored declaration is carried on each
+`ParticipantInteractionDeclaration`. `commutative: true` states that the
+declared interaction footprint may be composed independent of participant
+order; `merge_rule_ref` names the governed rule that authorizes composition.
+They are mutually exclusive, and absence of both is not implicit permission:
+the scheduler serializes overlapping shared-state or related-action
+footprints. At the snapshot boundary, two concurrent writes to the same
+field/key revision are rejected even when their values compare equal; a
+declaration authorizes semantic concurrency, not an unimplemented value-level
+merge algorithm.
+
 Capability claims are vectors over concerns, not one scalar. Each concern uses
 the ordered levels:
 
@@ -669,3 +680,4 @@ plane.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-06-13 | #484 | Recorded acceptance-time non-goal wording for already-published RUN-305 and backend-facing contract subsets. |
+| 2026-08-14 | #1135 | Clarified authored commutativity and merge-rule declarations, conservative serialization, and snapshot commit conflicts. |

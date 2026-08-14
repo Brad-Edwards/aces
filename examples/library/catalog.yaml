@@ -19,6 +19,9 @@ surfaces:
       - id: hospital-ransomware-surgery-day
         path: examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
         source_refs: [examples/README.md]
+      - id: cross-backend-minimal
+        path: examples/scenarios/cross-backend-minimal.sdl.yaml
+        source_refs: [examples/README.md]
     templates:
       - id: minimal-validated-scenario
         path: examples/library/templates/scenario/minimal-validated-scenario.yaml

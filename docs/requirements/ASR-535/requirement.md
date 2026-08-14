@@ -52,3 +52,5 @@ ADR-081 governs relation discipline and current tests provide bounded evidence, 
 - IMPLEMENTS → PROOF `specs/formal/participant-semantics/isabelle/Participant_Opacity.thy` (Kernel-checked participant-opacity theorem)
 - TESTS → TEST `implementations/python/tests/test_issue_963_participant_opacity_proof.py` (Issue 963 participant-opacity proof integration tests)
 - VERIFIES → PROOF `specs/formal/participant-semantics/participant-opacity-proof-evidence.json` (Participant-opacity proof evidence record)
+- IMPLEMENTS → GITHUB_ISSUE `1109` (Make the offline Isabelle sandbox portable on Ubuntu)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1109-asr-535-isabelle-sandbox-portability.md` (Pinned proof-runtime allowlist decision)

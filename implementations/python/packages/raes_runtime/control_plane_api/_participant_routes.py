@@ -21,6 +21,7 @@ from ..control_plane_api_models import (
 )
 from ..participant_control_intents import ParticipantControlIntent
 from ._auth import _MutatingIdentity, _ReadIdentity
+from ._offload import _control_plane_calls
 from ._responses import (
     _BAD_REQUEST_CONFLICT_RESPONSES,
     _CONFLICT_RESPONSES,
@@ -43,6 +44,7 @@ def _register_participant_execution_routes(
         identity: _MutatingIdentity,
         body: _ParticipantExecutionControlBody,
     ) -> OperationReceiptModel:
+        calls = _control_plane_calls(request)
         try:
             control_request = ParticipantExecutionControlRequestModel(
                 execution_scope_ref=execution_scope_ref,
@@ -50,7 +52,8 @@ def _register_participant_execution_routes(
                 expected_generation=body.expected_generation,
                 timeout_seconds=body.timeout_seconds,
             )
-            receipt = control_plane.control_participant_execution(
+            receipt = await calls.mutate(
+                control_plane.control_participant_execution,
                 control_request,
                 idempotency_key=request.headers.get("idempotency-key", ""),
                 request_fingerprint=_request_fingerprint(
@@ -60,7 +63,8 @@ def _register_participant_execution_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action=f"participant_execution_{body.action}",
             identity=identity.identity,
             allowed=True,
@@ -78,11 +82,13 @@ def _register_participant_execution_routes(
         request: Request,
         identity: _ReadIdentity,
     ) -> ParticipantExecutionServiceStateModel:
+        calls = _control_plane_calls(request)
         try:
-            state = control_plane.participant_execution_state(execution_scope_ref)
+            state = await calls.run(control_plane.participant_execution_state, execution_scope_ref)
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="get_participant_execution_state",
             identity=identity.identity,
             allowed=True,
@@ -113,15 +119,18 @@ def _register_participant_control_routes(
         body: ParticipantControlIntent,
         identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.record_participant_control(
+            receipt = await calls.mutate(
+                control_plane.record_participant_control,
                 participant_address,
                 body,
                 identity=identity,
                 idempotency_key=request.headers.get("idempotency-key", ""),
             )
         except PermissionError as exc:
-            control_plane.record_audit(
+            await calls.run(
+                control_plane.record_audit,
                 action="record_participant_control",
                 identity=identity.identity,
                 allowed=False,
@@ -152,8 +161,10 @@ def _register_participant_episode_start_routes(
         body: _ParticipantInitializeBody | None = None,
     ) -> OperationReceiptModel:
         payload = body or _ParticipantInitializeBody()
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.initialize_participant_episode(
+            receipt = await calls.mutate(
+                control_plane.initialize_participant_episode,
                 participant_address,
                 episode_id=payload.episode_id,
                 idempotency_key=request.headers.get("idempotency-key", ""),
@@ -164,7 +175,8 @@ def _register_participant_episode_start_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="initialize_participant_episode",
             identity=identity.identity,
             allowed=True,
@@ -184,8 +196,10 @@ def _register_participant_episode_start_routes(
         body: _ParticipantResetBody | None = None,
     ) -> OperationReceiptModel:
         payload = body or _ParticipantResetBody()
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.reset_participant_episode(
+            receipt = await calls.mutate(
+                control_plane.reset_participant_episode,
                 participant_address,
                 episode_id=payload.episode_id,
                 reason=payload.reason,
@@ -197,7 +211,8 @@ def _register_participant_episode_start_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="reset_participant_episode",
             identity=identity.identity,
             allowed=True,
@@ -222,8 +237,10 @@ def _register_participant_episode_end_routes(
         body: _ParticipantRestartBody | None = None,
     ) -> OperationReceiptModel:
         payload = body or _ParticipantRestartBody()
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.restart_participant_episode(
+            receipt = await calls.mutate(
+                control_plane.restart_participant_episode,
                 participant_address,
                 episode_id=payload.episode_id,
                 reason=payload.reason,
@@ -235,7 +252,8 @@ def _register_participant_episode_end_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="restart_participant_episode",
             identity=identity.identity,
             allowed=True,
@@ -255,12 +273,14 @@ def _register_participant_episode_end_routes(
         body: _ParticipantTerminateBody | None = None,
     ) -> OperationReceiptModel:
         payload = body or _ParticipantTerminateBody()
+        calls = _control_plane_calls(request)
         try:
             terminal_reason = ParticipantEpisodeTerminalReason(payload.terminal_reason)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=f"invalid terminal_reason: {exc}") from exc
         try:
-            receipt = control_plane.terminate_participant_episode(
+            receipt = await calls.mutate(
+                control_plane.terminate_participant_episode,
                 participant_address,
                 terminal_reason=terminal_reason,
                 detail=payload.detail,
@@ -272,7 +292,8 @@ def _register_participant_episode_end_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="terminate_participant_episode",
             identity=identity.identity,
             allowed=True,

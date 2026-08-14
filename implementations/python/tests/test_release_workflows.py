@@ -252,19 +252,27 @@ def test_canonical_verifier_preserves_proof_install_and_full_verify_graph() -> N
 
     acquire = _named_step(job, "Acquire pinned Isabelle distribution")
     assert "tools.isabelle_tool acquire" in acquire["run"]
+    sandbox = _named_step(job, "Install proof sandbox")["run"]
+    assert "bubblewrap fontconfig fonts-dejavu-core" in sandbox
+    assert "fc-list" in sandbox
+    assert "test -d /etc/fonts" in sandbox
+    assert "test -d /usr/share/fonts" in sandbox
     verify = _named_step(job, "Run canonical verification graph")
     assert "nox -f noxfile.py -s verify" in verify["run"]
     assert "--skip-requirement" in verify["run"]
 
     coverage = _named_step(job, "Upload coverage report")
     assert coverage["if"] == "always()"
-    assert coverage["with"]["path"] == "implementations/python/coverage.xml"
+    assert coverage["with"]["path"].splitlines() == [
+        "implementations/python/coverage.xml",
+        "implementations/python/coverage.json",
+    ]
 
 
 def test_ci_uses_the_same_canonical_verifier_for_github_sha() -> None:
     workflow = _load(CI_PATH)
     assert workflow["permissions"] == {"contents": "read", "pull-requests": "write"}
-    assert "interpreters" not in workflow["jobs"]
+    assert workflow["on"]["push"]["branches"] == ["main", "dev"]
     assert "continue-on-error" not in workflow["jobs"]["supply-chain"]
     canonical = workflow["jobs"]["canonical"]
     assert canonical["uses"] == LOCAL_CANONICAL_WORKFLOW
@@ -280,6 +288,20 @@ def test_ci_uses_the_same_canonical_verifier_for_github_sha() -> None:
     assert result_join["env"]["CANONICAL_RESULT"] == "${{ needs.canonical.result }}"
     assert '"${CANONICAL_RESULT}" != "success"' in result_join["run"]
     assert "verify" in workflow["jobs"]["sonar"]["needs"]
+
+    interpreters = workflow["jobs"]["interpreters"]
+    assert interpreters["strategy"]["matrix"]["python-version"] == [
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14",
+    ]
+    assert interpreters["env"] == {
+        "UV_PYTHON": "${{ matrix.python-version }}",
+        "RAES_EXPECTED_PYTHON": "${{ matrix.python-version }}",
+    }
+    compatibility = _named_step(interpreters, "Test exact interpreter and clean distribution")
+    assert "nox -f noxfile.py -s python-compatibility" in compatibility["run"]
 
 
 def test_release_resolves_and_verifies_one_immutable_release_commit() -> None:

@@ -47,7 +47,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "1112779f7f33a932c90fd5e1bde641199bdf02a9910d89b0207e5ba92ab7562f"
+      "content_sha256": "fb313cf4bb3281dd64a9c763cf8e0fbc3819e6ea36a6b297045f7fdf45281565"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -299,7 +299,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 20,
-      "content_sha256": "3bfc03a198bf951a689747605ad6cac40cdb15e4efcdeb6dae1eaf65432b8716"
+      "content_sha256": "19e18d246b9fc3679fd433ef1e05730f0badac0d76fb6442edaa90cce392e012"
     },
     {
       "path": "docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md",
@@ -495,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "dc023117f930026916eab8c545cf7eaa6ced7245006493c37061032e3f2ecb33"
+      "content_sha256": "f800c15b5d7131c89dde6e40b69e9ced8d303f15a4a9709ba89067f1b45819f4"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",

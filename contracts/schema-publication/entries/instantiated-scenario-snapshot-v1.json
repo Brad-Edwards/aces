@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "3e60ed2a2878f49d0aa3db325c82f2e61b5b2caa2be204298b31099d950dcc93",
+  "content_hash": "b2d7484b00bb3239e43119a1a176bca322b226cc313996becd7ade7381756fdd",
   "last_change": {
-    "summary": "Separated governed operating-system distribution from release-only version values for issue #1077.",
-    "content_hash": "3e60ed2a2878f49d0aa3db325c82f2e61b5b2caa2be204298b31099d950dcc93"
+    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
+    "content_hash": "b2d7484b00bb3239e43119a1a176bca322b226cc313996becd7ade7381756fdd"
   }
 }

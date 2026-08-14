@@ -124,6 +124,7 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
     assert kwargs["env"] == {"COVERAGE_FILE": str(coverage_file)}
 
     session.commands.clear()
+    monkeypatch.setattr(noxfile, "_enforce_line_coverage", lambda _path: 90.0)
     noxfile._run_pytest(
         session,
         "-m",
@@ -143,8 +144,8 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["xml", "report"]
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert [command[4] for command, _options in coverage_commands] == ["xml", "json", "report"]
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
 
 
@@ -299,6 +300,7 @@ def test_parallel_coverage_is_combined_before_reporting(
             return nullcontext()
 
     session = FakeSession()
+    monkeypatch.setattr(noxfile, "_enforce_line_coverage", lambda _path: 90.0)
     noxfile._finalize_parallel_coverage(session, tmp_path)
 
     coverage_commands = [
@@ -306,12 +308,225 @@ def test_parallel_coverage_is_combined_before_reporting(
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "report"]
+    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "json", "report"]
     assert coverage_commands[0][0][5:] == ("--keep", str(tmp_path))
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(
         options["env"] == {"COVERAGE_FILE": str(tmp_path / ".coverage")} for _command, options in coverage_commands
     )
+
+
+def test_policy_session_split_routes_base_revision_to_both_policy_layers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+
+    repo_args, requirement_args, skip_requirement = noxfile._split_policy_session_args(
+        ["--base-rev", "origin/dev", "--requirement-uid", "API-404"]
+    )
+
+    assert repo_args == ["--base-rev", "origin/dev"]
+    assert requirement_args == ["--base-rev", "origin/dev", "--requirement-uid", "API-404"]
+    assert skip_requirement is False
+
+
+def _exercise_python_compatibility(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    build_artifacts: bool,
+) -> tuple[types.ModuleType, list[tuple[str, ...]], list[tuple[str, ...]], list[str]]:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    commands: list[tuple[str, ...]] = []
+    pytest_calls: list[tuple[str, ...]] = []
+    logs: list[str] = []
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.env: dict[str, str] = {}
+
+        def log(self, message: str) -> None:
+            logs.append(message)
+
+    def fake_run(session: FakeSession, *command: str, **_kwargs: object) -> None:
+        assert session.env["UV_PYTHON"] == "cpython-3.14"
+        commands.append(command)
+        if command[:2] != ("uv", "build"):
+            return
+        output_dir = Path(command[command.index("--out-dir") + 1])
+        output_dir.mkdir(parents=True)
+        if build_artifacts:
+            (output_dir / "raes-3.3.0-py3-none-any.whl").write_bytes(b"wheel")
+            (output_dir / "raes-3.3.0.tar.gz").write_bytes(b"sdist")
+
+    monkeypatch.setenv(noxfile.EXPECTED_PYTHON_ENV, "3.14")
+    monkeypatch.setenv("UV_PYTHON", "cpython-3.14")
+    monkeypatch.setenv(noxfile.EXPECT_FREE_THREADED_ENV, "1")
+    monkeypatch.setattr(noxfile, "_run", fake_run)
+    monkeypatch.setattr(
+        noxfile,
+        "_run_pytest",
+        lambda _session, *args, **_kwargs: pytest_calls.append(tuple(args)),
+    )
+    reporter = noxfile.SessionReporter(FakeSession(), "python-compatibility")
+    noxfile._run_python_compatibility(reporter.session, reporter)
+    return noxfile, commands, pytest_calls, [result.name for result in reporter.results]
+
+
+def test_python_compatibility_graph_builds_and_checks_clean_distribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile, commands, pytest_calls, stages = _exercise_python_compatibility(
+        monkeypatch,
+        build_artifacts=True,
+    )
+
+    assert stages == [
+        "python compatibility / frozen sync",
+        "python compatibility / exact runtime",
+        "python compatibility / hermetic tests",
+        "python compatibility / build distributions",
+        "python compatibility / create clean environment",
+        "python compatibility / install wheel",
+        "python compatibility / installed metadata and imports",
+        "python compatibility / installed CLI version",
+        "python compatibility / installed CLI help",
+    ]
+    assert pytest_calls == [("-q",)]
+    runtime_command = next(command for command in commands if command[:2] == ("uv", "run"))
+    assert runtime_command[-2:] == ("3.14", "1")
+    build_command = next(command for command in commands if command[:2] == ("uv", "build"))
+    assert build_command[build_command.index("--python") :][:2] == ("--python", "cpython-3.14")
+    installed_python = next(command for command in commands if command and command[0].endswith("/bin/python"))
+    assert installed_python[-1] == "3.14"
+    assert any(command and command[0].endswith("/bin/raes") and command[-1] == "--version" for command in commands)
+    assert noxfile.PROJECT_ROOT.as_posix() in build_command
+
+
+@pytest.mark.parametrize(
+    ("expected", "selector", "message"),
+    [
+        ("3.15", "cpython-3.15", "must select a supported feature release"),
+        ("3.14", "", "UV_PYTHON must select the interpreter under test"),
+    ],
+)
+def test_python_compatibility_rejects_unsupported_or_missing_interpreter_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    expected: str,
+    selector: str,
+    message: str,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    monkeypatch.setenv(noxfile.EXPECTED_PYTHON_ENV, expected)
+    monkeypatch.setenv("UV_PYTHON", selector)
+    reporter = noxfile.SessionReporter(types.SimpleNamespace(log=lambda _message: None), "python-compatibility")
+
+    with pytest.raises(RuntimeError, match=message):
+        noxfile._run_python_compatibility(reporter.session, reporter)
+
+
+def test_python_compatibility_rejects_incomplete_distribution_build(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with pytest.raises(RuntimeError, match="must produce exactly one wheel and one source distribution"):
+        _exercise_python_compatibility(monkeypatch, build_artifacts=False)
+
+
+def test_python_compatibility_and_osv_session_wrappers_always_summarize(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    calls: list[str] = []
+    logs: list[str] = []
+    session = types.SimpleNamespace(log=logs.append, posargs=[])
+    monkeypatch.setattr(
+        noxfile,
+        "_run_python_compatibility",
+        lambda _session, _reporter: calls.append("python"),
+    )
+    monkeypatch.setattr(noxfile, "_run_osv_scan", lambda _session, _reporter, **_kwargs: calls.append("osv"))
+
+    noxfile.python_compatibility(session)
+    noxfile.osv_scan(session)
+
+    assert calls == ["python", "osv"]
+    assert any("[python-compatibility] stage summary" in message for message in logs)
+    assert any("[osv_scan] stage summary" in message for message in logs)
+
+
+def test_coverage_configuration_measures_branches_and_repository_python() -> None:
+    config = tomllib.loads((REPO_ROOT / "implementations" / "python" / "pyproject.toml").read_text(encoding="utf-8"))
+    run = config["tool"]["coverage"]["run"]
+    report = config["tool"]["coverage"]["report"]
+
+    assert run["branch"] is True
+    assert run["source"] == ["../.."]
+    assert set(run["omit"]) == {
+        "*/.cache/*",
+        "*/docs/*",
+        "*/implementations/python/.venv/*",
+        "*/implementations/python/tests/*",
+    }
+    assert report["include_namespace_packages"] is True
+
+
+def test_line_coverage_threshold_is_fixed_at_ninety_percent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    report_path = tmp_path / "coverage.json"
+    report_path.write_text(
+        json.dumps({"totals": {"covered_lines": 90, "num_statements": 100}}),
+        encoding="utf-8",
+    )
+
+    assert noxfile._enforce_line_coverage(report_path) == 90.0
+
+    report_path.write_text(
+        json.dumps({"totals": {"covered_lines": 899, "num_statements": 1000}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="89.900% is below required 90.000%"):
+        noxfile._enforce_line_coverage(report_path)
+
+
+def test_make_policy_skips_only_requirement_governance_without_a_uid() -> None:
+    environment = os.environ.copy()
+    environment.pop("RAES_REQUIREMENT_UID", None)
+    requirement_free = subprocess.run(
+        ("make", "--dry-run", "policy"),
+        cwd=REPO_ROOT,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    environment["RAES_REQUIREMENT_UID"] = "ASR-505"
+    requirement_scoped = subprocess.run(
+        ("make", "--dry-run", "policy"),
+        cwd=REPO_ROOT,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+    assert requirement_free.rstrip().endswith("-- --skip-requirement")
+    assert "--skip-requirement" not in requirement_scoped
+
+
+def test_hook_policy_context_skips_only_requirement_free_branches(monkeypatch: pytest.MonkeyPatch) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    monkeypatch.delenv("RAES_REQUIREMENT_UID", raising=False)
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged", "--skip-requirement"]
+
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-ASR-505-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
+
+    monkeypatch.setenv("RAES_REQUIREMENT_UID", "ASR-505")
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
 
 
 def test_docs_graph_uses_curated_root_and_reader_style_gate(
@@ -507,6 +722,22 @@ def test_hygiene_parser_ignores_policy_only_verify_args(monkeypatch: pytest.Monk
         {"staged": False, "base_rev": "origin/dev"},
         {"staged": False, "base_rev": "origin/dev"},
     ]
+
+
+@pytest.mark.parametrize("option", ["--base-rev", "--requirement-uid"])
+@pytest.mark.parametrize("trailing", [[], [""], ["--skip-requirement"]])
+def test_policy_arg_parsers_reject_missing_option_values(
+    monkeypatch: pytest.MonkeyPatch,
+    option: str,
+    trailing: list[str],
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    args = [option, *trailing]
+
+    with pytest.raises(ValueError, match=rf"^{option} requires a value$"):
+        noxfile._split_policy_session_args(args)
+    with pytest.raises(ValueError, match=rf"^{option} requires a value$"):
+        noxfile._parse_hygiene_posargs(args, default_all_files=False)
 
 
 def test_structural_policy_runner_receives_policy_input(tmp_path: Path) -> None:
