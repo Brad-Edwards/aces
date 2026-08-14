@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from copy import deepcopy
 
 from tools.policy.common import PolicyFailure
@@ -22,7 +23,7 @@ _ANALYSIS_PATH = "docs/research/specification-coverage/analysis-v1.json"
 _FAILING_STAGE_OUTCOMES = {"failed", "not_run", "tool_failed"}
 
 
-def _records_by_concept_id(records: object) -> dict[str, dict[str, object]]:
+def _records_by_concept_id(records: Sequence[object]) -> dict[str, dict[str, object]]:
     return {
         item["concept_id"]: item
         for item in records

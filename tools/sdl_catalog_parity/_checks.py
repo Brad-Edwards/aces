@@ -32,13 +32,10 @@ from tools.sdl_catalog_parity._model_paths import (
     _reference_source_path_exists,
 )
 from tools.sdl_catalog_parity._paths import (
-    _IMPLEMENTATION_TERM_RE,
-    _MARKDOWN_LINK_RE,
     _SUMMARY_RE,
     _VALID_KINDS,
     _VALID_LIFECYCLE,
     _VALID_SHAPES,
-    DIAGNOSTICS_PATH,
     PHASES_PATH,
     REFERENCES_PATH,
     RUNTIME_PATH,
@@ -49,6 +46,7 @@ from tools.sdl_catalog_parity._registry import REFERENCE_EDGE_EXPECTATIONS
 from tools.sdl_catalog_parity._rows import (
     CatalogParseError,
     PhaseMemberRow,
+    ReferenceRow,
     TopLevelRow,
     parse_phase_member_catalog,
     parse_reference_catalog,
@@ -117,6 +115,12 @@ def _field_row_failures(field: str, row: TopLevelRow, field_schema: dict[str, An
                 SECTIONS_PATH,
             )
         )
+    failures.extend(_field_classification_failures(field, row))
+    return failures
+
+
+def _field_classification_failures(field: str, row: TopLevelRow) -> list[PolicyFailure]:
+    failures: list[PolicyFailure] = []
     expected_lifecycle = _expected_lifecycle(field)
     if row.lifecycle != expected_lifecycle or not set(row.lifecycle) <= _VALID_LIFECYCLE:
         failures.append(
@@ -228,7 +232,7 @@ def _reference_contract_failures(by_source: dict[str, tuple[str, str, str, str]]
     ]
 
 
-def _completion_target_failures(rows: list) -> list[PolicyFailure]:
+def _completion_target_failures(rows: list[ReferenceRow]) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
     for key, domain in sorted(REFERENCE_COMPLETION_TARGETS.items()):
         matching = [row for row in rows if row.key == key and row.domain == domain]
@@ -244,7 +248,7 @@ def _completion_target_failures(rows: list) -> list[PolicyFailure]:
     return failures
 
 
-def _row_validity_failures(rows: list, repo_root: Path) -> list[PolicyFailure]:
+def _row_validity_failures(rows: list[ReferenceRow], repo_root: Path) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
     for row in rows:
         if not _reference_source_path_exists(row.source_path):
@@ -285,7 +289,7 @@ def _behavior_edge_failures(by_source: dict[str, tuple[str, str, str, str]]) -> 
     return failures
 
 
-def _reference_coverage_failures(rows: list, top_rows: list[TopLevelRow]) -> list[PolicyFailure]:
+def _reference_coverage_failures(rows: list[ReferenceRow], top_rows: list[TopLevelRow]) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
     source_sections = {row.key[0] for row in rows}
     top_by_field = {row.field: row for row in top_rows}
@@ -441,56 +445,4 @@ def _check_phase_members(text: str) -> list[PolicyFailure]:
         )
     failures.extend(_phase_membership_failures(by_member, expected_members))
     failures.extend(_realization_transfer_failures(by_member))
-    return failures
-
-
-def _check_internal_links(repo_root: Path, relative_paths: tuple[str, ...]) -> list[PolicyFailure]:
-    root = repo_root.resolve()
-    failures: list[PolicyFailure] = []
-    for relative in relative_paths:
-        source = repo_root / relative
-        text = source.read_text(encoding="utf-8")
-        for match in _MARKDOWN_LINK_RE.finditer(text):
-            target = match.group("target").strip()
-            if target.startswith(("#", "http:", "https:", "mailto:")):
-                continue
-            target_path = target.split("#", 1)[0]
-            if not target_path:
-                continue
-            resolved = (source.parent / target_path).resolve()
-            try:
-                resolved.relative_to(root)
-            except ValueError:
-                exists = False
-            else:
-                exists = resolved.exists()
-            if not exists:
-                line_no = text.count("\n", 0, match.start()) + 1
-                failures.append(
-                    _failure(
-                        "sdl-catalog-link-target",
-                        f"internal Markdown target at line {line_no} does not exist: {target_path}",
-                        relative,
-                    )
-                )
-    return failures
-
-
-def _check_diagnostic_normative_layer(text: str) -> list[PolicyFailure]:
-    failures: list[PolicyFailure] = []
-    in_implementation_evidence = False
-    for line_no, line in enumerate(text.splitlines(), start=1):
-        is_quote = line.startswith(">")
-        if is_quote and "Implementation evidence (non-normative)" in line:
-            in_implementation_evidence = True
-        elif not is_quote:
-            in_implementation_evidence = False
-        if _IMPLEMENTATION_TERM_RE.search(line) and not (is_quote and in_implementation_evidence):
-            failures.append(
-                _failure(
-                    "sdl-catalog-normative-layer",
-                    f"implementation-specific diagnostic term at line {line_no} is not marked non-normative",
-                    DIAGNOSTICS_PATH,
-                )
-            )
     return failures

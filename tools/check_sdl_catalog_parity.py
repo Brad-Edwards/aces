@@ -31,12 +31,14 @@ from tools.policy.common import (
     load_exceptions,
 )
 from tools.sdl_catalog_parity._checks import (
-    _check_diagnostic_normative_layer,
-    _check_internal_links,
     _check_phase_members,
     _check_references,
     _check_runtime,
     _check_top_level,
+)
+from tools.sdl_catalog_parity._prose_checks import (
+    _check_diagnostic_normative_layer,
+    _check_internal_links,
 )
 from tools.sdl_catalog_parity._expected import _failure
 from tools.sdl_catalog_parity._paths import (

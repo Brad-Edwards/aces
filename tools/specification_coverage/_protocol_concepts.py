@@ -175,6 +175,27 @@ def _validated_concepts(
     return concepts, concept_ids
 
 
+def _request_join_failures(
+    request: dict[str, object],
+    concepts: list[object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    for concept_id in request["concept_ids"]:
+        concept = next(
+            (item for item in concepts if isinstance(item, dict) and item.get("concept_id") == concept_id),
+            None,
+        )
+        if concept is None or concept.get("request_id") != request.get("request_id"):
+            failures.append(
+                _failure(
+                    "specification-coverage-concepts",
+                    "request/concept join is invalid",
+                    path,
+                )
+            )
+
+
 def _request_concept_join_failures(
     requests: list[object],
     concepts: list[object],
@@ -187,19 +208,7 @@ def _request_concept_join_failures(
         if not isinstance(request, dict) or not isinstance(request.get("concept_ids"), list):
             continue
         declared.extend(request["concept_ids"])
-        for concept_id in request["concept_ids"]:
-            concept = next(
-                (item for item in concepts if isinstance(item, dict) and item.get("concept_id") == concept_id),
-                None,
-            )
-            if concept is None or concept.get("request_id") != request.get("request_id"):
-                failures.append(
-                    _failure(
-                        "specification-coverage-concepts",
-                        "request/concept join is invalid",
-                        path,
-                    )
-                )
+        _request_join_failures(request, concepts, failures, path)
     if len(declared) != len(set(declared)) or set(declared) != concept_ids:
         failures.append(
             _failure(

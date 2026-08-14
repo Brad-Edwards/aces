@@ -141,9 +141,8 @@ def _pointer_step(current: object, segment: str) -> object:
     if isinstance(current, Mapping):
         return current.get(segment, _POINTER_MISS)
     if isinstance(current, Sequence) and not isinstance(current, (str, bytes, bytearray)):
-        if segment.isdigit() and int(segment) < len(current):
-            return current[int(segment)]
-        return _POINTER_MISS
+        indexed = segment.isdigit() and int(segment) < len(current)
+        return current[int(segment)] if indexed else _POINTER_MISS
     return _POINTER_MISS
 
 

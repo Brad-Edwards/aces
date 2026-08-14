@@ -35,17 +35,21 @@ def _unwrap_reference_container(annotation: object) -> tuple[object, ...]:
     return tuple(members)
 
 
+def _field_aliases(model_name: str, field: object) -> set[str]:
+    aliases = {model_name}
+    for alias in (field.alias, field.serialization_alias):
+        if isinstance(alias, str):
+            aliases.add(alias)
+    return aliases
+
+
 def _model_field_annotations(annotation: object, field_name: str) -> tuple[object, ...]:
     annotations: list[object] = []
     for option in _annotation_members(annotation):
         if not isinstance(option, type) or not issubclass(option, BaseModel):
             continue
         for model_name, field in option.model_fields.items():
-            aliases = {model_name}
-            for alias in (field.alias, field.serialization_alias):
-                if isinstance(alias, str):
-                    aliases.add(alias)
-            if field_name in aliases:
+            if field_name in _field_aliases(model_name, field):
                 annotations.append(field.annotation)
     return tuple(annotations)
 

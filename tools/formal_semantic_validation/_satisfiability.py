@@ -44,14 +44,7 @@ def validate_satisfiability_analysis(
     failures: list[PolicyFailure] = []
     path = str(manifest.get("satisfiability_analysis_path"))
     snapshot_path = str(manifest.get("satisfiability_snapshot_path"))
-    if manifest.get("revision") != "2.0.0":
-        failures.append(
-            _failure(
-                "formal-satisfiability-manifest-revision",
-                "the satisfiability supplement requires bundle revision 2.0.0",
-                MANIFEST_PATH,
-            )
-        )
+    _manifest_revision_failures(manifest, failures)
     if not _closed_object(
         analysis,
         _SATISFIABILITY_ANALYSIS_KEYS,
@@ -75,15 +68,30 @@ def validate_satisfiability_analysis(
         _satisfiability_join_failures(snapshot, analysis, failures, path, snapshot_path)
         cases = _validated_satisfiability_cases(analysis, failures, path)
     if cases is not None:
-        cases_by_id = {
-            item.get("case_id"): item
-            for item in cases
-            if isinstance(item, Mapping) and _nonempty_string(item.get("case_id"))
-        }
+        cases_by_id = _cases_by_id(cases)
         _satisfiability_command_failures(snapshot, cases_by_id, analysis, failures, snapshot_path)
         observations_by_case = _satisfiability_observations(snapshot, cases_by_id, failures, snapshot_path)
         _satisfiability_case_failures(repo_root, cases, snapshot, observations_by_case, failures, path, snapshot_path)
     return failures
+
+
+def _manifest_revision_failures(manifest: _JsonObject, failures: list[PolicyFailure]) -> None:
+    if manifest.get("revision") != "2.0.0":
+        failures.append(
+            _failure(
+                "formal-satisfiability-manifest-revision",
+                "the satisfiability supplement requires bundle revision 2.0.0",
+                MANIFEST_PATH,
+            )
+        )
+
+
+def _cases_by_id(cases: list[object]) -> dict[object, Mapping[str, object]]:
+    return {
+        item.get("case_id"): item
+        for item in cases
+        if isinstance(item, Mapping) and _nonempty_string(item.get("case_id"))
+    }
 
 
 def _satisfiability_scope_failures(analysis: _JsonObject, failures: list[PolicyFailure], path: str) -> None:

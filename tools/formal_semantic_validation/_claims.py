@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from tools.formal_semantic_validation._shape import _is_sequence
 
@@ -70,7 +70,7 @@ def _claim_status(
 
 def _claim_class_result(
     declaration: Mapping[str, object],
-    cases: object,
+    cases: Sequence[object],
     observations_by_case: Mapping[object, object],
     participant_count: int,
     *,

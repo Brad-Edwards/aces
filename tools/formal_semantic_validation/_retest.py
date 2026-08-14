@@ -52,7 +52,6 @@ def _validate_retest_snapshot(
     failures: list[PolicyFailure],
     path: str,
 ) -> None:
-    repo_root = scope.repo_root
     release = scope.release
     protocol = scope.protocol
     corpus = scope.corpus
@@ -74,38 +73,9 @@ def _validate_retest_snapshot(
     release_artifacts_by_path = {
         item.get("path"): item for item in release_artifacts if isinstance(item.get("path"), str)
     }
-    expected_release_paths: set[str] = set()
-    observations = snapshot.get("observations")
-    observation_ids, unique_observation_ids = _stable_ids(observations, "case_id")
-    if not _is_sequence(observations) or not unique_observation_ids:
-        failures.append(
-            _failure(
-                "formal-validation-observation-coverage",
-                "retest observations must have unique case ids",
-                path,
-            )
-        )
-        observations = []
-    for observation in observations:
-        expected_release_paths.update(
-            _validate_retest_observation(
-                repo_root,
-                snapshot,
-                cases_by_id,
-                (release_artifacts_by_path, commands_by_id),
-                observation,
-                failures,
-                path,
-            )
-        )
-    if observation_ids != set(cases_by_id) or len(observation_ids) != len(cases_by_id):
-        failures.append(
-            _failure(
-                "formal-validation-observation-coverage",
-                "retest snapshot must contain exactly one observation per v2 corpus case",
-                path,
-            )
-        )
+    expected_release_paths = _retest_observation_failures(
+        scope, (release_artifacts_by_path, commands_by_id), failures, path
+    )
     if (
         command_ids.issuperset(
             {
@@ -138,6 +108,49 @@ def _validate_retest_snapshot(
         )
 
     _validate_retest_participant_observations(protocol, snapshot, failures, path)
+
+
+def _retest_observation_failures(
+    scope: _RetestScope,
+    pins: tuple[Mapping[object, Mapping[str, object]], Mapping[object, object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> set[str]:
+    snapshot = scope.snapshot
+    cases_by_id = scope.cases_by_id
+    expected_release_paths: set[str] = set()
+    observations = snapshot.get("observations")
+    observation_ids, unique_observation_ids = _stable_ids(observations, "case_id")
+    if not _is_sequence(observations) or not unique_observation_ids:
+        failures.append(
+            _failure(
+                "formal-validation-observation-coverage",
+                "retest observations must have unique case ids",
+                path,
+            )
+        )
+        observations = []
+    for observation in observations:
+        expected_release_paths.update(
+            _validate_retest_observation(
+                scope.repo_root,
+                snapshot,
+                cases_by_id,
+                pins,
+                observation,
+                failures,
+                path,
+            )
+        )
+    if observation_ids != set(cases_by_id) or len(observation_ids) != len(cases_by_id):
+        failures.append(
+            _failure(
+                "formal-validation-observation-coverage",
+                "retest snapshot must contain exactly one observation per v2 corpus case",
+                path,
+            )
+        )
+    return expected_release_paths
 
 
 def _validate_retest_header(

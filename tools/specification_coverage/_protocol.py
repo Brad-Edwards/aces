@@ -148,25 +148,36 @@ def _source_entry_failures(
     sha = source.get("content_sha256")
     if not isinstance(sha, str) or not _SHA256_RE.fullmatch(sha):
         failures.append(_failure("specification-coverage-sources", "source digest is invalid", path))
+    _source_artifact_failures(repo_root, source, sha, failures, path)
+
+
+def _source_artifact_failures(
+    repo_root: Path,
+    source: dict[str, object],
+    sha: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
     artifact_path = source.get("artifact_path")
-    if artifact_path is not None:
-        resolved = safe_repo_path(repo_root, artifact_path) if isinstance(artifact_path, str) else None
-        if resolved is None or not resolved.is_file():
-            failures.append(
-                _failure(
-                    "specification-coverage-source-path",
-                    "source path is unsafe or missing",
-                    path,
-                )
+    if artifact_path is None:
+        return
+    resolved = safe_repo_path(repo_root, artifact_path) if isinstance(artifact_path, str) else None
+    if resolved is None or not resolved.is_file():
+        failures.append(
+            _failure(
+                "specification-coverage-source-path",
+                "source path is unsafe or missing",
+                path,
             )
-        elif isinstance(sha, str) and _SHA256_RE.fullmatch(sha) and _sha256(resolved) != sha:
-            failures.append(
-                _failure(
-                    "specification-coverage-source-digest",
-                    "source digest is stale",
-                    artifact_path,
-                )
+        )
+    elif isinstance(sha, str) and _SHA256_RE.fullmatch(sha) and _sha256(resolved) != sha:
+        failures.append(
+            _failure(
+                "specification-coverage-source-digest",
+                "source digest is stale",
+                artifact_path,
             )
+        )
 
 
 def _validated_sources(
@@ -250,6 +261,16 @@ def _request_entry_failures(
                 path,
             )
         )
+    _request_source_mismatch_failures(request, refs, sources, failures, path)
+
+
+def _request_source_mismatch_failures(
+    request: dict[str, object],
+    refs: object,
+    sources: list[object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
     for ref in refs if isinstance(refs, list) else []:
         source = next(
             (item for item in sources if isinstance(item, dict) and item.get("source_id") == ref),

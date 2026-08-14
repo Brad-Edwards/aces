@@ -51,11 +51,13 @@ def _nonempty_string(value: object) -> bool:
 
 
 def _string_list(value: object, *, nonempty: bool = True) -> bool:
-    return _is_sequence(value) and (not nonempty or bool(value)) and all(_nonempty_string(item) for item in value)
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return False
+    return (not nonempty or bool(value)) and all(_nonempty_string(item) for item in value)
 
 
 def _stable_ids(items: object, key: str) -> tuple[set[str], bool]:
-    if not _is_sequence(items):
+    if not isinstance(items, Sequence) or isinstance(items, (str, bytes, bytearray)):
         return set(), False
     values: list[str] = []
     for item in items:

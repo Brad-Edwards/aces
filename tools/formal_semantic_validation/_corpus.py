@@ -177,6 +177,15 @@ def _validate_corpus(
             cases_by_id[case_id] = item
         _case_reference_failures(item, claim_ids, polarities, failures, path)
         _case_fixture_failures(repo_root, item, failures, path)
+    _polarity_coverage_failures(polarities, failures, path)
+    return cases_by_id
+
+
+def _polarity_coverage_failures(
+    polarities: dict[object, set[object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
     for claim_id, values in polarities.items():
         if values != {"positive", "negative"}:
             failures.append(
@@ -186,4 +195,3 @@ def _validate_corpus(
                     path,
                 )
             )
-    return cases_by_id

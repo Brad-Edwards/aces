@@ -140,6 +140,19 @@ def _stage_entry_failures(
 ) -> None:
     stage_id = stage.get("stage_id")
     outcome = stage.get("outcome")
+    _stage_outcome_failures(context, stage, concept_id, failures, path)
+    _stage_classification_failures(stage_id, outcome, classification, concept, concept_id, failures, path)
+
+
+def _stage_outcome_failures(
+    context: _SnapshotContext,
+    stage: dict[str, object],
+    concept_id: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    stage_id = stage.get("stage_id")
+    outcome = stage.get("outcome")
     if outcome not in context.valid_outcomes:
         failures.append(
             _failure(
@@ -176,6 +189,17 @@ def _stage_entry_failures(
                     artifact_path if isinstance(artifact_path, str) else path,
                 )
             )
+
+
+def _stage_classification_failures(
+    stage_id: object,
+    outcome: object,
+    classification: object,
+    concept: dict[str, object],
+    concept_id: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
     if classification in _TYPED_CLASSIFICATIONS and outcome != "passed":
         failures.append(
             _failure(
@@ -267,7 +291,7 @@ def _occurrence_failures(
         path=path,
     )
     for occurrence_index, occurrence in enumerate(occurrences):
-        if not _exact_keys(
+        if _exact_keys(
             occurrence,
             _BACKEND_OCCURRENCE_KEYS,
             failures,
@@ -275,26 +299,36 @@ def _occurrence_failures(
             label=f"backend occurrence {occurrence_index}",
             path=path,
         ):
-            continue
-        if occurrence.get("allowed") is not True or classification == "directly-expressible":
+            _occurrence_entry_failures(context, occurrence, classification, concept_id, failures, path)
+
+
+def _occurrence_entry_failures(
+    context: _SnapshotContext,
+    occurrence: dict[str, object],
+    classification: object,
+    concept_id: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if occurrence.get("allowed") is not True or classification == "directly-expressible":
+        failures.append(
+            _failure(
+                "specification-coverage-backend-leakage",
+                f"{concept_id!r} contains unallowed backend vocabulary",
+                path,
+            )
+        )
+    occurrence_path = occurrence.get("artifact_path")
+    if isinstance(occurrence_path, str) and not occurrence_path.startswith("source:"):
+        resolved = safe_repo_path(context.repo_root, occurrence_path)
+        if resolved is None:
             failures.append(
                 _failure(
-                    "specification-coverage-backend-leakage",
-                    f"{concept_id!r} contains unallowed backend vocabulary",
+                    "specification-coverage-artifact-path",
+                    "backend occurrence path is unsafe",
                     path,
                 )
             )
-        occurrence_path = occurrence.get("artifact_path")
-        if isinstance(occurrence_path, str) and not occurrence_path.startswith("source:"):
-            resolved = safe_repo_path(context.repo_root, occurrence_path)
-            if resolved is None:
-                failures.append(
-                    _failure(
-                        "specification-coverage-artifact-path",
-                        "backend occurrence path is unsafe",
-                        path,
-                    )
-                )
 
 
 def _validate_snapshot(

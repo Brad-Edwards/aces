@@ -84,15 +84,7 @@ def _unquote(cell: str) -> str:
     return match.group(1) if match else cell.strip()
 
 
-def _table(text: str, heading: str, columns: int) -> list[tuple[int, list[str]]]:
-    size = len(text.encode("utf-8"))
-    if size > _MAX_CATALOG_BYTES:
-        raise CatalogParseError(f"catalog exceeds {_MAX_CATALOG_BYTES}-byte size limit")
-    lines = text.splitlines()
-    try:
-        start = next(index for index, line in enumerate(lines) if line.strip() == heading) + 1
-    except StopIteration as exc:
-        raise CatalogParseError(f"missing catalog heading: {heading}") from exc
+def _table_lines(lines: list[str], start: int) -> list[tuple[int, list[str]]]:
     table: list[tuple[int, list[str]]] = []
     started = False
     for index, line in enumerate(lines[start:], start=start):
@@ -105,6 +97,14 @@ def _table(text: str, heading: str, columns: int) -> list[tuple[int, list[str]]]
                 raise CatalogParseError(f"catalog exceeds {_MAX_CATALOG_ROWS}-row limit")
         elif started:
             break
+    return table
+
+
+def _validated_table_rows(
+    table: list[tuple[int, list[str]]],
+    heading: str,
+    columns: int,
+) -> list[tuple[int, list[str]]]:
     if len(table) < 3:
         raise CatalogParseError(f"catalog under {heading!r} requires a header, separator, and data rows")
     if len(table[0][1]) != columns:
@@ -116,6 +116,18 @@ def _table(text: str, heading: str, columns: int) -> list[tuple[int, list[str]]]
         if len(cells) != columns:
             raise CatalogParseError(f"catalog row at line {line_no} has {len(cells)} columns; expected {columns}")
     return table[2:]
+
+
+def _table(text: str, heading: str, columns: int) -> list[tuple[int, list[str]]]:
+    size = len(text.encode("utf-8"))
+    if size > _MAX_CATALOG_BYTES:
+        raise CatalogParseError(f"catalog exceeds {_MAX_CATALOG_BYTES}-byte size limit")
+    lines = text.splitlines()
+    try:
+        start = next(index for index, line in enumerate(lines) if line.strip() == heading) + 1
+    except StopIteration as exc:
+        raise CatalogParseError(f"missing catalog heading: {heading}") from exc
+    return _validated_table_rows(_table_lines(lines, start), heading, columns)
 
 
 def _unique(rows: list[Any], key_name: str, label: str) -> None:
