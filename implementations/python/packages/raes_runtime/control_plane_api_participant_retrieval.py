@@ -13,6 +13,7 @@ from raes_contracts.contracts import (
 )
 
 from .control_plane import RuntimeControlPlane
+from .control_plane_api._offload import _control_plane_calls
 from .control_plane_security import ControlPlaneIdentity, ParticipantAudienceSubjectBinding
 
 _NOT_FOUND_RESPONSES = {404: {"description": "Not found"}}
@@ -45,17 +46,20 @@ def register_participant_retrieval_routes(
         identity: _ReadIdentity,
     ) -> ParticipantStatusViewModel:
         audience_binding = _require_governed_audience_candidate(control_plane, identity, participant_address)
-        view = _governed_view(
+        calls = _control_plane_calls(request)
+        view = await calls.mutate(
+            _governed_view,
             lambda: control_plane.get_participant_status_view(
                 participant_address,
                 identity=identity,
                 audience_binding=audience_binding,
                 idempotency_key=request.headers.get("idempotency-key", ""),
-            )
+            ),
         )
         if view is None:
             raise HTTPException(status_code=404, detail=f"Unknown participant: {participant_address}")
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="get_participant_status_view",
             identity=identity.identity,
             allowed=True,
@@ -74,21 +78,24 @@ def register_participant_retrieval_routes(
         identity: _ReadIdentity,
     ) -> ParticipantHistoryViewModel:
         audience_binding = _require_governed_audience_candidate(control_plane, identity, participant_address)
-        view = _governed_view(
+        calls = _control_plane_calls(request)
+        view = await calls.mutate(
+            _governed_view,
             lambda: control_plane.get_participant_history_view(
                 participant_address,
                 episode_id,
                 identity=identity,
                 audience_binding=audience_binding,
                 idempotency_key=request.headers.get("idempotency-key", ""),
-            )
+            ),
         )
         if view is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown participant episode: {participant_address}/{episode_id}",
             )
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="get_participant_history_view",
             identity=identity.identity,
             allowed=True,
@@ -110,7 +117,9 @@ def register_participant_retrieval_routes(
         payload_ref: str | None = None,
     ) -> ParticipantContextViewModel:
         audience_binding = _require_governed_audience_candidate(control_plane, identity, participant_address)
-        view = _governed_view(
+        calls = _control_plane_calls(request)
+        view = await calls.mutate(
+            _governed_view,
             lambda: control_plane.get_participant_context_view(
                 participant_address,
                 view_ref=view_ref,
@@ -120,11 +129,12 @@ def register_participant_retrieval_routes(
                 identity=identity,
                 audience_binding=audience_binding,
                 idempotency_key=request.headers.get("idempotency-key", ""),
-            )
+            ),
         )
         if view is None:
             raise HTTPException(status_code=404, detail=f"Unknown participant: {participant_address}")
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="get_participant_context_view",
             identity=identity.identity,
             allowed=True,
