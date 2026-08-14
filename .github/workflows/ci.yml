@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     tags: ["v*"]
   pull_request:
     branches: [main, dev]
@@ -38,10 +38,13 @@ jobs:
           key: isabelle-linux-x86-64-2025-2-a20a507bc7c1270d
       - name: Install proof sandbox
         run: |
-          if ! command -v bwrap >/dev/null 2>&1; then
+          if ! command -v bwrap >/dev/null 2>&1 || ! command -v fc-list >/dev/null 2>&1 || [ -z "$(fc-list --format='%{file}\n' | head -n 1)" ]; then
             sudo apt-get update
-            sudo apt-get install --no-install-recommends -y bubblewrap
+            sudo apt-get install --no-install-recommends -y bubblewrap fontconfig fonts-dejavu-core
           fi
+          test -d /etc/fonts
+          test -d /usr/share/fonts
+          test -n "$(fc-list --format='%{file}\n' | head -n 1)"
       - name: Acquire pinned Isabelle distribution
         run: uv run --project implementations/python --frozen python -m tools.isabelle_tool acquire
       - name: Resolve policy base revision
@@ -77,7 +80,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-report
-          path: implementations/python/coverage.xml
+          path: |
+            implementations/python/coverage.xml
+            implementations/python/coverage.json
 
   fuzz:
     runs-on: ubuntu-latest
@@ -90,6 +95,27 @@ jobs:
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v8
       - name: Run fuzz session
         run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s fuzz
+
+  interpreters:
+    name: CPython ${{ matrix.python-version }} compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+      RAES_EXPECTED_PYTHON: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v8
+      - name: Test exact interpreter and clean distribution
+        run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s python-compatibility
 
   # Opt-in, non-blocking, runtime-gated container integration tests (RUN-314).
   # Kept out of the hermetic `verify` graph; the `docker` marker tests self-skip

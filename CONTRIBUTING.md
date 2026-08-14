@@ -19,7 +19,7 @@ documentation more precise and easier to validate.
 
 Prerequisites:
 
-- Python 3.11 or newer
+- standard CPython 3.11, 3.12, 3.13, or 3.14
 - [uv](https://github.com/astral-sh/uv)
 - [nox](https://nox.thea.codes/) or `uvx nox`
 
@@ -57,6 +57,26 @@ The full repository gate is:
 ```shell
 uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s verify
 ```
+
+That gate includes a `participant-opacity-proof` lane, which replays the pinned
+Isabelle proof offline. The lane runs on Linux x86_64 only. It needs
+`bubblewrap` to enforce the offline replay, and a fontconfig setup with at least
+one installed font, because Isabelle starts a JVM that will not run without one:
+
+```shell
+sudo apt-get install bubblewrap fontconfig fonts-dejavu-core
+```
+
+The proof tool checks this fontconfig runtime before entering the sandbox and
+reports a missing prerequisite separately from a kernel rejection. Run the
+gate on Linux, or rely on continuous integration, when your workstation is
+another platform.
+
+Some Linux security policies also deny unprivileged user or network namespaces.
+The proof tool reports that condition as unavailable bubblewrap isolation and
+does not retry without the network sandbox. Use an administrator-approved host
+policy for bubblewrap or rely on continuous integration; do not disable the
+offline boundary to make the lane pass.
 
 Run the change-aware local gate while iterating:
 
