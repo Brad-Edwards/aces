@@ -246,9 +246,12 @@ that makes the semantic behavior clear and testable.
 
 ## Static Analysis Alignment
 
-The Python implementation targets Python 3.11+ and uses Ruff with pyupgrade as
-the local style contract. SonarCloud is advisory but must not contradict that
-contract. Rules that require Python 2 compatibility idioms, Python 3.12-only
+The Python implementation supports standard CPython 3.11 through 3.14 and uses
+Ruff with pyupgrade as the local style contract. `Requires-Python` is bounded
+below 3.15; the blocking CI matrix and classifiers define the tested standard
+interpreter set. A scheduled/manual 3.14t lane is preview-only and does not
+extend the production support claim. SonarCloud is advisory but must not
+contradict that contract. Rules that require Python 2 compatibility idioms, Python 3.12-only
 generic syntax, or mechanical docstrings on every private helper are disabled in
 `sonar-project.properties` rather than encoded as source churn.
 
