@@ -67,11 +67,14 @@ adrs:
         summary: "Superseded §6's no-SDL-episode-syntax non-goal for the joint episode+budget design (SEM-222/DSL-120/ACT-623, #122): DSL-120/ACT-623 add an authored episode-structure surface (init, turn structure, terminal/truncation conditions, reset policy) as intent compiling to the existing ParticipantEpisode* contracts; runtime identity, state/reason/action separation, and the schema-first boundary are unchanged."
   - id: ADR-014
     path: docs/decisions/adrs/adr-014-nox-as-canonical-verification-graph.md
-    pin: 52b3bf9dfbf128658b0edc88e164114529e3e225db0360ea99e005ebc97f86bf
+    pin: bd8a22d378a04d61eb57ea855b99848035e9aba563339dc22a078cbd99c40b63
     amendments:
       - date: 2026-07-31
         ref: "#963"
         summary: Parallelized deterministic verification and contract batches, scoped pre-commit without duplicating full regression, and moved external links to dedicated docs CI.
+      - date: 2026-08-14
+        ref: "#1134"
+        summary: Added a required cross-interpreter CI matrix while retaining verify as the reproducible single-interpreter local gate.
   - id: ADR-015
     path: docs/decisions/adrs/adr-015-sdl-processor-layering-and-source-file-size-cap.md
     pin: bc5038164e535c4d506962e27cee07e720f5c8a77cb17d018dedb3dba927936f
