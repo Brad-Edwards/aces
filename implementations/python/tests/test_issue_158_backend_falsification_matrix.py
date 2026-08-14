@@ -11,11 +11,13 @@ hand-rolled double. `test_honest_baseline_is_accepted` is the control: without a
 perturbation the same construction is admitted, which is what makes the other
 results meaningful.
 
-Result at the time of writing: of the fabrications below, only "realizes nothing"
-is refused. The rest are accepted and their fabrications survive into the
-authoritative snapshot, so they are recorded here as strict xfails. Strict means
-a fix turns them into an unexpected pass and fails this suite, forcing the marker
-to be removed rather than letting the gap close silently or reopen unnoticed.
+Every fabrication below is refused at the boundary: the runtime returns the
+untouched baseline snapshot with ``runtime.backend-contract-invalid``, so no lie
+survives into the authoritative snapshot. "Realizes nothing" is refused by the
+SEM-218 realization gate; the other four are refused by the plan-conformance
+gate (``raes_runtime.backend_plan_conformance``), which holds the returned
+snapshot to the submitted plan's addresses, resource types, domains, and
+disclosed changes.
 
 These probes bound the runtime backend boundary (`RuntimeManager.apply`) only.
 `run_target_conformance` is not used as the discriminator because with default
@@ -27,7 +29,6 @@ from __future__ import annotations
 
 import dataclasses
 
-import pytest
 from raes import parse_sdl
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import ApplyResult
@@ -154,43 +155,35 @@ def test_a_backend_that_realizes_nothing_is_refused():
     assert "runtime.backend-contract-invalid" in {diagnostic.code for diagnostic in result.diagnostics}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="issue #158: an invented resource is admitted and survives into the snapshot",
-)
 def test_a_backend_cannot_invent_resources_the_scenario_never_authored():
     result = _apply_with(_InventsResource)
 
-    assert result.success is False or _SMUGGLED_ADDRESS not in result.snapshot.entries
+    assert result.success is False
+    assert "runtime.backend-contract-invalid" in {diagnostic.code for diagnostic in result.diagnostics}
+    assert _SMUGGLED_ADDRESS not in result.snapshot.entries
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="issue #158: a substituted resource type is admitted and survives into the snapshot",
-)
 def test_a_backend_cannot_misreport_what_kind_of_resource_it_realized():
     result = _apply_with(_SubstitutesResourceType)
 
+    assert result.success is False
+    assert "runtime.backend-contract-invalid" in {diagnostic.code for diagnostic in result.diagnostics}
     realized = {entry.resource_type for entry in result.snapshot.entries.values()}
-    assert result.success is False or realized == {"network", "node"}
+    assert "node" not in realized or realized == {"network", "node"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="issue #158: a snapshot mutation reported as no change is admitted",
-)
 def test_a_backend_cannot_mutate_state_while_reporting_no_changes():
     result = _apply_with(_UnderReportsChanges)
 
-    assert result.success is False or list(result.changed_addresses)
+    assert result.success is False
+    assert "runtime.backend-contract-invalid" in {diagnostic.code for diagnostic in result.diagnostics}
+    assert result.snapshot.entries == {}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="issue #158: provisioning results filed under another domain are admitted",
-)
 def test_a_backend_cannot_file_provisioning_results_under_another_domain():
     result = _apply_with(_ForgesDomain)
 
+    assert result.success is False
+    assert "runtime.backend-contract-invalid" in {diagnostic.code for diagnostic in result.diagnostics}
     domains = {getattr(entry.domain, "value", entry.domain) for entry in result.snapshot.entries.values()}
-    assert result.success is False or domains == {"provisioning"}
+    assert "evaluation" not in domains

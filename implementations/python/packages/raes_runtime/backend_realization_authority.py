@@ -70,3 +70,20 @@ def _bind_submitted_plan(
 
 
 __all__ = ["_RealizationApplyContext", "_apply_authority_diagnostics", "_bind_submitted_plan"]
+
+
+def _supplemental_realization_requirements(
+    realization: _RealizationApplyContext,
+) -> tuple[CompiledRealizationRequirement, ...]:
+    """Keep non-registry contracts while the plan owns registry concerns."""
+
+    if realization.plan is None or not realization.plan.realization_authority:
+        return realization.requirements
+    plan_identities = {
+        (entry.address, entry.field_path, entry.requirement_kind) for entry in realization.plan.realization_authority
+    }
+    return tuple(
+        requirement
+        for requirement in realization.requirements
+        if (requirement.address, requirement.field_path, requirement.requirement_kind) not in plan_identities
+    )

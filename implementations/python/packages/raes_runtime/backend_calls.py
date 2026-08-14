@@ -22,10 +22,12 @@ from .backend_account_credentials import (
     sanitize_account_credential_result,
     value_free_backend_diagnostics,
 )
+from .backend_plan_conformance import plan_conformance_diagnostics
 from .backend_realization_authority import (
     _apply_authority_diagnostics,
     _bind_submitted_plan,
     _RealizationApplyContext,
+    _supplemental_realization_requirements,
 )
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
@@ -183,6 +185,8 @@ def _post_apply_contract_result(
         baseline_snapshot,
         information_state_context_resolver=information_state_context_resolver,
     )
+    if not diagnostics and realization.plan is not None:
+        diagnostics = plan_conformance_diagnostics(result, baseline_snapshot, realization.plan)
     provenance: tuple[RealizationProvenanceEntry, ...] = ()
     if not diagnostics and realization.plan is not None:
         diagnostics, provenance = realization_authority_disclosure(
@@ -261,23 +265,6 @@ def _sanitize_backend_realization(
                 ),
             )
     return sanitized
-
-
-def _supplemental_realization_requirements(
-    realization: _RealizationApplyContext,
-) -> tuple[CompiledRealizationRequirement, ...]:
-    """Keep non-registry contracts while the plan owns registry concerns."""
-
-    if realization.plan is None or not realization.plan.realization_authority:
-        return realization.requirements
-    plan_identities = {
-        (entry.address, entry.field_path, entry.requirement_kind) for entry in realization.plan.realization_authority
-    }
-    return tuple(
-        requirement
-        for requirement in realization.requirements
-        if (requirement.address, requirement.field_path, requirement.requirement_kind) not in plan_identities
-    )
 
 
 def _with_snapshot(
