@@ -5,7 +5,6 @@ from __future__ import annotations
 from asyncio import CancelledError
 from collections.abc import Sequence
 from copy import deepcopy
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
@@ -217,6 +216,52 @@ def _bind_concurrent_policy_requests(
         return None
 
 
+def _bound_concurrent_policy_batch(
+    batch: _ConcurrentBatch,
+    requests: Sequence[ParticipantActionAdmissionRequest],
+) -> _ConcurrentBatch:
+    return _ConcurrentBatch(
+        policy=batch.policy,
+        time_model=batch.time_model,
+        participant_runtime=batch.participant_runtime,
+        current_tick=batch.current_tick,
+        cadence_ticks=batch.cadence_ticks,
+        run=batch.run,
+        contexts=batch.contexts,
+        states=batch.states,
+        requests=tuple(requests),
+    )
+
+
+def _concurrent_batch_chunk(
+    batch: _ConcurrentBatch,
+    requests: Sequence[ParticipantActionAdmissionRequest],
+    *,
+    offset: int,
+    size: int,
+) -> _ConcurrentBatch:
+    selected_contexts = tuple(batch.contexts[offset : offset + size])
+    selected_states = tuple(
+        ParticipantAutonomousExecutionStateModel.model_validate(
+            batch.run.working.participant_autonomous_execution_states[context.key]
+        )
+        for context in selected_contexts
+    )
+    return _ConcurrentBatch(
+        policy=batch.policy,
+        time_model=batch.time_model,
+        participant_runtime=batch.participant_runtime,
+        current_tick=batch.current_tick,
+        cadence_ticks=batch.cadence_ticks,
+        run=batch.run,
+        contexts=selected_contexts,
+        states=selected_states,
+        requests=tuple(requests[offset : offset + size]),
+        pre_batch=batch.run.working,
+        materialize=False,
+    )
+
+
 def _execute_capacity_bounded_batches(batch: _ConcurrentBatch) -> int:
     requests = batch.requests
     if requests is None:
@@ -245,23 +290,7 @@ def _execute_capacity_bounded_batches(batch: _ConcurrentBatch) -> int:
         )
         if batch_size < 2:
             break
-        selected_contexts = tuple(batch.contexts[offset : offset + batch_size])
-        selected_states = tuple(
-            ParticipantAutonomousExecutionStateModel.model_validate(
-                batch.run.working.participant_autonomous_execution_states[context.key]
-            )
-            for context in selected_contexts
-        )
-        _execute_concurrent_batch(
-            replace(
-                batch,
-                contexts=selected_contexts,
-                states=selected_states,
-                requests=tuple(requests[offset : offset + batch_size]),
-                pre_batch=batch.run.working,
-                materialize=False,
-            )
-        )
+        _execute_concurrent_batch(_concurrent_batch_chunk(batch, requests, offset=offset, size=batch_size))
         offset += batch_size
     return offset
 
@@ -272,7 +301,7 @@ def _execute_concurrent_due_contexts(batch: _ConcurrentBatch) -> None:
     requests = _bind_concurrent_policy_requests(batch.policy, batch.run, batch.contexts, batch.states)
     if requests is None:
         return
-    bound_batch = replace(batch, requests=tuple(requests))
+    bound_batch = _bound_concurrent_policy_batch(batch, requests)
     offset = _execute_capacity_bounded_batches(bound_batch)
 
     if batch.run.failure is None:
