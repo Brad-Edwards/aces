@@ -130,17 +130,11 @@ class SessionReporter:
             func()
         except Exception:
             duration_s = perf_counter() - started
-            self.results.append(
-                StageResult(
-                    name=name, status="FAIL", detail=detail, duration_s=duration_s
-                )
-            )
+            self.results.append(StageResult(name=name, status="FAIL", detail=detail, duration_s=duration_s))
             self._log("FAIL", name, detail, duration_s)
             raise
         duration_s = perf_counter() - started
-        self.results.append(
-            StageResult(name=name, status="PASS", detail=detail, duration_s=duration_s)
-        )
+        self.results.append(StageResult(name=name, status="PASS", detail=detail, duration_s=duration_s))
         self._log("PASS", name, detail, duration_s)
 
     def skip(self, name: str, reason: str) -> None:
@@ -153,17 +147,11 @@ class SessionReporter:
             self.session.log(f"[{self.session_name}]   SKIP no stages executed")
             return
         for result in self.results:
-            duration = (
-                f" ({result.duration_s:.2f}s)" if result.duration_s is not None else ""
-            )
+            duration = f" ({result.duration_s:.2f}s)" if result.duration_s is not None else ""
             detail = f" :: {result.detail}" if result.detail else ""
-            self.session.log(
-                f"[{self.session_name}]   {result.status:<4} {result.name}{duration}{detail}"
-            )
+            self.session.log(f"[{self.session_name}]   {result.status:<4} {result.name}{duration}{detail}")
 
-    def _log(
-        self, status: str, name: str, detail: str, duration_s: float | None = None
-    ) -> None:
+    def _log(self, status: str, name: str, detail: str, duration_s: float | None = None) -> None:
         duration = f" ({duration_s:.2f}s)" if duration_s is not None else ""
         suffix = f" :: {detail}" if detail else ""
         self.session.log(f"[{self.session_name}] {status}: {name}{duration}{suffix}")
@@ -191,16 +179,10 @@ def _git_lines(*args: str) -> list[str]:
 
 def _changed_paths(*, staged: bool = False, base_rev: str | None = None) -> list[str]:
     if staged:
-        return _normalize_paths(
-            _git_lines("diff", "--name-only", "--diff-filter=d", "--cached")
-        )
+        return _normalize_paths(_git_lines("diff", "--name-only", "--diff-filter=d", "--cached"))
     if base_rev:
-        return _normalize_paths(
-            _git_lines("diff", "--name-only", "--diff-filter=d", base_rev, "HEAD")
-        )
-    return _normalize_paths(
-        _git_lines("diff", "--name-only", "--diff-filter=d", "HEAD")
-    )
+        return _normalize_paths(_git_lines("diff", "--name-only", "--diff-filter=d", base_rev, "HEAD"))
+    return _normalize_paths(_git_lines("diff", "--name-only", "--diff-filter=d", "HEAD"))
 
 
 def _sync_project(session: nox.Session) -> None:
@@ -278,9 +260,7 @@ def _run_pytest(
 ) -> None:
     _sync_project(session)
     normalized_args = [
-        str((REPO_ROOT / arg).relative_to(PROJECT_ROOT))
-        if arg.startswith("implementations/python/")
-        else arg
+        str((REPO_ROOT / arg).relative_to(PROJECT_ROOT)) if arg.startswith("implementations/python/") else arg
         for arg in args
     ]
     command = ["uv", "run", "--frozen", "python", "-m", "pytest"]
@@ -301,11 +281,7 @@ def _run_pytest(
 
 def _required_option_value(values: Sequence[str], index: int, option: str) -> str:
     value_index = index + 1
-    if (
-        value_index >= len(values)
-        or not values[value_index]
-        or values[value_index].startswith("--")
-    ):
+    if value_index >= len(values) or not values[value_index] or values[value_index].startswith("--"):
         raise ValueError(f"{option} requires a value")
     return values[value_index]
 
@@ -346,9 +322,7 @@ def _requirement_aware_policy_args(*args: str) -> list[str]:
     return [*args, "--skip-requirement"]
 
 
-def _parse_hygiene_posargs(
-    posargs: Sequence[str], *, default_all_files: bool
-) -> HygieneSelection:
+def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -> HygieneSelection:
     staged = False
     base_rev: str | None = None
     all_files = default_all_files
@@ -384,9 +358,7 @@ def _parse_hygiene_posargs(
         all_files = False
         index += 1
     if explicit_paths:
-        return HygieneSelection(
-            paths=_normalize_paths(explicit_paths), source="explicit path selection"
-        )
+        return HygieneSelection(paths=_normalize_paths(explicit_paths), source="explicit path selection")
     if staged:
         return HygieneSelection(
             paths=_changed_paths(staged=True),
@@ -398,16 +370,12 @@ def _parse_hygiene_posargs(
             source=f"changes since {base_rev}",
         )
     if all_files:
-        return HygieneSelection(
-            paths=_tracked_repo_paths(), source="tracked repository files"
-        )
+        return HygieneSelection(paths=_tracked_repo_paths(), source="tracked repository files")
     return HygieneSelection(paths=_changed_paths(), source="working tree changes")
 
 
 def _tracked_repo_paths() -> list[str]:
-    return _normalize_paths(
-        _git_lines("ls-files", "--cached", "--others", "--exclude-standard")
-    )
+    return _normalize_paths(_git_lines("ls-files", "--cached", "--others", "--exclude-standard"))
 
 
 def _normalize_paths(paths: Iterable[str]) -> list[str]:
@@ -455,9 +423,7 @@ def _paths_trigger(paths: Iterable[str], prefixes: tuple[str, ...]) -> bool:
     return any(path.startswith(prefixes) or path in prefixes for path in paths)
 
 
-def _run_pre_commit_hook(
-    _session: nox.Session, command: str, *args: str, paths: list[str]
-) -> None:
+def _run_pre_commit_hook(_session: nox.Session, command: str, *args: str, paths: list[str]) -> None:
     for batch in _chunked(paths):
         _run_external_subprocess(
             "uv",
@@ -515,45 +481,31 @@ def _run_hygiene(
     text_paths = _text_paths(paths)
     yaml_paths = _suffix_paths(paths, (".yaml", ".yml"))
     json_paths = _suffix_paths(paths, (".json",))
-    private_key_paths = [
-        path for path in paths if not path.startswith(PRIVATE_KEY_EXCLUDE_PREFIXES)
-    ]
+    private_key_paths = [path for path in paths if not path.startswith(PRIVATE_KEY_EXCLUDE_PREFIXES)]
 
     reporter.run(
         "hygiene / trailing whitespace",
-        lambda: _run_pre_commit_hook(
-            session, "trailing-whitespace-fixer", paths=text_paths
-        ),
+        lambda: _run_pre_commit_hook(session, "trailing-whitespace-fixer", paths=text_paths),
         detail=f"{len(text_paths)} text files from {selection.source}",
-    ) if text_paths else reporter.skip(
-        "hygiene / trailing whitespace", "no text files selected"
-    )
+    ) if text_paths else reporter.skip("hygiene / trailing whitespace", "no text files selected")
 
     reporter.run(
         "hygiene / eof newline",
         lambda: _run_pre_commit_hook(session, "end-of-file-fixer", paths=text_paths),
         detail=f"{len(text_paths)} text files from {selection.source}",
-    ) if text_paths else reporter.skip(
-        "hygiene / eof newline", "no text files selected"
-    )
+    ) if text_paths else reporter.skip("hygiene / eof newline", "no text files selected")
 
     reporter.run(
         "hygiene / yaml syntax",
-        lambda: _run_pre_commit_hook(
-            session, "check-yaml", "--unsafe", paths=yaml_paths
-        ),
+        lambda: _run_pre_commit_hook(session, "check-yaml", "--unsafe", paths=yaml_paths),
         detail=f"{len(yaml_paths)} YAML files from {selection.source}",
-    ) if yaml_paths else reporter.skip(
-        "hygiene / yaml syntax", "no YAML files selected"
-    )
+    ) if yaml_paths else reporter.skip("hygiene / yaml syntax", "no YAML files selected")
 
     reporter.run(
         "hygiene / json syntax",
         lambda: _run_pre_commit_hook(session, "check-json", paths=json_paths),
         detail=f"{len(json_paths)} JSON files from {selection.source}",
-    ) if json_paths else reporter.skip(
-        "hygiene / json syntax", "no JSON files selected"
-    )
+    ) if json_paths else reporter.skip("hygiene / json syntax", "no JSON files selected")
 
     reporter.run(
         "hygiene / added large files",
@@ -571,19 +523,13 @@ def _run_hygiene(
         "hygiene / merge conflict markers",
         lambda: _run_pre_commit_hook(session, "check-merge-conflict", paths=text_paths),
         detail=f"{len(text_paths)} text files from {selection.source}",
-    ) if text_paths else reporter.skip(
-        "hygiene / merge conflict markers", "no text files selected"
-    )
+    ) if text_paths else reporter.skip("hygiene / merge conflict markers", "no text files selected")
 
     reporter.run(
         "hygiene / private key detection",
-        lambda: _run_pre_commit_hook(
-            session, "detect-private-key", paths=private_key_paths
-        ),
+        lambda: _run_pre_commit_hook(session, "detect-private-key", paths=private_key_paths),
         detail=f"{len(private_key_paths)} files from {selection.source}",
-    ) if private_key_paths else reporter.skip(
-        "hygiene / private key detection", "no eligible files selected"
-    )
+    ) if private_key_paths else reporter.skip("hygiene / private key detection", "no eligible files selected")
 
     reporter.run(
         "hygiene / gitleaks",
@@ -608,9 +554,7 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "from tools.policy.conftest_tool import verify_conftest_policy; verify_conftest_policy()",
         ),
     )
-    repo_args, requirement_args, skip_requirement = _split_policy_session_args(
-        list(args)
-    )
+    repo_args, requirement_args, skip_requirement = _split_policy_session_args(list(args))
     arg_list = list(args)
     adr_pin_args: list[str] = []
     if "--base-rev" in arg_list:
@@ -622,15 +566,11 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         lambda: _run_project_python(session, "tools/check_repo_policy.py", *repo_args),
     )
     if skip_requirement:
-        reporter.skip(
-            "policy / requirement governance", "skipped by --skip-requirement"
-        )
+        reporter.skip("policy / requirement governance", "skipped by --skip-requirement")
     else:
         reporter.run(
             "policy / requirement governance",
-            lambda: _run_project_python(
-                session, "tools/check_requirement_governance.py", *requirement_args
-            ),
+            lambda: _run_project_python(session, "tools/check_requirement_governance.py", *requirement_args),
         )
     # check_semantic_coverage.py validates live files on disk, not a staged
     # snapshot, so it is meaningless (and misleading) under --staged. It runs in
@@ -695,21 +635,15 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         )
         reporter.run(
             "policy / deprecation lifecycle records",
-            lambda: _run_project_python(
-                session, "tools/check_deprecation_lifecycle.py"
-            ),
+            lambda: _run_project_python(session, "tools/check_deprecation_lifecycle.py"),
         )
         reporter.run(
             "policy / concept authority governance",
-            lambda: _run_project_python(
-                session, "tools/check_concept_authority_governance.py"
-            ),
+            lambda: _run_project_python(session, "tools/check_concept_authority_governance.py"),
         )
         reporter.run(
             "policy / behavioral relation claims",
-            lambda: _run_project_python(
-                session, "tools/check_behavioral_relation_claims.py"
-            ),
+            lambda: _run_project_python(session, "tools/check_behavioral_relation_claims.py"),
         )
         reporter.run(
             "policy / agent guidance profile",
@@ -729,9 +663,7 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         )
         reporter.run(
             "policy / ADR acceptance-content pin",
-            lambda: _run_project_python(
-                session, "tools/check_adr_immutability.py", *adr_pin_args
-            ),
+            lambda: _run_project_python(session, "tools/check_adr_immutability.py", *adr_pin_args),
         )
 
 
@@ -764,9 +696,7 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
         index += 1
     reporter.run(
         "contracts / schema publication manifest",
-        lambda: _run_project_python(
-            session, "tools/check_schema_publication.py", *schema_publication_args
-        ),
+        lambda: _run_project_python(session, "tools/check_schema_publication.py", *schema_publication_args),
     )
     reporter.run(
         "contracts / generated schema drift",
@@ -782,9 +712,7 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     )
     reporter.run(
         "contracts / scientific-scenario completeness",
-        lambda: _run_project_python(
-            session, "tools/check_scientific_scenario_completeness.py"
-        ),
+        lambda: _run_project_python(session, "tools/check_scientific_scenario_completeness.py"),
     )
     reporter.run(
         "contracts / reproducible related-work comparison",
@@ -800,15 +728,11 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     )
     reporter.run(
         "contracts / formal semantic-validation evidence",
-        lambda: _run_project_python(
-            session, "tools/check_formal_semantic_validation.py"
-        ),
+        lambda: _run_project_python(session, "tools/check_formal_semantic_validation.py"),
     )
     reporter.run(
         "contracts / json artifact validation",
-        lambda: _run_project_python(
-            session, "tools/check_json_artifacts.py", *json_artifact_args
-        ),
+        lambda: _run_project_python(session, "tools/check_json_artifacts.py", *json_artifact_args),
     )
     reporter.run(
         "contracts / ATT&CK tactic vocabulary conformance",
@@ -820,26 +744,18 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     )
     reporter.run(
         "contracts / NIST CSF defensive vocabulary conformance",
-        lambda: _run_project_python(
-            session, "tools/check_nist_csf_defensive_vocabulary.py"
-        ),
+        lambda: _run_project_python(session, "tools/check_nist_csf_defensive_vocabulary.py"),
     )
     reporter.run(
         "contracts / autonomous behavior vocabulary conformance",
-        lambda: _run_project_python(
-            session, "tools/check_autonomous_behavior_vocabularies.py"
-        ),
+        lambda: _run_project_python(session, "tools/check_autonomous_behavior_vocabularies.py"),
     )
 
 
-def _run_participant_opacity_proof(
-    session: nox.Session, reporter: SessionReporter
-) -> None:
+def _run_participant_opacity_proof(session: nox.Session, reporter: SessionReporter) -> None:
     reporter.run(
         "formal proof / participant opacity",
-        lambda: _run_project_python(
-            session, "tools/check_participant_opacity_proof.py"
-        ),
+        lambda: _run_project_python(session, "tools/check_participant_opacity_proof.py"),
         detail="Isabelle2025-2 :: offline kernel replay",
     )
 
@@ -863,9 +779,7 @@ def _run_lint(session: nox.Session, reporter: SessionReporter) -> None:
     )
 
 
-def _run_changed_lint(
-    session: nox.Session, reporter: SessionReporter, paths: list[str]
-) -> None:
+def _run_changed_lint(session: nox.Session, reporter: SessionReporter, paths: list[str]) -> None:
     prefix = "implementations/python/"
     project_paths = []
     for path in paths:
@@ -874,9 +788,7 @@ def _run_changed_lint(
     if project_paths:
         reporter.run(
             "lint / ruff format (changed project files)",
-            lambda: _run_ruff(
-                session, "format", "--check", *project_paths, project_relative=True
-            ),
+            lambda: _run_ruff(session, "format", "--check", *project_paths, project_relative=True),
             detail=f"{len(project_paths)} files",
         )
         reporter.run(
@@ -895,9 +807,7 @@ def _run_changed_lint(
         )
 
     tooling_paths = [
-        path
-        for path in paths
-        if (path.startswith("tools/") or path == "noxfile.py") and path.endswith(".py")
+        path for path in paths if (path.startswith("tools/") or path == "noxfile.py") and path.endswith(".py")
     ]
     if tooling_paths:
         reporter.run(
@@ -931,9 +841,7 @@ def _run_tests(
 ) -> None:
     args = list(posargs) if posargs else ["-q"]
     parallel = not posargs
-    execution = (
-        "xdist auto, max 8, worksteal" if parallel else "explicit selection, serial"
-    )
+    execution = "xdist auto, max 8, worksteal" if parallel else "explicit selection, serial"
     reporter.run(
         "tests / pytest",
         lambda: _run_pytest(
@@ -951,9 +859,7 @@ def _run_python_compatibility(session: nox.Session, reporter: SessionReporter) -
     expected = os.environ.get(EXPECTED_PYTHON_ENV, "")
     selector = os.environ.get("UV_PYTHON", "")
     if expected not in {"3.11", "3.12", "3.13", "3.14"}:
-        raise RuntimeError(
-            f"{EXPECTED_PYTHON_ENV} must select a supported feature release"
-        )
+        raise RuntimeError(f"{EXPECTED_PYTHON_ENV} must select a supported feature release")
     if not selector:
         raise RuntimeError("UV_PYTHON must select the interpreter under test")
     expect_free_threaded = os.environ.get(EXPECT_FREE_THREADED_ENV) == "1"
@@ -1005,9 +911,7 @@ print(sys.version)
         detail="xdist auto, max 8, worksteal",
     )
 
-    with tempfile.TemporaryDirectory(
-        prefix="raes-python-compatibility-"
-    ) as temporary_dir:
+    with tempfile.TemporaryDirectory(prefix="raes-python-compatibility-") as temporary_dir:
         root = Path(temporary_dir)
         dist_dir = root / "dist"
         environment_dir = root / "installed"
@@ -1028,9 +932,7 @@ print(sys.version)
         wheels = sorted(dist_dir.glob("raes-*.whl"))
         source_distributions = sorted(dist_dir.glob("raes-*.tar.gz"))
         if len(wheels) != 1 or len(source_distributions) != 1:
-            raise RuntimeError(
-                "compatibility build must produce exactly one wheel and one source distribution"
-            )
+            raise RuntimeError("compatibility build must produce exactly one wheel and one source distribution")
 
         reporter.run(
             "python compatibility / create clean environment",
@@ -1141,9 +1043,7 @@ def _enforce_line_coverage(report_path: Path) -> float:
         covered_lines = totals["covered_lines"]
         statements = totals["num_statements"]
     except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
-        raise RuntimeError(
-            f"could not read line coverage totals from {report_path}"
-        ) from exc
+        raise RuntimeError(f"could not read line coverage totals from {report_path}") from exc
     if (
         not isinstance(covered_lines, int)
         or isinstance(covered_lines, bool)
@@ -1156,15 +1056,11 @@ def _enforce_line_coverage(report_path: Path) -> float:
         raise RuntimeError(f"invalid line coverage totals in {report_path}")
     percent = 100.0 if statements == 0 else 100.0 * covered_lines / statements
     if percent + 1e-12 < MINIMUM_LINE_COVERAGE_PERCENT:
-        raise RuntimeError(
-            f"line coverage {percent:.3f}% is below required {MINIMUM_LINE_COVERAGE_PERCENT:.3f}%"
-        )
+        raise RuntimeError(f"line coverage {percent:.3f}% is below required {MINIMUM_LINE_COVERAGE_PERCENT:.3f}%")
     return percent
 
 
-def _write_and_check_coverage(
-    session: nox.Session, coverage_env: dict[str, str]
-) -> None:
+def _write_and_check_coverage(session: nox.Session, coverage_env: dict[str, str]) -> None:
     _run(
         session,
         "uv",
@@ -1218,9 +1114,7 @@ def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path) -> Non
         _write_and_check_coverage(session, coverage_env)
 
 
-def _run_docker_integration_tests(
-    session: nox.Session, reporter: SessionReporter
-) -> None:
+def _run_docker_integration_tests(session: nox.Session, reporter: SessionReporter) -> None:
     reporter.run(
         "tests / pytest docker integration",
         lambda: _run_pytest(session, "-m", "docker", "-v"),
@@ -1231,17 +1125,13 @@ def _run_osv_scan(_session: nox.Session, reporter: SessionReporter) -> None:
     def _scan() -> None:
         lockfile = OSV_LOCKFILE_PATH
         if not lockfile.exists():
-            raise RuntimeError(
-                f"osv-scan: tracked lockfile not found: {lockfile.relative_to(REPO_ROOT)}"
-            )
+            raise RuntimeError(f"osv-scan: tracked lockfile not found: {lockfile.relative_to(REPO_ROOT)}")
         binary = ensure_osv_scanner(REPO_ROOT)
         exit_code = run_osv_scanner(lockfile, OSV_REPORT_PATH, binary=binary)
         report_rel = OSV_REPORT_PATH.relative_to(REPO_ROOT)
         outcome = classify_osv_exit_code(exit_code)
         if outcome is OSVScanOutcome.FINDINGS:
-            raise RuntimeError(
-                f"osv-scanner reported vulnerabilities (exit code {exit_code}); see {report_rel}"
-            )
+            raise RuntimeError(f"osv-scanner reported vulnerabilities (exit code {exit_code}); see {report_rel}")
         if outcome is OSVScanOutcome.SCANNER_ERROR:
             raise RuntimeError(
                 f"osv-scanner failed with scanner/setup error exit code {exit_code}; report at {report_rel}"
@@ -1525,9 +1415,7 @@ def osv_scan(session: nox.Session) -> None:
 @nox.session(name="hook-pre-commit")
 def hook_pre_commit(session: nox.Session) -> None:
     reporter = SessionReporter(session, "hook-pre-commit")
-    changed = [
-        Path(arg).as_posix() for arg in session.posargs if not arg.startswith("-")
-    ]
+    changed = [Path(arg).as_posix() for arg in session.posargs if not arg.startswith("-")]
     changed_tests = select_changed_python_tests(changed)
     try:
         _run_hygiene(session, reporter, posargs=changed, default_all_files=False)
@@ -1536,12 +1424,8 @@ def hook_pre_commit(session: nox.Session) -> None:
         if _paths_trigger(changed, CONTRACT_TRIGGER_PREFIXES):
             _run_contracts(session, reporter)
         else:
-            reporter.skip(
-                "contracts / generated schema drift", "no contract-bearing changes"
-            )
-            reporter.skip(
-                "contracts / json artifact validation", "no contract-bearing changes"
-            )
+            reporter.skip("contracts / generated schema drift", "no contract-bearing changes")
+            reporter.skip("contracts / json artifact validation", "no contract-bearing changes")
         if changed_tests:
             reporter.run(
                 "tests / directly changed pytest modules",
@@ -1595,15 +1479,11 @@ def _run_changed_verification(
         base_rev = _changed_base_rev(posargs)
         changes = collect_git_changes(REPO_ROOT, base_rev)
         plan = plan_for_changes(changes)
-        session.log(
-            f"change-aware verification against {base_rev}: {plan.reason}; {len(changes)} change records"
-        )
+        session.log(f"change-aware verification against {base_rev}: {plan.reason}; {len(changes)} change records")
     except (RuntimeError, ValueError) as exc:
         base_rev = None
         plan = plan_for_changes([])
-        session.log(
-            f"change classification failed closed to the full local gate: {exc}"
-        )
+        session.log(f"change classification failed closed to the full local gate: {exc}")
 
     base_policy_args = ["--base-rev", base_rev] if base_rev is not None else []
     policy_args = _requirement_aware_policy_args(*base_policy_args)
@@ -1643,9 +1523,7 @@ def verify_changed(session: nox.Session) -> None:
 def _required_coverage_file() -> Path:
     value = os.environ.get(VERIFY_COVERAGE_FILE_ENV)
     if not value:
-        raise RuntimeError(
-            f"{VERIFY_COVERAGE_FILE_ENV} is required for an orchestrated coverage lane"
-        )
+        raise RuntimeError(f"{VERIFY_COVERAGE_FILE_ENV} is required for an orchestrated coverage lane")
     return Path(value)
 
 
@@ -1722,9 +1600,7 @@ def _verification_lanes(
             env={
                 VERIFY_COVERAGE_FILE_ENV: str(coverage_dir / ".coverage.unit"),
                 "PYTEST_ADDOPTS": f"-o cache_dir={coverage_dir / 'pytest-unit'}",
-                "PYTEST_XDIST_AUTO_NUM_WORKERS": str(
-                    max(1, min(8, available_cpus // 2))
-                ),
+                "PYTEST_XDIST_AUTO_NUM_WORKERS": str(max(1, min(8, available_cpus // 2))),
             },
         ),
         VerificationLane(
@@ -1828,14 +1704,10 @@ def _run_parallel_verification(
                     f"{'PASS' if result.returncode == 0 else 'FAIL'} ({result.duration_s:.2f}s)"
                 )
                 if result.output:
-                    print(
-                        result.output, end="" if result.output.endswith("\n") else "\n"
-                    )
+                    print(result.output, end="" if result.output.endswith("\n") else "\n")
             failures = [result for result in results if result.returncode != 0]
             if failures:
-                failed = ", ".join(
-                    f"{result.name} (exit {result.returncode})" for result in failures
-                )
+                failed = ", ".join(f"{result.name} (exit {result.returncode})" for result in failures)
                 raise RuntimeError(f"parallel verification lanes failed: {failed}")
 
         reporter.run(
