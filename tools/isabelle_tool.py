@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
@@ -31,6 +32,7 @@ ISABELLE_ARCHIVE_SHA256 = "a20a507bc7c1270d8be96a9f3fbec06345387789d2dc2c4d3df62
 ISABELLE_ARCHIVE_BYTES = 1_228_480_874
 ISABELLE_SESSION = "Participant_Opacity"
 ISABELLE_SESSION_RELATIVE_PATH = Path("specs/formal/participant-semantics/isabelle")
+ISABELLE_LOCALE = "C.UTF-8"
 ISABELLE_BUILD_TIMEOUT_SECONDS = 600
 ISABELLE_OUTPUT_LIMIT_BYTES = 64 * 1024
 ISABELLE_FILE_LIMIT_BYTES = 4 * 1024 * 1024 * 1024
@@ -45,6 +47,7 @@ ISABELLE_SYSTEM_RUNTIME_PATHS = (
     Path("/usr/lib"),
     Path("/usr/lib64"),
     Path("/usr/share/locale"),
+    Path("/usr/share/fontconfig"),
     Path("/usr/share/fonts"),
     Path("/usr/share/zoneinfo"),
     Path("/lib"),
@@ -53,6 +56,12 @@ ISABELLE_SYSTEM_RUNTIME_PATHS = (
     Path("/etc/ld.so.cache"),
     Path("/var/cache/fontconfig"),
 )
+ISABELLE_REQUIRED_FONTCONFIG_PATHS = (
+    Path("/etc/fonts"),
+    Path("/usr/share/fonts"),
+)
+ISABELLE_FONTCONFIG_LIST = Path("/usr/bin/fc-list")
+ISABELLE_FONTCONFIG_QUERY_TIMEOUT_SECONDS = 10
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 
 
@@ -210,7 +219,7 @@ def expected_isabelle_result() -> dict[str, object]:
         "result": "kernel-checked",
         "network": "blocked-by-bubblewrap-network-namespace",
         "filesystem": "allowlisted-runtime-session-and-private-state-only",
-        "locale": "C.UTF-8",
+        "locale": ISABELLE_LOCALE,
         "platform_boundary": "linux-x86_64",
     }
     encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -287,10 +296,10 @@ def _proof_sandbox_command(
             "/state/isabelle-user",
             "--setenv",
             "LANG",
-            "C.UTF-8",
+            ISABELLE_LOCALE,
             "--setenv",
             "LC_ALL",
-            "C.UTF-8",
+            ISABELLE_LOCALE,
             "--setenv",
             "TZ",
             "UTC",
@@ -307,6 +316,43 @@ def _proof_sandbox_command(
     return command
 
 
+def _fontconfig_has_fonts(font_list: Path = ISABELLE_FONTCONFIG_LIST) -> bool:
+    """Return whether the fixed host fontconfig tool finds an installed font."""
+
+    if not font_list.is_file() or not os.access(font_list, os.X_OK):
+        return False
+    try:
+        completed = subprocess.run(
+            [str(font_list), "--format=%{file}\\n"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=ISABELLE_FONTCONFIG_QUERY_TIMEOUT_SECONDS,
+            env={"LANG": ISABELLE_LOCALE, "LC_ALL": ISABELLE_LOCALE},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0 and bool(completed.stdout.strip())
+
+
+def _require_fontconfig_runtime(
+    paths: tuple[Path, ...] = ISABELLE_REQUIRED_FONTCONFIG_PATHS,
+    *,
+    font_query: Callable[[], bool] = _fontconfig_has_fonts,
+) -> None:
+    """Fail before sandbox entry when the pinned prover's font runtime is absent."""
+
+    if any(not path.is_dir() for path in paths) or not font_query():
+        raise IsabelleToolError("fontconfig runtime is required for offline proof replay")
+
+
+def _bubblewrap_setup_failed(output: str) -> bool:
+    """Return whether bubblewrap failed before the fixed prover could start."""
+
+    return output.lstrip().startswith("bwrap:")
+
+
 def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
     """Kernel-check the fixed session in a network-isolated, bounded process."""
 
@@ -314,6 +360,7 @@ def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
     bwrap = Path("/usr/bin/bwrap")
     if not bwrap.is_file():
         raise IsabelleToolError("bubblewrap is required to enforce offline proof replay")
+    _require_fontconfig_runtime()
     session_root = (repo_root / ISABELLE_SESSION_RELATIVE_PATH).resolve()
     if not session_root.is_dir() or repo_root.resolve() not in session_root.parents:
         raise IsabelleToolError("the fixed Isabelle session root is unavailable")
@@ -354,6 +401,8 @@ def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
             raise IsabelleToolError("Isabelle proof replay exceeded its wall-time bound") from exc
         output = _read_bounded_output(output_path)
         if completed.returncode != 0:
+            if _bubblewrap_setup_failed(output):
+                raise IsabelleToolError("bubblewrap network isolation is unavailable for offline proof replay")
             failure_tail = output.strip()[-4096:]
             detail = f":\n{failure_tail}" if failure_tail else ""
             raise IsabelleToolError(f"Isabelle kernel rejected the fixed proof session{detail}")
