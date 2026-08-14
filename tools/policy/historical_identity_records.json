@@ -24,7 +24,7 @@
       "binding_class": "external-service-project-key",
       "rationale": "Retains the existing service-owned SonarCloud project designation without treating it as current RAES product identity.",
       "occurrences": 2,
-      "content_sha256": "132baeebb55cc960c3f1710921efc9386989fd7ab24a0780d568d3c93cae337f"
+      "content_sha256": "ed04109021168fb0888da06dff905050f093cd90f0f401ce9524fc4b6f26523e"
     }
   ],
   "records": [
