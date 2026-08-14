@@ -250,6 +250,8 @@ def test_canonical_verifier_preserves_proof_install_and_full_verify_graph() -> N
     assert "Acquire pinned Isabelle distribution" in step_names
     assert "Resolve requirement UID from branch" in step_names
 
+    cache_restore = _named_step(job, "Restore pinned Isabelle archive")
+    assert cache_restore["uses"].startswith("actions/cache/restore@")
     acquire = _named_step(job, "Acquire pinned Isabelle distribution")
     assert "tools.isabelle_tool acquire" in acquire["run"]
     sandbox = _named_step(job, "Install proof sandbox")["run"]
