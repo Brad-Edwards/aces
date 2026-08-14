@@ -12,7 +12,7 @@ import subprocess
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, TypeGuard
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -32,6 +32,8 @@ _MAX_CASES = 128
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+_JsonObject = dict[str, object]
 
 REQUIRED_CLAIM_CLASS_IDS = {
     "schema-validity",
@@ -386,7 +388,7 @@ def _failure(rule_id: str, message: str, path: str | None = None) -> PolicyFailu
     return PolicyFailure(rule_id, message, path)
 
 
-def _is_sequence(value: object) -> bool:
+def _is_sequence(value: object) -> TypeGuard[Sequence[object]]:
     return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
 
 
@@ -407,7 +409,8 @@ def _closed_object(
         failures.append(
             _failure(
                 rule_id,
-                f"{label} must use the closed key set; missing={sorted(expected_keys - keys)!r}, unknown={sorted(keys - expected_keys)!r}",
+                f"{label} must use the closed key set; missing={sorted(expected_keys - keys)!r}, "
+                f"unknown={sorted(keys - expected_keys)!r}",
                 path,
             )
         )
@@ -680,7 +683,7 @@ def recompute_claim_results(
     return results
 
 
-def _validate_protocol(repo_root: Path, protocol: dict, failures: list[PolicyFailure], path: str) -> None:
+def _validate_protocol(repo_root: Path, protocol: _JsonObject, failures: list[PolicyFailure], path: str) -> None:
     if not _closed_object(
         protocol,
         _PROTOCOL_KEYS,
@@ -711,15 +714,14 @@ def _validate_protocol(repo_root: Path, protocol: dict, failures: list[PolicyFai
                 path,
             )
         )
-    if not _closed_object(
+    _closed_object(
         protocol.get("analysis_rules"),
         _ANALYSIS_RULE_KEYS,
         rule_id="formal-validation-analysis-rules",
         label="analysis_rules",
         failures=failures,
         path=path,
-    ):
-        pass
+    )
 
     claim_ids, unique_claim_ids = _stable_ids(protocol.get("claim_classes"), "claim_class_id")
     if claim_ids != REQUIRED_CLAIM_CLASS_IDS or not unique_claim_ids:
@@ -795,8 +797,8 @@ def _validate_protocol(repo_root: Path, protocol: dict, failures: list[PolicyFai
 
 def _validate_corpus(
     repo_root: Path,
-    protocol: dict,
-    corpus: dict,
+    protocol: _JsonObject,
+    corpus: _JsonObject,
     failures: list[PolicyFailure],
     path: str,
 ) -> dict[str, Mapping[str, object]]:
@@ -935,9 +937,9 @@ def _validate_corpus(
 
 def _validate_snapshot(
     repo_root: Path,
-    protocol: dict,
-    corpus: dict,
-    snapshot: dict,
+    protocol: _JsonObject,
+    corpus: _JsonObject,
+    snapshot: _JsonObject,
     cases_by_id: dict[str, Mapping[str, object]],
     failures: list[PolicyFailure],
     path: str,
@@ -1314,10 +1316,10 @@ def _validate_snapshot_participant_command(
 
 def _validate_analysis(
     repo_root: Path,
-    protocol: dict,
-    corpus: dict,
-    snapshot: dict,
-    analysis: dict,
+    protocol: _JsonObject,
+    corpus: _JsonObject,
+    snapshot: _JsonObject,
+    analysis: _JsonObject,
     failures: list[PolicyFailure],
     path: str,
 ) -> None:
@@ -1423,9 +1425,12 @@ def _validate_analysis(
         )
 
     statuses = {item["evidence_status"] for item in recomputed}
-    overall = (
-        "refuted" if "refuted" in statuses else "partial" if statuses & {"partial", "demonstrated"} else "untested"
-    )
+    if "refuted" in statuses:
+        overall = "refuted"
+    elif statuses & {"partial", "demonstrated"}:
+        overall = "partial"
+    else:
+        overall = "untested"
     if analysis.get("evidence_status") != overall:
         failures.append(
             _failure(
@@ -1590,7 +1595,7 @@ def validate_release_bundle(repo_root: Path, release: EvidenceRelease) -> list[P
             )
         )
         artifacts = []
-    artifact_ids, unique_artifact_ids = _stable_ids(artifacts, "artifact_id")
+    _, unique_artifact_ids = _stable_ids(artifacts, "artifact_id")
     artifact_paths: list[str] = []
     for artifact in artifacts:
         if not _closed_object(
@@ -1733,7 +1738,7 @@ def validate_retest_bundle(
             "docs/research/formal-semantic-validation/corpus/manifest-v1.json",
             max_bytes=_MAX_FILE_BYTES,
         )
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         failures.append(
             _failure(
                 "formal-validation-historical-retention",
@@ -1760,7 +1765,8 @@ def validate_retest_bundle(
         failures.append(
             _failure(
                 "formal-validation-historical-retention",
-                "the v2 corpus must retain every v1 case semantically unchanged, allowing only the governed identity wording",
+                "the v2 corpus must retain every v1 case semantically unchanged, "
+                "allowing only the governed identity wording",
                 corpus_path,
             )
         )
@@ -1833,7 +1839,7 @@ def _validate_baseline_drift(
                 max_bytes=_MAX_FILE_BYTES,
             )
         )
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         failures.append(
             _failure(
                 "formal-validation-baseline-selection",
@@ -1887,7 +1893,7 @@ def _validate_baseline_drift(
             str(baseline_snapshot_path),
             max_bytes=_MAX_FILE_BYTES,
         )
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         failures.append(
             _failure(
                 "formal-validation-baseline-selection",
@@ -2484,7 +2490,6 @@ def _validate_production_evidence_observation(
         ValueError,
         RuntimeError,
         subprocess.SubprocessError,
-        json.JSONDecodeError,
     ) as exc:
         failures.append(
             _failure(
@@ -2637,7 +2642,7 @@ def _run_production_evidence_cli(repo_root: Path, argv: list[object]) -> dict[st
     return payload
 
 
-def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, dict]:
+def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[_JsonObject, _JsonObject, _JsonObject, _JsonObject, _JsonObject]:
     manifest = _assembled_manifest(repo_root)
     paths: list[str] = []
     for key in ("protocol_path", "corpus_path", "snapshot_path", "analysis_path"):
@@ -2653,7 +2658,7 @@ def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, di
 
 def load_satisfiability_analysis(
     repo_root: Path = REPO_ROOT,
-) -> tuple[dict, dict, dict]:
+) -> tuple[_JsonObject, _JsonObject, _JsonObject]:
     """Load the revisioned issue-826 supplement selected by the bundle."""
 
     manifest = _assembled_manifest(repo_root)
@@ -2710,9 +2715,9 @@ def _assembled_manifest(repo_root: Path) -> dict[str, object]:
 
 def validate_satisfiability_analysis(
     repo_root: Path,
-    manifest: dict,
-    snapshot: dict,
-    analysis: dict,
+    manifest: _JsonObject,
+    snapshot: _JsonObject,
+    analysis: _JsonObject,
 ) -> list[PolicyFailure]:
     """Recompute the finite-profile control matrix and replay every envelope."""
 
@@ -3028,11 +3033,11 @@ def validate_satisfiability_analysis(
 
 def validate_bundle(
     repo_root: Path,
-    manifest: dict,
-    protocol: dict,
-    corpus: dict,
-    snapshot: dict,
-    analysis: dict,
+    manifest: _JsonObject,
+    protocol: _JsonObject,
+    corpus: _JsonObject,
+    snapshot: _JsonObject,
+    analysis: _JsonObject,
     *,
     replay_cases: bool = True,
 ) -> list[PolicyFailure]:
@@ -3073,7 +3078,7 @@ def evaluate(
 ) -> list[PolicyFailure]:
     try:
         releases = load_release_bundles(repo_root)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         return [_failure("formal-validation-bundle-load", str(exc), MANIFEST_PATH)]
     failures: list[PolicyFailure] = []
     for release in releases:

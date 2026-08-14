@@ -160,6 +160,23 @@ _TIME_MODEL_VALIDATOR = "[time-model validator](../../implementations/python/pac
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
 _DANGLING = "fatal dangling or ambiguous"
+_NODE_ROLES = "derived:node_roles"
+_DANGLING_ROLE = "fatal dangling role when non-empty"
+_SWITCH_BACKED = "fatal unless the target is switch-backed"
+_DANGLING_CYCLIC = "fatal dangling, ambiguous, or cyclic"
+_NON_PRECONDITION_ROLE = "fatal dangling, ambiguous, or non-precondition role"
+_STRUCTURAL_MODEL = "structural model validation"
+_ARTIFACT_VOLUME_FIELDS = "generated_artifacts,persistent_volumes"
+_MAIL_SERVICE_SCOPE = "fatal outside the target mail service"
+_MIXED_CONTROL_IDS = "derived:mixed_control_local_ids"
+_STRUCTURAL_SEMANTIC = "structural and semantic validation"
+_STALE_LOCAL_REF = "fatal dangling, stale, reversed, or ambiguously ordered local ref"
+_UNKNOWN_VOCABULARY = "fatal unknown vocabulary identifier"
+_WRONG_SLOT_CANDIDATE = "fatal dangling or wrong slot candidate type"
+_VARIATION_MEMBERS = "derived:variation_members"
+_VARIATION_SCOPE = "fatal outside the resolved variation point"
+_ORDER_POINT_SCOPE = "fatal outside the owning order point"
+_DANGLING_UNREACHABLE = "fatal dangling, cyclic, or unreachable"
 
 # This independently owned expectation makes every normative reference row a
 # checked contract. The catalog is not generated from this registry; changing
@@ -167,16 +184,16 @@ _DANGLING = "fatal dangling or ambiguous"
 _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "nodes.*.features[]": ("features", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
     "nodes.*.features.*": (
-        "derived:node_roles",
+        _NODE_ROLES,
         _SEMANTIC,
-        "fatal dangling role when non-empty",
+        _DANGLING_ROLE,
         _NODE_VALIDATOR,
     ),
     "nodes.*.conditions[]": ("conditions", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
     "nodes.*.conditions.*": (
-        "derived:node_roles",
+        _NODE_ROLES,
         _SEMANTIC,
-        "fatal dangling role when non-empty",
+        _DANGLING_ROLE,
         _NODE_VALIDATOR,
     ),
     "conditions.*.proposition": (
@@ -205,9 +222,9 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     ),
     "nodes.*.injects[]": ("injects", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
     "nodes.*.injects.*": (
-        "derived:node_roles",
+        _NODE_ROLES,
         _SEMANTIC,
-        "fatal dangling role when non-empty",
+        _DANGLING_ROLE,
         _NODE_VALIDATOR,
     ),
     "nodes.*.vulnerabilities[]": (
@@ -243,13 +260,13 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "infrastructure.*.acls[].from_net": (
         "infrastructure",
         _SEMANTIC,
-        "fatal unless the target is switch-backed",
+        _SWITCH_BACKED,
         _INFRASTRUCTURE_VALIDATOR,
     ),
     "infrastructure.*.acls[].to_net": (
         "infrastructure",
         _SEMANTIC,
-        "fatal unless the target is switch-backed",
+        _SWITCH_BACKED,
         _INFRASTRUCTURE_VALIDATOR,
     ),
     "infrastructure.*.dependencies[]": (
@@ -261,7 +278,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "features.*.dependencies[]": (
         "features",
         _SEMANTIC,
-        "fatal dangling, ambiguous, or cyclic",
+        _DANGLING_CYCLIC,
         _SECTION_VALIDATOR,
     ),
     "features.*.vulnerabilities[]": (
@@ -282,7 +299,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "events.*.assertions[]": (
         "assertions",
         _SEMANTIC,
-        "fatal dangling, ambiguous, or non-precondition role",
+        _NON_PRECONDITION_ROLE,
         _PROPOSITION_VALIDATOR,
     ),
     "events.*.injects[]": ("injects", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
@@ -332,37 +349,37 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     ),
     "generated_artifacts.*.consumers[].node": (
         "nodes",
-        "structural model validation",
+        _STRUCTURAL_MODEL,
         _DANGLING,
         _STATEFUL_MODEL,
     ),
     "generated_artifacts.*.ordering_dependencies[]": (
-        "generated_artifacts,persistent_volumes",
+        _ARTIFACT_VOLUME_FIELDS,
         "structural model and planner graph validation",
-        "fatal dangling, ambiguous, or cyclic",
+        _DANGLING_CYCLIC,
         _STATEFUL_MODEL,
     ),
     "generated_artifacts.*.refresh_dependencies[]": (
-        "generated_artifacts,persistent_volumes",
-        "structural model validation",
+        _ARTIFACT_VOLUME_FIELDS,
+        _STRUCTURAL_MODEL,
         _DANGLING,
         _STATEFUL_MODEL,
     ),
     "persistent_volumes.*.consumers[].node": (
         "nodes",
-        "structural model validation",
+        _STRUCTURAL_MODEL,
         _DANGLING,
         _STATEFUL_MODEL,
     ),
     "persistent_volumes.*.ordering_dependencies[]": (
-        "generated_artifacts,persistent_volumes",
+        _ARTIFACT_VOLUME_FIELDS,
         "structural model and planner graph validation",
-        "fatal dangling, ambiguous, or cyclic",
+        _DANGLING_CYCLIC,
         _STATEFUL_MODEL,
     ),
     "persistent_volumes.*.refresh_dependencies[]": (
-        "generated_artifacts,persistent_volumes",
-        "structural model validation",
+        _ARTIFACT_VOLUME_FIELDS,
+        _STRUCTURAL_MODEL,
         _DANGLING,
         _STATEFUL_MODEL,
     ),
@@ -435,19 +452,19 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "relationships.*.mail_access.listener_ref": (
         "derived:mail_listeners",
         _SEMANTIC,
-        "fatal outside the target mail service",
+        _MAIL_SERVICE_SCOPE,
         _MAIL_VALIDATOR,
     ),
     "relationships.*.mail_access.mailbox_ref": (
         "derived:mailboxes",
         _SEMANTIC,
-        "fatal outside the target mail service",
+        _MAIL_SERVICE_SCOPE,
         _MAIL_VALIDATOR,
     ),
     "relationships.*.mail_access.domain_ref": (
         "derived:mail_domains",
         _SEMANTIC,
-        "fatal outside the target mail service",
+        _MAIL_SERVICE_SCOPE,
         _MAIL_VALIDATOR,
     ),
     "relationships.*.forwarding_edge.forwarder_ref": (
@@ -532,7 +549,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "agents.*.starting_assertions[]": (
         "assertions",
         _SEMANTIC,
-        "fatal dangling, ambiguous, or non-precondition role",
+        _NON_PRECONDITION_ROLE,
         _PROPOSITION_VALIDATOR,
     ),
     "agents.*.initial_knowledge.hosts[]": (
@@ -544,7 +561,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "agents.*.initial_knowledge.subnets[]": (
         "infrastructure",
         _SEMANTIC,
-        "fatal unless the target is switch-backed",
+        _SWITCH_BACKED,
         _PARTICIPANT_VALIDATOR,
     ),
     "agents.*.initial_knowledge.services[]": (
@@ -562,7 +579,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "agents.*.allowed_subnets[]": (
         "infrastructure",
         _SEMANTIC,
-        "fatal unless the target is switch-backed",
+        _SWITCH_BACKED,
         _PARTICIPANT_VALIDATOR,
     ),
     "agents.*.authority_anchors[]": (
@@ -764,8 +781,8 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
     ),
     "behavior_specifications.*.participant_inject_deliveries.*.control_transition_ref": (
-        "derived:mixed_control_local_ids",
-        "structural and semantic validation",
+        _MIXED_CONTROL_IDS,
+        _STRUCTURAL_SEMANTIC,
         "fatal dangling, wrong-kind, or incomplete control agreement",
         _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
     ),
@@ -824,21 +841,21 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _MIXED_CONTROL_VALIDATOR,
     ),
     "behavior_specifications.*.mixed_control.transitions.*.from_state_ref": (
-        "derived:mixed_control_local_ids",
-        "structural and semantic validation",
-        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_IDS,
+        _STRUCTURAL_SEMANTIC,
+        _STALE_LOCAL_REF,
         _MIXED_CONTROL_MODEL,
     ),
     "behavior_specifications.*.mixed_control.transitions.*.to_state_ref": (
-        "derived:mixed_control_local_ids",
-        "structural and semantic validation",
-        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_IDS,
+        _STRUCTURAL_SEMANTIC,
+        _STALE_LOCAL_REF,
         _MIXED_CONTROL_MODEL,
     ),
     "behavior_specifications.*.mixed_control.transitions.*.proposal_ref": (
-        "derived:mixed_control_local_ids",
-        "structural and semantic validation",
-        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_IDS,
+        _STRUCTURAL_SEMANTIC,
+        _STALE_LOCAL_REF,
         _MIXED_CONTROL_MODEL,
     ),
     "behavior_specifications.*.mixed_control.transitions.*.evidence_refs[]": (
@@ -856,19 +873,19 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "behavior_specifications.*.ai_offensive_behavior_refs[]": (
         "vocabulary:ai_offensive_behavior",
         _SEMANTIC,
-        "fatal unknown vocabulary identifier",
+        _UNKNOWN_VOCABULARY,
         _BEHAVIOR_MODEL,
     ),
     "behavior_specifications.*.defensive_behavior_refs[]": (
         "vocabulary:defensive_behavior",
         _SEMANTIC,
-        "fatal unknown vocabulary identifier",
+        _UNKNOWN_VOCABULARY,
         _BEHAVIOR_MODEL,
     ),
     "behavior_specifications.*.offensive_behavior_refs[]": (
         "vocabulary:offensive_behavior",
         _SEMANTIC,
-        "fatal unknown vocabulary identifier",
+        _UNKNOWN_VOCABULARY,
         _BEHAVIOR_MODEL,
     ),
     "behavior_specifications.*.realization_profile_ref": (
@@ -970,19 +987,19 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "variation_points.*.domain.allowed_refs[]": (
         "targetable",
         _SEMANTIC,
-        "fatal dangling or wrong slot candidate type",
+        _WRONG_SLOT_CANDIDATE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.alternatives.*.reference": (
         "targetable",
         _SEMANTIC,
-        "fatal dangling or wrong slot candidate type",
+        _WRONG_SLOT_CANDIDATE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.members.*.reference": (
         "targetable",
         _SEMANTIC,
-        "fatal dangling or wrong slot candidate type",
+        _WRONG_SLOT_CANDIDATE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.alternatives.*.requires[].point": (
@@ -992,9 +1009,9 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.alternatives.*.requires[].members[]": (
-        "derived:variation_members",
+        _VARIATION_MEMBERS,
         _SEMANTIC,
-        "fatal outside the resolved variation point",
+        _VARIATION_SCOPE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.alternatives.*.excludes[].point": (
@@ -1004,9 +1021,9 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.alternatives.*.excludes[].members[]": (
-        "derived:variation_members",
+        _VARIATION_MEMBERS,
         _SEMANTIC,
-        "fatal outside the resolved variation point",
+        _VARIATION_SCOPE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.members.*.requires[].point": (
@@ -1016,9 +1033,9 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.members.*.requires[].members[]": (
-        "derived:variation_members",
+        _VARIATION_MEMBERS,
         _SEMANTIC,
-        "fatal outside the resolved variation point",
+        _VARIATION_SCOPE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.members.*.excludes[].point": (
@@ -1028,27 +1045,27 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.members.*.excludes[].members[]": (
-        "derived:variation_members",
+        _VARIATION_MEMBERS,
         _SEMANTIC,
-        "fatal outside the resolved variation point",
+        _VARIATION_SCOPE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.precedence[].before": (
-        "derived:variation_members",
+        _VARIATION_MEMBERS,
         _STRUCTURAL,
-        "fatal outside the owning order point",
+        _ORDER_POINT_SCOPE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.precedence[].after": (
-        "derived:variation_members",
+        _VARIATION_MEMBERS,
         _STRUCTURAL,
-        "fatal outside the owning order point",
+        _ORDER_POINT_SCOPE,
         _VARIATION_VALIDATOR,
     ),
     "variation_points.*.fixed_positions.*.$key": (
-        "derived:variation_members",
+        _VARIATION_MEMBERS,
         _STRUCTURAL,
-        "fatal outside the owning order point",
+        _ORDER_POINT_SCOPE,
         _VARIATION_VALIDATOR,
     ),
     "objectives.*.agent": ("agents", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
@@ -1074,7 +1091,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "objectives.*.depends_on[]": (
         "objectives",
         _SEMANTIC,
-        "fatal dangling, ambiguous, or cyclic",
+        _DANGLING_CYCLIC,
         _OBJECTIVE_SEMANTICS,
     ),
     "objectives.*.window.stories[]": (
@@ -1116,7 +1133,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "workflows.*.steps.*.when.assertions[]": (
         "assertions",
         _SEMANTIC,
-        "fatal dangling, ambiguous, or non-precondition role",
+        _NON_PRECONDITION_ROLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.when.objectives[]": (
@@ -1134,7 +1151,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "workflows.*.steps.*.cases.*.when.assertions[]": (
         "assertions",
         _SEMANTIC,
-        "fatal dangling, ambiguous, or non-precondition role",
+        _NON_PRECONDITION_ROLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.cases.*.when.objectives[]": (
@@ -1176,49 +1193,49 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "workflows.*.steps.*.next": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.on_success": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.on_failure": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.on_exhausted": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.then": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.else": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.cases.*.next": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.default": (
         "workflow_steps",
         _SEMANTIC,
-        "fatal dangling, cyclic, or unreachable",
+        _DANGLING_UNREACHABLE,
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.branches[]": (
@@ -1521,7 +1538,8 @@ def _check_top_level(text: str, schema: dict[str, Any]) -> tuple[list[PolicyFail
                 "sdl-catalog-field-set",
                 f"field sets differ: catalog-only={sorted(catalog_fields - model_fields)}, "
                 f"model-only={sorted(model_fields - catalog_fields)}, "
-                f"schema-only={sorted(schema_fields - model_fields)}, model-only-vs-schema={sorted(model_fields - schema_fields)}",
+                f"schema-only={sorted(schema_fields - model_fields)}, "
+                f"model-only-vs-schema={sorted(model_fields - schema_fields)}",
                 SECTIONS_PATH,
             )
         )
@@ -1713,7 +1731,7 @@ def _check_references(text: str, top_rows: list[TopLevelRow], repo_root: Path) -
     return failures
 
 
-def _annotation_members(annotation: Any) -> tuple[Any, ...]:
+def _annotation_members(annotation: object) -> tuple[object, ...]:
     if get_origin(annotation) is Annotated:
         return _annotation_members(get_args(annotation)[0])
     if get_origin(annotation) in (Union, types.UnionType):
@@ -1721,8 +1739,8 @@ def _annotation_members(annotation: Any) -> tuple[Any, ...]:
     return (annotation,)
 
 
-def _unwrap_reference_container(annotation: Any) -> tuple[Any, ...]:
-    members: list[Any] = []
+def _unwrap_reference_container(annotation: object) -> tuple[object, ...]:
+    members: list[object] = []
     for option in _annotation_members(annotation):
         origin = get_origin(option)
         if not isinstance(origin, type):
@@ -1735,8 +1753,8 @@ def _unwrap_reference_container(annotation: Any) -> tuple[Any, ...]:
     return tuple(members)
 
 
-def _model_field_annotations(annotation: Any, field_name: str) -> tuple[Any, ...]:
-    annotations: list[Any] = []
+def _model_field_annotations(annotation: object, field_name: str) -> tuple[object, ...]:
+    annotations: list[object] = []
     for option in _annotation_members(annotation):
         if not isinstance(option, type) or not issubclass(option, BaseModel):
             continue
@@ -1751,7 +1769,7 @@ def _model_field_annotations(annotation: Any, field_name: str) -> tuple[Any, ...
 
 
 def _reference_source_path_exists(source_path: str) -> bool:
-    annotations: tuple[Any, ...] = (Scenario,)
+    annotations: tuple[object, ...] = (Scenario,)
     segments = source_path.split(".")
     for index, segment in enumerate(segments):
         if segment == "$key":
@@ -1782,7 +1800,7 @@ def _is_normative_reference_owner(owner: str, repo_root: Path) -> bool:
     target = targets[0]
     if target.startswith("#"):
         relative = REFERENCES_PATH
-    elif target.startswith(("http://", "https://", "mailto:")):
+    elif target.startswith(("http:", "https:", "mailto:")):
         return False
     else:
         target_path = target.split("#", 1)[0]
@@ -1792,7 +1810,7 @@ def _is_normative_reference_owner(owner: str, repo_root: Path) -> bool:
             relative = resolved.relative_to(root).as_posix()
         except ValueError:
             return False
-    return relative.startswith("specs/") or relative.startswith("docs/decisions/adrs/")
+    return relative.startswith(("specs/", "docs/decisions/adrs/"))
 
 
 def _check_runtime(text: str) -> list[PolicyFailure]:
@@ -1907,7 +1925,7 @@ def _check_internal_links(repo_root: Path, relative_paths: tuple[str, ...]) -> l
         text = source.read_text(encoding="utf-8")
         for match in _MARKDOWN_LINK_RE.finditer(text):
             target = match.group("target").strip()
-            if target.startswith(("#", "http://", "https://", "mailto:")):
+            if target.startswith(("#", "http:", "https:", "mailto:")):
                 continue
             target_path = target.split("#", 1)[0]
             if not target_path:

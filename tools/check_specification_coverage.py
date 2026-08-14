@@ -46,10 +46,12 @@ IMPLEMENTATION_SURFACE_PATHS = {
     "processor-pipeline": "implementations/python/packages/raes_processor",
     "sdl-pipeline": "implementations/python/packages/raes",
 }
+_PACKAGES_ROOT = "implementations/python/packages/"
+_EXECUTION_SNAPSHOT_PATH = "docs/research/specification-coverage/execution-snapshot-v1.json"
 HISTORICAL_IMPLEMENTATION_SURFACE_PATHS = {
-    "contract-models": "implementations/python/packages/" + "a" + "ces_contracts",
-    "processor-pipeline": "implementations/python/packages/" + "a" + "ces_processor",
-    "sdl-pipeline": "implementations/python/packages/" + "a" + "ces_sdl",
+    "contract-models": _PACKAGES_ROOT + "a" + "ces_contracts",
+    "processor-pipeline": _PACKAGES_ROOT + "a" + "ces_processor",
+    "sdl-pipeline": _PACKAGES_ROOT + "a" + "ces_sdl",
 }
 RENAMED_ARTIFACT_DIGESTS = {
     "examples/scenarios/enterprise-participant-evidence-loop.sdl.yaml": (
@@ -818,7 +820,7 @@ def _validate_implementation_surfaces(
     snapshot: dict[str, object],
     failures: list[PolicyFailure],
 ) -> None:
-    path = "docs/research/specification-coverage/execution-snapshot-v1.json"
+    path = _EXECUTION_SNAPSHOT_PATH
     surfaces = _bounded_list(
         snapshot.get("implementation_surfaces"),
         failures,
@@ -940,7 +942,7 @@ def _validate_artifacts(
     snapshot: dict[str, object],
     failures: list[PolicyFailure],
 ) -> tuple[dict[str, dict[str, object]], dict[str, dict[str, object]]]:
-    path = "docs/research/specification-coverage/execution-snapshot-v1.json"
+    path = _EXECUTION_SNAPSHOT_PATH
     artifacts = _bounded_list(
         snapshot.get("artifacts"),
         failures,
@@ -1018,7 +1020,7 @@ def _validate_artifacts(
             continue
         try:
             executed[artifact_path] = _execute_artifact(repo_root, kind, resolved)
-        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        except (OSError, ValueError, TypeError) as exc:
             failures.append(
                 _failure(
                     "specification-coverage-artifact-execution",
@@ -1045,7 +1047,7 @@ def _validate_snapshot(
     catalogs: dict[str, object],
     failures: list[PolicyFailure],
 ) -> None:
-    path = "docs/research/specification-coverage/execution-snapshot-v1.json"
+    path = _EXECUTION_SNAPSHOT_PATH
     if not _exact_keys(
         snapshot,
         _SNAPSHOT_KEYS,
@@ -1402,7 +1404,12 @@ def recompute_analysis(
             )
             for item in observed
         )
-        status = "refuted" if critical_bad else "partial" if missing_count or failed_stage_count else "demonstrated"
+        if critical_bad:
+            status = "refuted"
+        elif missing_count or failed_stage_count:
+            status = "partial"
+        else:
+            status = "demonstrated"
         any_noncritical_failure = any_noncritical_failure or bool(missing_count or failed_stage_count)
         request_results.append(
             {
@@ -1595,7 +1602,7 @@ def _load_bundle_record(
 def evaluate(repo_root: Path = REPO_ROOT) -> list[PolicyFailure]:
     try:
         bundles = load_bundles(repo_root)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         return [_failure("specification-coverage-bundle-invalid", str(exc), MANIFEST_PATH)]
     failures: list[PolicyFailure] = []
     for _manifest, protocol, snapshot, analysis in bundles:

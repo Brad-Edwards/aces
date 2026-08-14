@@ -52,7 +52,7 @@ def _release_base_url(version: str = OSV_SCANNER_VERSION) -> str:
     return f"https://github.com/google/osv-scanner/releases/download/v{version}"
 
 
-def _release_asset_name(version: str = OSV_SCANNER_VERSION) -> str:
+def _release_asset_name() -> str:
     system = platform.system()
     machine = platform.machine().lower()
     arch_map = {
@@ -178,7 +178,7 @@ def _install_binary(binary_path: Path, binary_bytes: bytes) -> None:
 
 
 def ensure_osv_scanner(repo_root: Path = REPO_ROOT, *, version: str = OSV_SCANNER_VERSION) -> Path:
-    asset_name = _release_asset_name(version)
+    asset_name = _release_asset_name()
     expected_checksum = OSV_SCANNER_SHA256.get(version, {}).get(asset_name)
     if expected_checksum is None:
         raise RuntimeError(f"no repository-pinned checksum for osv-scanner asset {asset_name}")
@@ -222,7 +222,7 @@ def run_osv_scanner(lockfile: Path, report_path: Path, *, binary: Path) -> int:
     """
     report_path.parent.mkdir(parents=True, exist_ok=True)
     with report_path.open("wb") as report_file:
-        completed = subprocess.run(  # noqa: S603 - trusted, checksum-verified binary; fixed argv
+        completed = subprocess.run(  # noqa: S603  # trusted, checksum-verified binary; fixed argv
             [
                 str(binary),
                 "scan",

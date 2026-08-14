@@ -104,14 +104,14 @@ def resolve_token(repo_root: Path) -> str | None:
     return _resolve_from_env_or_mcp(repo_root, BEARER_ENV)
 
 
-def load_policy(repo_root: Path) -> dict:
+def load_policy(repo_root: Path) -> dict[str, object]:
     return load_yaml(repo_root / "tools" / "policy" / "requirement_order.yaml")
 
 
 class RequirementClient(Protocol):
-    def get_requirement(self, project: str, uid: str) -> dict: ...
+    def get_requirement(self, project: str, uid: str) -> dict[str, object]: ...
 
-    def get_traceability(self, requirement_id: str) -> list[dict]: ...
+    def get_traceability(self, requirement_id: str) -> list[dict[str, object]]: ...
 
 
 class GroundControlHttpClient:
@@ -126,7 +126,7 @@ class GroundControlHttpClient:
         self.token = token
         self.timeout_seconds = timeout_seconds
 
-    def _request(self, path: str, *, params: dict[str, str] | None = None) -> dict | list:
+    def _request(self, path: str, *, params: dict[str, str] | None = None) -> dict[str, object] | list[object]:
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
@@ -151,20 +151,20 @@ class GroundControlHttpClient:
         except TimeoutError as exc:
             raise GroundControlUnavailable("request timed out") from exc
 
-    def get_requirement(self, project: str, uid: str) -> dict:
+    def get_requirement(self, project: str, uid: str) -> dict[str, object]:
         return self._request(f"/api/v1/requirements/uid/{uid}", params={"project": project})
 
-    def get_traceability(self, requirement_id: str) -> list[dict]:
+    def get_traceability(self, requirement_id: str) -> list[dict[str, object]]:
         return self._request(f"/api/v1/requirements/{requirement_id}/traceability")
 
 
 @dataclass(frozen=True)
 class PhaseMatch:
     phase_id: str
-    phase: dict
+    phase: dict[str, object]
 
 
-def _traceability_value(link: dict, snake_case: str, camel_case: str) -> str | None:
+def _traceability_value(link: dict[str, object], snake_case: str, camel_case: str) -> str | None:
     value = link.get(snake_case)
     if value is not None:
         return value
@@ -216,7 +216,7 @@ def evaluate_requirement_governance(
     return failures
 
 
-def match_phase(policy: dict, requirement_uid: str) -> PhaseMatch | None:
+def match_phase(policy: dict[str, object], requirement_uid: str) -> PhaseMatch | None:
     for phase in policy.get("phases", []):
         if requirement_uid in phase.get("requirements", []):
             return PhaseMatch(phase["id"], phase)
@@ -227,7 +227,7 @@ def match_phase(policy: dict, requirement_uid: str) -> PhaseMatch | None:
 
 
 def _check_phase_predecessors(
-    policy: dict,
+    policy: dict[str, object],
     client: RequirementClient,
     match: PhaseMatch,
 ) -> list[PolicyFailure]:
@@ -253,25 +253,19 @@ def _check_phase_predecessors(
             failures.append(
                 PolicyFailure(
                     "requirement-order-blocked",
-                    f"{match.phase_id} is blocked until {phase_id} is complete; incomplete prerequisites: {', '.join(incomplete)}",
+                    f"{match.phase_id} is blocked until {phase_id} is complete; "
+                    f"incomplete prerequisites: {', '.join(incomplete)}",
                 )
             )
     return failures
 
 
-def _check_path_ownership(policy: dict, match: PhaseMatch, changed: list[str]) -> list[PolicyFailure]:
+def _check_path_ownership(policy: dict[str, object], match: PhaseMatch, changed: list[str]) -> list[PolicyFailure]:
     allowed = policy.get("ownership", {}).get(match.phase_id, [])
     if not allowed:
         return []
     failures: list[PolicyFailure] = []
-    relevant = [
-        path
-        for path in changed
-        if path.startswith("implementations/")
-        or path.startswith("contracts/")
-        or path.startswith("specs/")
-        or path.startswith("docs/")
-    ]
+    relevant = [path for path in changed if path.startswith(("implementations/", "contracts/", "specs/", "docs/"))]
     for path in relevant:
         if not path_matches_any(path, allowed):
             failures.append(
@@ -284,48 +278,46 @@ def _check_path_ownership(policy: dict, match: PhaseMatch, changed: list[str]) -
     return failures
 
 
+def _linked_artifacts(
+    traceability: list[dict[str, object]],
+    artifact_type: str,
+    link_type: str,
+) -> set[str]:
+    return {
+        artifact_identifier
+        for link in traceability
+        if _traceability_value(link, "artifact_type", "artifactType") == artifact_type
+        and _traceability_value(link, "link_type", "linkType") == link_type
+        and (artifact_identifier := _traceability_value(link, "artifact_identifier", "artifactIdentifier")) is not None
+    }
+
+
 def _check_traceability(
     client: RequirementClient,
-    requirement: dict,
-    policy: dict,
+    requirement: dict[str, object],
+    policy: dict[str, object],
     changed: list[str],
 ) -> list[PolicyFailure]:
     traceability = client.get_traceability(requirement["id"])
-    code_links = {
-        artifact_identifier
-        for link in traceability
-        if _traceability_value(link, "artifact_type", "artifactType") == "CODE_FILE"
-        and _traceability_value(link, "link_type", "linkType") == "IMPLEMENTS"
-        and (artifact_identifier := _traceability_value(link, "artifact_identifier", "artifactIdentifier")) is not None
-    }
-    test_links = {
-        artifact_identifier
-        for link in traceability
-        if _traceability_value(link, "artifact_type", "artifactType") == "TEST"
-        and _traceability_value(link, "link_type", "linkType") == "TESTS"
-        and (artifact_identifier := _traceability_value(link, "artifact_identifier", "artifactIdentifier")) is not None
-    }
+    checks = (
+        (
+            _linked_artifacts(traceability, "CODE_FILE", "IMPLEMENTS"),
+            policy["traceability"]["required_code_roots"],
+            "traceability-missing-implements",
+            f"{requirement['uid']} is missing an IMPLEMENTS traceability link for this code file",
+        ),
+        (
+            _linked_artifacts(traceability, "TEST", "TESTS"),
+            policy["traceability"]["required_test_roots"],
+            "traceability-missing-tests",
+            f"{requirement['uid']} is missing a TESTS traceability link for this test file",
+        ),
+    )
     failures: list[PolicyFailure] = []
-    required_code_roots = policy["traceability"]["required_code_roots"]
-    required_test_roots = policy["traceability"]["required_test_roots"]
-
     for path in changed:
-        if path_matches_any(path, required_code_roots) and path.endswith(".py") and path not in code_links:
-            failures.append(
-                PolicyFailure(
-                    "traceability-missing-implements",
-                    f"{requirement['uid']} is missing an IMPLEMENTS traceability link for this code file",
-                    path,
-                )
-            )
-        if path_matches_any(path, required_test_roots) and path.endswith(".py") and path not in test_links:
-            failures.append(
-                PolicyFailure(
-                    "traceability-missing-tests",
-                    f"{requirement['uid']} is missing a TESTS traceability link for this test file",
-                    path,
-                )
-            )
+        for linked, roots, failure_code, message in checks:
+            if path_matches_any(path, roots) and path.endswith(".py") and path not in linked:
+                failures.append(PolicyFailure(failure_code, message, path))
     return failures
 
 

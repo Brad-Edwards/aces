@@ -13,7 +13,6 @@ import tarfile
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -125,7 +124,7 @@ def _download_archive(path: Path) -> None:
         temporary_path.unlink(missing_ok=True)
         try:
             _download_archive_from_url(url, temporary_path)
-        except (HTTPError, URLError, TimeoutError, OSError, IsabelleToolError) as exc:
+        except (OSError, IsabelleToolError) as exc:
             failures.append(f"{url}: {type(exc).__name__}")
             continue
         temporary_path.replace(path)
@@ -279,7 +278,7 @@ def _proof_sandbox_command(
             "--proc",
             "/proc",
             "--tmpfs",
-            "/tmp",  # noqa: S108 - private bubblewrap tmpfs, not a shared host path
+            "/tmp",  # noqa: S108  # private bubblewrap tmpfs, not a shared host path
             "--chdir",
             "/workspace",
             "--setenv",
