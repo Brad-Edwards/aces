@@ -170,45 +170,43 @@ def _prepare_concurrent_batch(
     batch: _ConcurrentBatch,
     batch_method: _ConcurrentBatchMethod,
 ) -> _PreparedConcurrentBatch | None:
-    isolated = _isolate_concurrent_batch_predecessors(batch)
-    if isolated is None:
-        return None
-    pre_batch, binding_snapshot = isolated
-    provided_requests = getattr(batch, "requests", None)
-    requests = (
-        tuple(provided_requests)
-        if provided_requests is not None
-        else _bind_concurrent_batch_requests(batch, binding_snapshot, pre_batch)
-    )
-    if requests is None:
-        return None
-    if len(requests) != len(batch.contexts):
-        _fail_concurrent_batch_before_dispatch(
-            batch.run,
-            pre_batch,
-            policy_address=batch.policy.address,
-            code="runtime.participant-concurrent-binding-failed",
-            message="Backend concurrent participant request binding did not complete.",
-        )
-        return None
-    reserved = _reserve_concurrent_batch_for_dispatch(batch, pre_batch)
     prepared = None
-    if reserved is not None:
-        base, dispatch_snapshot = reserved
-        prepared = _PreparedConcurrentBatch(
-            batch_method=batch_method,
-            settlement=_ConcurrentBatchSettlement(
-                run=batch.run,
-                policy_address=batch.policy.address,
-                contexts=tuple(batch.contexts),
-                states=tuple(batch.states),
-                requests=requests,
-                pre_batch=pre_batch,
-            ),
-            base=base,
-            dispatch_snapshot=dispatch_snapshot,
-            materialize=cast(bool, getattr(batch, "materialize", True)),
+    isolated = _isolate_concurrent_batch_predecessors(batch)
+    if isolated is not None:
+        pre_batch, binding_snapshot = isolated
+        provided_requests = getattr(batch, "requests", None)
+        requests = (
+            tuple(provided_requests)
+            if provided_requests is not None
+            else _bind_concurrent_batch_requests(batch, binding_snapshot, pre_batch)
         )
+        if requests is not None and len(requests) != len(batch.contexts):
+            _fail_concurrent_batch_before_dispatch(
+                batch.run,
+                pre_batch,
+                policy_address=batch.policy.address,
+                code="runtime.participant-concurrent-binding-failed",
+                message="Backend concurrent participant request binding did not complete.",
+            )
+            requests = None
+        if requests is not None:
+            reserved = _reserve_concurrent_batch_for_dispatch(batch, pre_batch)
+            if reserved is not None:
+                base, dispatch_snapshot = reserved
+                prepared = _PreparedConcurrentBatch(
+                    batch_method=batch_method,
+                    settlement=_ConcurrentBatchSettlement(
+                        run=batch.run,
+                        policy_address=batch.policy.address,
+                        contexts=tuple(batch.contexts),
+                        states=tuple(batch.states),
+                        requests=requests,
+                        pre_batch=pre_batch,
+                    ),
+                    base=base,
+                    dispatch_snapshot=dispatch_snapshot,
+                    materialize=cast(bool, getattr(batch, "materialize", True)),
+                )
     return prepared
 
 
