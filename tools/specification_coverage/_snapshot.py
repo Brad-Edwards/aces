@@ -366,6 +366,18 @@ def _validate_snapshot(
             )
         )
 
+    _concept_results_failures(repo_root, protocol, snapshot, catalogs, executed, failures, path)
+
+
+def _concept_results_failures(
+    repo_root: Path,
+    protocol: dict[str, object],
+    snapshot: dict[str, object],
+    catalogs: dict[str, object],
+    executed: dict[str, dict[str, object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
     results = _bounded_list(
         snapshot.get("concept_results"),
         failures,

@@ -112,6 +112,19 @@ def _satisfiability_scope_failures(analysis: _JsonObject, failures: list[PolicyF
         )
 
 
+def _snapshot_binding_valid(snapshot: _JsonObject, analysis: _JsonObject) -> bool:
+    return (
+        snapshot.get("profile") == _HISTORICAL_SATISFIABILITY_EXECUTION_PROFILE
+        and snapshot.get("revision") == "1.0.0"
+        and snapshot.get("execution_id") == analysis.get("execution_id")
+        and snapshot.get("revision") == analysis.get("snapshot_revision")
+        and snapshot.get("analysis_profile") == analysis.get("analysis_profile")
+        and _nonempty_string(snapshot.get("captured_at"))
+        and _nonempty_string(snapshot.get("solver_configuration_digest"))
+        and snapshot.get("deviations") == []
+    )
+
+
 def _satisfiability_join_failures(
     snapshot: _JsonObject,
     analysis: _JsonObject,
@@ -119,16 +132,7 @@ def _satisfiability_join_failures(
     path: str,
     snapshot_path: str,
 ) -> None:
-    if (
-        snapshot.get("profile") != _HISTORICAL_SATISFIABILITY_EXECUTION_PROFILE
-        or snapshot.get("revision") != "1.0.0"
-        or snapshot.get("execution_id") != analysis.get("execution_id")
-        or snapshot.get("revision") != analysis.get("snapshot_revision")
-        or snapshot.get("analysis_profile") != analysis.get("analysis_profile")
-        or not _nonempty_string(snapshot.get("captured_at"))
-        or not _nonempty_string(snapshot.get("solver_configuration_digest"))
-        or snapshot.get("deviations") != []
-    ):
+    if not _snapshot_binding_valid(snapshot, analysis):
         failures.append(
             _failure(
                 "formal-satisfiability-snapshot-join",
