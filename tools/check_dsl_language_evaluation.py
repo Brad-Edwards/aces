@@ -67,6 +67,28 @@ __all__ = [
 ]
 
 
+_ANALYSIS_ARTIFACT_PATH = "docs/research/dsl-language-evaluation/analysis-v1.json"
+
+
+def _artifact_path(paths: Mapping[str, object], key: str, default: str) -> str:
+    value = paths.get(key)
+    return value if isinstance(value, str) else default
+
+
+def _manifest_claim_binding(repo_root: Path, analysis: dict[str, object]) -> object:
+    claim = analysis.get("claim")
+    claim_id = claim.get("claim_id") if isinstance(claim, Mapping) else None
+    try:
+        return next(
+            entry[0]["claim_binding"]
+            for entry in load_bundles(repo_root)
+            if isinstance(entry[0].get("claim_binding"), Mapping)
+            and entry[0]["claim_binding"].get("claim_id") == claim_id
+        )
+    except (OSError, ValueError, StopIteration):
+        return None
+
+
 def validate_bundle(
     repo_root: Path,
     protocol: dict[str, object],
@@ -79,62 +101,18 @@ def validate_bundle(
 
     failures: list[PolicyFailure] = []
     paths = artifact_paths or {}
-    protocol_path = paths.get("protocol_path")
-    snapshot_path = paths.get("snapshot_path")
-    analysis_path = paths.get("analysis_path")
     claim_binding = paths.get("claim_binding")
     if claim_binding is None:
-        claim = analysis.get("claim")
-        claim_id = claim.get("claim_id") if isinstance(claim, Mapping) else None
-        try:
-            claim_binding = next(
-                entry[0]["claim_binding"]
-                for entry in load_bundles(repo_root)
-                if isinstance(entry[0].get("claim_binding"), Mapping)
-                and entry[0]["claim_binding"].get("claim_id") == claim_id
-            )
-        except (OSError, ValueError, StopIteration):
-            claim_binding = None
-    catalogs = _validate_protocol(
-        repo_root,
-        protocol,
-        failures,
-        path=protocol_path
-        if isinstance(protocol_path, str)
-        else "docs/research/dsl-language-evaluation/protocol-v1.json",
+        claim_binding = _manifest_claim_binding(repo_root, analysis)
+    protocol_path = _artifact_path(paths, "protocol_path", "docs/research/dsl-language-evaluation/protocol-v1.json")
+    snapshot_path = _artifact_path(
+        paths, "snapshot_path", "docs/research/dsl-language-evaluation/execution-snapshot-v1.json"
     )
-    scope = _validate_claim_scope(
-        protocol,
-        analysis,
-        catalogs,
-        failures,
-        path=analysis_path
-        if isinstance(analysis_path, str)
-        else "docs/research/dsl-language-evaluation/analysis-v1.json",
-    )
-    strata = _validate_claim_binding(
-        protocol,
-        analysis,
-        claim_binding,
-        scope,
-        failures,
-        path=analysis_path
-        if isinstance(analysis_path, str)
-        else "docs/research/dsl-language-evaluation/analysis-v1.json",
-    )
-    observation_ids = _validate_snapshot(
-        repo_root,
-        protocol,
-        snapshot,
-        catalogs,
-        scope,
-        failures,
-        path=(
-            snapshot_path
-            if isinstance(snapshot_path, str)
-            else "docs/research/dsl-language-evaluation/execution-snapshot-v1.json"
-        ),
-    )
+    analysis_path = _artifact_path(paths, "analysis_path", _ANALYSIS_ARTIFACT_PATH)
+    catalogs = _validate_protocol(repo_root, protocol, failures, path=protocol_path)
+    scope = _validate_claim_scope(protocol, analysis, catalogs, failures, path=analysis_path)
+    strata = _validate_claim_binding(protocol, analysis, claim_binding, scope, failures, path=analysis_path)
+    observation_ids = _validate_snapshot(repo_root, protocol, snapshot, catalogs, scope, failures, path=snapshot_path)
     _validate_analysis(
         _AnalysisContext(
             repo_root=repo_root,
@@ -146,9 +124,7 @@ def validate_bundle(
         ),
         analysis,
         failures,
-        path=analysis_path
-        if isinstance(analysis_path, str)
-        else "docs/research/dsl-language-evaluation/analysis-v1.json",
+        path=analysis_path,
     )
     return failures
 

@@ -203,13 +203,16 @@ def _observation_stage_failures(
         )
     except ValueError:
         applicable_stages = []
-    if (
-        observation.get("artifact_stage") not in task_stages
-        or observation.get("artifact_stage") not in applicable_stages
-        or observation.get("task_id") not in measure_tasks
-        or observation_dimensions is None
-        or set(observation_dimensions) != expected_dimensions
-    ):
+    undeclared = any(
+        (
+            observation.get("artifact_stage") not in task_stages,
+            observation.get("artifact_stage") not in applicable_stages,
+            observation.get("task_id") not in measure_tasks,
+            observation_dimensions is None,
+            set(observation_dimensions or []) != expected_dimensions,
+        )
+    )
+    if undeclared:
         failures.append(
             _failure(
                 "dsl-evaluation-observation-task-join",
@@ -355,7 +358,8 @@ def _opportunity_coverage_failures(
         failures.append(
             _failure(
                 "dsl-evaluation-opportunity-coverage",
-                "observations must exactly cover every non-withdrawn protocol-declared attempt-measure-stage opportunity",
+                "observations must exactly cover every non-withdrawn "
+                "protocol-declared attempt-measure-stage opportunity",
                 path,
             )
         )

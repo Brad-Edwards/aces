@@ -106,17 +106,18 @@ def _declaration_stage_pairs(
     task = tasks_by_id.get(task_id) if isinstance(task_id, str) else None
     declaration_variants = _string_list(declaration["variant_ids"], non_empty=True)
     declaration_stages = _string_list(declaration["artifact_stage_ids"], non_empty=True)
-    task_variants = set(_string_list(task.get("variant_ids"), non_empty=True) or []) if task is not None else set()
-    task_stages = set(_string_list(task.get("artifact_stage_ids"), non_empty=True) or []) if task is not None else set()
-    if (
-        task is None
-        or measure_tasks is None
-        or task_id not in measure_tasks
-        or declaration_variants is None
-        or not set(declaration_variants).issubset(task_variants)
-        or declaration_stages is None
-        or not set(declaration_stages).issubset(task_stages)
-    ):
+    invalid = any(
+        (
+            task is None,
+            measure_tasks is None,
+            task_id not in (measure_tasks or []),
+            declaration_variants is None,
+            not set(declaration_variants or []).issubset(_task_id_set(task, "variant_ids")),
+            declaration_stages is None,
+            not set(declaration_stages or []).issubset(_task_id_set(task, "artifact_stage_ids")),
+        )
+    )
+    if invalid:
         failures.append(
             _failure(
                 "dsl-evaluation-measure-stage-applicability",
@@ -125,7 +126,14 @@ def _declaration_stage_pairs(
             )
         )
         return None
+    assert declaration_variants is not None
     return [(task_id, variant_id) for variant_id in declaration_variants]
+
+
+def _task_id_set(task: Mapping[str, object] | None, field: str) -> set[str]:
+    if task is None:
+        return set()
+    return set(_string_list(task.get(field), non_empty=True) or [])
 
 
 def _stage_applicability_failures(

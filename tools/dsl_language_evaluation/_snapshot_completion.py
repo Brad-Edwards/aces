@@ -122,16 +122,19 @@ def _review_join_failures(
     task = tasks.get(attempt.get("task_id"))
     task_stages = _string_list(task.get("artifact_stage_ids"), non_empty=True) if task else None
     task_personas = _string_list(task.get("persona_ids"), non_empty=True) if task else None
-    if (
-        review.get("task_id") != attempt.get("task_id")
-        or review.get("variant_id") != attempt.get("variant_id")
-        or reviewer_id == attempt.get("subject_id")
-        or reviewer.get("consent_status") != "consented"
-        or task_stages is None
-        or "review-judgment" not in task_stages
-        or task_personas is None
-        or reviewer.get("persona_id") not in task_personas
-    ):
+    ineligible = any(
+        (
+            review.get("task_id") != attempt.get("task_id"),
+            review.get("variant_id") != attempt.get("variant_id"),
+            reviewer_id == attempt.get("subject_id"),
+            reviewer.get("consent_status") != "consented",
+            task_stages is None,
+            "review-judgment" not in (task_stages or []),
+            task_personas is None,
+            reviewer.get("persona_id") not in (task_personas or []),
+        )
+    )
+    if ineligible:
         failures.append(
             _failure(
                 "dsl-evaluation-review-join",
@@ -182,6 +185,51 @@ def _review_failures(
     return reviews_by_attempt
 
 
+def _linked_attempt_ids(reviews: list[object], disagreement_review_ids: list[str] | None) -> set[object]:
+    if disagreement_review_ids is None:
+        return set()
+    return {
+        review.get("attempt_id")
+        for review in reviews
+        if isinstance(review, Mapping) and review.get("review_id") in disagreement_review_ids
+    }
+
+
+def _disagreement_record_failures(
+    disagreement: Mapping[str, object],
+    joins: _SnapshotJoins,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    disagreement_review_ids = _string_list(disagreement["review_ids"], non_empty=True)
+    linked_attempts = _linked_attempt_ids(joins.reviews, disagreement_review_ids)
+    listed_ids = disagreement_review_ids or []
+    broken = any(
+        (
+            disagreement_review_ids is None,
+            len(listed_ids) < 2,
+            not set(listed_ids).issubset(joins.review_ids),
+            len(linked_attempts) != 1,
+        )
+    )
+    if broken:
+        failures.append(
+            _failure(
+                "dsl-evaluation-disagreement-join",
+                f"{disagreement['disagreement_id']}: reviews must share one parent attempt",
+                path,
+            )
+        )
+    if disagreement["originals_preserved"] is not True:
+        failures.append(
+            _failure(
+                "dsl-evaluation-disagreement-preservation",
+                f"{disagreement['disagreement_id']}: originals must be preserved",
+                path,
+            )
+        )
+
+
 def _disagreement_failures(
     joins: _SnapshotJoins,
     failures: list[PolicyFailure],
@@ -190,36 +238,7 @@ def _disagreement_failures(
     for disagreement in joins.disagreements:
         if not isinstance(disagreement, Mapping) or set(disagreement) != _DISAGREEMENT_KEYS:
             continue
-        disagreement_review_ids = _string_list(disagreement["review_ids"], non_empty=True)
-        linked_reviews = [
-            review
-            for review in joins.reviews
-            if isinstance(review, Mapping)
-            and disagreement_review_ids is not None
-            and review.get("review_id") in disagreement_review_ids
-        ]
-        linked_attempts = {review.get("attempt_id") for review in linked_reviews}
-        if (
-            disagreement_review_ids is None
-            or len(disagreement_review_ids) < 2
-            or not set(disagreement_review_ids).issubset(joins.review_ids)
-            or len(linked_attempts) != 1
-        ):
-            failures.append(
-                _failure(
-                    "dsl-evaluation-disagreement-join",
-                    f"{disagreement['disagreement_id']}: reviews must share one parent attempt",
-                    path,
-                )
-            )
-        if disagreement["originals_preserved"] is not True:
-            failures.append(
-                _failure(
-                    "dsl-evaluation-disagreement-preservation",
-                    f"{disagreement['disagreement_id']}: originals must be preserved",
-                    path,
-                )
-            )
+        _disagreement_record_failures(disagreement, joins, failures, path)
 
 
 def _scoped_subject_ids(
@@ -381,19 +400,24 @@ def _completion_failures(
                 path,
             )
         )
-    if (
-        not ethics_approved
-        or missing_personas
-        or not isinstance(target_total, int)
-        or len(active_subject_ids) < target_total
-        or not expected_task_shapes.issubset(actual_task_shapes)
-        or any(reviews_by_attempt[attempt_id] == 0 for attempt_id in review_required_attempts)
-        or missing_subject_workloads
-    ):
+    subject_floor = target_total if isinstance(target_total, int) else 0
+    incomplete = any(
+        (
+            not ethics_approved,
+            bool(missing_personas),
+            not isinstance(target_total, int),
+            len(active_subject_ids) < subject_floor,
+            not expected_task_shapes.issubset(actual_task_shapes),
+            any(reviews_by_attempt[attempt_id] == 0 for attempt_id in review_required_attempts),
+            bool(missing_subject_workloads),
+        )
+    )
+    if incomplete:
         failures.append(
             _failure(
                 "dsl-evaluation-completion-coverage",
-                "complete execution lacks approved ethics, subject workload/minima, task/condition/variant coverage, or required independent reviews",
+                "complete execution lacks approved ethics, subject workload/minima, "
+                "task/condition/variant coverage, or required independent reviews",
                 path,
             )
         )

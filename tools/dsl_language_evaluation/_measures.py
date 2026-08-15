@@ -78,13 +78,11 @@ def _attempt_in_scope(
 ) -> bool:
     if scope_sets is None:
         return True
-    if not _attempt_matches_scope(attempt, scope_sets):
-        return False
-    if "experience_band_ids" in scope_sets:
+    in_scope = _attempt_matches_scope(attempt, scope_sets)
+    if in_scope and "experience_band_ids" in scope_sets:
         subject = subjects_by_id.get(attempt.get("subject_id"))
-        if not isinstance(subject, Mapping) or subject.get("experience_band") not in scope_sets["experience_band_ids"]:
-            return False
-    return True
+        in_scope = isinstance(subject, Mapping) and subject.get("experience_band") in scope_sets["experience_band_ids"]
+    return in_scope
 
 
 def _attempt_opportunities(
@@ -134,6 +132,65 @@ def _check_observed_keys(
         raise ValueError(f"observations without protocol-declared opportunities: {extras[:5]}")
 
 
+def _subjects_by_id(subjects: object) -> dict[object, Mapping[str, object]]:
+    return {
+        subject.get("subject_id"): subject
+        for subject in subjects
+        if isinstance(subject, Mapping) and isinstance(subject.get("subject_id"), str)
+    }
+
+
+def _withdrawn_subjects(withdrawals: list[object]) -> set[str]:
+    return {
+        withdrawal["subject_id"]
+        for withdrawal in withdrawals
+        if isinstance(withdrawal, Mapping) and isinstance(withdrawal.get("subject_id"), str)
+    }
+
+
+def _attempt_withdrawn(attempt: Mapping[str, object], withdrawn_subjects: set[str]) -> bool:
+    subject_id = attempt.get("subject_id")
+    if isinstance(subject_id, str) and subject_id in withdrawn_subjects:
+        return True
+    return attempt.get("outcome") == "withdrawn"
+
+
+def _selected_opportunities(
+    attempts: list[object],
+    tasks: Mapping[str, Mapping[str, object]],
+    measures: Mapping[str, Mapping[str, object]],
+    scope_sets: Mapping[str, set[str]] | None,
+    subjects_by_id: Mapping[object, Mapping[str, object]],
+    withdrawn_subjects: set[str],
+) -> tuple[
+    list[tuple[Mapping[str, object], Mapping[str, object], str, bool]],
+    set[tuple[str, str, str]],
+    set[str],
+]:
+    opportunities: list[tuple[Mapping[str, object], Mapping[str, object], str, bool]] = []
+    expected_keys: set[tuple[str, str, str]] = set()
+    selected_attempt_ids: set[str] = set()
+    for attempt in attempts:
+        if not isinstance(attempt, Mapping):
+            continue
+        attempt_id = attempt.get("attempt_id")
+        task_id = attempt.get("task_id")
+        if (
+            not isinstance(attempt_id, str)
+            or not isinstance(task_id, str)
+            or not isinstance(attempt.get("variant_id"), str)
+        ):
+            continue
+        if tasks.get(task_id) is None or not _attempt_in_scope(attempt, scope_sets, subjects_by_id):
+            continue
+        selected_attempt_ids.add(attempt_id)
+        withdrawn = _attempt_withdrawn(attempt, withdrawn_subjects)
+        attempt_opportunities, attempt_keys = _attempt_opportunities(attempt, measures, scope_sets, withdrawn=withdrawn)
+        opportunities.extend(attempt_opportunities)
+        expected_keys.update(attempt_keys)
+    return opportunities, expected_keys, selected_attempt_ids
+
+
 def _measure_opportunities(
     protocol: Mapping[str, object],
     snapshot: Mapping[str, object],
@@ -151,49 +208,27 @@ def _measure_opportunities(
     attempts = snapshot.get("attempts", [])
     observations = snapshot.get("observations", [])
     withdrawals = snapshot.get("withdrawals", [])
-    subjects = snapshot.get("subjects", [])
-    subjects_by_id = {
-        subject.get("subject_id"): subject
-        for subject in subjects
-        if isinstance(subject, Mapping) and isinstance(subject.get("subject_id"), str)
-    }
+    subjects_by_id = _subjects_by_id(snapshot.get("subjects", []))
     if not isinstance(attempts, list) or not isinstance(observations, list) or not isinstance(withdrawals, list):
         raise ValueError("snapshot execution records must be lists")
 
-    withdrawn_subjects = {
-        withdrawal["subject_id"]
-        for withdrawal in withdrawals
-        if isinstance(withdrawal, Mapping) and isinstance(withdrawal.get("subject_id"), str)
-    }
+    withdrawn_subjects = _withdrawn_subjects(withdrawals)
     observation_by_opportunity = _observation_index(observations)
-
-    opportunities: list[tuple[Mapping[str, object], Mapping[str, object], str, bool]] = []
-    expected_keys: set[tuple[str, str, str]] = set()
-    selected_attempt_ids: set[str] = set()
-    for attempt in attempts:
-        if not isinstance(attempt, Mapping):
-            continue
-        attempt_id = attempt.get("attempt_id")
-        task_id = attempt.get("task_id")
-        subject_id = attempt.get("subject_id")
-        if (
-            not isinstance(attempt_id, str)
-            or not isinstance(task_id, str)
-            or not isinstance(attempt.get("variant_id"), str)
-        ):
-            continue
-        if tasks.get(task_id) is None or not _attempt_in_scope(attempt, scope_sets, subjects_by_id):
-            continue
-        selected_attempt_ids.add(attempt_id)
-        withdrawn = (isinstance(subject_id, str) and subject_id in withdrawn_subjects) or attempt.get(
-            "outcome"
-        ) == "withdrawn"
-        attempt_opportunities, attempt_keys = _attempt_opportunities(attempt, measures, scope_sets, withdrawn=withdrawn)
-        opportunities.extend(attempt_opportunities)
-        expected_keys.update(attempt_keys)
-
+    opportunities, expected_keys, selected_attempt_ids = _selected_opportunities(
+        attempts, tasks, measures, scope_sets, subjects_by_id, withdrawn_subjects
+    )
     _check_observed_keys(observation_by_opportunity, expected_keys, selected_attempt_ids, scope_sets)
     return measures, opportunities, observation_by_opportunity
+
+
+def _validated_value(measure_id: str, aggregation: object, value: object) -> int | float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{measure_id}: observation values must be numeric or null")
+    if aggregation == "proportion" and value not in {0, 1}:
+        raise ValueError(f"{measure_id}: proportion observations must be 0 or 1")
+    return value
 
 
 def _observation_tallies(
@@ -207,10 +242,11 @@ def _observation_tallies(
     counts = {"missing": 0, "abandoned": 0, "tool_failed": 0}
     for attempt, artifact_stage in eligible:
         attempt_id = attempt.get("attempt_id")
-        if not isinstance(attempt_id, str):
-            counts["missing"] += 1
-            continue
-        observation = observation_by_opportunity.get((attempt_id, measure_id, artifact_stage))
+        observation = (
+            observation_by_opportunity.get((attempt_id, measure_id, artifact_stage))
+            if isinstance(attempt_id, str)
+            else None
+        )
         if observation is None:
             counts["missing"] += 1
             continue
@@ -221,14 +257,9 @@ def _observation_tallies(
         outcome = observation.get("outcome")
         if outcome in counts:
             counts[outcome] += 1
-        value = observation.get("value")
-        if value is None:
-            continue
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError(f"{measure_id}: observation values must be numeric or null")
-        if aggregation == "proportion" and value not in {0, 1}:
-            raise ValueError(f"{measure_id}: proportion observations must be 0 or 1")
-        values.append(value)
+        value = _validated_value(measure_id, aggregation, observation.get("value"))
+        if value is not None:
+            values.append(value)
     return values, supporting_ids, counts
 
 
@@ -239,13 +270,10 @@ def _aggregated_value(
 ) -> tuple[int | float | None, int | float | None]:
     if denominator == 0 or len(values) != denominator:
         return None, None
-    if aggregation == "proportion":
-        numerator = sum(values)
-        return numerator, numerator / denominator
     if aggregation == "median":
         return None, float(median(values))
     numerator = sum(values)
-    return numerator, numerator
+    return numerator, numerator / denominator if aggregation == "proportion" else numerator
 
 
 def _measure_result(

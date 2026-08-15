@@ -351,39 +351,50 @@ def _not_started_analysis_failures(
             )
 
 
-def _gating_qualification(
-    snapshot: Mapping[str, object],
+def _dimension_outcome(result: object, threshold_result: str) -> bool:
+    return (
+        isinstance(result, Mapping)
+        and result.get("status") == "evaluated"
+        and result.get("threshold_result") == threshold_result
+    )
+
+
+def _all_gating_pass(gating_strata: list[dict[str, object]], gating_dimensions: list[object]) -> bool:
+    return (
+        bool(gating_strata)
+        and len(gating_dimensions) == len(gating_strata)
+        and all(
+            dimension_results and all(_dimension_outcome(result, "pass") for result in dimension_results)
+            for dimension_results in gating_dimensions
+        )
+    )
+
+
+def _any_record_matches(records: object, field: str, value: str) -> bool:
+    return any(isinstance(item, Mapping) and item.get(field) == value for item in records)
+
+
+def _gating_dimension_lists(
     expected_strata: list[dict[str, object]],
-) -> tuple[bool, bool]:
+) -> tuple[list[dict[str, object]], list[object]]:
     gating_strata = [item for item in expected_strata if item.get("role") == "gating"]
     gating_dimensions = [
         item.get("dimension_results", []) for item in gating_strata if isinstance(item.get("dimension_results"), list)
     ]
-    all_pass = (
-        bool(gating_strata)
-        and len(gating_dimensions) == len(gating_strata)
-        and all(
-            dimension_results
-            and all(
-                isinstance(result, Mapping)
-                and result.get("status") == "evaluated"
-                and result.get("threshold_result") == "pass"
-                for result in dimension_results
-            )
-            for dimension_results in gating_dimensions
-        )
-    )
+    return gating_strata, gating_dimensions
+
+
+def _gating_qualification(
+    snapshot: Mapping[str, object],
+    expected_strata: list[dict[str, object]],
+) -> tuple[bool, bool]:
+    gating_strata, gating_dimensions = _gating_dimension_lists(expected_strata)
+    all_pass = _all_gating_pass(gating_strata, gating_dimensions)
     any_fail = any(
-        isinstance(result, Mapping) and result.get("status") == "evaluated" and result.get("threshold_result") == "fail"
-        for dimension_results in gating_dimensions
-        for result in dimension_results
+        _dimension_outcome(result, "fail") for dimension_results in gating_dimensions for result in dimension_results
     )
-    unresolved = any(
-        isinstance(item, Mapping) and item.get("status") == "unresolved" for item in snapshot.get("disagreements", [])
-    )
-    invalidating_deviation = any(
-        isinstance(item, Mapping) and item.get("severity") == "invalidating" for item in snapshot.get("deviations", [])
-    )
+    unresolved = _any_record_matches(snapshot.get("disagreements", []), "status", "unresolved")
+    invalidating_deviation = _any_record_matches(snapshot.get("deviations", []), "severity", "invalidating")
     execution_complete = snapshot.get("execution_status") == "complete"
     qualifies_demonstrated = execution_complete and all_pass and not unresolved and not invalidating_deviation
     qualifies_refuted = execution_complete and any_fail
