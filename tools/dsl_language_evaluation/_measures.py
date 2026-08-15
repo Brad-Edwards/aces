@@ -132,10 +132,10 @@ def _check_observed_keys(
         raise ValueError(f"observations without protocol-declared opportunities: {extras[:5]}")
 
 
-def _subjects_by_id(subjects: object) -> dict[object, Mapping[str, object]]:
+def _subjects_by_id(snapshot: Mapping[str, object]) -> dict[object, Mapping[str, object]]:
     return {
         subject.get("subject_id"): subject
-        for subject in subjects
+        for subject in snapshot.get("subjects", [])
         if isinstance(subject, Mapping) and isinstance(subject.get("subject_id"), str)
     }
 
@@ -208,7 +208,7 @@ def _measure_opportunities(
     attempts = snapshot.get("attempts", [])
     observations = snapshot.get("observations", [])
     withdrawals = snapshot.get("withdrawals", [])
-    subjects_by_id = _subjects_by_id(snapshot.get("subjects", []))
+    subjects_by_id = _subjects_by_id(snapshot)
     if not isinstance(attempts, list) or not isinstance(observations, list) or not isinstance(withdrawals, list):
         raise ValueError("snapshot execution records must be lists")
 

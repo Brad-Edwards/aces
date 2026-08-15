@@ -370,8 +370,8 @@ def _all_gating_pass(gating_strata: list[dict[str, object]], gating_dimensions: 
     )
 
 
-def _any_record_matches(records: object, field: str, value: str) -> bool:
-    return any(isinstance(item, Mapping) and item.get(field) == value for item in records)
+def _any_record_matches(snapshot: Mapping[str, object], field_name: str, field: str, value: str) -> bool:
+    return any(isinstance(item, Mapping) and item.get(field) == value for item in snapshot.get(field_name, []))
 
 
 def _gating_dimension_lists(
@@ -393,8 +393,8 @@ def _gating_qualification(
     any_fail = any(
         _dimension_outcome(result, "fail") for dimension_results in gating_dimensions for result in dimension_results
     )
-    unresolved = _any_record_matches(snapshot.get("disagreements", []), "status", "unresolved")
-    invalidating_deviation = _any_record_matches(snapshot.get("deviations", []), "severity", "invalidating")
+    unresolved = _any_record_matches(snapshot, "disagreements", "status", "unresolved")
+    invalidating_deviation = _any_record_matches(snapshot, "deviations", "severity", "invalidating")
     execution_complete = snapshot.get("execution_status") == "complete"
     qualifies_demonstrated = execution_complete and all_pass and not unresolved and not invalidating_deviation
     qualifies_refuted = execution_complete and any_fail
