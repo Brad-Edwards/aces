@@ -463,7 +463,9 @@ def test_python_compatibility_and_osv_session_wrappers_always_summarize(
         "_run_python_compatibility",
         lambda _session, _reporter: calls.append("python"),
     )
-    _patch_nox_globals(monkeypatch, noxfile, "_run_osv_scan", lambda _session, _reporter, **_kwargs: calls.append("osv"))
+    _patch_nox_globals(
+        monkeypatch, noxfile, "_run_osv_scan", lambda _session, _reporter, **_kwargs: calls.append("osv")
+    )
 
     noxfile.python_compatibility(session)
     noxfile.osv_scan(session)

@@ -157,7 +157,7 @@ def _run_parallel_verification(
                 run_verification_lanes(
                     lanes,
                     nox_python=Path(sys.executable),
-                    noxfile=Path(__file__).resolve(),
+                    noxfile=REPO_ROOT / "noxfile.py",
                     repo_root=REPO_ROOT,
                     base_env={
                         VERIFY_PROJECT_SYNCED_ENV: str(os.getpid()),
@@ -233,7 +233,7 @@ def _run_parallel_verification(
                 run_verification_lanes(
                     lanes,
                     nox_python=Path(sys.executable),
-                    noxfile=Path(__file__).resolve(),
+                    noxfile=REPO_ROOT / "noxfile.py",
                     repo_root=REPO_ROOT,
                     base_env={
                         VERIFY_PROJECT_SYNCED_ENV: str(os.getpid()),
