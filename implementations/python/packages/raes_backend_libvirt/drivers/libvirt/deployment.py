@@ -14,6 +14,8 @@ from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
 from raes_contracts.realization_observation import RealizationObservation
 
+from raes_backend_libvirt._observability import LOGGER as _LOGGER
+from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
 from raes_backend_libvirt.driver import (
     DomainHandle,
     DomainSpec,
@@ -100,7 +102,8 @@ class LibvirtDeploymentDriver:
         created_domains: list[str] = []
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _LOGGER.debug(_NATIVE_FAILURE_LOG, "realize", exc_info=exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         realize_network_specs(self, connection, networks, created_networks, network_handles, diagnostics)
@@ -149,7 +152,8 @@ class LibvirtDeploymentDriver:
                 native = lookup(self._name_for(address))
                 active = getattr(native, "isActive", None)
                 owned_and_active = _existing_uuid(native) == _raes_uuid(address) and callable(active) and active() == 1
-            except Exception:
+            except Exception as exc:
+                _LOGGER.debug(_NATIVE_FAILURE_LOG, "_compute_substrate_observation", exc_info=exc)
                 owned_and_active = False
             if owned_and_active:
                 envelope = load_libvirt_realization_envelope(self.driver_mode)
@@ -172,7 +176,8 @@ class LibvirtDeploymentDriver:
 
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _LOGGER.debug(_NATIVE_FAILURE_LOG, "observe", exc_info=exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
         observations: list[RealizationObservation] = []
         diagnostics: list[Diagnostic] = []
@@ -221,7 +226,8 @@ class LibvirtDeploymentDriver:
             native.create()
         except _OwnershipConflict:
             return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
-        except Exception:
+        except Exception as exc:
+            _LOGGER.debug(_NATIVE_FAILURE_LOG, "_realize_network", exc_info=exc)
             return _failure(spec.address, _CODE_OPERATION_FAILED)
         self._realized.add(spec.address)
         return None
@@ -250,7 +256,8 @@ class LibvirtDeploymentDriver:
             native.create()
         except _OwnershipConflict:
             return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
-        except Exception:
+        except Exception as exc:
+            _LOGGER.debug(_NATIVE_FAILURE_LOG, "_realize_domain", exc_info=exc)
             return _failure(spec.address, _CODE_OPERATION_FAILED)
         self._realized.add(spec.address)
         return None
@@ -264,7 +271,8 @@ class LibvirtDeploymentDriver:
         diagnostics: list[Diagnostic] = []
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _LOGGER.debug(_NATIVE_FAILURE_LOG, "destroy", exc_info=exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         domain_handles = self._destroy_domains(connection, domains, diagnostics)

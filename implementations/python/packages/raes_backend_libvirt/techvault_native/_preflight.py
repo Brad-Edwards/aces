@@ -8,6 +8,9 @@ from urllib.parse import urlsplit
 
 from raes_contracts.diagnostics import Diagnostic
 
+from raes_backend_libvirt._observability import LOGGER as _LOGGER
+from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+
 from .._initramfs import builder_preflight
 from .._techvault_native_ops import (
     _CODE_KERNEL_UNAVAILABLE,
@@ -59,7 +62,8 @@ def artifact_preflight_diagnostics(
         else:
             try:
                 toolchain = builder_preflight(initramfs_builder)
-            except Exception:
+            except Exception as exc:
+                _LOGGER.debug(_NATIVE_FAILURE_LOG, "artifact_preflight_diagnostics", exc_info=exc)
                 toolchain = None
             if toolchain is None or not toolchain.ready:
                 diagnostic = _diagnostic(_CODE_TOOLCHAIN_UNAVAILABLE, "runtime.libvirt.initramfs")

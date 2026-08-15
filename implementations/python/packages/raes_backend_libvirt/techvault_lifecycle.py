@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from raes_backend_libvirt._observability import LOGGER as _LOGGER
+from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+
 from .drivers.libvirt import _error_code, _existing_uuid, _raes_uuid
 from .techvault_matrix import runtime_name
 
@@ -126,7 +129,8 @@ def _list_native(connection: object, method_name: str) -> tuple[object, ...] | N
         return None
     try:
         native = method()
-    except Exception:
+    except Exception as exc:
+        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_list_native", exc_info=exc)
         return None
     return tuple(native) if isinstance(native, list | tuple) else None
 
@@ -137,7 +141,8 @@ def _native_name(native: object) -> str:
         return ""
     try:
         value = method()
-    except Exception:
+    except Exception as exc:
+        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_native_name", exc_info=exc)
         return ""
     return value if isinstance(value, str) else ""
 

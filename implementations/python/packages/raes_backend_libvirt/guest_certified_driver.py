@@ -22,6 +22,9 @@ from typing import ClassVar
 
 from raes_contracts.diagnostics import Diagnostic
 
+from raes_backend_libvirt._observability import LOGGER as _LOGGER
+from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+
 from ._techvault_native_ops import _CODE_GUEST_FRESHNESS_UNAVAILABLE, _diagnostic
 from .driver import DomainSpec, NetworkSpec, RealizationObservation
 from .drivers.libvirt import _raes_uuid
@@ -98,7 +101,8 @@ class GuestCertifiedLibvirtDriver(TechVaultNativeLibvirtDriver):
         diagnostics: list[Diagnostic] = []
         try:
             candidate = self.challenge_factory()
-        except Exception:
+        except Exception as exc:
+            _LOGGER.debug(_NATIVE_FAILURE_LOG, "_prepare_operation", exc_info=exc)
             candidate = None
         if (
             not isinstance(candidate, str)

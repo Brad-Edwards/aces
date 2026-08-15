@@ -15,6 +15,9 @@ import uuid
 from collections.abc import Callable
 from typing import Protocol, cast
 
+from raes_backend_libvirt._observability import LOGGER as _LOGGER
+from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 # Fixed namespace for deriving a per-address libvirt UUID. The UUID proves an
 # existing host object was realized by RAES for *this* address, so convergence
@@ -56,7 +59,8 @@ def _error_code(exc: BaseException) -> int | None:
         return None
     try:
         code = getter()
-    except Exception:
+    except Exception as exc:
+        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_error_code", exc_info=exc)
         return None
     return code if isinstance(code, int) else None
 
@@ -101,7 +105,8 @@ def _existing_uuid(native: object) -> str | None:
         return None
     try:
         return reader()
-    except Exception:
+    except Exception as exc:
+        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_existing_uuid", exc_info=exc)
         return None
 
 
@@ -135,7 +140,8 @@ def _lookup(connection: object, method_name: str, name: str) -> object | None:
         return None
     try:
         return method(name)
-    except Exception:
+    except Exception as exc:
+        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_lookup", exc_info=exc)
         return None
 
 
