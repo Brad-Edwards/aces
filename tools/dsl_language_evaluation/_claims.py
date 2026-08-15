@@ -73,6 +73,18 @@ def _validate_claim_scope(
     ):
         return fallback
 
+    resolved = _resolved_scope_fields(scope, catalogs, failures, path)
+    _scope_task_failures(protocol, resolved, failures, path)
+    _scope_threshold_failures(protocol, resolved, failures, path)
+    return resolved
+
+
+def _resolved_scope_fields(
+    scope: Mapping[str, object],
+    catalogs: Mapping[str, set[str]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> dict[str, set[str]]:
     catalog_fields = {
         "persona_ids": "persona_ids",
         "task_ids": "task_ids",
@@ -97,17 +109,25 @@ def _validate_claim_scope(
             resolved[field] = set(values or []) & known
         else:
             resolved[field] = set(values)
+    return resolved
 
+
+def _scope_task_failures(
+    protocol: Mapping[str, object],
+    resolved: Mapping[str, set[str]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
     tasks = _protocol_records_by_id(protocol, "tasks", "task_id")
     measures = _protocol_records_by_id(protocol, "measures", "measure_id")
+    joins = (
+        ("persona_ids", "persona_ids"),
+        ("tooling_condition_ids", "tooling_condition_ids"),
+        ("variant_ids", "variant_ids"),
+        ("artifact_stage_ids", "artifact_stage_ids"),
+    )
     for task_id in resolved["task_ids"]:
         task = tasks.get(task_id, {})
-        joins = (
-            ("persona_ids", "persona_ids"),
-            ("tooling_condition_ids", "tooling_condition_ids"),
-            ("variant_ids", "variant_ids"),
-            ("artifact_stage_ids", "artifact_stage_ids"),
-        )
         if any(
             not (set(_string_list(task.get(task_field), non_empty=True) or []) & resolved[scope_field])
             for task_field, scope_field in joins
@@ -132,19 +152,16 @@ def _validate_claim_scope(
                 )
             )
 
-    thresholds = {
-        threshold.get("dimension_id"): threshold
-        for threshold in protocol.get("thresholds", [])
-        if isinstance(threshold, Mapping) and isinstance(threshold.get("dimension_id"), str)
-    }
+
+def _scope_threshold_failures(
+    protocol: Mapping[str, object],
+    resolved: Mapping[str, set[str]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    thresholds = _thresholds_by_dimension(protocol)
     for dimension_id in resolved["dimension_ids"]:
-        threshold = thresholds.get(dimension_id)
-        conditions = threshold.get("conditions", []) if isinstance(threshold, Mapping) else []
-        required_measures = {
-            condition.get("measure_id")
-            for condition in conditions
-            if isinstance(condition, Mapping) and isinstance(condition.get("measure_id"), str)
-        }
+        required_measures = _threshold_measures(thresholds.get(dimension_id))
         if not required_measures or not required_measures.issubset(resolved["measure_ids"]):
             failures.append(
                 _failure(
@@ -153,14 +170,29 @@ def _validate_claim_scope(
                     path,
                 )
             )
-    return resolved
+
+
+def _thresholds_by_dimension(protocol: Mapping[str, object]) -> dict[object, Mapping[str, object]]:
+    return {
+        threshold.get("dimension_id"): threshold
+        for threshold in protocol.get("thresholds", [])
+        if isinstance(threshold, Mapping) and isinstance(threshold.get("dimension_id"), str)
+    }
+
+
+def _threshold_measures(threshold: Mapping[str, object] | None) -> set[object]:
+    conditions = threshold.get("conditions", []) if isinstance(threshold, Mapping) else []
+    return {
+        condition.get("measure_id")
+        for condition in conditions
+        if isinstance(condition, Mapping) and isinstance(condition.get("measure_id"), str)
+    }
 
 
 def _validate_claim_binding(
     protocol: Mapping[str, object],
     analysis: Mapping[str, object],
     claim_binding: object,
-    catalogs: Mapping[str, set[str]],
     scope: Mapping[str, set[str]],
     failures: list[PolicyFailure],
     *,
@@ -178,37 +210,8 @@ def _validate_claim_binding(
     ):
         return []
     assert isinstance(claim_binding, dict)
-    claim = analysis.get("claim")
-    claim_id = claim.get("claim_id") if isinstance(claim, Mapping) else None
-    if not _valid_id(claim_binding["claim_id"]) or claim_binding["claim_id"] != claim_id:
-        failures.append(
-            _failure(
-                "dsl-evaluation-claim-binding",
-                "manifest claim binding must name the analysis claim_id exactly",
-                path,
-            )
-        )
-
-    bound_scope = claim_binding["scope"]
-    if _exact_keys(
-        bound_scope,
-        _CLAIM_SCOPE_KEYS,
-        failures,
-        rule_id="dsl-evaluation-claim-binding",
-        label="claim binding scope",
-        path=path,
-    ):
-        assert isinstance(bound_scope, dict)
-        for field in _CLAIM_SCOPE_KEYS:
-            values = _string_list(bound_scope[field], non_empty=True)
-            if values is None or len(values) != len(set(values)) or set(values) != scope.get(field, set()):
-                failures.append(
-                    _failure(
-                        "dsl-evaluation-claim-binding",
-                        f"analysis claim scope {field} must exactly match its manifest binding",
-                        path,
-                    )
-                )
+    _claim_identity_failures(analysis, claim_binding, failures, path)
+    _bound_scope_failures(claim_binding, scope, failures, path)
 
     groups = _bounded_list(
         claim_binding["strata"],
@@ -243,83 +246,17 @@ def _validate_claim_binding(
         ):
             continue
         assert isinstance(group, dict)
-        group_id = group["group_id"]
-        role = group["role"]
-        partition_by = _string_list(group["partition_by"])
-        persona_ids = _string_list(group["persona_ids"], non_empty=True)
-        band_ids = _string_list(group["experience_band_ids"], non_empty=True)
-        condition_ids = _string_list(group["tooling_condition_ids"], non_empty=True)
-        valid = (
-            _valid_id(group_id)
-            and role in _STRATUM_ROLES
-            and partition_by is not None
-            and len(partition_by) == len(set(partition_by))
-            and set(partition_by).issubset(_STRATUM_PARTITION_AXES)
-            and persona_ids is not None
-            and len(persona_ids) == len(set(persona_ids))
-            and set(persona_ids).issubset(scope.get("persona_ids", set()))
-            and band_ids is not None
-            and len(band_ids) == len(set(band_ids))
-            and set(band_ids).issubset(experience_bands)
-            and condition_ids is not None
-            and len(condition_ids) == len(set(condition_ids))
-            and set(condition_ids).issubset(scope.get("tooling_condition_ids", set()))
-        )
-        if not valid:
+        filters = _validated_group_filters(group, scope, experience_bands)
+        if filters is None:
             failures.append(
                 _failure(
                     "dsl-evaluation-claim-strata",
-                    f"claim stratum group {group_id!r} has invalid role, partition axes, or catalog filters",
+                    f"claim stratum group {group['group_id']!r} has invalid role, partition axes, or catalog filters",
                     path,
                 )
             )
             continue
-
-        assert isinstance(group_id, str)
-        assert isinstance(role, str)
-        assert partition_by is not None
-        assert persona_ids is not None
-        assert band_ids is not None
-        assert condition_ids is not None
-        axis_values = {
-            "persona_id": persona_ids,
-            "experience_band": band_ids,
-            "tooling_condition_id": condition_ids,
-        }
-        split_axes = [
-            axis for axis in ("persona_id", "experience_band", "tooling_condition_id") if axis in partition_by
-        ]
-        combinations = product(*(axis_values[axis] for axis in split_axes)) if split_axes else [()]
-        for combination in combinations:
-            selected = dict(zip(split_axes, combination, strict=True))
-            stratum_id = "-".join([group_id, *(str(selected[axis]) for axis in split_axes)])
-            stratum_personas = {str(selected["persona_id"])} if "persona_id" in selected else set(persona_ids)
-            stratum_bands = {str(selected["experience_band"])} if "experience_band" in selected else set(band_ids)
-            stratum_conditions = (
-                {str(selected["tooling_condition_id"])} if "tooling_condition_id" in selected else set(condition_ids)
-            )
-            stratum_scope = _derive_stratum_scope(
-                protocol,
-                scope,
-                persona_ids=stratum_personas,
-                experience_band_ids=stratum_bands,
-                tooling_condition_ids=stratum_conditions,
-            )
-            if (
-                not _valid_id(stratum_id)
-                or not stratum_scope["task_ids"]
-                or not stratum_scope["measure_ids"]
-                or not stratum_scope["dimension_ids"]
-            ):
-                failures.append(
-                    _failure(
-                        "dsl-evaluation-claim-strata",
-                        f"claim stratum {stratum_id!r} has no complete task/measure/dimension slice",
-                        path,
-                    )
-                )
-                continue
-            expanded.append({"stratum_id": stratum_id, "role": role, "scope": stratum_scope})
+        expanded.extend(_expanded_group_strata(protocol, scope, group, filters, failures, path))
 
     expanded_ids = [str(item["stratum_id"]) for item in expanded]
     if len(group_ids) != len(groups) or len(expanded_ids) != len(set(expanded_ids)) or not expanded:
@@ -341,6 +278,135 @@ def _validate_claim_binding(
             )
         )
         return expanded[:_MAX_CATALOG_ITEMS]
+    return expanded
+
+
+def _claim_identity_failures(
+    analysis: Mapping[str, object],
+    claim_binding: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    claim = analysis.get("claim")
+    claim_id = claim.get("claim_id") if isinstance(claim, Mapping) else None
+    if not _valid_id(claim_binding["claim_id"]) or claim_binding["claim_id"] != claim_id:
+        failures.append(
+            _failure(
+                "dsl-evaluation-claim-binding",
+                "manifest claim binding must name the analysis claim_id exactly",
+                path,
+            )
+        )
+
+
+def _bound_scope_failures(
+    claim_binding: Mapping[str, object],
+    scope: Mapping[str, set[str]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    bound_scope = claim_binding["scope"]
+    if not _exact_keys(
+        bound_scope,
+        _CLAIM_SCOPE_KEYS,
+        failures,
+        rule_id="dsl-evaluation-claim-binding",
+        label="claim binding scope",
+        path=path,
+    ):
+        return
+    assert isinstance(bound_scope, dict)
+    for field in _CLAIM_SCOPE_KEYS:
+        values = _string_list(bound_scope[field], non_empty=True)
+        if values is None or len(values) != len(set(values)) or set(values) != scope.get(field, set()):
+            failures.append(
+                _failure(
+                    "dsl-evaluation-claim-binding",
+                    f"analysis claim scope {field} must exactly match its manifest binding",
+                    path,
+                )
+            )
+
+
+def _unique_subset(values: list[str] | None, allowed: set[str]) -> bool:
+    return values is not None and len(values) == len(set(values)) and set(values).issubset(allowed)
+
+
+def _validated_group_filters(
+    group: Mapping[str, object],
+    scope: Mapping[str, set[str]],
+    experience_bands: set[str],
+) -> tuple[str, str, list[str], list[str], list[str], list[str]] | None:
+    """Return (group_id, role, partition_by, personas, bands, conditions) or None."""
+
+    group_id = group["group_id"]
+    role = group["role"]
+    partition_by = _string_list(group["partition_by"])
+    persona_ids = _string_list(group["persona_ids"], non_empty=True)
+    band_ids = _string_list(group["experience_band_ids"], non_empty=True)
+    condition_ids = _string_list(group["tooling_condition_ids"], non_empty=True)
+    valid = (
+        _valid_id(group_id)
+        and isinstance(group_id, str)
+        and isinstance(role, str)
+        and role in _STRATUM_ROLES
+        and _unique_subset(partition_by, _STRATUM_PARTITION_AXES)
+        and _unique_subset(persona_ids, scope.get("persona_ids", set()))
+        and _unique_subset(band_ids, experience_bands)
+        and _unique_subset(condition_ids, scope.get("tooling_condition_ids", set()))
+    )
+    if not valid:
+        return None
+    assert partition_by is not None and persona_ids is not None
+    assert band_ids is not None and condition_ids is not None
+    return group_id, role, partition_by, persona_ids, band_ids, condition_ids
+
+
+def _expanded_group_strata(
+    protocol: Mapping[str, object],
+    scope: Mapping[str, set[str]],
+    group: Mapping[str, object],
+    filters: tuple[str, str, list[str], list[str], list[str], list[str]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> list[dict[str, object]]:
+    del group
+    group_id, role, partition_by, persona_ids, band_ids, condition_ids = filters
+    axis_values = {
+        "persona_id": persona_ids,
+        "experience_band": band_ids,
+        "tooling_condition_id": condition_ids,
+    }
+    split_axes = [axis for axis in ("persona_id", "experience_band", "tooling_condition_id") if axis in partition_by]
+    combinations = product(*(axis_values[axis] for axis in split_axes)) if split_axes else [()]
+    expanded: list[dict[str, object]] = []
+    for combination in combinations:
+        selected = dict(zip(split_axes, combination, strict=True))
+        stratum_id = "-".join([group_id, *(str(selected[axis]) for axis in split_axes)])
+        stratum_scope = _derive_stratum_scope(
+            protocol,
+            scope,
+            persona_ids={str(selected["persona_id"])} if "persona_id" in selected else set(persona_ids),
+            experience_band_ids={str(selected["experience_band"])} if "experience_band" in selected else set(band_ids),
+            tooling_condition_ids=(
+                {str(selected["tooling_condition_id"])} if "tooling_condition_id" in selected else set(condition_ids)
+            ),
+        )
+        if (
+            not _valid_id(stratum_id)
+            or not stratum_scope["task_ids"]
+            or not stratum_scope["measure_ids"]
+            or not stratum_scope["dimension_ids"]
+        ):
+            failures.append(
+                _failure(
+                    "dsl-evaluation-claim-strata",
+                    f"claim stratum {stratum_id!r} has no complete task/measure/dimension slice",
+                    path,
+                )
+            )
+            continue
+        expanded.append({"stratum_id": stratum_id, "role": role, "scope": stratum_scope})
     return expanded
 
 
@@ -375,20 +441,10 @@ def _derive_stratum_scope(
         if measure_id in claim_scope.get("measure_ids", set())
         and set(_string_list(measure.get("task_ids"), non_empty=True) or []) & selected_tasks
     }
-    thresholds = {
-        threshold.get("dimension_id"): threshold
-        for threshold in protocol.get("thresholds", [])
-        if isinstance(threshold, Mapping) and isinstance(threshold.get("dimension_id"), str)
-    }
+    thresholds = _thresholds_by_dimension(protocol)
     selected_dimensions = set()
     for dimension_id in claim_scope.get("dimension_ids", set()):
-        threshold = thresholds.get(dimension_id)
-        conditions = threshold.get("conditions", []) if isinstance(threshold, Mapping) else []
-        required_measures = {
-            condition.get("measure_id")
-            for condition in conditions
-            if isinstance(condition, Mapping) and isinstance(condition.get("measure_id"), str)
-        }
+        required_measures = _threshold_measures(thresholds.get(dimension_id))
         if required_measures and required_measures.issubset(selected_measures):
             selected_dimensions.add(dimension_id)
     return {
@@ -425,7 +481,6 @@ def resolve_claim_strata(
         protocol,
         analysis,
         claim_binding,
-        catalogs,
         scope,
         failures,
         path=MANIFEST_PATH,

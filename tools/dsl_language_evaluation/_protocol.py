@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from tools.dsl_language_evaluation._keys import (
@@ -31,162 +32,73 @@ from tools.dsl_language_evaluation._shape import (
 )
 from tools.policy.common import PolicyFailure
 
+_CATALOG_FIELDS = (
+    ("dimensions", "dimension_id", "dimension"),
+    ("personas", "persona_id", "persona"),
+    ("tooling_conditions", "condition_id", "tooling condition"),
+    ("artifact_stages", "stage_id", "artifact stage"),
+    ("sources", "source_id", "source"),
+    ("tasks", "task_id", "task"),
+    ("variants", "variant_id", "variant"),
+    ("measures", "measure_id", "measure"),
+)
 
-def _validate_protocol(
-    repo_root: Path,
+
+def _protocol_catalog_records(
     protocol: dict[str, object],
     failures: list[PolicyFailure],
-    *,
-    path: str = "docs/research/dsl-language-evaluation/protocol-v1.json",
+    path: str,
+) -> dict[str, list[object]]:
+    records: dict[str, list[object]] = {}
+    for field, _id_field, _label in (*_CATALOG_FIELDS, ("thresholds", "", "")):
+        records[field] = _bounded_list(
+            protocol[field],
+            _MAX_CATALOG_ITEMS,
+            failures,
+            rule_id="dsl-evaluation-protocol-shape",
+            label=field,
+            path=path,
+        )
+    return records
+
+
+def _protocol_catalog_ids(
+    records: Mapping[str, list[object]],
+    failures: list[PolicyFailure],
+    path: str,
 ) -> dict[str, set[str]]:
-    if not _exact_keys(
-        protocol,
-        _PROTOCOL_KEYS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="protocol",
-        path=path,
-    ):
-        return {}
+    ids: dict[str, set[str]] = {}
+    for field, id_field, label in _CATALOG_FIELDS:
+        ids[_ID_KEYS[field]] = _record_ids(
+            records[field],
+            id_field,
+            failures,
+            rule_id="dsl-evaluation-protocol-id",
+            label=label,
+            path=path,
+        )
+    return ids
 
-    dimensions = _bounded_list(
-        protocol["dimensions"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="dimensions",
-        path=path,
-    )
-    personas = _bounded_list(
-        protocol["personas"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="personas",
-        path=path,
-    )
-    conditions = _bounded_list(
-        protocol["tooling_conditions"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="tooling_conditions",
-        path=path,
-    )
-    stages = _bounded_list(
-        protocol["artifact_stages"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="artifact_stages",
-        path=path,
-    )
-    sources = _bounded_list(
-        protocol["sources"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="sources",
-        path=path,
-    )
-    tasks = _bounded_list(
-        protocol["tasks"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="tasks",
-        path=path,
-    )
-    variants = _bounded_list(
-        protocol["variants"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="variants",
-        path=path,
-    )
-    measures = _bounded_list(
-        protocol["measures"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="measures",
-        path=path,
-    )
-    thresholds = _bounded_list(
-        protocol["thresholds"],
-        _MAX_CATALOG_ITEMS,
-        failures,
-        rule_id="dsl-evaluation-protocol-shape",
-        label="thresholds",
-        path=path,
-    )
 
-    dimension_ids = _record_ids(
-        dimensions,
-        "dimension_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="dimension",
-        path=path,
-    )
-    persona_ids = _record_ids(
-        personas,
-        "persona_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="persona",
-        path=path,
-    )
-    condition_ids = _record_ids(
-        conditions,
-        "condition_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="tooling condition",
-        path=path,
-    )
-    stage_ids = _record_ids(
-        stages,
-        "stage_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="artifact stage",
-        path=path,
-    )
-    source_ids = _record_ids(
-        sources,
-        "source_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="source",
-        path=path,
-    )
-    task_ids = _record_ids(
-        tasks,
-        "task_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="task",
-        path=path,
-    )
-    variant_ids = _record_ids(
-        variants,
-        "variant_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="variant",
-        path=path,
-    )
-    measure_ids = _record_ids(
-        measures,
-        "measure_id",
-        failures,
-        rule_id="dsl-evaluation-protocol-id",
-        label="measure",
-        path=path,
-    )
+_ID_KEYS = {
+    "dimensions": "dimension_ids",
+    "personas": "persona_ids",
+    "tooling_conditions": "condition_ids",
+    "artifact_stages": "stage_ids",
+    "sources": "source_ids",
+    "tasks": "task_ids",
+    "variants": "variant_ids",
+    "measures": "measure_ids",
+}
 
+
+def _required_coverage_failures(
+    protocol: dict[str, object],
+    dimension_ids: set[str],
+    persona_ids: set[str],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
     if not REQUIRED_DIMENSION_IDS.issubset(dimension_ids):
         failures.append(
             _failure(
@@ -217,7 +129,13 @@ def _validate_protocol(
             )
         )
 
-    for index, record in enumerate(dimensions):
+
+def _catalog_shape_failures(
+    records: Mapping[str, list[object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    for index, record in enumerate(records["dimensions"]):
         _exact_keys(
             record,
             _DIMENSION_KEYS,
@@ -226,7 +144,7 @@ def _validate_protocol(
             label=f"dimensions[{index}]",
             path=path,
         )
-    for index, record in enumerate(personas):
+    for index, record in enumerate(records["personas"]):
         if not _exact_keys(
             record,
             _PERSONA_KEYS,
@@ -248,7 +166,7 @@ def _validate_protocol(
                     path,
                 )
             )
-    for index, record in enumerate(conditions):
+    for index, record in enumerate(records["tooling_conditions"]):
         _exact_keys(
             record,
             _CONDITION_KEYS,
@@ -257,7 +175,7 @@ def _validate_protocol(
             label=f"tooling_conditions[{index}]",
             path=path,
         )
-    for index, record in enumerate(stages):
+    for index, record in enumerate(records["artifact_stages"]):
         _exact_keys(
             record,
             _STAGE_KEYS,
@@ -267,73 +185,86 @@ def _validate_protocol(
             path=path,
         )
 
-    for index, source in enumerate(sources):
-        if not _exact_keys(
-            source,
-            _SOURCE_KEYS,
-            failures,
-            rule_id="dsl-evaluation-protocol-shape",
-            label=f"sources[{index}]",
-            path=path,
-        ):
-            continue
-        source_id = source["source_id"]
-        _validate_https_locator(source["locator"], failures, source_id)
-        if source["primary"] is not True:
-            failures.append(
-                _failure(
-                    "dsl-evaluation-source-primary",
-                    f"{source_id}: source must be primary",
-                    path,
-                )
+
+def _repository_source_failures(
+    repo_root: Path,
+    source: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    source_id = source["source_id"]
+    revision = source["revision"]
+    artifact_path = source["artifact_path"]
+    if not isinstance(revision, str) or not _SHA_RE.fullmatch(revision):
+        failures.append(
+            _failure(
+                "dsl-evaluation-source-pin",
+                f"{source_id}: invalid Git revision",
+                path,
             )
-        if source["kind"] == "repository-internal":
-            revision = source["revision"]
-            artifact_path = source["artifact_path"]
-            if not isinstance(revision, str) or not _SHA_RE.fullmatch(revision):
-                failures.append(
-                    _failure(
-                        "dsl-evaluation-source-pin",
-                        f"{source_id}: invalid Git revision",
-                        path,
-                    )
-                )
-            elif isinstance(source["locator"], str) and revision not in source["locator"]:
-                failures.append(
-                    _failure(
-                        "dsl-evaluation-source-pin",
-                        f"{source_id}: locator does not bind the declared Git revision",
-                        path,
-                    )
-                )
-            if not isinstance(artifact_path, str):
-                failures.append(
-                    _failure(
-                        "dsl-evaluation-source-path",
-                        f"{source_id}: missing artifact path",
-                        path,
-                    )
-                )
-            else:
-                resolved = _resolve_repository_artifact(repo_root, artifact_path)
-                if resolved is None or not resolved.exists():
-                    failures.append(
-                        _failure(
-                            "dsl-evaluation-source-path",
-                            f"{source_id}: unsafe or missing path",
-                            path,
-                        )
-                    )
-        elif source["revision"] is not None or source["artifact_path"] is not None:
+        )
+    elif isinstance(source["locator"], str) and revision not in source["locator"]:
+        failures.append(
+            _failure(
+                "dsl-evaluation-source-pin",
+                f"{source_id}: locator does not bind the declared Git revision",
+                path,
+            )
+        )
+    if not isinstance(artifact_path, str):
+        failures.append(
+            _failure(
+                "dsl-evaluation-source-path",
+                f"{source_id}: missing artifact path",
+                path,
+            )
+        )
+    else:
+        resolved = _resolve_repository_artifact(repo_root, artifact_path)
+        if resolved is None or not resolved.exists():
             failures.append(
                 _failure(
-                    "dsl-evaluation-source-shape",
-                    f"{source_id}: publication must not claim a repository revision/path",
+                    "dsl-evaluation-source-path",
+                    f"{source_id}: unsafe or missing path",
                     path,
                 )
             )
 
-    task_kinds: set[str] = set()
+
+def _source_entry_failures(
+    repo_root: Path,
+    source: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    source_id = source["source_id"]
+    _validate_https_locator(source["locator"], failures, source_id)
+    if source["primary"] is not True:
+        failures.append(
+            _failure(
+                "dsl-evaluation-source-primary",
+                f"{source_id}: source must be primary",
+                path,
+            )
+        )
+    if source["kind"] == "repository-internal":
+        _repository_source_failures(repo_root, source, failures, path)
+    elif source["revision"] is not None or source["artifact_path"] is not None:
+        failures.append(
+            _failure(
+                "dsl-evaluation-source-shape",
+                f"{source_id}: publication must not claim a repository revision/path",
+                path,
+            )
+        )
+
+
+def _variants_by_task(
+    variants: list[object],
+    task_ids: set[str],
+    failures: list[PolicyFailure],
+    path: str,
+) -> dict[str, set[str]]:
     variants_by_task: dict[str, set[str]] = {task_id: set() for task_id in task_ids}
     for index, variant in enumerate(variants):
         if not _exact_keys(
@@ -358,7 +289,55 @@ def _validate_protocol(
             variant_id = variant["variant_id"]
             if isinstance(variant_id, str):
                 variants_by_task[task_id].add(variant_id)
-    for index, task in enumerate(tasks):
+    return variants_by_task
+
+
+def _task_entry_failures(
+    task: Mapping[str, object],
+    task_id: str,
+    ids: Mapping[str, set[str]],
+    variants_by_task: Mapping[str, set[str]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    joins = (
+        ("persona_ids", ids["persona_ids"]),
+        ("dimension_ids", ids["dimension_ids"]),
+        ("source_refs", ids["source_ids"]),
+        ("artifact_stage_ids", ids["stage_ids"]),
+        ("tooling_condition_ids", ids["condition_ids"]),
+        ("variant_ids", ids["variant_ids"]),
+    )
+    for field, allowed in joins:
+        value_ids = _string_list(task[field], non_empty=True)
+        if value_ids is None or not set(value_ids).issubset(allowed):
+            failures.append(
+                _failure(
+                    "dsl-evaluation-task-join",
+                    f"{task_id}: invalid or empty {field}",
+                    path,
+                )
+            )
+    valid_task_variant_ids = _string_list(task["variant_ids"])
+    if valid_task_variant_ids is not None and set(valid_task_variant_ids) != variants_by_task.get(task_id, set()):
+        failures.append(
+            _failure(
+                "dsl-evaluation-task-variant-coverage",
+                f"{task_id}: task and variant catalogs disagree",
+                path,
+            )
+        )
+
+
+def _task_failures(
+    records: Mapping[str, list[object]],
+    ids: Mapping[str, set[str]],
+    variants_by_task: Mapping[str, set[str]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    task_kinds: set[str] = set()
+    for index, task in enumerate(records["tasks"]):
         if not _exact_keys(
             task,
             _TASK_KEYS,
@@ -383,35 +362,7 @@ def _validate_protocol(
                     path,
                 )
             )
-        joins = (
-            ("persona_ids", persona_ids),
-            ("dimension_ids", dimension_ids),
-            ("source_refs", source_ids),
-            ("artifact_stage_ids", stage_ids),
-            ("tooling_condition_ids", condition_ids),
-            ("variant_ids", variant_ids),
-        )
-        for field, allowed in joins:
-            values = task[field]
-            value_ids = _string_list(values, non_empty=True)
-            if value_ids is None or not set(value_ids).issubset(allowed):
-                failures.append(
-                    _failure(
-                        "dsl-evaluation-task-join",
-                        f"{task_id}: invalid or empty {field}",
-                        path,
-                    )
-                )
-        task_variant_ids = task["variant_ids"]
-        valid_task_variant_ids = _string_list(task_variant_ids)
-        if valid_task_variant_ids is not None and set(valid_task_variant_ids) != variants_by_task.get(task_id, set()):
-            failures.append(
-                _failure(
-                    "dsl-evaluation-task-variant-coverage",
-                    f"{task_id}: task and variant catalogs disagree",
-                    path,
-                )
-            )
+        _task_entry_failures(task, task_id, ids, variants_by_task, failures, path)
     if not REQUIRED_TASK_KINDS.issubset(task_kinds):
         failures.append(
             _failure(
@@ -421,24 +372,52 @@ def _validate_protocol(
             )
         )
 
-    catalogs_ids = {
-        "dimension_ids": dimension_ids,
-        "persona_ids": persona_ids,
-        "condition_ids": condition_ids,
-        "stage_ids": stage_ids,
-        "source_ids": source_ids,
-        "task_ids": task_ids,
-        "variant_ids": variant_ids,
-        "measure_ids": measure_ids,
-    }
-    _plan_failures(protocol, catalogs_ids, personas, tasks, measures, thresholds, failures, path)
+
+def _validate_protocol(
+    repo_root: Path,
+    protocol: dict[str, object],
+    failures: list[PolicyFailure],
+    *,
+    path: str = "docs/research/dsl-language-evaluation/protocol-v1.json",
+) -> dict[str, set[str]]:
+    if not _exact_keys(
+        protocol,
+        _PROTOCOL_KEYS,
+        failures,
+        rule_id="dsl-evaluation-protocol-shape",
+        label="protocol",
+        path=path,
+    ):
+        return {}
+
+    records = _protocol_catalog_records(protocol, failures, path)
+    ids = _protocol_catalog_ids(records, failures, path)
+
+    _required_coverage_failures(protocol, ids["dimension_ids"], ids["persona_ids"], failures, path)
+    _catalog_shape_failures(records, failures, path)
+
+    for index, source in enumerate(records["sources"]):
+        if _exact_keys(
+            source,
+            _SOURCE_KEYS,
+            failures,
+            rule_id="dsl-evaluation-protocol-shape",
+            label=f"sources[{index}]",
+            path=path,
+        ):
+            _source_entry_failures(repo_root, source, failures, path)
+
+    variants_by_task = _variants_by_task(records["variants"], ids["task_ids"], failures, path)
+    _task_failures(records, ids, variants_by_task, failures, path)
+
+    _plan_failures(protocol, ids, records, failures, path)
     _preregistration_failures(protocol, failures, path)
     return {
-        "dimension_ids": dimension_ids,
-        "persona_ids": persona_ids,
-        "condition_ids": condition_ids,
-        "stage_ids": stage_ids,
-        "task_ids": task_ids,
-        "variant_ids": variant_ids,
-        "measure_ids": measure_ids,
+        "dimension_ids": ids["dimension_ids"],
+        "persona_ids": ids["persona_ids"],
+        "condition_ids": ids["condition_ids"],
+        "stage_ids": ids["stage_ids"],
+        "task_ids": ids["task_ids"],
+        "variant_ids": ids["variant_ids"],
+        "measure_ids": ids["measure_ids"],
     }

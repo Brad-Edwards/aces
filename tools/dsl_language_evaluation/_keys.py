@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import re
 
+_PACKAGES_PREFIX = "implementations/python/packages/"
 MANIFEST_PATH = "docs/research/dsl-language-evaluation/bundle-manifest.json"
-_RETIRED_PACKAGE_PREFIX = "implementations/python/packages/" + "a" + "ces_sdl"
+_RETIRED_PACKAGE_PREFIX = _PACKAGES_PREFIX + "a" + "ces_sdl"
 _HISTORICAL_PACKAGE_MOVES: tuple[tuple[str, str], ...] = (
     (_RETIRED_PACKAGE_PREFIX, "implementations/python/packages/raes"),
-    ("implementations/python/packages/" + "a" + "ces_cli", "implementations/python/packages/raes_cli"),
-    ("implementations/python/packages/" + "a" + "ces_mcp", "implementations/python/packages/raes_mcp"),
+    (_PACKAGES_PREFIX + "a" + "ces_cli", "implementations/python/packages/raes_cli"),
+    (_PACKAGES_PREFIX + "a" + "ces_mcp", "implementations/python/packages/raes_mcp"),
 )
 _MAX_FILE_BYTES = 2 * 1024 * 1024
 _MAX_CATALOG_ITEMS = 128

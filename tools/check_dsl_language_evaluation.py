@@ -26,7 +26,7 @@ from tools.policy.common import (
     load_bounded_json_object,
     safe_repo_path,
 )
-from tools.dsl_language_evaluation._analysis import _validate_analysis
+from tools.dsl_language_evaluation._analysis import _AnalysisContext, _validate_analysis
 from tools.dsl_language_evaluation._claims import (
     _validate_claim_binding,
     _validate_claim_scope,
@@ -93,7 +93,7 @@ def validate_bundle(
                 if isinstance(entry[0].get("claim_binding"), Mapping)
                 and entry[0]["claim_binding"].get("claim_id") == claim_id
             )
-        except (OSError, ValueError, json.JSONDecodeError, StopIteration):
+        except (OSError, ValueError, StopIteration):
             claim_binding = None
     catalogs = _validate_protocol(
         repo_root,
@@ -116,7 +116,6 @@ def validate_bundle(
         protocol,
         analysis,
         claim_binding,
-        catalogs,
         scope,
         failures,
         path=analysis_path
@@ -137,14 +136,15 @@ def validate_bundle(
         ),
     )
     _validate_analysis(
-        repo_root,
-        protocol,
-        snapshot,
+        _AnalysisContext(
+            repo_root=repo_root,
+            protocol=protocol,
+            snapshot=snapshot,
+            scope=scope,
+            strata=strata,
+            observation_ids=observation_ids,
+        ),
         analysis,
-        catalogs,
-        scope,
-        strata,
-        observation_ids,
         failures,
         path=analysis_path
         if isinstance(analysis_path, str)
@@ -207,7 +207,7 @@ def load_bundles(
 def evaluate(repo_root: Path = REPO_ROOT) -> list[PolicyFailure]:
     try:
         bundles = load_bundles(repo_root)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         return [_failure("dsl-evaluation-bundle-invalid", str(exc), MANIFEST_PATH)]
     failures: list[PolicyFailure] = []
     for entry, protocol, snapshot, analysis in bundles:
