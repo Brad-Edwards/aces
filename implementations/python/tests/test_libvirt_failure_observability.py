@@ -78,14 +78,16 @@ def _deployment_driver(**kwargs: object) -> LibvirtDeploymentDriver:
 def test_deployment_observe_records_a_raising_connector(caplog: pytest.LogCaptureFixture) -> None:
     result = _deployment_driver(connector=_raiser).observe(domains=())
 
-    assert result.diagnostics and result.diagnostics[0].code.endswith("unavailable")
+    assert result.diagnostics
+    assert result.diagnostics[0].code.endswith("unavailable")
     _assert_recorded(caplog, "observe")
 
 
 def test_deployment_destroy_records_a_raising_connector(caplog: pytest.LogCaptureFixture) -> None:
     result = _deployment_driver(connector=_raiser).destroy(networks=(), domains=())
 
-    assert result.diagnostics and result.diagnostics[0].code.endswith("unavailable")
+    assert result.diagnostics
+    assert result.diagnostics[0].code.endswith("unavailable")
     _assert_recorded(caplog, "destroy")
 
 
@@ -122,7 +124,8 @@ def test_techvault_destroy_records_a_raising_connector(tmp_path, caplog: pytest.
 
     result = driver.destroy(networks=(), domains=())
 
-    assert result.diagnostics and result.diagnostics[0].code.endswith("unavailable")
+    assert result.diagnostics
+    assert result.diagnostics[0].code.endswith("unavailable")
     _assert_recorded(caplog, "destroy")
 
 
@@ -131,7 +134,8 @@ def test_techvault_observe_records_a_raising_connector(tmp_path, caplog: pytest.
 
     result = driver.observe(domains=())
 
-    assert result.diagnostics and result.diagnostics[0].code.endswith("unavailable")
+    assert result.diagnostics
+    assert result.diagnostics[0].code.endswith("unavailable")
     _assert_recorded(caplog, "observe")
 
 
@@ -188,8 +192,10 @@ def test_define_network_records_a_raising_readback(tmp_path, monkeypatch, caplog
 
     handle, diagnostic, observations = _define.define_network(driver, object(), network)
 
-    assert handle is not None and handle.realized
-    assert diagnostic is not None and diagnostic.code.endswith("readback-failed")
+    assert handle is not None
+    assert handle.realized
+    assert diagnostic is not None
+    assert diagnostic.code.endswith("readback-failed")
     assert observations == ()
     _assert_recorded(caplog, "define_network")
 
@@ -210,7 +216,9 @@ def test_define_domain_records_a_raising_readback(tmp_path, monkeypatch, caplog:
 
     handle, diagnostic, observations = _define.define_domain(driver, object(), domain, {})
 
-    assert handle is not None and handle.realized
-    assert diagnostic is not None and diagnostic.code.endswith("readback-failed")
+    assert handle is not None
+    assert handle.realized
+    assert diagnostic is not None
+    assert diagnostic.code.endswith("readback-failed")
     assert observations == ()
     _assert_recorded(caplog, "define_domain")
