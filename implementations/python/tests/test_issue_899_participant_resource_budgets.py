@@ -8,6 +8,16 @@ from pathlib import Path
 
 import pytest
 import yaml
+from implementations.python.tests.test_dsl_437_benign_participant_execution import (
+    SCENARIO_CLOCK_ADDRESS,
+    SCENARIO_CLOCK_STEP_TICKS,
+    _activity_control,
+    _activity_policy_yaml,
+    _advance_stepped_clock_to_tick,
+    _autonomous_manifest,
+    _compiled,
+    _NativeParticipantRuntime,
+)
 from pydantic import BaseModel
 from raes import parse_sdl
 from raes._errors import SDLValidationError
@@ -40,17 +50,6 @@ from raes_runtime.participant_resource_accounting import (
 from raes_runtime.participant_resource_budgets import (
     initialize_participant_resource_budgets,
     reserve_participant_resources,
-)
-
-from implementations.python.tests.test_dsl_437_benign_participant_execution import (
-    SCENARIO_CLOCK_ADDRESS,
-    SCENARIO_CLOCK_STEP_TICKS,
-    _activity_control,
-    _activity_policy_yaml,
-    _advance_stepped_clock_to_tick,
-    _autonomous_manifest,
-    _compiled,
-    _NativeParticipantRuntime,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

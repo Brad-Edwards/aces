@@ -7,7 +7,6 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from tools.check_identity_cutover import evaluate_identity_cutover
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

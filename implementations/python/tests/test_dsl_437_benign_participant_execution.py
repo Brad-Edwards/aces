@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+from implementations.python.tests.participant_execution_test_backend import (
+    NativeParticipantExecutionController,
+)
 from raes._errors import SDLValidationError
 from raes.parser import parse_sdl
 from raes.participant_behavior import ParticipantFailureClass
@@ -63,10 +66,6 @@ from raes_runtime.participant_activity import (
 from raes_runtime.participant_clock_driver import ParticipantClockDriver
 from raes_runtime.participant_scheduler import ParticipantScheduler
 from raes_runtime.time_coordinator import ReferenceTimeRuntime, TimeCoordinator
-
-from implementations.python.tests.participant_execution_test_backend import (
-    NativeParticipantExecutionController,
-)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 EXAMPLE = REPO_ROOT / "examples" / "scenarios" / "enterprise-participant-evidence-loop.sdl.yaml"

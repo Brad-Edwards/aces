@@ -8,7 +8,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import pytest
-
 from tools.check_semantic_coverage import (
     ADR_RELATIVE_PATH,
     CANONICAL_PHASES,

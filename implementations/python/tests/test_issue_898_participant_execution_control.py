@@ -7,6 +7,13 @@ from dataclasses import replace
 
 import pytest
 import yaml
+from implementations.python.tests.test_dsl_437_benign_participant_execution import (
+    _autonomous_manifest,
+    _compiled,
+    _NativeParticipantRuntime,
+    _scenario_yaml,
+)
+from implementations.python.tests.test_runtime_control_plane_api import _test_security
 from raes import parse_sdl
 from raes.participant_behavior import ParticipantFailureClass
 from raes_backend_protocols.capability_admission import (
@@ -43,14 +50,6 @@ from raes_runtime.participant_scheduler_concurrent_commit import (
     participant_generation_commit_diagnostic,
 )
 from starlette.testclient import TestClient
-
-from implementations.python.tests.test_dsl_437_benign_participant_execution import (
-    _autonomous_manifest,
-    _compiled,
-    _NativeParticipantRuntime,
-    _scenario_yaml,
-)
-from implementations.python.tests.test_runtime_control_plane_api import _test_security
 
 
 def _binding() -> ParticipantExecutionBindingModel:

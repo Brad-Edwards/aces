@@ -19,14 +19,13 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import pytest
-import yaml
-from packaging.requirements import Requirement
-from packaging.version import Version
-
 import tools.check_generated_schemas as check_generated_schemas
 import tools.check_json_artifacts as check_json_artifacts
 import tools.osv_scanner_tool as osv_scanner_tool
 import tools.policy.conftest_tool as conftest_tool
+import yaml
+from packaging.requirements import Requirement
+from packaging.version import Version
 from tools.check_adr_immutability import (
     amendment_refs,
     canonical_content,

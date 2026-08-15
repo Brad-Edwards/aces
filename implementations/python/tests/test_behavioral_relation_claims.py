@@ -6,7 +6,6 @@ from copy import deepcopy
 
 import pytest
 from raes_contracts.behavioral_relations import load_behavioral_relation_catalog
-
 from tools.check_behavioral_relation_claims import (
     _should_validate_structured_bindings,
     _validate_claim_text,

@@ -6,7 +6,6 @@ from http.client import RemoteDisconnected
 from urllib.error import HTTPError
 
 import pytest
-
 from tools.http_download import download_bytes
 
 
