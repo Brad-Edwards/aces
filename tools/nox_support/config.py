@@ -29,7 +29,7 @@ OSV_REPORT_PATH = PROJECT_ROOT / "osv-scanner-report.json"
 COVERAGE_XML_PATH = PROJECT_ROOT / "coverage.xml"
 COVERAGE_JSON_PATH = PROJECT_ROOT / "coverage.json"
 MINIMUM_LINE_COVERAGE_PERCENT = 90.0
-REQUIREMENT_UID_RE = re.compile(r"(?:^|[^A-Z0-9])[A-Z]{3}-[0-9]{3}(?:$|[^A-Z0-9])")
+REQUIREMENT_UID_RE = re.compile(r"(?:^|[^A-Z0-9])[A-Z]{3}-\d{3}(?:$|[^A-Z0-9])", re.ASCII)
 TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_repo_policy_tools.py",
     "implementations/python/tests/test_requirement_governance.py",

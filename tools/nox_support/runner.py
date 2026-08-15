@@ -107,12 +107,15 @@ def _git_lines(*args: str) -> list[str]:
     return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
+_EXCLUDE_DELETED_FILTER = "--diff-filter=d"
+
+
 def _changed_paths(*, staged: bool = False, base_rev: str | None = None) -> list[str]:
     if staged:
-        return _normalize_paths(_git_lines("diff", "--name-only", "--diff-filter=d", "--cached"))
+        return _normalize_paths(_git_lines("diff", "--name-only", _EXCLUDE_DELETED_FILTER, "--cached"))
     if base_rev:
-        return _normalize_paths(_git_lines("diff", "--name-only", "--diff-filter=d", base_rev, "HEAD"))
-    return _normalize_paths(_git_lines("diff", "--name-only", "--diff-filter=d", "HEAD"))
+        return _normalize_paths(_git_lines("diff", "--name-only", _EXCLUDE_DELETED_FILTER, base_rev, "HEAD"))
+    return _normalize_paths(_git_lines("diff", "--name-only", _EXCLUDE_DELETED_FILTER, "HEAD"))
 
 
 def _sync_project(session: nox.Session) -> None:
@@ -252,7 +255,7 @@ def _requirement_aware_policy_args(*args: str) -> list[str]:
     return [*args, "--skip-requirement"]
 
 
-def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -> HygieneSelection:
+def _hygiene_flags(posargs: Sequence[str], *, default_all_files: bool) -> tuple[bool, str | None, bool, list[str]]:
     staged = False
     base_rev: str | None = None
     all_files = default_all_files
@@ -287,21 +290,22 @@ def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -
         explicit_paths.append(arg)
         all_files = False
         index += 1
+    return staged, base_rev, all_files, explicit_paths
+
+
+def _parse_hygiene_posargs(posargs: Sequence[str], *, default_all_files: bool) -> HygieneSelection:
+    staged, base_rev, all_files, explicit_paths = _hygiene_flags(posargs, default_all_files=default_all_files)
     if explicit_paths:
-        return HygieneSelection(paths=_normalize_paths(explicit_paths), source="explicit path selection")
-    if staged:
-        return HygieneSelection(
-            paths=_changed_paths(staged=True),
-            source="staged tracked files",
-        )
-    if base_rev:
-        return HygieneSelection(
-            paths=_changed_paths(base_rev=base_rev),
-            source=f"changes since {base_rev}",
-        )
-    if all_files:
-        return HygieneSelection(paths=_tracked_repo_paths(), source="tracked repository files")
-    return HygieneSelection(paths=_changed_paths(), source="working tree changes")
+        selection = HygieneSelection(paths=_normalize_paths(explicit_paths), source="explicit path selection")
+    elif staged:
+        selection = HygieneSelection(paths=_changed_paths(staged=True), source="staged tracked files")
+    elif base_rev:
+        selection = HygieneSelection(paths=_changed_paths(base_rev=base_rev), source=f"changes since {base_rev}")
+    elif all_files:
+        selection = HygieneSelection(paths=_tracked_repo_paths(), source="tracked repository files")
+    else:
+        selection = HygieneSelection(paths=_changed_paths(), source="working tree changes")
+    return selection
 
 
 def _tracked_repo_paths() -> list[str]:
@@ -367,7 +371,7 @@ def _run_pre_commit_hook(_session: nox.Session, command: str, *args: str, paths:
         )
 
 
-def _run_gitleaks_dir_scan(session: nox.Session, paths: list[str]) -> None:
+def _run_gitleaks_dir_scan(_session: nox.Session, paths: list[str]) -> None:
     binary = ensure_gitleaks(REPO_ROOT)
     with tempfile.TemporaryDirectory(prefix="raes-gitleaks-") as tmpdir:
         scan_root = Path(tmpdir) / "scan"

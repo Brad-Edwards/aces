@@ -62,26 +62,7 @@ def _run_tests(
     )
 
 
-def _run_python_compatibility(session: nox.Session, reporter: SessionReporter) -> None:
-    expected = os.environ.get(EXPECTED_PYTHON_ENV, "")
-    selector = os.environ.get("UV_PYTHON", "")
-    if expected not in {"3.11", "3.12", "3.13", "3.14"}:
-        raise RuntimeError(f"{EXPECTED_PYTHON_ENV} must select a supported feature release")
-    if not selector:
-        raise RuntimeError("UV_PYTHON must select the interpreter under test")
-    expect_free_threaded = os.environ.get(EXPECT_FREE_THREADED_ENV) == "1"
-    # Nox removes UV_PYTHON inherited from the parent process. Put the
-    # matrix selector back into the per-session command environment so every
-    # nested uv invocation uses the interpreter that the lane names.
-    session.env["UV_PYTHON"] = selector
-
-    reporter.run(
-        "python compatibility / frozen sync",
-        lambda: _sync_project(session),
-        detail=f"selector={selector}",
-    )
-
-    runtime_assertion = """
+_RUNTIME_ASSERTION = """
 import sys
 
 expected = tuple(int(part) for part in sys.argv[1].split("."))
@@ -95,6 +76,53 @@ elif callable(is_gil_enabled):
     assert is_gil_enabled() is True, "standard lane selected a free-threaded interpreter"
 print(sys.version)
 """
+
+_INSTALLED_ASSERTION = """
+import importlib
+import sys
+from importlib.metadata import metadata
+
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
+
+expected = tuple(int(part) for part in sys.argv[1].split("."))
+assert sys.version_info[:2] == expected, (sys.version, expected)
+for module in (
+    "raes",
+    "raes_backend_libvirt",
+    "raes_backend_protocols",
+    "raes_backend_stubs",
+    "raes_cli",
+    "raes_conformance",
+    "raes_contracts",
+    "raes_mcp",
+    "raes_operations",
+    "raes_processor",
+    "raes_reference_backend",
+    "raes_runtime",
+):
+    importlib.import_module(module)
+requires_python = metadata("raes")["Requires-Python"]
+support = SpecifierSet(requires_python)
+assert Version("3.11") in support
+assert Version("3.14") in support
+assert Version("3.15") not in support
+"""
+
+
+def _compatibility_runtime_stages(
+    session: nox.Session,
+    reporter: SessionReporter,
+    *,
+    selector: str,
+    expected: str,
+    expect_free_threaded: bool,
+) -> None:
+    reporter.run(
+        "python compatibility / frozen sync",
+        lambda: _sync_project(session),
+        detail=f"selector={selector}",
+    )
     reporter.run(
         "python compatibility / exact runtime",
         lambda: _run(
@@ -107,7 +135,7 @@ print(sys.version)
             "--frozen",
             "python",
             "-c",
-            runtime_assertion,
+            _RUNTIME_ASSERTION,
             expected,
             "1" if expect_free_threaded else "0",
         ),
@@ -118,6 +146,14 @@ print(sys.version)
         detail="xdist auto, max 8, worksteal",
     )
 
+
+def _compatibility_distribution_stages(
+    session: nox.Session,
+    reporter: SessionReporter,
+    *,
+    selector: str,
+    expected: str,
+) -> None:
     with tempfile.TemporaryDirectory(prefix="raes-python-compatibility-") as temporary_dir:
         root = Path(temporary_dir)
         dist_dir = root / "dist"
@@ -168,41 +204,9 @@ print(sys.version)
                 str(wheels[0]),
             ),
         )
-
-        installed_assertion = """
-import importlib
-import sys
-from importlib.metadata import metadata
-
-from packaging.specifiers import SpecifierSet
-from packaging.version import Version
-
-expected = tuple(int(part) for part in sys.argv[1].split("."))
-assert sys.version_info[:2] == expected, (sys.version, expected)
-for module in (
-    "raes",
-    "raes_backend_libvirt",
-    "raes_backend_protocols",
-    "raes_backend_stubs",
-    "raes_cli",
-    "raes_conformance",
-    "raes_contracts",
-    "raes_mcp",
-    "raes_operations",
-    "raes_processor",
-    "raes_reference_backend",
-    "raes_runtime",
-):
-    importlib.import_module(module)
-requires_python = metadata("raes")["Requires-Python"]
-support = SpecifierSet(requires_python)
-assert Version("3.11") in support
-assert Version("3.14") in support
-assert Version("3.15") not in support
-"""
         reporter.run(
             "python compatibility / installed metadata and imports",
-            lambda: _run(session, str(python), "-c", installed_assertion, expected),
+            lambda: _run(session, str(python), "-c", _INSTALLED_ASSERTION, expected),
         )
         reporter.run(
             "python compatibility / installed CLI version",
@@ -212,6 +216,28 @@ assert Version("3.15") not in support
             "python compatibility / installed CLI help",
             lambda: _run(session, str(raes), "--help"),
         )
+
+
+def _run_python_compatibility(session: nox.Session, reporter: SessionReporter) -> None:
+    expected = os.environ.get(EXPECTED_PYTHON_ENV, "")
+    selector = os.environ.get("UV_PYTHON", "")
+    if expected not in {"3.11", "3.12", "3.13", "3.14"}:
+        raise RuntimeError(f"{EXPECTED_PYTHON_ENV} must select a supported feature release")
+    if not selector:
+        raise RuntimeError("UV_PYTHON must select the interpreter under test")
+    expect_free_threaded = os.environ.get(EXPECT_FREE_THREADED_ENV) == "1"
+    # Nox removes UV_PYTHON inherited from the parent process. Put the
+    # matrix selector back into the per-session command environment so every
+    # nested uv invocation uses the interpreter that the lane names.
+    session.env["UV_PYTHON"] = selector
+    _compatibility_runtime_stages(
+        session,
+        reporter,
+        selector=selector,
+        expected=expected,
+        expect_free_threaded=expect_free_threaded,
+    )
+    _compatibility_distribution_stages(session, reporter, selector=selector, expected=expected)
 
 
 def _run_fuzz(session: nox.Session, reporter: SessionReporter) -> None:

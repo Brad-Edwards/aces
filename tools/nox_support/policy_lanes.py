@@ -25,6 +25,22 @@ from tools.nox_support.runner import (
     _text_paths,
 )
 
+_NO_TEXT_FILES_REASON = "no text files selected"
+_STAGED_SKIP_REASON = "skipped on staged check; runs on push and verify"
+_NOXFILE_PATH = "noxfile.py"
+_WORKING_TREE_POLICY_STAGES: tuple[tuple[str, str], ...] = (
+    ("policy / semantic coverage ADR", "tools/check_semantic_coverage.py"),
+    ("policy / assurance policy ADR", "tools/check_assurance_policy.py"),
+    ("policy / authority boundary ADR", "tools/check_authority_boundary.py"),
+    ("policy / deprecation lifecycle records", "tools/check_deprecation_lifecycle.py"),
+    ("policy / concept authority governance", "tools/check_concept_authority_governance.py"),
+    ("policy / behavioral relation claims", "tools/check_behavioral_relation_claims.py"),
+    ("policy / agent guidance profile", "tools/check_agent_guidance.py"),
+    ("policy / example library catalog", "tools/check_example_library.py"),
+    ("policy / project positioning", "tools/check_project_positioning.py"),
+    ("policy / identity cutover", "tools/check_identity_cutover.py"),
+)
+
 
 def _run_hygiene(
     session: nox.Session,
@@ -52,13 +68,13 @@ def _run_hygiene(
         "hygiene / trailing whitespace",
         lambda: _run_pre_commit_hook(session, "trailing-whitespace-fixer", paths=text_paths),
         detail=f"{len(text_paths)} text files from {selection.source}",
-    ) if text_paths else reporter.skip("hygiene / trailing whitespace", "no text files selected")
+    ) if text_paths else reporter.skip("hygiene / trailing whitespace", _NO_TEXT_FILES_REASON)
 
     reporter.run(
         "hygiene / eof newline",
         lambda: _run_pre_commit_hook(session, "end-of-file-fixer", paths=text_paths),
         detail=f"{len(text_paths)} text files from {selection.source}",
-    ) if text_paths else reporter.skip("hygiene / eof newline", "no text files selected")
+    ) if text_paths else reporter.skip("hygiene / eof newline", _NO_TEXT_FILES_REASON)
 
     reporter.run(
         "hygiene / yaml syntax",
@@ -88,7 +104,7 @@ def _run_hygiene(
         "hygiene / merge conflict markers",
         lambda: _run_pre_commit_hook(session, "check-merge-conflict", paths=text_paths),
         detail=f"{len(text_paths)} text files from {selection.source}",
-    ) if text_paths else reporter.skip("hygiene / merge conflict markers", "no text files selected")
+    ) if text_paths else reporter.skip("hygiene / merge conflict markers", _NO_TEXT_FILES_REASON)
 
     reporter.run(
         "hygiene / private key detection",
@@ -140,96 +156,27 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
     # check_semantic_coverage.py validates live files on disk, not a staged
     # snapshot, so it is meaningless (and misleading) under --staged. It runs in
     # the working-tree policy invocations (`policy`, `hook-pre-push`, `verify`).
-    if "--staged" in args:
-        reporter.skip(
-            "policy / semantic coverage ADR",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / assurance policy ADR",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / authority boundary ADR",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / deprecation lifecycle records",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / concept authority governance",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / behavioral relation claims",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / agent guidance profile",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / example library catalog",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / project positioning",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / identity cutover",
-            "skipped on staged check; runs on push and verify",
-        )
-        reporter.skip(
-            "policy / ADR acceptance-content pin",
-            "skipped on staged check; runs on push and verify",
-        )
-    else:
-        reporter.run(
-            "policy / semantic coverage ADR",
-            lambda: _run_project_python(session, "tools/check_semantic_coverage.py"),
-        )
-        reporter.run(
-            "policy / assurance policy ADR",
-            lambda: _run_project_python(session, "tools/check_assurance_policy.py"),
-        )
-        reporter.run(
-            "policy / authority boundary ADR",
-            lambda: _run_project_python(session, "tools/check_authority_boundary.py"),
-        )
-        reporter.run(
-            "policy / deprecation lifecycle records",
-            lambda: _run_project_python(session, "tools/check_deprecation_lifecycle.py"),
-        )
-        reporter.run(
-            "policy / concept authority governance",
-            lambda: _run_project_python(session, "tools/check_concept_authority_governance.py"),
-        )
-        reporter.run(
-            "policy / behavioral relation claims",
-            lambda: _run_project_python(session, "tools/check_behavioral_relation_claims.py"),
-        )
-        reporter.run(
-            "policy / agent guidance profile",
-            lambda: _run_project_python(session, "tools/check_agent_guidance.py"),
-        )
-        reporter.run(
-            "policy / example library catalog",
-            lambda: _run_project_python(session, "tools/check_example_library.py"),
-        )
-        reporter.run(
-            "policy / project positioning",
-            lambda: _run_project_python(session, "tools/check_project_positioning.py"),
-        )
-        reporter.run(
-            "policy / identity cutover",
-            lambda: _run_project_python(session, "tools/check_identity_cutover.py"),
-        )
-        reporter.run(
-            "policy / ADR acceptance-content pin",
-            lambda: _run_project_python(session, "tools/check_adr_immutability.py", *adr_pin_args),
-        )
+    _run_working_tree_policies(session, reporter, staged="--staged" in args, adr_pin_args=adr_pin_args)
+
+
+def _run_working_tree_policies(
+    session: nox.Session,
+    reporter: SessionReporter,
+    *,
+    staged: bool,
+    adr_pin_args: list[str],
+) -> None:
+    if staged:
+        for stage_name, _script in _WORKING_TREE_POLICY_STAGES:
+            reporter.skip(stage_name, _STAGED_SKIP_REASON)
+        reporter.skip("policy / ADR acceptance-content pin", _STAGED_SKIP_REASON)
+        return
+    for stage_name, script in _WORKING_TREE_POLICY_STAGES:
+        reporter.run(stage_name, lambda script=script: _run_project_python(session, script))
+    reporter.run(
+        "policy / ADR acceptance-content pin",
+        lambda: _run_project_python(session, "tools/check_adr_immutability.py", *adr_pin_args),
+    )
 
 
 def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) -> None:
@@ -336,11 +283,11 @@ def _run_lint(session: nox.Session, reporter: SessionReporter) -> None:
     )
     reporter.run(
         "lint / ruff format (tooling)",
-        lambda: _run_ruff(session, "format", "--check", "tools", "noxfile.py"),
+        lambda: _run_ruff(session, "format", "--check", "tools", _NOXFILE_PATH),
     )
     reporter.run(
         "lint / ruff check (tooling)",
-        lambda: _run_ruff(session, "check", "tools", "noxfile.py"),
+        lambda: _run_ruff(session, "check", "tools", _NOXFILE_PATH),
     )
 
 
@@ -372,7 +319,7 @@ def _run_changed_lint(session: nox.Session, reporter: SessionReporter, paths: li
         )
 
     tooling_paths = [
-        path for path in paths if (path.startswith("tools/") or path == "noxfile.py") and path.endswith(".py")
+        path for path in paths if (path.startswith("tools/") or path == _NOXFILE_PATH) and path.endswith(".py")
     ]
     if tooling_paths:
         reporter.run(
