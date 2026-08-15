@@ -21,6 +21,7 @@ from sem230_information_flow_model import (
     project_history,
     reactive_policy_noninterference_holds,
 )
+
 from tools.check_behavioral_relation_claims import _validate_claim_text
 
 BASE_POLICY = ProjectionPolicyDecision(

@@ -175,8 +175,7 @@ class TechVaultNativeLibvirtDriver:
             specs=(networks, domains),
             handles=(network_handles, domain_handles),
             observations=observations,
-            envelope_digest=envelope_digest,
-            configuration_digest=configuration_digest,
+            binding_digests=(envelope_digest, configuration_digest),
         )
 
     def _admission_diagnostics(

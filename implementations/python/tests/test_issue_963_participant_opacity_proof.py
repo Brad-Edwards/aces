@@ -11,7 +11,6 @@ from types import SimpleNamespace
 from urllib.error import URLError
 
 import pytest
-import tools.isabelle_tool as isabelle_tool
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes_contracts.behavioral_relation_profiles import (
@@ -25,6 +24,8 @@ from raes_contracts.behavioral_relations import (
     load_behavioral_relation_catalog,
     load_behavioral_relation_catalog_revision,
 )
+
+import tools.isabelle_tool as isabelle_tool
 from tools.check_participant_opacity_proof import (
     ProofEvidenceError,
     load_proof_manifest,

@@ -33,9 +33,9 @@ def _verify_and_finalize(
     specs: tuple[tuple[NetworkSpec, ...], tuple[DomainSpec, ...]],
     handles: tuple[list[NetworkHandle], list[DomainHandle]],
     observations: tuple[RealizationObservation, ...],
-    envelope_digest: str,
-    configuration_digest: str,
+    binding_digests: tuple[str, str],
 ) -> DriverResult:
+    envelope_digest, configuration_digest = binding_digests
     networks, domains = specs
     network_handles, domain_handles = handles
     observations = tuple(
