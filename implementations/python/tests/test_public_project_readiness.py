@@ -121,6 +121,6 @@ def test_python_support_metadata_and_blocking_matrix_are_aligned() -> None:
         "RAES_EXPECT_FREE_THREADED": "1",
     }
 
-    noxfile = (REPO_ROOT / "noxfile.py").read_text(encoding="utf-8")
-    assert 'assert is_gil_enabled() is False, "interpreter is not free-threaded"' in noxfile
-    assert 'assert is_gil_enabled() is True, "standard lane selected a free-threaded interpreter"' in noxfile
+    compatibility_lane = (REPO_ROOT / "tools" / "nox_support" / "test_lanes.py").read_text(encoding="utf-8")
+    assert 'assert is_gil_enabled() is False, "interpreter is not free-threaded"' in compatibility_lane
+    assert 'assert is_gil_enabled() is True, "standard lane selected a free-threaded interpreter"' in compatibility_lane
