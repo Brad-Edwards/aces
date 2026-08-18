@@ -3,15 +3,18 @@
 Marked ``@pytest.mark.docker`` so it is excluded from the default hermetic
 suite (``addopts = -m 'not fuzz and not integration and not docker'``).
 Run it explicitly with ``pytest -m docker`` / ``nox -s integration_docker``.
-It also self-skips cleanly when no container runtime is available, so an
-accidental ``-m docker`` run on a runtime-less host does not fail.
+It self-skips cleanly for optional local/PR runs when no runtime or image is
+available. The exact-SHA release gate sets ``RAES_DOCKER_INTEGRATION_REQUIRED=1``
+to turn every such condition into a hard failure.
 """
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import textwrap
+from typing import NoReturn
 
 import pytest
 from raes import parse_sdl
@@ -27,7 +30,8 @@ from raes_runtime.manager import RuntimeManager
 
 pytestmark = pytest.mark.docker
 
-_IMAGE = "docker.io/library/alpine:3.20"
+_REQUIRED_MODE_ENV = "RAES_DOCKER_INTEGRATION_REQUIRED"
+_IMAGE = "docker.io/library/alpine@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc"
 _SCENARIO = f"""
 name: ref-docker
 nodes:
@@ -57,13 +61,29 @@ def _available_runtime() -> str | None:
     return None
 
 
-@pytest.fixture(scope="module")
-def container_runtime() -> str:
+def _required_mode() -> bool:
+    value = os.environ.get(_REQUIRED_MODE_ENV, "0")
+    if value not in {"0", "1"}:
+        pytest.fail(f"{_REQUIRED_MODE_ENV} must be exactly 0 or 1")
+    return value == "1"
+
+
+def _unavailable(reason: str) -> NoReturn:
+    if _required_mode():
+        pytest.fail(f"required real-container release gate unavailable: {reason}")
+    pytest.skip(reason)
+
+
+def _require_container_runtime() -> str:
+    # Validate the release-mode selector even when the runtime and pull both
+    # succeed; a misspelled admission setting must never silently become an
+    # optional run.
+    _required_mode()
     runtime = _available_runtime()
     if runtime is None:
-        pytest.skip("no container runtime (docker/podman) available")
-    # Pre-pull the integration image; skip (not fail) if the host is offline
-    # or the registry is unreachable, so the test only runs when it can.
+        _unavailable("no container runtime (docker/podman) available")
+    # Pre-pull the reviewed multiarch image. Optional runs skip if the registry
+    # is unavailable; release-required mode fails closed.
     try:
         completed = subprocess.run(
             [runtime, "pull", _IMAGE],
@@ -73,10 +93,15 @@ def container_runtime() -> str:
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
-        pytest.skip("container runtime present but image pull failed")
+        _unavailable("container runtime present but image pull failed")
     if completed.returncode != 0:
-        pytest.skip("integration image is not available (offline registry?)")
+        _unavailable("integration image is not available (offline registry?)")
     return runtime
+
+
+@pytest.fixture(scope="module")
+def container_runtime() -> str:
+    return _require_container_runtime()
 
 
 def test_real_container_provision_inventory_and_teardown(container_runtime: str):
