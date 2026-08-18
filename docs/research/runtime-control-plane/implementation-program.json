@@ -1,0 +1,133 @@
+{
+  "schema_version": "runtime-control-plane-program/v1",
+  "assessment_date": "2026-08-17",
+  "parent_issue": 1151,
+  "milestone": "Runtime Control-Plane",
+  "requirement": "API-404",
+  "deliverables": [
+    "docs/decisions/issue-1151-runtime-control-plane-architecture-preflight.md",
+    "docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md",
+    "docs/research/runtime-control-plane/index.md",
+    "docs/research/runtime-control-plane/current-state-assessment.md",
+    "docs/research/runtime-control-plane/composition-architecture.md",
+    "docs/research/runtime-control-plane/requirement-disposition.md",
+    "docs/research/runtime-control-plane/implementation-program.md",
+    "docs/research/runtime-control-plane/implementation-program.json"
+  ],
+  "profiles": [
+    {
+      "id": "P0",
+      "name": "ephemeral",
+      "claims": ["in-process contract conformance"],
+      "nonclaims": ["durability", "multi-process ownership", "restart recovery"]
+    },
+    {
+      "id": "P1",
+      "name": "local durable",
+      "claims": [
+        "single lease-admitted owner",
+        "crash-consistent authoritative state",
+        "atomic terminal commits",
+        "startup reconciliation with explicit indeterminacy"
+      ],
+      "nonclaims": ["multi-process ownership", "high availability"]
+    },
+    {
+      "id": "P2",
+      "name": "served",
+      "claims": [
+        "P1 core behind the reference HTTP adapter",
+        "owner-serialized mutation",
+        "revision-carrying reads"
+      ],
+      "nonclaims": ["multi-owner writes", "high availability"]
+    },
+    {
+      "id": "P3",
+      "name": "coordinated",
+      "claims": [],
+      "nonclaims": ["everything: seam only, requires a future ADR"]
+    }
+  ],
+  "work_packages": [
+    {
+      "id": "CP-1",
+      "title": "Operation lifecycle contract",
+      "depends_on": [],
+      "surfaces": ["contracts/schemas/control-plane", "raes_runtime lifecycle states"]
+    },
+    {
+      "id": "CP-2",
+      "title": "Atomic terminal commit in the generic execution path",
+      "depends_on": ["CP-1"],
+      "surfaces": ["raes_runtime control_plane_execution"]
+    },
+    {
+      "id": "CP-3",
+      "title": "Startup reconciliation with effect classification",
+      "depends_on": ["CP-1", "CP-2"],
+      "surfaces": ["raes_runtime control_plane recovery"]
+    },
+    {
+      "id": "CP-4",
+      "title": "Snapshot revision compare-and-swap and derived-cache demotion",
+      "depends_on": ["CP-1"],
+      "surfaces": ["raes_runtime control_plane", "store protocol"]
+    },
+    {
+      "id": "CP-5",
+      "title": "Store lease admission",
+      "depends_on": [],
+      "surfaces": ["store protocol", "local lease implementation"]
+    },
+    {
+      "id": "CP-6",
+      "title": "Transactional local store (re-lands PR #1136)",
+      "depends_on": ["CP-1", "CP-2", "CP-4", "CP-5"],
+      "surfaces": ["raes_runtime control_plane_store_local and sibling modules"]
+    },
+    {
+      "id": "CP-7",
+      "title": "Atomic idempotency claims and cache demotion",
+      "depends_on": ["CP-6"],
+      "surfaces": ["raes_runtime idempotent receipt path", "get_operation/get_snapshot caches"]
+    },
+    {
+      "id": "CP-8",
+      "title": "Served-profile alignment of the reference HTTP adapter",
+      "depends_on": ["CP-4", "CP-7"],
+      "surfaces": ["raes_runtime control_plane_api"]
+    },
+    {
+      "id": "CP-9",
+      "title": "Crash and profile conformance suite",
+      "depends_on": ["CP-2", "CP-3", "CP-6"],
+      "surfaces": ["implementations/python/tests"]
+    },
+    {
+      "id": "CP-10",
+      "title": "Profile declaration and capability discovery",
+      "depends_on": ["CP-1", "CP-2", "CP-3", "CP-4", "CP-5", "CP-6", "CP-7", "CP-8"],
+      "surfaces": ["raes_runtime profile surface", "docs/explain/sdl/runtime-architecture.md"]
+    },
+    {
+      "id": "CP-11",
+      "title": "API-404 requirement update and traceability",
+      "depends_on": ["CP-10"],
+      "surfaces": ["docs/requirements/API-404"]
+    },
+    {
+      "id": "CP-12",
+      "title": "Recovery runbook and operator tooling",
+      "depends_on": ["CP-3", "CP-6"],
+      "surfaces": ["docs", "operator tooling"]
+    }
+  ],
+  "dispositions": {
+    "issue_1092": "superseded by CP-1 through CP-7; close on package filing",
+    "pr_1136": "split: store work re-lands as CP-6, recovery reworked under CP-3, tests absorbed into CP-9",
+    "runtime_control_plane": "retain and change under the profiled contract",
+    "local_json_store": "supersede; migration source only",
+    "http_adapter": "retain as the P2 reference; change under CP-8"
+  }
+}

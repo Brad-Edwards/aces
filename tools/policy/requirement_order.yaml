@@ -12,6 +12,9 @@ phases:
   - id: sdl-language
     patterns:
       - ^DSL-
+  - id: runtime-control-plane
+    requirements:
+      - API-404
   - id: api400-core
     requirements:
       - API-412

@@ -509,3 +509,6 @@ adrs:
   - id: ADR-103
     path: docs/decisions/adrs/adr-103-branch-aware-python-coverage-policy.md
     pin: a44acbc2db1b5349ba316ba0d09bd9b46310db016cb87937b08bc6bc107755aa
+  - id: ADR-104
+    path: docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md
+    pin: bf15139353bc39af301261cb7799fab26ea354cf06a2cb64a59c50a663258cea
