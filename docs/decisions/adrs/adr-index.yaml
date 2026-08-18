@@ -511,4 +511,4 @@ adrs:
     pin: a44acbc2db1b5349ba316ba0d09bd9b46310db016cb87937b08bc6bc107755aa
   - id: ADR-104
     path: docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md
-    pin: bf15139353bc39af301261cb7799fab26ea354cf06a2cb64a59c50a663258cea
+    pin: b27359f9d4bc21bbd3b13570202fc03a4107a0d0fa66b18937210fde18168c8e

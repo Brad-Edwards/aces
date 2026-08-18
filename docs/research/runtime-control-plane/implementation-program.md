@@ -66,8 +66,11 @@ enumerate every legal and illegal transition. Depends on: nothing.
 Rework the generic execution path so the running claim is durable before
 backend invocation and the terminal transition commits snapshot, terminal
 record, and audit event in one store transaction, matching the participant
-transition path. Verification: kill-point tests at every step boundary show
-no observable partial terminal state. Depends on: CP-1.
+transition path. Unify in-process locking behind one operation lock — the
+generic path is unlocked today and the participant and manager paths hold
+two unordered locks. Verification: kill-point tests at every step boundary
+show no observable partial terminal state; concurrent in-process
+submission tests. Depends on: CP-1.
 
 ### CP-3 — Startup reconciliation
 
@@ -94,10 +97,15 @@ CP-4).
 
 ### CP-6 — Transactional local store
 
-Re-land the PR #1136 SQLite store under the CP-1/CP-2/CP-4/CP-5 contracts:
-WAL admission by returned result, unique idempotency claims, path and
-permission hardening, integrity digests, one-time migration with durable
-backups. Recovery behavior conforms to CP-3 instead of blanket
+Re-land the PR #1136 store work — already implemented across
+`API-404-durable-store-successor`, `API-404-fsync-wal`, and
+`integration-openrae-current-dev` (atomic `claim_record`,
+`AtomicControlPlaneStore` with `commit_terminal_operation` and
+`reconcile_interrupted_records`, `RuntimeOwnerLease`, fsync path
+discipline, compatibility adapter) — under the CP-1/CP-2/CP-4/CP-5
+contracts: WAL admission by returned result, unique idempotency claims,
+path and permission hardening, integrity digests, one-time migration with
+durable backups. Recovery behavior conforms to CP-3 instead of blanket
 interrupted-to-failed conversion. Verification: the absorbed
 crash-consistency suite plus store-contract conformance. Depends on: CP-1,
 CP-2, CP-4, CP-5.
@@ -114,8 +122,10 @@ stale-cache injection. Depends on: CP-6.
 
 Bring the reference HTTP adapter to profile P2: single owning service
 process, owner-serialized mutations, reads carrying the snapshot revision
-they observed, and explicit stale-read rules. Verification: extension of
-the #1133 admission suite. Depends on: CP-4, CP-7.
+they observed, and explicit stale-read rules. Move the API-408 retrieval
+routes off the mutation lock by giving evidence appends their own ordered
+path, so reads stop contending with backend mutation latency. Verification:
+extension of the #1133 admission suite. Depends on: CP-4, CP-7.
 
 ### CP-9 — Crash and profile conformance suite
 
