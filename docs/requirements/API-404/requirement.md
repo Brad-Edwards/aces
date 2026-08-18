@@ -22,6 +22,10 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 ## Traceability
 
 - IMPLEMENTS → GITHUB_ISSUE `8` (API-404: Secure, Durable, And Idempotent Control-Plane Semantics)
+- IMPLEMENTS → GITHUB_ISSUE `1151` (design(runtime): define the runtime control-plane architecture)
+- DOCUMENTS → ADR `docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md` (ADR-104: Runtime Control-Plane Architecture)
+- DOCUMENTS → DOCUMENTATION `docs/research/runtime-control-plane/index.md` (Runtime control-plane architecture design set)
+- TESTS → TEST `implementations/python/tests/test_issue_1151_runtime_control_plane_design.py` (Structural acceptance gate for the design set)
 - IMPLEMENTS → GITHUB_ISSUE `1090` (Fail-closed bearer-token authentication and target binding)
 - IMPLEMENTS → GITHUB_ISSUE `1091` (Bounded pre-routing HTTP request admission)
 - DOCUMENTS → GITHUB_ISSUE `1093` (In-process HTTP offload and rejection-audit slice)
