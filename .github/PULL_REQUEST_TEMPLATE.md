@@ -4,10 +4,14 @@
 - **Problem:** <!-- The concrete defect, gap, or unmet need. -->
 - **Fix:** <!-- What this pull request changes and why it solves the problem. -->
 
-## Issues closed
+## Issue tracking
 
-<!-- Use one standalone line for each open same-repository issue. -->
+<!-- Use one route. Keep the former heading "Issues closed" only on existing PRs.
+For tracked work, add one standalone line per open same-repository issue:
 Closes #N
+For a small docs fix, typo, or narrow test improvement without an issue, add:
+No issue: Briefly explain why separate issue tracking is unnecessary.
+-->
 
 ## Verification
 

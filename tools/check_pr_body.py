@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate issue-scoped pull request bodies from trusted base-ref code.
+"""Validate pull request bodies with checker code loaded from the base ref.
 
 The GitHub event payload and pull request body are untrusted input.  This
 module deliberately uses only the standard library, never executes body text,
@@ -22,7 +22,7 @@ from typing import Any
 
 RULE_SECTION = "required-section"
 RULE_SUMMARY = "plain-language-summary"
-RULE_ISSUES = "open-same-repository-issue"
+RULE_ISSUES = "issue-tracking"
 RULE_VERIFICATION = "substantive-verification"
 
 _CHECKBOX_ONLY = re.compile(r"^[ \t]*[-*][ \t]+\[[ xX]\][ \t]*", re.MULTILINE)
@@ -132,24 +132,41 @@ def closing_issue_numbers(body: str) -> tuple[int, ...]:
     return tuple(dict.fromkeys(numbers))
 
 
+def no_issue_reasons(body: str) -> tuple[str, ...]:
+    """Return reasons from standalone ``No issue: ...`` declarations."""
+
+    cleaned = _strip_ignored(body)
+    reasons: list[str] = []
+    for line in cleaned.splitlines():
+        stripped = line.strip(" \t")
+        prefix = "No issue:"
+        if stripped.startswith(prefix):
+            reasons.append(stripped.removeprefix(prefix).strip())
+    return tuple(reasons)
+
+
 def is_exempt_automation(event: dict[str, Any]) -> bool:
     """Limit exemptions to Dependabot and the repository release-please lane."""
 
-    actor = str(event.get("sender", {}).get("login", ""))
     pull_request = event.get("pull_request", {})
     if not isinstance(pull_request, dict):
         return False
     author = str(pull_request.get("user", {}).get("login", ""))
-    login = actor or author
     head = pull_request.get("head", {})
     head_ref = str(head.get("ref", "")) if isinstance(head, dict) else ""
-    trusted_release_action = login == "github-actions[bot]" and head_ref.startswith("release-please--branches--")
-    return login in {"dependabot[bot]", "release-please[bot]"} or trusted_release_action
+    trusted_release_action = author == "github-actions[bot]" and head_ref.startswith("release-please--branches--")
+    return author in {"dependabot[bot]", "release-please[bot]"} or trusted_release_action
+
+
+def _tracking_sections(sections: dict[str, list[str]]) -> list[str]:
+    """Accept the former heading while existing PRs and tooling migrate."""
+
+    return [*sections.get("issue tracking", []), *sections.get("issues closed", [])]
 
 
 def _validate_required_sections(sections: dict[str, list[str]]) -> list[BodyViolation]:
     violations: list[BodyViolation] = []
-    for name in ("plain-language summary", "issues closed", "verification"):
+    for name in ("plain-language summary", "verification"):
         count = len(sections.get(name, []))
         if count != 1:
             violations.append(
@@ -158,6 +175,15 @@ def _validate_required_sections(sections: dict[str, list[str]]) -> list[BodyViol
                     f"PR body must contain exactly one '## {name.title()}' section; found {count}.",
                 )
             )
+    tracking_count = len(_tracking_sections(sections))
+    if tracking_count != 1:
+        violations.append(
+            BodyViolation(
+                RULE_SECTION,
+                "PR body must contain exactly one '## Issue Tracking' section; "
+                f"found {tracking_count} (the former '## Issues Closed' heading is also accepted).",
+            )
+        )
     return violations
 
 
@@ -198,18 +224,30 @@ def _inspect_issue(number: int, issue_lookup: IssueLookup) -> BodyViolation | No
 
 
 def _validate_issues(sections: dict[str, list[str]], issue_lookup: IssueLookup) -> list[BodyViolation]:
-    issues = sections.get("issues closed", [])
-    if len(issues) != 1:
+    tracking = _tracking_sections(sections)
+    if len(tracking) != 1:
         return []
-    numbers = closing_issue_numbers(f"## Issues closed\n{issues[0]}")
-    if not numbers:
+    content = tracking[0]
+    numbers = closing_issue_numbers(content)
+    reasons = no_issue_reasons(content)
+    if numbers and reasons:
         return [
             BodyViolation(
                 RULE_ISSUES,
-                "Issues closed must contain at least one standalone 'Closes #N' line.",
+                "Issue tracking must use either 'Closes #N' lines or one 'No issue: ...' declaration, not both.",
             )
         ]
-    return [violation for number in numbers if (violation := _inspect_issue(number, issue_lookup)) is not None]
+    if numbers:
+        return [violation for number in numbers if (violation := _inspect_issue(number, issue_lookup)) is not None]
+    if len(reasons) != 1 or not _meaningful(reasons[0], minimum_words=2):
+        return [
+            BodyViolation(
+                RULE_ISSUES,
+                "Issue tracking needs open same-repository 'Closes #N' lines or one substantive "
+                "'No issue: ...' declaration.",
+            )
+        ]
+    return []
 
 
 def _validate_verification(sections: dict[str, list[str]]) -> list[BodyViolation]:
@@ -306,6 +344,7 @@ def _fixture_lookup(path: Path) -> IssueLookup:
 
 def _open_issue_report(body: str, issue_lookup: IssueLookup, pr_number: int | str) -> str:
     numbers = closing_issue_numbers(body)
+    reasons = no_issue_reasons(body)
     open_numbers: list[int] = []
     errors: list[str] = []
     for number in numbers:
@@ -323,8 +362,10 @@ def _open_issue_report(body: str, issue_lookup: IssueLookup, pr_number: int | st
         lines.extend(f"- `#{number}`" for number in open_numbers)
     elif numbers:
         lines.append("All declared closing issues are closed.")
+    elif reasons:
+        lines.append("The pull request declared that no issue was required.")
     else:
-        lines.append("No standalone `Closes #N` lines were found.")
+        lines.append("No issue-tracking declaration was found.")
     if errors:
         lines.extend(("", "Inspection errors:", *errors))
     lines.extend(("", "This audit is read-only and never closes issues."))

@@ -18,8 +18,9 @@ jobs:
   body-guard:
     runs-on: ubuntu-latest
     steps:
-      # Policy executes from the trusted base revision. A pull request cannot
-      # weaken the checker that decides whether that same pull request passes.
+      # Load the checker from the base revision so checker changes do not
+      # self-validate. The workflow remains review-protected repository code,
+      # consistent with the trust model in ADR-015 and ADR-103.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.base.sha }}
