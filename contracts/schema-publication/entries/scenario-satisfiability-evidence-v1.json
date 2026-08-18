@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "617becb282057789766c4c77967e0241ae64adab788ba491b7fa910678f3b953",
+  "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d",
   "last_change": {
-    "summary": "Propagated governed operating-system distribution and release identity through satisfiability witnesses for issue #1077.",
-    "content_hash": "617becb282057789766c4c77967e0241ae64adab788ba491b7fa910678f3b953"
+    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
+    "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d"
   }
 }

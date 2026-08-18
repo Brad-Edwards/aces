@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
 from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
@@ -32,7 +33,7 @@ from .participant_scheduler_operations import (
 )
 from .participant_scheduler_policy import _policy_digest
 from .participant_scheduler_time import cadence as _cadence
-from .participant_scheduler_time import clock_coordinate
+from .participant_scheduler_time import cadence_missed_result, clock_coordinate
 
 _RESOURCE_GOVERNED_PROFILE = "participant-autonomous-execution/v3"
 
@@ -57,6 +58,46 @@ def _missing_execution_service_result(
 
 def _execution_service_accepts_work(service: ParticipantExecutionServiceStateModel) -> bool:
     return service.observed_lifecycle == "running" and service.accepting_new_work and service.readiness == "ready"
+
+
+def _execution_service_has_capacity(service: ParticipantExecutionServiceStateModel) -> bool:
+    return service.reserved + service.in_flight < service.capacity
+
+
+def _capacity_blocked_due_result(
+    policy: ParticipantAutonomousExecutionRuntime,
+    current_tick: int,
+    run: SchedulerRunState,
+) -> ApplyResult | None:
+    for participant_address in policy.participant_addresses:
+        key = f"{policy.address}.state.{participant_address}"
+        state = ParticipantAutonomousExecutionStateModel.model_validate(
+            run.working.participant_autonomous_execution_states[key]
+        )
+        if state.lifecycle_state == "running" and state.next_tick < current_tick:
+            return cadence_missed_result(run.working, key, current_tick, state)
+        due = (
+            state.lifecycle_state == "running"
+            and state.next_tick == current_tick
+            and state.attempted_actions < policy.max_action_attempts
+            and state.in_flight == 0
+        )
+        if due:
+            return ApplyResult(
+                success=False,
+                snapshot=run.working,
+                diagnostics=[
+                    Diagnostic(
+                        code="runtime.participant-execution-capacity-blocked",
+                        domain="participant",
+                        address=policy.address,
+                        message=(
+                            "Due participant work could not progress because execution-service capacity is exhausted."
+                        ),
+                    )
+                ],
+            )
+    return None
 
 
 def _run_serial_due(
@@ -101,6 +142,9 @@ def _run_due_policy(
         return
     cadence_ticks = _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
     current_tick = _clock_tick(run.working, policy.clock_address)
+    if not _execution_service_has_capacity(service):
+        run.failure = _capacity_blocked_due_result(policy, current_tick, run)
+        return
     if not run_policy_due_concurrently(policy, time_model, participant_runtime, current_tick, cadence_ticks, run):
         _run_serial_due(policy, time_model, participant_runtime, current_tick, cadence_ticks, activity_controls, run)
 

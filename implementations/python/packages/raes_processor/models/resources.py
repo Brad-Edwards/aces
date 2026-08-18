@@ -262,6 +262,8 @@ class ParticipantActionContractRuntime(ResolvedResource):
     backend_failure_mappings: tuple[dict[str, str], ...] = ()
     interaction_classes: tuple[str, ...] = ()
     shared_state_refs: tuple[str, ...] = ()
+    commutative_interaction_targets: tuple[str, ...] = ()
+    merge_rule_refs: tuple[str, ...] = ()
     temporal_contract_ids: tuple[str, ...] = ()
     temporal_kinds: tuple[str, ...] = ()
     time_domains: tuple[str, ...] = ()

@@ -238,7 +238,11 @@ class ParticipantClockDriver:
         next_ticks = [
             int(payload["next_tick"])
             for payload in snapshot.participant_autonomous_execution_states.values()
-            if payload.get("clock_address") == clock_address and payload.get("lifecycle_state") == "running"
+            if (
+                payload.get("clock_address") == clock_address
+                and payload.get("lifecycle_state") == "running"
+                and int(payload.get("in_flight", 0)) == 0
+            )
         ]
         return min(next_ticks) if next_ticks else None
 

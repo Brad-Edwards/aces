@@ -97,6 +97,14 @@ class ParticipantExecutionBindingRuntime:
     participant_implementation_ref: str
     max_action_attempts: int
     max_in_flight: int
+    interaction_classes: tuple[str, ...] = ()
+    shared_state_refs: tuple[str, ...] = ()
+    related_action_contract_addresses: tuple[str, ...] = ()
+    commutative_shared_state_refs: tuple[str, ...] = ()
+    commutative_related_action_contract_addresses: tuple[str, ...] = ()
+    merge_rule_refs: tuple[str, ...] = ()
+    shared_state_merge_rules: tuple[tuple[str, str], ...] = ()
+    related_action_merge_rules: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)

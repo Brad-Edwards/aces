@@ -6,7 +6,7 @@ type: NON_FUNCTIONAL
 priority: MUST
 wave: 2
 created_at: 2026-04-03T07:16:00.634358Z
-updated_at: 2026-06-14T02:41:58.145594Z
+updated_at: 2026-08-12T00:00:00.000000Z
 ---
 
 # GOV-901 — Versioning And Compatibility Rules
@@ -41,3 +41,12 @@ Requirement inventory expansion. Compatibility claims need explicit versioning a
 - DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1111-gov-901-cli-version-startup-preflight.md` (Measured startup boundary and compatibility invariants)
 - TESTS → TEST `implementations/python/tests/test_issue_1111_cli_version_startup.py` (Source, fallback, delegation, and startup-budget guards)
 - TESTS → TEST `implementations/python/tests/test_corpus_packaging.py` (Clean installed-wheel entry-point acceptance)
+- IMPLEMENTS → GITHUB_ISSUE `1097` (Standard CPython 3.14 support and bounded 3.15 admission)
+- IMPLEMENTS → GITHUB_ISSUE `1100` (Fail-closed Nox option-value validation)
+- IMPLEMENTS → GITHUB_ISSUE `1117` (Python 3.14-safe MCP test event-loop boundaries)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1097-python-314-support-preflight.md` (Blocking interpreter matrix, clean distribution smoke, and free-threaded preview boundary)
+- IMPLEMENTS → CONFIG `noxfile.py` (Exact interpreter selection, hermetic suite, build, install, and smoke graph)
+- IMPLEMENTS → CONFIG `.github/workflows/ci.yml` (Blocking CPython 3.11 through 3.14 matrix)
+- IMPLEMENTS → CONFIG `.github/workflows/python-free-threaded-preview.yml` (Nonblocking scheduled/manual 3.14t preview)
+- TESTS → TEST `implementations/python/tests/test_repo_policy_tools.py` (Selector handoff and compatibility-graph regression tests)
+- TESTS → TEST `implementations/python/tests/test_mcp_server.py` (Deprecation-free synchronous MCP test boundaries)
