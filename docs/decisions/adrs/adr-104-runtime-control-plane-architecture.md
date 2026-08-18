@@ -38,12 +38,14 @@ decision.
 The integration review of that work recorded two structural findings that
 bound this design. First, the generic operation path performs independently
 durable steps — claim `RUNNING`, invoke the backend, save the snapshot, save
-terminal status — so a process exit can strand an applied backend effect
-behind stale state, and an idempotent retry after restart returns the stale
-record without reconciling. Second, each `RuntimeControlPlane` permanently
-caches snapshot and operation maps while HTTP mutation serialization is
-application-local, so a shared database alone cannot make multiple
-application workers coherent.
+terminal status — with no lock of its own and the in-memory snapshot mutated
+before the durable write, so concurrent in-process submissions race and a
+process exit can strand an applied backend effect behind stale state, while
+an idempotent retry after restart returns the stale record without
+reconciling. Second, each `RuntimeControlPlane` permanently caches snapshot
+and operation maps while HTTP mutation serialization is application-local,
+so a shared database alone cannot make multiple application workers
+coherent.
 
 Expected RAES use spans hermetic tests, single-user local execution, embedded
 RAE/env-pack/ETV consumers, air-gapped deployments, and long-lived services.
@@ -110,8 +112,10 @@ Exactly one writer owns a store at a time in P1 and P2, admitted through a
 store lease. Snapshot commits carry a revision and commit by
 compare-and-swap, so a stale writer fails closed instead of overwriting.
 Idempotency keys are unique claims in the authoritative store, not cache
-entries. Within a process, existing lock discipline continues to serialize
-mutation; across processes, admission is the lease, not advisory locking.
+entries. Within a process, one operation lock serializes every mutation
+path — today the generic execution path is unlocked and the participant and
+manager paths hold two unordered locks; across processes, admission is the
+lease, not advisory locking.
 
 ### 6. Boundaries against the rest of RAES
 
@@ -131,13 +135,15 @@ and audit.
 reference HTTP adapter are retained and brought under this contract. The
 local JSON store is superseded by the P1 transactional store and retained
 only as a migration source. Issue #1092 is re-scoped into the P1
-implementation program; PR #1136 is its principal input — the SQLite WAL
-admission, atomic participant commits, path hardening, and migration work
-align with this decision and are re-landed as the P1 store issues, while its
-recovery semantics are reworked to the reconciliation classification above
-instead of a blanket interrupted-to-failed conversion. The full disposition
-table, including every store module and test surface, lives in the design
-set's requirement disposition.
+implementation program; PR #1136 and its successor branches are its
+principal input — the atomic claim, single-transaction terminal commit,
+owner lease, WAL admission, path hardening, and migration work already
+implemented there converge with this decision and are re-landed as the P1
+store issues, while their recovery semantics are reworked to the
+reconciliation classification above instead of a blanket
+interrupted-to-failed conversion. The full disposition table, including
+every store module and test surface, lives in the design set's requirement
+disposition.
 
 ## Alternatives Considered
 
