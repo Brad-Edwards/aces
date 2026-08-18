@@ -225,29 +225,31 @@ def _inspect_issue(number: int, issue_lookup: IssueLookup) -> BodyViolation | No
 
 def _validate_issues(sections: dict[str, list[str]], issue_lookup: IssueLookup) -> list[BodyViolation]:
     tracking = _tracking_sections(sections)
-    if len(tracking) != 1:
-        return []
-    content = tracking[0]
-    numbers = closing_issue_numbers(content)
-    reasons = no_issue_reasons(content)
-    if numbers and reasons:
-        return [
-            BodyViolation(
-                RULE_ISSUES,
-                "Issue tracking must use either 'Closes #N' lines or one 'No issue: ...' declaration, not both.",
+    violations: list[BodyViolation] = []
+    if len(tracking) == 1:
+        content = tracking[0]
+        numbers = closing_issue_numbers(content)
+        reasons = no_issue_reasons(content)
+        if numbers and reasons:
+            violations.append(
+                BodyViolation(
+                    RULE_ISSUES,
+                    "Issue tracking must use either 'Closes #N' lines or one 'No issue: ...' declaration, not both.",
+                )
             )
-        ]
-    if numbers:
-        return [violation for number in numbers if (violation := _inspect_issue(number, issue_lookup)) is not None]
-    if len(reasons) != 1 or not _meaningful(reasons[0], minimum_words=2):
-        return [
-            BodyViolation(
-                RULE_ISSUES,
-                "Issue tracking needs open same-repository 'Closes #N' lines or one substantive "
-                "'No issue: ...' declaration.",
+        elif numbers:
+            violations.extend(
+                violation for number in numbers if (violation := _inspect_issue(number, issue_lookup)) is not None
             )
-        ]
-    return []
+        elif len(reasons) != 1 or not _meaningful(reasons[0], minimum_words=2):
+            violations.append(
+                BodyViolation(
+                    RULE_ISSUES,
+                    "Issue tracking needs open same-repository 'Closes #N' lines or one substantive "
+                    "'No issue: ...' declaration.",
+                )
+            )
+    return violations
 
 
 def _validate_verification(sections: dict[str, list[str]]) -> list[BodyViolation]:
