@@ -1,0 +1,30 @@
+name: Post-merge Closing Issue Audit
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  report-open-closing-issues:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: dev
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Report issues that remain open
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python tools/check_pr_body.py
+          --report-open-closing-issues
+          --summary-file "$GITHUB_STEP_SUMMARY"
