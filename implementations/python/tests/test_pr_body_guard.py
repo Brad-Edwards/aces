@@ -1,4 +1,4 @@
-"""Tests for trusted-base pull request body governance."""
+"""Tests for base-ref pull request body governance."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ from tools.check_pr_body import (  # noqa: E402
     closing_issue_numbers,
     is_exempt_automation,
     main,
+    no_issue_reasons,
     validate_pr_body,
 )
 
@@ -36,9 +37,9 @@ def _body(issue: int = 123) -> str:
 
 - **Context:** Contributors need one reviewable delivery contract.
 - **Problem:** Empty pull request bodies hide delivery scope and evidence.
-- **Fix:** The trusted guard validates structured human-authored content.
+- **Fix:** The base-ref checker validates structured human-authored content.
 
-## Issues closed
+## Issue tracking
 
 Closes #{issue}
 
@@ -65,12 +66,22 @@ def test_complete_body_passes() -> None:
     assert validate_pr_body(_body(), _lookup({123: "open"})) == []
 
 
-@pytest.mark.parametrize("heading", ["Plain-language summary", "Issues closed", "Verification"])
+@pytest.mark.parametrize("heading", ["Plain-language summary", "Issue tracking", "Verification"])
 def test_each_required_section_is_mandatory_and_unique(heading: str) -> None:
     missing = _body().replace(f"## {heading}\n", "### Removed\n", 1)
     duplicate = _body() + f"\n## {heading}\nExtra content that must not create ambiguity.\n"
     assert RULE_SECTION in _rules(missing)
     assert RULE_SECTION in _rules(duplicate)
+
+
+def test_former_issues_closed_heading_remains_compatible() -> None:
+    body = _body().replace("## Issue tracking", "## Issues closed")
+    assert validate_pr_body(body, _lookup({123: "open"})) == []
+
+
+def test_issue_tracking_headings_cannot_be_mixed() -> None:
+    body = _body() + "\n## Issues closed\nCloses #123\n"
+    assert RULE_SECTION in _rules(body)
 
 
 @pytest.mark.parametrize("field", ["Context", "Problem", "Fix"])
@@ -97,6 +108,30 @@ def test_closing_line_allows_whitespace_and_deduplicates() -> None:
     assert closing_issue_numbers(body) == (123,)
 
 
+def test_substantive_no_issue_declaration_passes_without_lookup() -> None:
+    body = _body().replace("Closes #123", "No issue: Corrects a small documentation typo.")
+
+    def unexpected_lookup(_number: int) -> tuple[bool, bool]:
+        raise AssertionError("no issue declaration must not query GitHub")
+
+    assert no_issue_reasons(body) == ("Corrects a small documentation typo.",)
+    assert validate_pr_body(body, unexpected_lookup) == []
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    ["No issue:", "No issue: TODO", "No issue: not needed\nNo issue: duplicate declaration"],
+)
+def test_no_issue_declaration_must_be_unique_and_substantive(declaration: str) -> None:
+    body = _body().replace("Closes #123", declaration)
+    assert RULE_ISSUES in _rules(body)
+
+
+def test_no_issue_declaration_cannot_be_mixed_with_closing_references() -> None:
+    body = _body().replace("Closes #123", "Closes #123\nNo issue: Corrects a small documentation typo.")
+    assert RULE_ISSUES in _rules(body)
+
+
 @pytest.mark.parametrize("state", ["closed", "missing"])
 def test_closing_reference_must_be_an_open_same_repository_issue(state: str) -> None:
     states = {} if state == "missing" else {123: state}
@@ -111,7 +146,7 @@ def test_comments_and_fenced_code_cannot_satisfy_policy() -> None:
 - Fix: Hidden fix is not reviewer-visible evidence.
 -->
 ```markdown
-## Issues closed
+## Issue tracking
 Closes #123
 ## Verification
 - `pytest`: passed
@@ -139,20 +174,21 @@ def test_verification_checklist_without_evidence_is_rejected() -> None:
 
 
 @pytest.mark.parametrize(
-    ("login", "head", "expected"),
+    ("author", "sender", "head", "expected"),
     [
-        ("dependabot[bot]", "dependabot/pip/x", True),
-        ("release-please[bot]", "release-please--branches--dev", True),
-        ("github-actions[bot]", "release-please--branches--dev", True),
-        ("github-actions[bot]", "feature", False),
-        ("renovate[bot]", "renovate/x", False),
-        ("human", "feature", False),
+        ("dependabot[bot]", "maintainer", "dependabot/pip/x", True),
+        ("release-please[bot]", "maintainer", "release-please--branches--dev", True),
+        ("github-actions[bot]", "maintainer", "release-please--branches--dev", True),
+        ("github-actions[bot]", "maintainer", "feature", False),
+        ("human", "github-actions[bot]", "release-please--branches--dev", False),
+        ("renovate[bot]", "renovate[bot]", "renovate/x", False),
+        ("human", "human", "feature", False),
     ],
 )
-def test_automation_exemptions_are_narrow(login: str, head: str, expected: bool) -> None:
+def test_automation_exemptions_follow_pr_author(author: str, sender: str, head: str, expected: bool) -> None:
     event = {
-        "sender": {"login": login},
-        "pull_request": {"user": {"login": login}, "head": {"ref": head}},
+        "sender": {"login": sender},
+        "pull_request": {"user": {"login": author}, "head": {"ref": head}},
     }
     assert is_exempt_automation(event) is expected
 
@@ -214,7 +250,13 @@ def test_validation_and_report_record_lookup_errors() -> None:
     assert "Inspection errors" in report
     assert "never closes issues" in report
     assert "All declared closing issues are closed" in pr_body._open_issue_report(_body(), _lookup({123: "closed"}), 7)
-    assert "No standalone" in pr_body._open_issue_report("No references", _lookup({}), 7)
+    assert "No issue-tracking declaration" in pr_body._open_issue_report("No references", _lookup({}), 7)
+
+
+def test_report_mode_recognizes_no_issue_declaration() -> None:
+    body = _body().replace("Closes #123", "No issue: Corrects a small documentation typo.")
+    report = pr_body._open_issue_report(body, _lookup({}), 7)
+    assert "declared that no issue was required" in report
 
 
 def test_cli_rejects_missing_or_malformed_events(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -236,7 +278,7 @@ def test_cli_exempts_trusted_automation_before_api_configuration(
     event.write_text(
         json.dumps(
             {
-                "sender": {"login": "dependabot[bot]"},
+                "sender": {"login": "maintainer"},
                 "pull_request": {"body": "", "user": {"login": "dependabot[bot]"}},
             }
         ),

@@ -8,6 +8,7 @@ from raes_contracts.contracts import OperationReceiptModel, WorkflowCancellation
 from ..control_plane import RuntimeControlPlane
 from ..control_plane_api_models import _request_fingerprint
 from ._auth import _MutatingIdentity
+from ._offload import _control_plane_calls
 from ._responses import _CONFLICT_RESPONSES, _receipt_response
 
 
@@ -23,8 +24,10 @@ def _register_workflow_routes(
         cancellation: WorkflowCancellationRequestModel | None = None,
     ) -> OperationReceiptModel:
         payload = cancellation or WorkflowCancellationRequestModel()
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.cancel_workflow(
+            receipt = await calls.mutate(
+                control_plane.cancel_workflow,
                 workflow_address,
                 run_id=payload.run_id,
                 reason=payload.reason,
@@ -36,7 +39,8 @@ def _register_workflow_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="cancel_workflow",
             identity=identity.identity,
             allowed=True,
@@ -50,8 +54,10 @@ def _register_workflow_routes(
         request: Request,
         identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.reconcile_workflow_timeouts(
+            receipt = await calls.mutate(
+                control_plane.reconcile_workflow_timeouts,
                 idempotency_key=request.headers.get("idempotency-key", ""),
                 request_fingerprint=_request_fingerprint(
                     request,
@@ -60,7 +66,8 @@ def _register_workflow_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="reconcile_workflow_timeouts",
             identity=identity.identity,
             allowed=True,

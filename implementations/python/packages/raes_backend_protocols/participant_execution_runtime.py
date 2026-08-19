@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 
 from raes_contracts.contracts.participant_execution import (
     ParticipantExecutionServiceStateModel,
@@ -108,9 +109,17 @@ class ParticipantExecutionRuntimeMixin:
             raise ValueError("concurrent participant execution requires at least two workers")
         if len(requests) > max_workers:
             raise ValueError("participant action batch exceeds its worker bound")
+        # RuntimeSnapshot is a mutable carrier even though workers are required
+        # to treat their predecessor as immutable.  Give each native call an
+        # independently owned copy so an in-place adapter bug cannot race with
+        # or contaminate a peer's input.
+        predecessors = tuple(deepcopy(snapshot) for _request in requests)
         with ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="raes-participant",
         ) as executor:
-            futures = [executor.submit(self.admit_action, request, snapshot) for request in requests]
+            futures = [
+                executor.submit(self.admit_action, request, predecessor)
+                for request, predecessor in zip(requests, predecessors, strict=True)
+            ]
             return tuple(future.result() for future in futures)

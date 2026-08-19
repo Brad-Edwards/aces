@@ -705,6 +705,8 @@ def test_autonomous_execution_compiles_existing_participant_and_shared_time_refs
     action = runtime_model.action_contracts["participant.action-contract.probe-customer-portal-login"]
     assert action.interaction_classes == ("shared_state_change",)
     assert action.shared_state_refs == ("nodes.customer-portal.services.http",)
+    assert action.commutative_interaction_targets == ("nodes.customer-portal.services.http",)
+    assert action.merge_rule_refs == ()
 
 
 def test_activity_policy_v2_compiles_weighted_candidates_and_shared_time_windows() -> None:
@@ -1644,7 +1646,7 @@ def test_scheduler_executes_native_actions_and_persists_shared_time_readback() -
     )
     assert (state.attempted_actions, state.succeeded_actions, state.next_tick) == (1, 1, 10)
     assert state.time_segment == 0
-    assert state.policy_digest == "sha256:e89d1e56a9c09893581257b39a595634599b4d3a8140cfb9ecba1a6df889f35b"
+    assert state.policy_digest == "sha256:2fb5d1cbbde0d3c7554fac379e1f58fd39f6b74c98b0267f28fcd7b9a4cca9d8"
     events = first.snapshot.participant_behavior_history[state.participant_address]
     assert [event["event_type"] for event in events] == [
         "action_attempted",

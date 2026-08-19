@@ -5575,6 +5575,10 @@ Design commitments:
 - conflicts are detected over semantic read/write sets, exclusive resource
   claims, visibility effects, evidence streams, sessions, authorities,
   actuators, and contract interference;
+- authored participant interactions declare portable composition with either
+  `commutative: true` or a governed `merge_rule_ref`; absence of both keeps
+  overlapping interaction footprints serialized, and the declarations do not
+  authorize implicit same-revision last-writer-wins;
 - concurrent state updates record read/write revisions and realized ordering;
 - participant-local observations may differ even when they refer to the same
   shared event;

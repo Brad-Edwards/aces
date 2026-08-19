@@ -29,6 +29,7 @@ from ..control_plane import RuntimeControlPlane
 from ..control_plane_api_participant_retrieval import register_participant_retrieval_routes
 from ..control_plane_security import ControlPlaneSecurityConfig
 from ._auth import _ControlPlaneApiAuth
+from ._offload import _ControlPlaneCallExecutor
 from ._operation_routes import _install_request_guards, _register_operation_routes
 from ._participant_routes import (
     _register_participant_control_routes,
@@ -69,6 +70,9 @@ def create_control_plane_app(
         description="Reference HTTP/JSON adapter over the repo-owned runtime control plane.",
     )
     app.state.control_plane_api_auth = _ControlPlaneApiAuth(control_plane, security)
+    app.state.control_plane_call_executor = _ControlPlaneCallExecutor(
+        max_pending_mutations=security.max_pending_mutations
+    )
     _install_request_guards(app, control_plane, security)
     _register_operation_routes(app, control_plane)
     _register_workflow_routes(app, control_plane)
