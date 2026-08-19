@@ -45,6 +45,40 @@ def _require_string_values(name: str, values: frozenset[str], *, required: bool 
         raise ValueError(f"ProvisionerCapabilities.{name} must not contain empty strings")
 
 
+def _validate_operating_system_rows(capabilities: "ProvisionerCapabilities") -> None:
+    os_keys = [(entry.family, entry.distribution) for entry in capabilities.operating_systems]
+    if len(os_keys) != len(set(os_keys)):
+        raise ValueError(
+            "ProvisionerCapabilities.operating_systems must not contain duplicate family/distribution rows"
+        )
+    undeclared_families = {
+        entry.family
+        for entry in capabilities.operating_systems
+        if entry.family not in capabilities.supported_os_families
+    }
+    if undeclared_families:
+        raise ValueError(
+            "ProvisionerCapabilities.operating_systems families must be present in supported_os_families: "
+            + ", ".join(sorted(undeclared_families))
+        )
+
+
+def _validated_artifact_kinds(capabilities: "ProvisionerCapabilities") -> frozenset[GeneratedArtifactKind]:
+    try:
+        normalized = frozenset(GeneratedArtifactKind(kind) for kind in capabilities.supported_generated_artifact_kinds)
+    except ValueError as exc:
+        raise ValueError("ProvisionerCapabilities contains an unknown generated artifact kind") from exc
+    if capabilities.supports_generated_artifacts and not normalized:
+        raise ValueError(
+            "ProvisionerCapabilities that support generated artifacts must declare supported_generated_artifact_kinds"
+        )
+    if not capabilities.supports_generated_artifacts and normalized:
+        raise ValueError(
+            "ProvisionerCapabilities supported_generated_artifact_kinds require supports_generated_artifacts=True"
+        )
+    return normalized
+
+
 def _validate_account_support(capabilities: "ProvisionerCapabilities") -> None:
     if capabilities.supports_accounts and not capabilities.supported_account_features:
         raise ValueError("ProvisionerCapabilities that support accounts must declare supported_account_features")
@@ -92,19 +126,7 @@ class ProvisionerCapabilities:
             "capabilities.provisioner.supported_os_families",
             self.supported_os_families,
         )
-        os_keys = [(entry.family, entry.distribution) for entry in self.operating_systems]
-        if len(os_keys) != len(set(os_keys)):
-            raise ValueError(
-                "ProvisionerCapabilities.operating_systems must not contain duplicate family/distribution rows"
-            )
-        undeclared_families = {
-            entry.family for entry in self.operating_systems if entry.family not in self.supported_os_families
-        }
-        if undeclared_families:
-            raise ValueError(
-                "ProvisionerCapabilities.operating_systems families must be present in supported_os_families: "
-                + ", ".join(sorted(undeclared_families))
-            )
+        _validate_operating_system_rows(self)
         validate_controlled_vocabulary_scope_values(
             "capabilities.provisioner.supported_node_architectures",
             self.supported_node_architectures,
@@ -128,22 +150,7 @@ class ProvisionerCapabilities:
         if self.max_total_nodes is not None and self.max_total_nodes < 1:
             raise ValueError("ProvisionerCapabilities.max_total_nodes must be positive when provided")
         _validate_account_support(self)
-        try:
-            normalized_artifact_kinds = frozenset(
-                GeneratedArtifactKind(kind) for kind in self.supported_generated_artifact_kinds
-            )
-        except ValueError as exc:
-            raise ValueError("ProvisionerCapabilities contains an unknown generated artifact kind") from exc
-        object.__setattr__(self, "supported_generated_artifact_kinds", normalized_artifact_kinds)
-        if self.supports_generated_artifacts and not normalized_artifact_kinds:
-            raise ValueError(
-                "ProvisionerCapabilities that support generated artifacts must declare "
-                "supported_generated_artifact_kinds"
-            )
-        if not self.supports_generated_artifacts and normalized_artifact_kinds:
-            raise ValueError(
-                "ProvisionerCapabilities supported_generated_artifact_kinds require supports_generated_artifacts=True"
-            )
+        object.__setattr__(self, "supported_generated_artifact_kinds", _validated_artifact_kinds(self))
 
     def supports_operating_system(
         self,

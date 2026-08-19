@@ -21,4 +21,4 @@ Narrowed after establishment of RAES Hub, env-packs, adapters, and LilRAE owners
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#85` (Human CLI for RAES semantic operations (AUT-802))
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#85` (Human CLI for RAES semantic operations (AUT-802))

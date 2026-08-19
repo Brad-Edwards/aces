@@ -22,11 +22,11 @@ ASR-535 provides bounded participant-flow assurance discipline, but ordinary neg
 ## Traceability
 
 - TESTS → TEST `implementations/python/tests/test_issue_1004_apparatus_backend_capabilities.py` (ASR-536 honest/unsupported/weakened/overclaiming/colluding declaration fixtures)
-- DOCUMENTS → GITHUB_ISSUE `https://github.com/RAESystem/rae/issues/812` (Issue #812 adversarial participant control design)
+- DOCUMENTS → GITHUB_ISSUE `https://github.com/OpenRAE/rae/issues/812` (Issue #812 adversarial participant control design)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md` (ADR-101: Adversarial Participant Boundary Flow Control)
 - DOCUMENTS → SPEC `specs/formal/participant-semantics/adversarial-flow-control.md` (SEM-233 and ASR-536 formal authority)
 - DOCUMENTS → DOCUMENTATION `docs/research/adversarial-participant-control/implementation-program.json` (Adversarial participant control implementation program)
-- DOCUMENTS → GITHUB_ISSUE `https://github.com/RAESystem/rae/issues/1004` (Issue #1004 apparatus and backend support)
-- DOCUMENTS → GITHUB_ISSUE `https://github.com/RAESystem/rae/issues/1007` (Issue #1007 adversarial evaluation)
-- DOCUMENTS → GITHUB_ISSUE `https://github.com/RAESystem/rae/issues/1008` (Issue #1008 evidenced documentation)
+- DOCUMENTS → GITHUB_ISSUE `https://github.com/OpenRAE/rae/issues/1004` (Issue #1004 apparatus and backend support)
+- DOCUMENTS → GITHUB_ISSUE `https://github.com/OpenRAE/rae/issues/1007` (Issue #1007 adversarial evaluation)
+- DOCUMENTS → GITHUB_ISSUE `https://github.com/OpenRAE/rae/issues/1008` (Issue #1008 evidenced documentation)
 - DOCUMENTS → GITHUB_ISSUE `812` (Issue #812 adversarial participant control design)

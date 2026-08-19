@@ -7,10 +7,11 @@ documentation more precise and easier to validate.
 ## Choose the right route
 
 - For a small docs fix, typo fix, or narrow test improvement, a pull request
-  is enough.
+  is enough. Use `No issue: <brief reason>` in its Issue tracking section.
 - For SDL language changes, contract changes, processor behavior changes, or
-  backend conformance changes, open an issue first. Those changes can affect
-  authored scenario meaning and generated artifacts.
+  backend conformance changes, open an issue first and reference it with a
+  standalone `Closes #N` line. Those changes can affect authored scenario
+  meaning and generated artifacts.
 - Keep unrelated work in separate pull requests.
 - Base pull requests on `dev`, not `main`. `main` is the stable release line;
   `dev` is the integration branch.
