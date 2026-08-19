@@ -1,0 +1,216 @@
+"""Analysis validation for the formal-semantic evidence bundle."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from tools.formal_semantic_validation._claims import recompute_claim_results
+from tools.formal_semantic_validation._shape import (
+    _closed_object,
+    _failure,
+    _is_sequence,
+    _nonempty_string,
+    _string_list,
+)
+from tools.formal_semantic_validation._types import (
+    _ANALYSIS_KEYS,
+    _CLAIM_KEYS,
+    _CLAIM_RESULT_KEYS,
+    _JsonObject,
+)
+from tools.policy.common import PolicyFailure, safe_repo_path
+
+
+def _validate_analysis(
+    repo_root: Path,
+    protocol: _JsonObject,
+    corpus: _JsonObject,
+    snapshot: _JsonObject,
+    analysis: _JsonObject,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if not _closed_object(
+        analysis,
+        _ANALYSIS_KEYS,
+        rule_id="formal-validation-analysis-shape",
+        label="analysis",
+        failures=failures,
+        path=path,
+    ):
+        return
+    if (
+        analysis.get("protocol_revision") != protocol.get("revision")
+        or analysis.get("corpus_revision") != corpus.get("revision")
+        or analysis.get("execution_id") != snapshot.get("execution_id")
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-analysis-join",
+                "analysis must bind the selected protocol, corpus, and execution",
+                path,
+            )
+        )
+    recomputed = recompute_claim_results(protocol, corpus, snapshot)
+    expected_by_id = {item["claim_class_id"]: item for item in recomputed}
+    results = analysis.get("claim_results")
+    if not _is_sequence(results):
+        failures.append(
+            _failure(
+                "formal-validation-analysis-results",
+                "claim_results must be a list",
+                path,
+            )
+        )
+        results = []
+    result_ids: list[object] = []
+    for item in results:
+        if not _closed_object(
+            item,
+            _CLAIM_RESULT_KEYS,
+            rule_id="formal-validation-claim-result-shape",
+            label="claim result",
+            failures=failures,
+            path=path,
+        ):
+            continue
+        result_ids.append(item.get("claim_class_id"))
+        _claim_result_failures(item, expected_by_id, failures, path)
+    if set(result_ids) != set(expected_by_id) or len(result_ids) != len(set(result_ids)):
+        failures.append(
+            _failure(
+                "formal-validation-analysis-result-coverage",
+                "analysis must contain exactly one result per claim class",
+                path,
+            )
+        )
+    _overall_status_failures(recomputed, analysis, failures, path)
+    _claim_record_failures(repo_root, analysis, failures, path)
+
+
+def _claim_result_failures(
+    item: dict[str, object],
+    expected_by_id: dict[object, dict[str, object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    claim_class_id = item.get("claim_class_id")
+    expected = expected_by_id.get(claim_class_id)
+    if expected is None:
+        failures.append(
+            _failure(
+                "formal-validation-analysis-result-join",
+                f"unknown claim result {claim_class_id!r}",
+                path,
+            )
+        )
+        return
+    for key in (
+        "evidence_status",
+        "case_count",
+        "matching_case_count",
+        "replayable_case_count",
+        "unsupported_case_count",
+        "participant_obligation_count",
+    ):
+        if item.get(key) != expected[key]:
+            failures.append(
+                _failure(
+                    "formal-validation-analysis-drift",
+                    f"claim result {claim_class_id!r} field {key} does not match frozen observations",
+                    path,
+                )
+            )
+            break
+    if expected["evidence_status"] in {"untested", "refuted"} and item.get("evidence_status") in {
+        "partial",
+        "demonstrated",
+    }:
+        failures.append(
+            _failure(
+                "formal-validation-unsupported-overclaim",
+                f"unproven or refuted class {claim_class_id!r} cannot be promoted",
+                path,
+            )
+        )
+    if not _string_list(item.get("limitations")):
+        failures.append(
+            _failure(
+                "formal-validation-claim-limitations",
+                f"claim result {claim_class_id!r} needs limitations",
+                path,
+            )
+        )
+
+
+def _overall_status_failures(
+    recomputed: list[dict[str, object]],
+    analysis: _JsonObject,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    statuses = {item["evidence_status"] for item in recomputed}
+    if "refuted" in statuses:
+        overall = "refuted"
+    elif statuses & {"partial", "demonstrated"}:
+        overall = "partial"
+    else:
+        overall = "untested"
+    if analysis.get("evidence_status") != overall:
+        failures.append(
+            _failure(
+                "formal-validation-analysis-drift",
+                "overall evidence status does not match claim results",
+                path,
+            )
+        )
+
+
+def _claim_record_failures(
+    repo_root: Path,
+    analysis: _JsonObject,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if not _closed_object(
+        analysis.get("claim"),
+        _CLAIM_KEYS,
+        rule_id="formal-validation-claim-record",
+        label="claim",
+        failures=failures,
+        path=path,
+    ):
+        return
+    claim = analysis["claim"]
+    for key in (
+        "threats_to_validity",
+        "allowed_evidence",
+        "disallowed_evidence",
+        "evidence_artifacts",
+    ):
+        if not _string_list(claim.get(key)):
+            failures.append(
+                _failure(
+                    "formal-validation-claim-record",
+                    f"claim needs non-empty {key}",
+                    path,
+                )
+            )
+    for artifact in claim.get("evidence_artifacts", []):
+        resolved = safe_repo_path(repo_root, artifact) if isinstance(artifact, str) else None
+        if resolved is None or not resolved.is_file():
+            failures.append(
+                _failure(
+                    "formal-validation-claim-artifact",
+                    f"claim references missing or unsafe artifact {artifact!r}",
+                    path,
+                )
+            )
+    if not _string_list(analysis.get("limitations")) or not _nonempty_string(analysis.get("plain_language_outcome")):
+        failures.append(
+            _failure(
+                "formal-validation-analysis-disclosure",
+                "analysis needs a plain-language outcome and limitations",
+                path,
+            )
+        )
