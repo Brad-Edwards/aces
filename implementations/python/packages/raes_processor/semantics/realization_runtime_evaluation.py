@@ -18,6 +18,7 @@ from raes_contracts.bounded_domains import scalar_in_domain
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisioningPlan
 from raes_contracts.runtime_state import (
+    RealizationObservationDisclosure,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
 )
@@ -190,6 +191,27 @@ def _projected_declared_realization_result(
     return result
 
 
+def _observation_corroborates(
+    requirement: CompiledRealizationRequirement,
+    observation: RealizationObservationDisclosure,
+    manifest: BackendManifest | None,
+) -> bool:
+    """Return whether one disclosed observation satisfies the requirement's evidence bar."""
+
+    required_scope = requirement.verification_scope
+    return (
+        (required_scope is None or verification_scope_satisfies(observation.verification_scope, required_scope))
+        and (
+            requirement.required_observation_strength is None
+            or observation_strength_satisfies(
+                observation.observation_strength,
+                requirement.required_observation_strength,
+            )
+        )
+        and manifest_corroborates(requirement, observation, manifest)
+    )
+
+
 def _corroboration_diagnostic(
     requirement: CompiledRealizationRequirement,
     returned_snapshot: RuntimeSnapshot,
@@ -206,18 +228,7 @@ def _corroboration_diagnostic(
     ):
         return None
     observation = matching_observation(requirement, returned_snapshot)
-    if (
-        observation is not None
-        and (required_scope is None or verification_scope_satisfies(observation.verification_scope, required_scope))
-        and (
-            requirement.required_observation_strength is None
-            or observation_strength_satisfies(
-                observation.observation_strength,
-                requirement.required_observation_strength,
-            )
-        )
-        and manifest_corroborates(requirement, observation, manifest)
-    ):
+    if observation is not None and _observation_corroborates(requirement, observation, manifest):
         return None
     return Diagnostic(
         code=BACKEND_CONTRACT_INVALID,
