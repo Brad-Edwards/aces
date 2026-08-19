@@ -50,7 +50,7 @@ Current admission, retrieval, lifecycle, and persistence surfaces do not yet for
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_store.py` (RUN-319 participant crossing-history source classification)
 - DOCUMENTS → DOCUMENTATION `docs/public/participant-control.md` (Participant input and output control guide)
 - TESTS → TEST `implementations/python/tests/test_public_docs_policy.py` (Executable participant-control public guide claim example)
-- IMPLEMENTS → GITHUB_ISSUE `RAESystem/rae#964` (Enforce declared participant-opacity profiles in the reference runtime)
+- IMPLEMENTS → GITHUB_ISSUE `OpenRAE/rae#964` (Enforce declared participant-opacity profiles in the reference runtime)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/participant_crossing_state_cut.py` (Atomic participant crossing state-cut binding)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/participant_opacity_enforcement.py` (RUN-319 participant-opacity crossing enforcement)
 - TESTS → TEST `implementations/python/tests/test_issue_964_participant_opacity_runtime.py` (Issue 964 RUN-319 opacity mediation boundary tests)
