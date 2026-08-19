@@ -33,4 +33,4 @@ Narrowed to the RAES semantic contract and analysis kernel consumed by Hub, env-
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/semantic_comparison_impact.py` (GOV-904 bounded impact traversal)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/semantic_comparison_projections.py` (GOV-904 owner-specific semantic projections)
 - IMPLEMENTS → GITHUB_ISSUE `110` (Issue 110: semantic diff and impact analysis)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#110` (Machine-readable RAES semantic diff and impact analysis (GOV-904))
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#110` (Machine-readable RAES semantic diff and impact analysis (GOV-904))

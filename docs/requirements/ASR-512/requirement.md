@@ -22,7 +22,7 @@ Requirement inventory expansion. Some ecosystem claims require executable behavi
 ## Traceability
 
 - DOCUMENTS → DOCUMENTATION `docs/decisions/issue-260-asr-512-executable-behavioral-validation-preflight.md` (ASR-512 behavioral validation architecture preflight)
-- IMPLEMENTS → GITHUB_ISSUE `RAESystem/rae#260` (Executable Behavioral Validation (ASR-512))
+- IMPLEMENTS → GITHUB_ISSUE `OpenRAE/rae#260` (Executable Behavioral Validation (ASR-512))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_conformance/behavioral_validation.py` (Executable behavioral validation probe support)
 - TESTS → TEST `implementations/python/tests/test_behavioral_validation_probes.py` (Behavioral validation probe tests)
 - DOCUMENTS → DOCUMENTATION `docs/research/behavioral-validation/traceability-matrix-asr-512.md` (ASR-512 behavioral validation traceability matrix)
