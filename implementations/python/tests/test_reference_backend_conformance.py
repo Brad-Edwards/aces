@@ -20,6 +20,29 @@ def test_reference_target_requires_opacity_probe_for_positive_declaration():
     assert not report.unsupported_capability_gaps
 
 
+def test_adapter_probes_pass_for_every_hermetic_backend():
+    """The provisioning/snapshot adapter probes must stay envelope-neutral.
+
+    An authored ``os`` in the default probe scenario becomes an exact SEM-218
+    realization requirement no hermetic in-process backend can corroborate,
+    which silently failed these probes for every honest backend when authored
+    OS identity started carrying through realization. Pinning them keeps the
+    default probe admissible on every declared envelope (issue #663's runner
+    parameter stays the escape hatch for bounded backends).
+    """
+
+    from raes_backend_stubs.stubs import create_stub_target
+
+    for target in (create_reference_backend_target(), create_stub_target()):
+        report = run_target_conformance(target)
+        cases = {case.name: case for case in report.cases}
+        for name in ("target-provisioning", "target-snapshot"):
+            assert cases[name].passed, (
+                f"{name} must pass for an honest hermetic backend; "
+                f"diagnostics: {[diag.message for diag in cases[name].diagnostics]}"
+            )
+
+
 def test_reference_target_drives_full_participant_probe_case_set():
     report = run_target_conformance(create_reference_backend_target())
 
