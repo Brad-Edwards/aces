@@ -43,6 +43,34 @@ __all__ = [
 ]
 
 
+def _applied_entries(
+    plan: ProvisioningPlan,
+    snapshot: RuntimeSnapshot,
+) -> tuple[dict[str, SnapshotEntry], list[str]]:
+    """Fold the plan's operations into snapshot entries and changed addresses."""
+
+    entries = dict(snapshot.entries)
+    changed_addresses: list[str] = []
+    for op in plan.operations:
+        if op.action == ChangeAction.DELETE:
+            entries.pop(op.address, None)
+            changed_addresses.append(op.address)
+            continue
+        status = "unchanged" if op.action == ChangeAction.UNCHANGED else "applied"
+        entries[op.address] = SnapshotEntry(
+            address=op.address,
+            domain=RuntimeDomain.PROVISIONING,
+            resource_type=op.resource_type,
+            payload=op.payload,
+            ordering_dependencies=op.ordering_dependencies,
+            refresh_dependencies=op.refresh_dependencies,
+            status=status,
+        )
+        if op.action != ChangeAction.UNCHANGED:
+            changed_addresses.append(op.address)
+    return entries, changed_addresses
+
+
 class StubProvisioner:
     """In-memory provisioner."""
 
@@ -74,25 +102,7 @@ class StubProvisioner:
                     )
                 ],
             )
-        entries = dict(snapshot.entries)
-        changed_addresses: list[str] = []
-        for op in plan.operations:
-            if op.action == ChangeAction.DELETE:
-                entries.pop(op.address, None)
-                changed_addresses.append(op.address)
-                continue
-            status = "unchanged" if op.action == ChangeAction.UNCHANGED else "applied"
-            entries[op.address] = SnapshotEntry(
-                address=op.address,
-                domain=RuntimeDomain.PROVISIONING,
-                resource_type=op.resource_type,
-                payload=op.payload,
-                ordering_dependencies=op.ordering_dependencies,
-                refresh_dependencies=op.refresh_dependencies,
-                status=status,
-            )
-            if op.action != ChangeAction.UNCHANGED:
-                changed_addresses.append(op.address)
+        entries, changed_addresses = _applied_entries(plan, snapshot)
 
         if self._realization_envelope is None:
             return ApplyResult(

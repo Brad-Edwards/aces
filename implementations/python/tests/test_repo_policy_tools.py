@@ -2531,7 +2531,7 @@ def test_osv_scanner_release_asset_names_match_platform_conventions(
     monkeypatch.setattr("platform.machine", lambda: machine)
 
     # OSV-Scanner ships plain per-platform binaries, not archives.
-    assert osv_scanner_tool._release_asset_name("2.4.0") == expected
+    assert osv_scanner_tool._release_asset_name() == expected
 
 
 @pytest.mark.parametrize("system", ["Windows", "Plan9"])
@@ -2542,7 +2542,7 @@ def test_osv_scanner_release_asset_name_rejects_unsupported_platform(
     monkeypatch.setattr("platform.machine", lambda: "x86_64")
 
     with pytest.raises(RuntimeError, match="unsupported osv-scanner platform"):
-        osv_scanner_tool._release_asset_name("2.4.0")
+        osv_scanner_tool._release_asset_name()
 
 
 def test_osv_scanner_binary_path_uses_repo_local_cache(tmp_path: Path) -> None:
