@@ -505,8 +505,9 @@ def test_parallel_graph_executes_success_and_reports_all_failures(
             types.SimpleNamespace(name="contracts", returncode=3, output="", duration_s=0.02),
         ],
     )
+    failure_reporter = ImmediateReporter()
     with pytest.raises(RuntimeError, match=r"unit-tests \(exit 2\), contracts \(exit 3\)"):
-        noxfile._run_parallel_verification(session, ImmediateReporter(), include_policy=False)
+        noxfile._run_parallel_verification(session, failure_reporter, include_policy=False)
 
 
 def test_change_selected_graph_routes_plans_and_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
