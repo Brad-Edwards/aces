@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 from raes_contracts.diagnostics import Diagnostic
 
-from raes_backend_libvirt._observability import LOGGER as _LOGGER
-from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
 
 from .._techvault_native_helpers import (
     default_connector as _default_connector,
@@ -136,7 +135,7 @@ class TechVaultNativeLibvirtDriver:
                 try:
                     connection = self._conn()
                 except Exception as exc:
-                    _LOGGER.debug(_NATIVE_FAILURE_LOG, "realize", exc_info=exc)
+                    _record_suppressed_failure("realize", exc)
                     result = DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
                 else:
                     result = self._realize_matrix(
@@ -265,7 +264,7 @@ class TechVaultNativeLibvirtDriver:
         try:
             connection = self._conn()
         except Exception as exc:
-            _LOGGER.debug(_NATIVE_FAILURE_LOG, "destroy", exc_info=exc)
+            _record_suppressed_failure("destroy", exc)
             return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
         domain_handles: list[DomainHandle] = []
         network_handles: list[NetworkHandle] = []
@@ -304,7 +303,7 @@ class TechVaultNativeLibvirtDriver:
         try:
             connection = self._conn()
         except Exception as exc:
-            _LOGGER.debug(_NATIVE_FAILURE_LOG, "observe", exc_info=exc)
+            _record_suppressed_failure("observe", exc)
             return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
         envelope = load_libvirt_realization_envelope(self.driver_mode)
         observations: list[RealizationObservation] = []
@@ -347,7 +346,7 @@ class TechVaultNativeLibvirtDriver:
             if native is None or _existing_uuid(native) != _raes_uuid(address) or not native_active(native):
                 return None
         except Exception as exc:
-            _LOGGER.debug(_NATIVE_FAILURE_LOG, "_observed_domain", exc_info=exc)
+            _record_suppressed_failure("_observed_domain", exc)
             return None
         return resolved
 
@@ -451,5 +450,5 @@ class TechVaultNativeLibvirtDriver:
         try:
             return self._destroy_one(connection, lookup_method, address)
         except Exception as exc:
-            _LOGGER.debug(_NATIVE_FAILURE_LOG, "_try_destroy", exc_info=exc)
+            _record_suppressed_failure("_try_destroy", exc)
             return False

@@ -5,8 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from raes_backend_libvirt._observability import LOGGER as _LOGGER
-from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
 
 from .drivers.libvirt import _error_code, _existing_uuid, _raes_uuid
 from .techvault_matrix import runtime_name
@@ -74,8 +73,11 @@ def _resolve_by_name(
     except KeyError:
         resolved = _resolve_verified_absence(connection, list_method, address)
     except Exception as exc:
-        if _error_code(exc) in {42, 43}:
+        code = _error_code(exc)
+        if code in {42, 43}:
             resolved = _resolve_verified_absence(connection, list_method, address)
+        else:
+            _record_suppressed_failure("_resolve_by_name", exc, native_code=code)
     else:
         resolved = NativeResolution(native=native, name=name)
     return resolved
@@ -119,7 +121,11 @@ def _invoke_native_action(native: object, method_name: str, tolerated_codes: set
     try:
         method()
     except Exception as exc:
-        return _error_code(exc) in tolerated_codes
+        code = _error_code(exc)
+        if code in tolerated_codes:
+            return True
+        _record_suppressed_failure("_invoke_native_action", exc, native_code=code)
+        return False
     return True
 
 
@@ -130,7 +136,7 @@ def _list_native(connection: object, method_name: str) -> tuple[object, ...] | N
     try:
         native = method()
     except Exception as exc:
-        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_list_native", exc_info=exc)
+        _record_suppressed_failure("_list_native", exc)
         return None
     return tuple(native) if isinstance(native, list | tuple) else None
 
@@ -142,7 +148,7 @@ def _native_name(native: object) -> str:
     try:
         value = method()
     except Exception as exc:
-        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_native_name", exc_info=exc)
+        _record_suppressed_failure("_native_name", exc)
         return ""
     return value if isinstance(value, str) else ""
 

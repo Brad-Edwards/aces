@@ -14,9 +14,6 @@ from enum import Enum
 from pathlib import Path
 from typing import BinaryIO
 
-from raes_backend_libvirt._observability import LOGGER as _LOGGER
-from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
-
 _NEWC_MAGIC = b"070701"
 _NEWC_TRAILER = "TRAILER!!!"
 _ELF_MACHINE_X86_64 = 62
@@ -178,8 +175,7 @@ def atomic_write(path: Path, payload: bytes, *, mode: int) -> Path:
         os.chmod(temporary, mode)
         os.replace(temporary, path)
         _fsync_directory(path.parent)
-    except BaseException as exc:
-        _LOGGER.debug(_NATIVE_FAILURE_LOG, "atomic_write", exc_info=exc)
+    except BaseException:
         temporary.unlink(missing_ok=True)
         raise
     return path
@@ -211,8 +207,7 @@ def atomic_copy_by_digest(source: Path, target: Path, *, mode: int) -> Path:
         os.chmod(temporary, mode)
         os.replace(temporary, target)
         _fsync_directory(target.parent)
-    except BaseException as exc:
-        _LOGGER.debug(_NATIVE_FAILURE_LOG, "atomic_copy_by_digest", exc_info=exc)
+    except BaseException:
         temporary.unlink(missing_ok=True)
         raise
     return target

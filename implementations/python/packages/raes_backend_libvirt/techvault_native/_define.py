@@ -14,8 +14,7 @@ from typing import TYPE_CHECKING
 
 from raes_contracts.diagnostics import Diagnostic
 
-from raes_backend_libvirt._observability import LOGGER as _LOGGER
-from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
 
 from .._techvault_native_ops import (
     _CODE_OPERATION_FAILED,
@@ -80,7 +79,7 @@ def define_network(
         driver._names.pop(address, None)
         diagnostic = _diagnostic(_CODE_OWNERSHIP_CONFLICT, address)
     except Exception as exc:
-        _LOGGER.debug(_NATIVE_FAILURE_LOG, "define_network", exc_info=exc)
+        _record_suppressed_failure("define_network", exc)
         if native is None:
             driver._names.pop(address, None)
         else:
@@ -93,7 +92,7 @@ def define_network(
         try:
             observations = network_observations(native, network)
         except Exception as exc:
-            _LOGGER.debug(_NATIVE_FAILURE_LOG, "define_network", exc_info=exc)
+            _record_suppressed_failure("define_network", exc)
             diagnostic = _diagnostic(_CODE_READBACK_FAILED, address)
     return handle, diagnostic, observations
 
@@ -158,7 +157,7 @@ def define_domain(
         driver._names.pop(address, None)
         diagnostic = _diagnostic(_CODE_OWNERSHIP_CONFLICT, address)
     except Exception as exc:
-        _LOGGER.debug(_NATIVE_FAILURE_LOG, "define_domain", exc_info=exc)
+        _record_suppressed_failure("define_domain", exc)
         if native is None:
             driver._cleanup_artifacts(address)
             driver._names.pop(address, None)
@@ -178,6 +177,6 @@ def define_domain(
                 initrd=initrd,
             )
         except Exception as exc:
-            _LOGGER.debug(_NATIVE_FAILURE_LOG, "define_domain", exc_info=exc)
+            _record_suppressed_failure("define_domain", exc)
             diagnostic = _diagnostic(_CODE_READBACK_FAILED, address)
     return handle, diagnostic, observations

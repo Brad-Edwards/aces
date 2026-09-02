@@ -6,8 +6,7 @@ from collections.abc import Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from raes_backend_libvirt._observability import LOGGER as _LOGGER
-from raes_backend_libvirt._observability import NATIVE_FAILURE_LOG as _NATIVE_FAILURE_LOG
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
 
 from .._techvault_native_ops import _CODE_OPERATION_FAILED, _diagnostic
 from ..driver import (
@@ -65,7 +64,7 @@ def _verify_and_finalize(
         binding = driver._material_binding(envelope_digest, configuration_digest)
         snapshot = snapshot_from_observations(matrix, observations, binding=binding)
     except Exception as exc:
-        _LOGGER.debug(_NATIVE_FAILURE_LOG, "_verify_and_finalize", exc_info=exc)
+        _record_suppressed_failure("_verify_and_finalize", exc)
         binding_diagnostics = [_diagnostic(_CODE_OPERATION_FAILED, "runtime.libvirt.binding")]
         binding_diagnostics.extend(driver._rollback(connection, network_handles, domain_handles))
         return DriverResult(diagnostics=tuple(binding_diagnostics))
