@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import os
 import shutil
 import tempfile
@@ -14,6 +13,7 @@ from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
 from raes_contracts.realization_observation import RealizationObservation
 
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
 from raes_backend_libvirt.driver import (
     DomainHandle,
     DomainSpec,
@@ -100,7 +100,8 @@ class LibvirtDeploymentDriver:
         created_domains: list[str] = []
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("realize", exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         realize_network_specs(self, connection, networks, created_networks, network_handles, diagnostics)
@@ -149,7 +150,8 @@ class LibvirtDeploymentDriver:
                 native = lookup(self._name_for(address))
                 active = getattr(native, "isActive", None)
                 owned_and_active = _existing_uuid(native) == _raes_uuid(address) and callable(active) and active() == 1
-            except Exception:
+            except Exception as exc:
+                _record_suppressed_failure("_compute_substrate_observation", exc)
                 owned_and_active = False
             if owned_and_active:
                 envelope = load_libvirt_realization_envelope(self.driver_mode)
@@ -172,7 +174,8 @@ class LibvirtDeploymentDriver:
 
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("observe", exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
         observations: list[RealizationObservation] = []
         diagnostics: list[Diagnostic] = []
@@ -221,7 +224,8 @@ class LibvirtDeploymentDriver:
             native.create()
         except _OwnershipConflict:
             return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("_realize_network", exc)
             return _failure(spec.address, _CODE_OPERATION_FAILED)
         self._realized.add(spec.address)
         return None
@@ -250,7 +254,8 @@ class LibvirtDeploymentDriver:
             native.create()
         except _OwnershipConflict:
             return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("_realize_domain", exc)
             return _failure(spec.address, _CODE_OPERATION_FAILED)
         self._realized.add(spec.address)
         return None
@@ -264,7 +269,8 @@ class LibvirtDeploymentDriver:
         diagnostics: list[Diagnostic] = []
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("destroy", exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         domain_handles = self._destroy_domains(connection, domains, diagnostics)
@@ -437,31 +443,39 @@ class LibvirtDeploymentDriver:
             return
         # Best-effort cleanup of our own filter: a filter that cannot be undefined
         # (in use, missing) must not fail the destroy.
-        with contextlib.suppress(Exception):
+        try:
             cast(_NativeResource, native).undefine()
+        except Exception as exc:
+            if not _is_absence_error(exc):
+                _record_suppressed_failure("_undefine_nwfilter", exc)
 
     def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
+        removed = True
         try:
             native = _find_native(connection, lookup_method, self._name_for(address))
-        except _NativeLookupError:
+        except _NativeLookupError as exc:
             # Connection/permission/internal lookup failure: fail closed so the
             # snapshot is preserved for retry instead of claiming the object gone.
-            return False
-        # A None result is genuine absence — teardown is idempotently satisfied.
-        # A present object is torn down only when its UUID proves RAES ownership
-        # (the same invariant as convergence), never a foreign name collision.
-        if native is not None:
-            if _existing_uuid(native) != _raes_uuid(address):
-                raise _OwnershipConflict(address)
-            try:
-                _stop_native(native)
-                cast(_NativeResource, native).undefine()
-            except Exception as exc:
-                # An object that vanished between lookup and undefine is still torn
-                # down; a stop/undefine that failed for permission or an internal
-                # reason fails closed and preserves the snapshot for retry.
-                return _is_absence_error(exc)
-        return True
+            _record_suppressed_failure("_destroy_one", exc.__cause__ or exc)
+            removed = False
+        else:
+            # A None result is genuine absence — teardown is idempotently satisfied.
+            # A present object is torn down only when its UUID proves RAES ownership
+            # (the same invariant as convergence), never a foreign name collision.
+            if native is not None:
+                if _existing_uuid(native) != _raes_uuid(address):
+                    raise _OwnershipConflict(address)
+                try:
+                    _stop_native(native)
+                    cast(_NativeResource, native).undefine()
+                except Exception as exc:
+                    # An object that vanished between lookup and undefine is still torn
+                    # down; a stop/undefine that failed for permission or an internal
+                    # reason fails closed and preserves the snapshot for retry.
+                    removed = _is_absence_error(exc)
+                    if not removed:
+                        _record_suppressed_failure("_destroy_one", exc)
+        return removed
 
     def _rollback(self, networks: list[str], domains: list[str]) -> None:
         if networks or domains:
