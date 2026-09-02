@@ -28,10 +28,6 @@ from tools.nox_support.config import (
 )
 from tools.tool_versions import PRE_COMMIT_HOOKS_TOOL_SPEC, RUFF_TOOL_SPEC
 
-nox.options.default_venv_backend = "none"
-nox.options.reuse_existing_virtualenvs = True
-nox.options.sessions = ["verify"]
-
 
 @dataclass(frozen=True)
 class StageResult:

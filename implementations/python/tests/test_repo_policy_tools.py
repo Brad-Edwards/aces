@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
 import inspect
 import json
@@ -40,6 +41,8 @@ from tools.parallel_verification import VerificationLane, run_verification_lanes
 from tools.policy.common import PolicyFailure
 from tools.policy.conftest_tool import run_conftest_policy
 from tools.policy.repo_policy import evaluate_repo_policy
+
+NOX_SUPPORT_MODULES = ("config", "runner", "policy_lanes", "test_lanes", "graph")
 
 
 def test_sonar_project_binding_matches_scanner_configuration() -> None:
@@ -91,12 +94,98 @@ def _patch_nox_globals(
 
     modules = [noxfile] + [
         sys.modules[f"tools.nox_support.{module_name}"]
-        for module_name in ("config", "runner", "policy_lanes", "test_lanes", "graph")
+        for module_name in NOX_SUPPORT_MODULES
         if f"tools.nox_support.{module_name}" in sys.modules
     ]
     for module in modules:
         if hasattr(module, name):
             monkeypatch.setattr(module, name, value)
+
+
+def test_nox_support_has_one_authoritative_definition_per_symbol() -> None:
+    definitions: dict[str, list[str]] = {}
+    for module_name in NOX_SUPPORT_MODULES:
+        relative_path = f"tools/nox_support/{module_name}.py"
+        tree = ast.parse((REPO_ROOT / relative_path).read_text(encoding="utf-8"))
+        for node in tree.body:
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+                continue
+            definitions.setdefault(node.name, []).append(relative_path)
+    duplicates = {name: paths for name, paths in definitions.items() if len(paths) > 1}
+    assert duplicates == {}
+
+
+def test_noxfile_owns_session_registration_and_nox_configuration() -> None:
+    noxfile_source = (REPO_ROOT / "noxfile.py").read_text(encoding="utf-8")
+    assert 'nox.options.default_venv_backend = "none"' in noxfile_source
+    assert "nox.options.reuse_existing_virtualenvs = True" in noxfile_source
+    assert 'nox.options.sessions = ["verify"]' in noxfile_source
+    for module_name in NOX_SUPPORT_MODULES:
+        support_source = (REPO_ROOT / "tools" / "nox_support" / f"{module_name}.py").read_text(encoding="utf-8")
+        assert "@nox.session" not in support_source
+        assert "nox.options." not in support_source
+
+
+def test_noxfile_registers_the_exact_public_session_inventory() -> None:
+    tree = ast.parse((REPO_ROOT / "noxfile.py").read_text(encoding="utf-8"))
+    sessions: set[str] = set()
+    for node in tree.body:
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Attribute) and decorator.attr == "session":
+                sessions.add(node.name)
+            elif isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute):
+                name_keyword = next((keyword.value for keyword in decorator.keywords if keyword.arg == "name"), None)
+                if decorator.func.attr == "session" and isinstance(name_keyword, ast.Constant):
+                    sessions.add(name_keyword.value)
+    assert sessions == {
+        "contracts",
+        "docs",
+        "docs-links",
+        "docs-local",
+        "fuzz",
+        "hook-pre-commit",
+        "hook-pre-push",
+        "hygiene",
+        "integration",
+        "integration_docker",
+        "lint",
+        "osv_scan",
+        "participant-opacity-proof",
+        "policy",
+        "python-compatibility",
+        "tests",
+        "verify",
+        "verify-changed",
+        "verify-completion",
+        "verify-integration-lane",
+        "verify-static-lane",
+        "verify-tests-lane",
+    }
+
+
+def test_nox_support_dependency_graph_is_acyclic() -> None:
+    dependencies = {module_name: set() for module_name in NOX_SUPPORT_MODULES}
+    for module_name in NOX_SUPPORT_MODULES:
+        source = (REPO_ROOT / "tools" / "nox_support" / f"{module_name}.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module is not None
+        }
+        assert "noxfile" not in imported_modules
+        dependencies[module_name].update(
+            imported.removeprefix("tools.nox_support.")
+            for imported in imported_modules
+            if imported.startswith("tools.nox_support.")
+        )
+
+    remaining = {module_name: set(imports) for module_name, imports in dependencies.items()}
+    while remaining:
+        leaves = {module_name for module_name, imports in remaining.items() if not imports.intersection(remaining)}
+        assert leaves, f"cyclic nox support imports: {remaining}"
+        for module_name in leaves:
+            del remaining[module_name]
 
 
 def test_parallel_coverage_command_is_capped_and_worker_safe(

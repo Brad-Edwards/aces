@@ -1,9 +1,9 @@
 # ruff: noqa: E402, I001
 """Repository nox sessions.
 
-Configuration constants, the session reporter/runner, and the lane
-implementations live in ``tools/nox_support``; this file registers the
-sessions and the parallel verification graph.
+Configuration constants, the session reporter/runner, lane implementations,
+and graph composition live in ``tools/nox_support``; this file is the public
+session registry.
 """
 
 from __future__ import annotations
@@ -13,6 +13,10 @@ import tempfile
 from pathlib import Path
 
 import nox
+
+nox.options.default_venv_backend = "none"
+nox.options.reuse_existing_virtualenvs = True
+nox.options.sessions = ["verify"]
 
 REPO_ROOT = Path(__file__).resolve().parent
 import sys
