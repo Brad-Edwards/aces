@@ -39,7 +39,13 @@ from raes_conformance.conformance.semantics import _semantic_diagnostics
 from raes_conformance.conformance.validators import _validate_payload
 
 # Default reference scenario the target-conformance adapter probe drives when the
-# caller supplies none. Backend-neutral: a single generic linux vm node.
+# caller supplies none. Backend-neutral: a single generic compute node with no
+# authored OS identity — an authored ``os`` becomes an exact SEM-218
+# realization requirement demanding corroboration no hermetic in-process
+# backend declares, which is what regressed this probe when authored OS
+# identity started carrying through realization. Leaving it unset keeps the
+# probe admissible on every declared envelope, mirroring
+# ``examples/scenarios/cross-backend-minimal.sdl.yaml``.
 #
 # Issue #663 makes this a *default*, not a universal assumption. A fixed-topology
 # emulation or bounded simulation backend that cannot realize this generic
@@ -55,7 +61,6 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
     nodes:
       vm:
         type: compute
-        os: linux
         resources: {ram: 1 gib, cpu: 1}
         conditions: {health: ops}
         roles: {ops: operator}

@@ -186,25 +186,35 @@ def _out_of_envelope_terms(
             if term and term not in supported:
                 yield (dimension.code, address, term), _envelope_diagnostic(dimension, address, term)
     if resource_type == NODE_RESOURCE_TYPE:
-        family = _os_family(payload)
-        distribution = _os_distribution(payload)
-        version = _os_version(payload) or None
-        if distribution and not capabilities.supports_operating_system(
-            family=family,
-            distribution=distribution,
-            version=version,
-        ):
-            identity = "/".join((family, distribution, version or "<open-release>"))
-            yield (
-                (_CODE_UNSUPPORTED_OPERATING_SYSTEM, address, identity),
-                Diagnostic(
-                    code=_CODE_UNSUPPORTED_OPERATING_SYSTEM,
-                    domain=_DOMAIN,
-                    address=address,
-                    message=f"Libvirt backend does not realize operating-system identity '{identity}'.",
-                    severity=Severity.ERROR,
-                ),
-            )
+        yield from _out_of_envelope_operating_system(address, payload, capabilities)
+
+
+def _out_of_envelope_operating_system(
+    address: str,
+    payload: Mapping[str, object],
+    capabilities: ProvisionerCapabilities,
+) -> Iterator[tuple[tuple[str, str, str], Diagnostic]]:
+    """Yield the unsupported operating-system identity of a node payload, if any."""
+
+    family = _os_family(payload)
+    distribution = _os_distribution(payload)
+    version = _os_version(payload) or None
+    if distribution and not capabilities.supports_operating_system(
+        family=family,
+        distribution=distribution,
+        version=version,
+    ):
+        identity = "/".join((family, distribution, version or "<open-release>"))
+        yield (
+            (_CODE_UNSUPPORTED_OPERATING_SYSTEM, address, identity),
+            Diagnostic(
+                code=_CODE_UNSUPPORTED_OPERATING_SYSTEM,
+                domain=_DOMAIN,
+                address=address,
+                message=f"Libvirt backend does not realize operating-system identity '{identity}'.",
+                severity=Severity.ERROR,
+            ),
+        )
 
 
 def _materialized_payloads(plan: ProvisioningPlan) -> Iterator[tuple[str, str, Mapping[str, object]]]:

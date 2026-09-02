@@ -106,6 +106,37 @@ class ProcessResourceLimitCapability:
         )
 
 
+def _validate_observation_and_limit_capabilities(declaration: RealizationSupportDeclaration) -> None:
+    if any(not kind.strip() for kind in declaration.observation_capabilities):
+        raise ValueError("observation_capabilities must not contain empty concern kinds")
+    if any(
+        not isinstance(capability, RealizationObservationCapability)
+        for capability in declaration.observation_capabilities.values()
+    ):
+        raise TypeError("observation_capabilities values must be RealizationObservationCapability")
+    if any(
+        not isinstance(capability, ProcessResourceLimitCapability) for capability in declaration.process_resource_limits
+    ):
+        raise TypeError("process_resource_limits values must be ProcessResourceLimitCapability")
+    resource_keys = [capability.resource for capability in declaration.process_resource_limits]
+    if len(resource_keys) != len(set(resource_keys)):
+        raise ValueError("process_resource_limits must not contain duplicate resource terms")
+
+
+def _validate_artifact_mechanism_identities(declaration: RealizationSupportDeclaration) -> None:
+    identities = [
+        (
+            capability.mechanism.mechanism,
+            capability.mechanism.profile,
+            capability.mechanism.version,
+            capability.mechanism.digest,
+        )
+        for capability in declaration.artifact_mechanisms
+    ]
+    if len(identities) != len(set(identities)):
+        raise ValueError("artifact_mechanisms must not contain duplicate mechanism profiles")
+
+
 @dataclass(frozen=True)
 class RealizationSupportDeclaration:
     """Declared realization-support and disclosure surface for one concern domain."""
@@ -129,20 +160,7 @@ class RealizationSupportDeclaration:
             field_name="supported_exact_requirement_kinds",
         )
         _require_non_empty_strings(self.disclosure_kinds, field_name="disclosure_kinds")
-        if any(not kind.strip() for kind in self.observation_capabilities):
-            raise ValueError("observation_capabilities must not contain empty concern kinds")
-        if any(
-            not isinstance(capability, RealizationObservationCapability)
-            for capability in self.observation_capabilities.values()
-        ):
-            raise TypeError("observation_capabilities values must be RealizationObservationCapability")
-        if any(
-            not isinstance(capability, ProcessResourceLimitCapability) for capability in self.process_resource_limits
-        ):
-            raise TypeError("process_resource_limits values must be ProcessResourceLimitCapability")
-        resource_keys = [capability.resource for capability in self.process_resource_limits]
-        if len(resource_keys) != len(set(resource_keys)):
-            raise ValueError("process_resource_limits must not contain duplicate resource terms")
+        _validate_observation_and_limit_capabilities(self)
         if not self.disclosure_kinds:
             raise ValueError("RealizationSupportDeclaration.disclosure_kinds must not be empty")
         if not (self.supported_constraint_kinds or self.supported_exact_requirement_kinds):
@@ -152,14 +170,4 @@ class RealizationSupportDeclaration:
             )
         if self.support_mode == RealizationSupportMode.EXACT_ONLY and self.supported_constraint_kinds:
             raise ValueError("exact-only realization support must not declare supported_constraint_kinds")
-        identities = [
-            (
-                capability.mechanism.mechanism,
-                capability.mechanism.profile,
-                capability.mechanism.version,
-                capability.mechanism.digest,
-            )
-            for capability in self.artifact_mechanisms
-        ]
-        if len(identities) != len(set(identities)):
-            raise ValueError("artifact_mechanisms must not contain duplicate mechanism profiles")
+        _validate_artifact_mechanism_identities(self)

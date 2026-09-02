@@ -89,7 +89,7 @@ def ensure_conftest(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERS
 
 
 def run_conftest_policy(
-    input_document: dict,
+    input_document: dict[str, object],
     *,
     repo_root: Path = REPO_ROOT,
     policy_dir: Path = POLICY_DIR,
