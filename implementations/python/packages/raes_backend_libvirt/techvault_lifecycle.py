@@ -122,10 +122,10 @@ def _invoke_native_action(native: object, method_name: str, tolerated_codes: set
         method()
     except Exception as exc:
         code = _error_code(exc)
-        if code in tolerated_codes:
-            return True
-        _record_suppressed_failure("_invoke_native_action", exc, native_code=code)
-        return False
+        tolerated = code in tolerated_codes
+        if not tolerated:
+            _record_suppressed_failure("_invoke_native_action", exc, native_code=code)
+        return tolerated
     return True
 
 
