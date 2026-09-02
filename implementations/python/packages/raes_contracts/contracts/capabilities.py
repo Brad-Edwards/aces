@@ -8,6 +8,7 @@ from pydantic_core import CoreSchema
 
 from ..artifact_requirements import ArtifactMechanismCapability
 from ..vocabulary import (
+    GeneratedArtifactDeliveryMode,
     GeneratedArtifactKind,
     ObservationStrength,
     RealizationSupportMode,
@@ -33,6 +34,10 @@ class ProvisionerCapabilitiesModel(ContractModel):
     supports_accounts: bool = False
     supports_generated_artifacts: bool = False
     supported_generated_artifact_kinds: list[GeneratedArtifactKind] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_generated_artifact_delivery_modes: list[GeneratedArtifactDeliveryMode] = Field(
         default_factory=list,
         json_schema_extra={"uniqueItems": True},
     )
@@ -81,6 +86,12 @@ class ProvisionerCapabilitiesModel(ContractModel):
             )
         if not self.supports_generated_artifacts and self.supported_generated_artifact_kinds:
             raise ValueError("supported_generated_artifact_kinds require supports_generated_artifacts=true")
+        if len(self.supported_generated_artifact_delivery_modes) != len(
+            set(self.supported_generated_artifact_delivery_modes)
+        ):
+            raise ValueError("supported_generated_artifact_delivery_modes must not contain duplicates")
+        if not self.supports_generated_artifacts and self.supported_generated_artifact_delivery_modes:
+            raise ValueError("supported_generated_artifact_delivery_modes require supports_generated_artifacts=true")
         return self
 
     @classmethod

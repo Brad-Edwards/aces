@@ -3,7 +3,9 @@
 from collections.abc import Iterable
 from enum import Enum
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import Field, GetJsonSchemaHandler, ValidationInfo, field_validator, model_validator
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import CoreSchema
 
 from . import runtime_app_authorization as _runtime_app_authorization
 from . import runtime_application as _runtime_application
@@ -51,6 +53,11 @@ from .runtime_filesystem import (
     RuntimeFilesystemStability,
     RuntimeMountPropagation,
     RuntimeSensitivityClassification,
+)
+from .runtime_generated_value import (
+    GeneratedArtifactValueSource,
+    RuntimeEnvironmentFile,
+    value_from_schema_exclusions,
 )
 from .runtime_identity import (
     RuntimeIdentityProvenance,
@@ -107,6 +114,8 @@ __all__ = [
     "RuntimeControlInterfaceKind",
     "RuntimeDependencyManifest",
     "RuntimeDeviceMapping",
+    "GeneratedArtifactValueSource",
+    "RuntimeEnvironmentFile",
     "RuntimeEnvironmentValueClassification",
     "RuntimeEnvironmentVariable",
     "RuntimeEnvironmentVariableProvenance",
@@ -202,6 +211,7 @@ class RuntimeEnvironmentVariable(SDLModel):
 
     name: str
     value: str = ""
+    value_from: GeneratedArtifactValueSource | None = Field(default=None, exclude_if=lambda v: v is None)
     value_classification: RuntimeEnvironmentValueClassification | str = RuntimeEnvironmentValueClassification.UNKNOWN
     provenance: RuntimeEnvironmentVariableProvenance | str = RuntimeEnvironmentVariableProvenance.UNKNOWN
     source: str = ""
@@ -215,6 +225,24 @@ class RuntimeEnvironmentVariable(SDLModel):
         if "=" in v:
             raise ValueError("environment variable name must not contain '='")
         return v
+
+    @model_validator(mode="after")
+    def validate_value_from_exclusivity(self) -> "RuntimeEnvironmentVariable":
+        if self.value_from is not None:
+            if self.value:
+                raise ValueError(
+                    "runtime environment variable must not set both a literal value and value_from; "
+                    "a generated-artifact value is realized from the referenced output"
+                )
+            # `operator_secret` is reserved for out-of-SDL operator-controlled
+            # material; a generated-artifact value is realized in-band and must
+            # not claim that classification.
+            if self.value_classification is RuntimeEnvironmentValueClassification.OPERATOR_SECRET:
+                raise ValueError(
+                    "runtime environment variable with value_from must not be classified operator_secret; "
+                    "a generated-artifact value is not out-of-SDL operator material"
+                )
+        return self
 
     @field_validator("value_classification", mode="before")
     @classmethod
@@ -246,6 +274,19 @@ class RuntimeEnvironmentVariable(SDLModel):
             raw_value_label="value",
         )
         return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        # Publish the model's value_from cross-field exclusions so schema-only
+        # consumers reject the same payloads the Python model rejects (issue #1074).
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(value_from_schema_exclusions())
+        return json_schema
 
 
 class RuntimeResourceLimits(SDLModel):
@@ -353,6 +394,7 @@ class RuntimeConfiguration(SDLModel):
     local_control_interfaces: list[RuntimeControlInterface] = Field(default_factory=list)
     processes: list[RuntimeProcessIdentity] = Field(default_factory=list)
     environment: list[RuntimeEnvironmentVariable] = Field(default_factory=list)
+    environment_files: list[RuntimeEnvironmentFile] = Field(default_factory=list)
     linux_capabilities: RuntimeCapabilityPolicy | None = None
     operational_policy: RuntimeOperationalPolicy | None = None
     container: RuntimeContainerConfiguration | None = None
@@ -387,6 +429,7 @@ class RuntimeConfiguration(SDLModel):
     @model_validator(mode="after")
     def validate_unique_runtime_entries(self) -> "RuntimeConfiguration":
         _reject_duplicate_keys(self.environment, attr="name", label="environment variable")
+        _reject_duplicate_keys(self.environment_files, attr="name", label="environment file")
         _reject_duplicate_keys(self.mounts, attr="target", label="mount target")
         _reject_duplicate_keys(
             self.local_control_interfaces,

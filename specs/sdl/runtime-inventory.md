@@ -90,6 +90,17 @@ authored `accounts`, runtime local identity, application authorization, database
 roles, and participant identities are distinct models and MUST NOT be collapsed
 into one.
 
+A node's `runtime.environment[]` variable and `runtime.environment_files[]` entry
+may source their value from a **generated-artifact output** instead of a literal,
+using a value-free `value_from: {generated_artifact, output}` reference. This is
+the `environment` / `env_file` generated-artifact delivery mode; the binding is
+authored here, on the node, and the compiler derives the artifact-side consumer
+projection. See [stateful-resources.md](stateful-resources.md) for the delivery
+modes, cross-resource resolution, `producer_private` exclusion, and the
+`supported_generated_artifact_delivery_modes` backend capability. A generated
+secret value follows invariant §3.5 below (omit the raw `value`, classify
+`redacted`); it is not `operator_secret`.
+
 ## 3. Shared invariants
 
 The following invariants hold for every runtime family and child collection.

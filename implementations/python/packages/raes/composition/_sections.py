@@ -71,6 +71,16 @@ def _rewrite_node(payload: dict[str, Any], symbols: dict[str, dict[str, str] | s
             "nodes",
             symbols["nodes"],
         )
+    if isinstance(runtime, dict):
+        for collection_name in ("environment", "environment_files"):
+            for entry in runtime.get(collection_name, []):
+                source = entry.get("value_from") if isinstance(entry, dict) else None
+                if isinstance(source, dict) and source.get("generated_artifact"):
+                    source["generated_artifact"] = _rewrite_section_ref(
+                        str(source["generated_artifact"]),
+                        "generated_artifacts",
+                        symbols["generated_artifacts"],
+                    )
 
 
 def _rewrite_infrastructure(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:

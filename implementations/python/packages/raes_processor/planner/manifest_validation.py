@@ -163,6 +163,7 @@ def _validate_artifact_and_volume_support(
                 address=artifact.address,
                 spec=artifact.spec,
                 provisioner=provisioner,
+                node_specs={address: node.spec for address, node in model.node_deployments.items()},
             )
             if diagnostic is not None:
                 diagnostics.append(diagnostic)

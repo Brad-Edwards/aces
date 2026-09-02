@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "d214222bf9ab0ec17c40edad6b6717fba4363a63199d00eda78d6e2d0af2d7f5",
+  "content_hash": "06c820c352467598b76e12c33289fb1c0a7c32c8cb2d7c69e8d4eeccae4b7925",
   "last_change": {
-    "summary": "Added the issue #1004 adversarial-control apparatus/backend feature-support terms (participant_boundary_flow_resolution, participant_final_sink_mediation, participant_quarantined_processing, participant_processing_role_trust, participant_monitor_topology) to the API-407 evidence-required feature_support conditionals and added participant-flow-control-relation-v1 to the backend supported-contract enum as the owning realization contract for the flow, final-sink, and quarantine terms, so a backend can declare bounded flow resolution, final-sink mediation, quarantine, processing-role trust, and monitor topology as evidence-bound support.",
-    "content_hash": "d214222bf9ab0ec17c40edad6b6717fba4363a63199d00eda78d6e2d0af2d7f5"
+    "summary": "Added generated-artifact output consumption as a node runtime environment value (RuntimeEnvironmentVariable.value_from / RuntimeEnvironmentFile) with a GeneratedArtifactValueSource reference, environment/env_file generated-artifact delivery-mode capability, published value_from cross-field exclusions, and a bounded env-file identity for issue #1074 and DSL-435.",
+    "content_hash": "06c820c352467598b76e12c33289fb1c0a7c32c8cb2d7c69e8d4eeccae4b7925"
   }
 }

@@ -428,6 +428,7 @@ def test_control_plane_rejects_stateful_kind_before_backend_calls(
     capability_changes: dict[str, Any] = {capability_attribute: False}
     if capability_attribute == "supports_generated_artifacts":
         capability_changes["supported_generated_artifact_kinds"] = frozenset()
+        capability_changes["supported_generated_artifact_delivery_modes"] = frozenset()
     unsupported = replace(
         manifest,
         capabilities=replace(

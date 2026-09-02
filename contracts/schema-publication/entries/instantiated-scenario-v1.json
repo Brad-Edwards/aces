@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "98fa6c880ec8c7c73488a82a599cb184ad9796040dd097bab80df227e2d58125",
+  "content_hash": "936860a957a6561bb83d832b41aa3953f909e3a4b2cd046c708c94388dc6f355",
   "last_change": {
-    "summary": "Propagated concrete typed account credential bindings into the instantiated scenario model for issue #673 and DSL-439.",
-    "content_hash": "98fa6c880ec8c7c73488a82a599cb184ad9796040dd097bab80df227e2d58125"
+    "summary": "Added generated-artifact output consumption as a node runtime environment value (RuntimeEnvironmentVariable.value_from / RuntimeEnvironmentFile) with a GeneratedArtifactValueSource reference, environment/env_file generated-artifact delivery-mode capability, published value_from cross-field exclusions, and a bounded env-file identity for issue #1074 and DSL-435.",
+    "content_hash": "936860a957a6561bb83d832b41aa3953f909e3a4b2cd046c708c94388dc6f355"
   }
 }

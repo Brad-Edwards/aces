@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
-from raes_contracts.vocabulary import GeneratedArtifactKind
+from raes_contracts.vocabulary import GeneratedArtifactDeliveryMode, GeneratedArtifactKind
 
 PROVISIONER_DOMAIN_PROFILE_SCOPE = "capabilities.provisioner.supported_domain_profiles"
 PROVISIONER_SERVICE_MATERIALIZATION_PROFILE_SCOPE = (
@@ -40,6 +40,7 @@ class ProvisionerCapabilities:
     supports_accounts: bool = False
     supports_generated_artifacts: bool = False
     supported_generated_artifact_kinds: frozenset[GeneratedArtifactKind] = frozenset()
+    supported_generated_artifact_delivery_modes: frozenset[GeneratedArtifactDeliveryMode] = frozenset()
     supports_persistent_volumes: bool = False
     constraints: dict[str, str] = field(default_factory=dict)
 
@@ -103,6 +104,23 @@ class ProvisionerCapabilities:
             raise ValueError(
                 "ProvisionerCapabilities supported_generated_artifact_kinds require supports_generated_artifacts=True"
             )
+        try:
+            normalized_delivery_modes = frozenset(
+                GeneratedArtifactDeliveryMode(mode) for mode in self.supported_generated_artifact_delivery_modes
+            )
+        except ValueError as exc:
+            raise ValueError("ProvisionerCapabilities contains an unknown generated artifact delivery mode") from exc
+        if not self.supports_generated_artifacts and normalized_delivery_modes:
+            raise ValueError(
+                "ProvisionerCapabilities supported_generated_artifact_delivery_modes require "
+                "supports_generated_artifacts=True"
+            )
+        # A provisioner that supports generated artifacts realizes at least the
+        # read-only mount projection; existing manifests that predate delivery
+        # modes keep that mount-only meaning without falsely claiming injection.
+        if self.supports_generated_artifacts and not normalized_delivery_modes:
+            normalized_delivery_modes = frozenset({GeneratedArtifactDeliveryMode.MOUNT})
+        object.__setattr__(self, "supported_generated_artifact_delivery_modes", normalized_delivery_modes)
 
 
 __all__ = [

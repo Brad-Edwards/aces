@@ -157,6 +157,11 @@ def _stateful_submission_diagnostic(
     manifest: BackendManifest,
 ) -> Diagnostic | None:
     diagnostic: Diagnostic | None = None
+    node_specs = {
+        operation.address: operation.payload.get("spec")
+        for operation in plan.operations
+        if operation.resource_type == "node"
+    }
     exact_supported = any(
         declaration.domain == RUNTIME_REALIZATION_DOMAIN
         and DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
@@ -179,6 +184,7 @@ def _stateful_submission_diagnostic(
                 address=operation.address,
                 spec=operation.payload.get("spec"),
                 provisioner=manifest.provisioner,
+                node_specs=node_specs,
             )
             if artifact_diagnostic is not None:
                 diagnostic = artifact_diagnostic

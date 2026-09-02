@@ -30,6 +30,16 @@ nodes:
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: dashboard, port: 5601, protocol: tcp}
+    runtime:
+      # Consume a runtime-generated secret as a process-environment value
+      # (issue #1074): the token is minted during realization from the
+      # generated rendered-config artifact, not authored here.
+      environment:
+        - name: DASHBOARD_API_TOKEN
+          value_from: {generated_artifact: wazuh-dashboard-api-token, output: api-token}
+          value_classification: redacted
+          provenance: runtime
+          description: Dashboard API token sourced from a generated artifact output.
 
   aptl-otel-collector:
     type: vm
@@ -85,6 +95,16 @@ generated_artifacts:
       - node: wazuh-indexer
         mount_destination: /usr/share/wazuh-indexer/certs
         access_mode: read_only
+
+  wazuh-dashboard-api-token:
+    generator: rendered_config
+    lifecycle: reuse_valid
+    provenance: config/dashboard-api-token.yml
+    outputs:
+      - {name: api-token, path: dashboard-api-token.env, sensitivity: secret}
+    # Consumed only as the wazuh-dashboard DASHBOARD_API_TOKEN environment value
+    # (env delivery mode), so there is no file-mount `consumers` block; the
+    # compiler derives the consumer projection from the node runtime binding.
 
 persistent_volumes:
   wazuh-indexer-data:

@@ -183,6 +183,11 @@
         "rendered_config",
         "ssh_key_bundle"
       ],
+      "supported_generated_artifact_delivery_modes": [
+        "env_file",
+        "environment",
+        "mount"
+      ],
       "supports_persistent_volumes": true,
       "constraints": {}
     },
