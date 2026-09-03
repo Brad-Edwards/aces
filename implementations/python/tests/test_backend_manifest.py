@@ -32,10 +32,12 @@ from raes_backend_protocols.capabilities import (
     resolve_participant_feature_support,
 )
 from raes_backend_protocols.manifest import backend_manifest_payload
+from raes_backend_protocols.provisioner_manifest import provisioner_from_model
 from raes_backend_stubs.stubs import create_stub_manifest
 from raes_contracts.contracts import BackendManifestV2Model
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from raes_contracts.vocabulary import (
+    GeneratedArtifactDeliveryMode,
     ParticipantFeatureSupportLevel,
     WorkflowFeature,
     WorkflowStatePredicateFeature,
@@ -130,6 +132,17 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
     assert roundtrip == payload
 
 
+def test_legacy_generated_artifact_capability_defaults_to_mount_delivery():
+    payload = backend_manifest_payload(create_stub_manifest())
+    provisioner_payload = payload["capabilities"]["provisioner"]
+    provisioner_payload.pop("supported_generated_artifact_delivery_modes")
+
+    model = BackendManifestV2Model.model_validate(payload)
+    provisioner = provisioner_from_model(model.capabilities.provisioner)
+
+    assert provisioner.supported_generated_artifact_delivery_modes == frozenset({GeneratedArtifactDeliveryMode.MOUNT})
+
+
 def test_generated_artifact_capability_requires_explicit_kind_support():
     manifest = create_stub_manifest()
     provisioner = manifest.provisioner
@@ -184,6 +197,10 @@ def test_backend_manifest_schema_requires_true_support_flag_for_nonempty_support
         BackendManifestV2Model.model_validate(payload)
 
     provisioner[supported_values] = []
+    if support_flag == "supports_generated_artifacts":
+        # supports_generated_artifacts also gates the delivery-mode list; clear it
+        # too so the otherwise-consistent payload validates.
+        provisioner["supported_generated_artifact_delivery_modes"] = []
     validator.validate(payload)
     BackendManifestV2Model.model_validate(payload)
 

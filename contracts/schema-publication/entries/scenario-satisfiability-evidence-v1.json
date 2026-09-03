@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d",
+  "content_hash": "2981c2cb86232160373a380a20fbb1ad7d69b09628095e6d05979e397f4446a7",
   "last_change": {
-    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
-    "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d"
+    "summary": "Added generated-artifact output environment consumption for issue #1074 and DSL-435 alongside participant-interaction commutativity and merge rules from issue #1101.",
+    "content_hash": "2981c2cb86232160373a380a20fbb1ad7d69b09628095e6d05979e397f4446a7"
   }
 }

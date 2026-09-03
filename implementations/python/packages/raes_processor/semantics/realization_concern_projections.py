@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from pydantic import ValidationError
+from raes.runtime_generated_value import GeneratedArtifactValueSource
 from raes.runtime_resource_limits import project_process_resource_limit
 from raes_contracts.canonical import canonical_json_digest
 
@@ -96,6 +98,21 @@ def project_environment(value: object, observed: bool = False) -> object:
             "provenance": record.get("provenance", "unknown"),
             "source": record.get("source", ""),
         }
+        # A value-free generated-artifact source (issue #1074) is exact realization
+        # metadata (artifact id + output name), not a secret, so pin it into the
+        # projection; entries without it keep their prior shape.
+        value_from = record.get("value_from")
+        if value_from is not None:
+            try:
+                source = GeneratedArtifactValueSource.model_validate(value_from)
+            except ValidationError:
+                raise ValueError(
+                    "runtime environment value_from must be a closed generated-artifact output reference"
+                ) from None
+            entry["value_from"] = {
+                "generated_artifact": source.generated_artifact,
+                "output": source.output,
+            }
         entry.update(
             _committed_value(
                 record,
