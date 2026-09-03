@@ -9,6 +9,8 @@ from .runtime_generated_value import (
 )
 from .stateful_resources import GeneratedArtifact, PersistentVolume
 
+_GENERATED_ARTIFACTS_PREFIX = "generated_artifacts."
+
 
 def _node_name(reference: str, nodes: Mapping[str, Node]) -> str | None:
     name = reference.removeprefix("nodes.") if reference.startswith("nodes.") else reference
@@ -19,7 +21,11 @@ def _generated_artifact_ref_name(
     reference: str,
     generated_artifacts: Mapping[str, GeneratedArtifact],
 ) -> str | None:
-    name = reference.removeprefix("generated_artifacts.") if reference.startswith("generated_artifacts.") else reference
+    name = (
+        reference.removeprefix(_GENERATED_ARTIFACTS_PREFIX)
+        if reference.startswith(_GENERATED_ARTIFACTS_PREFIX)
+        else reference
+    )
     return name if name in generated_artifacts else None
 
 
@@ -94,8 +100,8 @@ def _dependency_candidates(
     generated_artifacts: Mapping[str, GeneratedArtifact],
     persistent_volumes: Mapping[str, PersistentVolume],
 ) -> list[str]:
-    if reference.startswith("generated_artifacts."):
-        name = reference.removeprefix("generated_artifacts.")
+    if reference.startswith(_GENERATED_ARTIFACTS_PREFIX):
+        name = reference.removeprefix(_GENERATED_ARTIFACTS_PREFIX)
         return [reference] if name in generated_artifacts else []
     if reference.startswith("persistent_volumes."):
         name = reference.removeprefix("persistent_volumes.")
@@ -103,7 +109,7 @@ def _dependency_candidates(
 
     candidates: list[str] = []
     if reference in generated_artifacts:
-        candidates.append(f"generated_artifacts.{reference}")
+        candidates.append(f"{_GENERATED_ARTIFACTS_PREFIX}{reference}")
     if reference in persistent_volumes:
         candidates.append(f"persistent_volumes.{reference}")
     return candidates

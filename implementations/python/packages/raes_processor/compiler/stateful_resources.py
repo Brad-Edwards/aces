@@ -14,10 +14,14 @@ from .addresses import (
 )
 from .support import _dump
 
+_GENERATED_ARTIFACTS_PREFIX = "generated_artifacts."
+
 
 def _generated_artifact_ref_matches(reference: str, artifact_name: str) -> bool:
     resolved = (
-        reference.removeprefix("generated_artifacts.") if reference.startswith("generated_artifacts.") else reference
+        reference.removeprefix(_GENERATED_ARTIFACTS_PREFIX)
+        if reference.startswith(_GENERATED_ARTIFACTS_PREFIX)
+        else reference
     )
     return resolved == artifact_name
 
@@ -71,8 +75,8 @@ def _stateful_dependency_address(
     scenario: InstantiatedScenario,
     reference: str,
 ) -> str:
-    if reference.startswith("generated_artifacts."):
-        name = reference.removeprefix("generated_artifacts.")
+    if reference.startswith(_GENERATED_ARTIFACTS_PREFIX):
+        name = reference.removeprefix(_GENERATED_ARTIFACTS_PREFIX)
         if name in scenario.generated_artifacts:
             return _generated_artifact_address(name)
     if reference.startswith("persistent_volumes."):

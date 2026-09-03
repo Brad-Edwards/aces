@@ -82,8 +82,9 @@ def test_env_var_rejects_literal_value_with_value_from():
       value: leaked-literal
       value_from: {generated_artifact: cortex-api-key, output: api-key}
     """
+    document = _scenario(environment=conflicting)
     with pytest.raises(SDLParseError, match="value_from"):
-        parse_sdl(_scenario(environment=conflicting))
+        parse_sdl(document)
 
 
 def test_env_var_value_from_rejects_operator_secret_classification():
@@ -92,8 +93,9 @@ def test_env_var_value_from_rejects_operator_secret_classification():
       value_from: {generated_artifact: cortex-api-key, output: api-key}
       value_classification: operator_secret
     """
+    document = _scenario(environment=reserved)
     with pytest.raises(SDLParseError, match="operator_secret"):
-        parse_sdl(_scenario(environment=reserved))
+        parse_sdl(document)
 
 
 @pytest.mark.parametrize("classification", ["plain", "unknown", "other", "secret_fixture"])
@@ -103,8 +105,9 @@ def test_secret_generated_output_requires_redacted_environment_classification(cl
       value_from: {{generated_artifact: cortex-api-key, output: api-key}}
       value_classification: {classification}
     """
+    document = _scenario(environment=downgraded)
     with pytest.raises(SDLValidationError, match="redacted"):
-        parse_sdl(_scenario(environment=downgraded))
+        parse_sdl(document)
 
 
 def test_environment_file_sources_generated_artifact_output_parses():
@@ -141,8 +144,9 @@ def test_env_value_from_unknown_artifact_is_rejected():
     - name: CORTEX_API_KEY
       value_from: {generated_artifact: does-not-exist, output: api-key}
     """
+    document = _scenario(environment=unknown)
     with pytest.raises(SDLValidationError, match="does-not-exist"):
-        parse_sdl(_scenario(environment=unknown))
+        parse_sdl(document)
 
 
 def test_env_value_from_unknown_output_is_rejected():
@@ -150,8 +154,9 @@ def test_env_value_from_unknown_output_is_rejected():
     - name: CORTEX_API_KEY
       value_from: {generated_artifact: cortex-api-key, output: missing-output}
     """
+    document = _scenario(environment=unknown_output)
     with pytest.raises(SDLValidationError, match="missing-output"):
-        parse_sdl(_scenario(environment=unknown_output))
+        parse_sdl(document)
 
 
 def test_env_value_from_producer_private_output_is_rejected():
@@ -163,8 +168,9 @@ def test_env_value_from_producer_private_output_is_rejected():
       outputs:
         - {name: api-key, path: api-key.env, sensitivity: secret, disposition: producer_private}
     """
+    document = _scenario(environment=_ENV_SCALAR, artifacts=artifacts)
     with pytest.raises(SDLValidationError, match="producer_private|producer-private"):
-        parse_sdl(_scenario(environment=_ENV_SCALAR, artifacts=artifacts))
+        parse_sdl(document)
 
 
 def test_generated_artifact_with_no_consumer_at_all_is_rejected():
@@ -176,8 +182,9 @@ def test_generated_artifact_with_no_consumer_at_all_is_rejected():
       outputs:
         - {name: conf, path: orphan.conf, sensitivity: restricted}
     """
+    document = _scenario(artifacts=orphan)
     with pytest.raises(SDLValidationError, match="orphan-config"):
-        parse_sdl(_scenario(artifacts=orphan))
+        parse_sdl(document)
 
 
 # --- compilation -------------------------------------------------------------
@@ -413,7 +420,8 @@ def test_admission_rejects_malformed_environment_consumers():
         spec={**base_spec, "environment_consumers": {"delivery_mode": "environment"}},
         provisioner=provisioner,
     )
-    assert non_list is not None and non_list.code == "provisioner.generated-artifact-invalid"
+    assert non_list is not None
+    assert non_list.code == "provisioner.generated-artifact-invalid"
     # A projection missing its mode-specific target must be rejected.
     missing_target = generated_artifact_payload_diagnostic(
         address="provision.generated-artifact.x",
@@ -430,7 +438,8 @@ def test_admission_rejects_malformed_environment_consumers():
         },
         provisioner=provisioner,
     )
-    assert missing_target is not None and missing_target.code == "provisioner.generated-artifact-invalid"
+    assert missing_target is not None
+    assert missing_target.code == "provisioner.generated-artifact-invalid"
     # Compiler-derived projections are a closed contract: the opposite mode's
     # target (or any other undeclared key) must not cross the backend boundary.
     unexpected_target = generated_artifact_payload_diagnostic(
@@ -450,7 +459,8 @@ def test_admission_rejects_malformed_environment_consumers():
         },
         provisioner=provisioner,
     )
-    assert unexpected_target is not None and unexpected_target.code == "provisioner.generated-artifact-invalid"
+    assert unexpected_target is not None
+    assert unexpected_target.code == "provisioner.generated-artifact-invalid"
     null_address = generated_artifact_payload_diagnostic(
         address="provision.generated-artifact.x",
         spec={
@@ -467,7 +477,8 @@ def test_admission_rejects_malformed_environment_consumers():
         },
         provisioner=provisioner,
     )
-    assert null_address is not None and null_address.code == "provisioner.generated-artifact-invalid"
+    assert null_address is not None
+    assert null_address.code == "provisioner.generated-artifact-invalid"
     assignment_target = generated_artifact_payload_diagnostic(
         address="provision.generated-artifact.x",
         spec={
@@ -484,7 +495,8 @@ def test_admission_rejects_malformed_environment_consumers():
         },
         provisioner=provisioner,
     )
-    assert assignment_target is not None and assignment_target.code == "provisioner.generated-artifact-invalid"
+    assert assignment_target is not None
+    assert assignment_target.code == "provisioner.generated-artifact-invalid"
     mount_projection = generated_artifact_payload_diagnostic(
         address="provision.generated-artifact.x",
         spec={
@@ -501,7 +513,8 @@ def test_admission_rejects_malformed_environment_consumers():
         },
         provisioner=provisioner,
     )
-    assert mount_projection is not None and mount_projection.code == "provisioner.generated-artifact-invalid"
+    assert mount_projection is not None
+    assert mount_projection.code == "provisioner.generated-artifact-invalid"
 
 
 def test_admission_rejects_contradictory_mount_delivery_mode():
@@ -527,7 +540,8 @@ def test_admission_rejects_contradictory_mount_delivery_mode():
         },
         provisioner=create_stub_manifest().provisioner,
     )
-    assert diagnostic is not None and diagnostic.code == "provisioner.generated-artifact-invalid"
+    assert diagnostic is not None
+    assert diagnostic.code == "provisioner.generated-artifact-invalid"
 
 
 @pytest.mark.parametrize(
@@ -568,7 +582,8 @@ def test_direct_admission_authorizes_environment_consumer_output(output: str):
         },
         provisioner=create_stub_manifest().provisioner,
     )
-    assert diagnostic is not None and diagnostic.code == "provisioner.generated-artifact-invalid"
+    assert diagnostic is not None
+    assert diagnostic.code == "provisioner.generated-artifact-invalid"
 
 
 def test_direct_admission_requires_a_consumer():
@@ -585,7 +600,8 @@ def test_direct_admission_requires_a_consumer():
         },
         provisioner=create_stub_manifest().provisioner,
     )
-    assert diagnostic is not None and diagnostic.code == "provisioner.generated-artifact-invalid"
+    assert diagnostic is not None
+    assert diagnostic.code == "provisioner.generated-artifact-invalid"
 
 
 @pytest.mark.parametrize("classification", [None, "plain", "unknown"])
@@ -628,7 +644,8 @@ def test_direct_admission_requires_matching_redacted_node_binding(classification
         provisioner=create_stub_manifest().provisioner,
         node_specs=node_specs,
     )
-    assert diagnostic is not None and diagnostic.code == "provisioner.generated-artifact-invalid"
+    assert diagnostic is not None
+    assert diagnostic.code == "provisioner.generated-artifact-invalid"
 
 
 # --- env-file target hardening ----------------------------------------------
@@ -648,5 +665,6 @@ def test_environment_file_name_rejects_path_like_targets(bad_name: str):
     - name: {bad_name!r}
       value_from: {{generated_artifact: thehive-keystore, output: env}}
     """
+    document = _scenario(environment_files=env_files, artifacts=artifacts)
     with pytest.raises(SDLParseError):
-        parse_sdl(_scenario(environment_files=env_files, artifacts=artifacts))
+        parse_sdl(document)
