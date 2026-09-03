@@ -39,6 +39,9 @@ def provisioner_capability_payload(provisioner: ProvisionerCapabilities) -> dict
         "supported_generated_artifact_kinds": sorted(
             kind.value for kind in provisioner.supported_generated_artifact_kinds
         ),
+        "supported_generated_artifact_delivery_modes": sorted(
+            mode.value for mode in provisioner.supported_generated_artifact_delivery_modes
+        ),
         "supports_persistent_volumes": provisioner.supports_persistent_volumes,
         "constraints": dict(provisioner.constraints),
     }
@@ -69,6 +72,7 @@ def provisioner_from_model(model: ProvisionerCapabilitiesModel) -> ProvisionerCa
         supports_accounts=model.supports_accounts,
         supports_generated_artifacts=model.supports_generated_artifacts,
         supported_generated_artifact_kinds=frozenset(model.supported_generated_artifact_kinds),
+        supported_generated_artifact_delivery_modes=frozenset(model.supported_generated_artifact_delivery_modes),
         supports_persistent_volumes=model.supports_persistent_volumes,
         constraints=dict(model.constraints),
     )

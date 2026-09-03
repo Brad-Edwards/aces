@@ -44,6 +44,13 @@ from .runtime_container import (
     RuntimeNamespaceConfiguration,
     RuntimeNetworkNamespace,
 )
+from .runtime_environment import (
+    GeneratedArtifactValueSource,
+    RuntimeEnvironmentFile,
+    RuntimeEnvironmentValueClassification,
+    RuntimeEnvironmentVariable,
+    RuntimeEnvironmentVariableProvenance,
+)
 from .runtime_filesystem import (
     RuntimeFilesystemEntry,
     RuntimeFilesystemEntryType,
@@ -98,7 +105,7 @@ from .runtime_software import (
     RuntimeSoftwareComponentType,
 )
 from .runtime_values import absolute_path_or_var as _abs_path_or_var
-from .runtime_values import enforce_observed_value_redaction, parse_ram
+from .runtime_values import parse_ram
 from .runtime_values import parse_runtime_enum_or_var as _parse_runtime_enum_or_var
 
 _RUNTIME_SERVICE_FAMILY_EXPORTS = install_runtime_service_family_exports(globals())
@@ -113,6 +120,8 @@ __all__ = [
     "RuntimeControlInterfaceKind",
     "RuntimeDependencyManifest",
     "RuntimeDeviceMapping",
+    "GeneratedArtifactValueSource",
+    "RuntimeEnvironmentFile",
     "RuntimeEnvironmentValueClassification",
     "RuntimeEnvironmentVariable",
     "RuntimeEnvironmentVariableProvenance",
@@ -166,35 +175,6 @@ __all__ = [
 ]
 
 
-class RuntimeEnvironmentValueClassification(str, Enum):
-    """Sensitivity classification for a required runtime environment value."""
-
-    PLAIN = "plain"
-    REDACTED = "redacted"
-    SECRET_FIXTURE = "secret_fixture"  # noqa: S105
-    OPERATOR_SECRET = "operator_secret"  # noqa: S105
-    UNKNOWN = "unknown"
-    OTHER = "other"
-
-
-_ENV_REDACTED_CLASSIFICATIONS = (
-    RuntimeEnvironmentValueClassification.REDACTED,
-    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
-)
-
-
-class RuntimeEnvironmentVariableProvenance(str, Enum):
-    """Required origin class for a runtime environment variable."""
-
-    COMPOSE = "compose"
-    IMAGE = "image"
-    OPERATOR = "operator"
-    CONTAINER = "container"
-    RUNTIME = "runtime"
-    OTHER = "other"
-    UNKNOWN = "unknown"
-
-
 class RuntimeRestartPolicy(str, Enum):
     """Portable restart policy required by the scenario."""
 
@@ -204,57 +184,6 @@ class RuntimeRestartPolicy(str, Enum):
     UNLESS_STOPPED = "unless_stopped"
     UNKNOWN = "unknown"
     OTHER = "other"
-
-
-class RuntimeEnvironmentVariable(SDLModel):
-    """Required runtime environment variable with provenance and sensitivity."""
-
-    name: str
-    value: str = ""
-    value_classification: RuntimeEnvironmentValueClassification | str = RuntimeEnvironmentValueClassification.UNKNOWN
-    provenance: RuntimeEnvironmentVariableProvenance | str = RuntimeEnvironmentVariableProvenance.UNKNOWN
-    source: str = ""
-    description: str = ""
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        if not isinstance(v, str) or not v.strip():
-            raise ValueError("environment variable name must be a non-empty string")
-        if "=" in v:
-            raise ValueError("environment variable name must not contain '='")
-        return v
-
-    @field_validator("value_classification", mode="before")
-    @classmethod
-    def normalize_value_classification(
-        cls,
-        v: RuntimeEnvironmentValueClassification | str,
-    ) -> RuntimeEnvironmentValueClassification | str:
-        return _parse_runtime_enum_or_var(
-            v,
-            RuntimeEnvironmentValueClassification,
-            field_name="value_classification",
-        )
-
-    @field_validator("provenance", mode="before")
-    @classmethod
-    def normalize_provenance(
-        cls,
-        v: RuntimeEnvironmentVariableProvenance | str,
-    ) -> RuntimeEnvironmentVariableProvenance | str:
-        return _parse_runtime_enum_or_var(v, RuntimeEnvironmentVariableProvenance, field_name="provenance")
-
-    @model_validator(mode="after")
-    def validate_redacted_value(self) -> "RuntimeEnvironmentVariable":
-        enforce_observed_value_redaction(
-            owner_label=f"runtime environment variable '{self.name}'",
-            value=self.value,
-            classification=self.value_classification,
-            redacted_classifications=_ENV_REDACTED_CLASSIFICATIONS,
-            raw_value_label="value",
-        )
-        return self
 
 
 class RuntimeResourceLimits(SDLModel):
@@ -367,6 +296,7 @@ class RuntimeConfiguration(SDLModel):
     local_control_interfaces: list[RuntimeControlInterface] = Field(default_factory=list)
     processes: list[RuntimeProcessIdentity] = Field(default_factory=list)
     environment: list[RuntimeEnvironmentVariable] = Field(default_factory=list)
+    environment_files: list[RuntimeEnvironmentFile] = Field(default_factory=list)
     linux_capabilities: RuntimeCapabilityPolicy | None = None
     operational_policy: RuntimeOperationalPolicy | None = None
     container: RuntimeContainerConfiguration | None = None
@@ -401,6 +331,7 @@ class RuntimeConfiguration(SDLModel):
     @model_validator(mode="after")
     def validate_unique_runtime_entries(self) -> "RuntimeConfiguration":
         _reject_duplicate_keys(self.environment, attr="name", label="environment variable")
+        _reject_duplicate_keys(self.environment_files, attr="name", label="environment file")
         _reject_duplicate_keys(self.mounts, attr="target", label="mount target")
         _reject_duplicate_keys(
             self.local_control_interfaces,

@@ -165,7 +165,12 @@ class GeneratedArtifact(SDLModel):
     lifecycle: GeneratedArtifactLifecycle
     provenance: str = Field(min_length=1)
     outputs: list[GeneratedArtifactOutput] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    consumers: list[GeneratedArtifactConsumer] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    # Consumers may be empty when a generated artifact is consumed only as a node
+    # runtime environment value / env_file (issue #1074): those bindings are
+    # authored on ``nodes.<node>.runtime.environment[]`` and the compiler derives
+    # the consumer projection. Semantic admission still rejects an artifact that
+    # no file consumer and no environment binding consumes.
+    consumers: list[GeneratedArtifactConsumer] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
     ordering_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
     refresh_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
 
