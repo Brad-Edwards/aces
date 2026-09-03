@@ -265,17 +265,20 @@ def test_runtime_gate_rejects_raw_material_for_a_protected_observation(classific
 
 @pytest.mark.parametrize("classification", ["redacted", "operator_secret"])
 def test_typed_runtime_projection_rejects_raw_material_for_a_protected_value(classification: str) -> None:
+    protected_value = [
+        {
+            "name": "TOKEN",
+            "value": "must-not-cross-the-boundary",
+            "value_classification": classification,
+        }
+    ]
+    adapter = TypeAdapter(list[dict[str, object]])
+
     with pytest.raises(ValueError, match="protected realization values must not carry raw material"):
         project_typed_runtime_concern(
-            [
-                {
-                    "name": "TOKEN",
-                    "value": "must-not-cross-the-boundary",
-                    "value_classification": classification,
-                }
-            ],
+            protected_value,
             observed=True,
-            adapter=TypeAdapter(list[dict[str, object]]),
+            adapter=adapter,
             concern_kind="runtime-database-services",
         )
 

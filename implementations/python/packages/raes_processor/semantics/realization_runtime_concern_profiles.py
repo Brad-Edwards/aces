@@ -199,11 +199,49 @@ def _model_type(annotation: object) -> type[BaseModel]:
 def runtime_path_annotation(path: tuple[str, ...]) -> object:
     """Return the closed Pydantic annotation at one runtime-relative path."""
 
-    current: object = RuntimeConfiguration
-    for token in path:
-        model = current if isinstance(current, type) and issubclass(current, BaseModel) else _model_type(current)
-        current = model.model_fields[token].annotation
-    return current
+    if not path:
+        return RuntimeConfiguration
+    annotation = RuntimeConfiguration.model_fields[path[0]].annotation
+    for token in path[1:]:
+        annotation = _model_type(annotation).model_fields[token].annotation
+    return annotation
+
+
+def _semantic_owner(field: str, concern_kinds: tuple[str, ...]) -> str:
+    if field not in _DELEGATED_PATHS:
+        return "canonical-runtime-realization-concern"
+    if concern_kinds:
+        return "canonical-runtime-realization-concern+existing-resource-owner"
+    return "existing-resource-owner"
+
+
+def _enforcement_status(field: str, concern_kinds: tuple[str, ...]) -> str:
+    delegated = field in _DELEGATED_PATHS
+    observation_only = field in _OBSERVATION_ONLY_PATHS
+    if delegated and not concern_kinds:
+        return "delegated-to-existing-owner"
+    if delegated and observation_only:
+        return "registered-with-delegated-and-observation-only-paths"
+    if delegated:
+        return "registered-with-delegated-paths"
+    if observation_only:
+        return "registered-with-observation-only-paths"
+    return "registered-fail-closed"
+
+
+def _runtime_field_boundary(
+    field: str,
+    concerns_by_field: dict[str, tuple[str, ...]],
+) -> RuntimeFieldBoundary:
+    concern_kinds = concerns_by_field[field]
+    return RuntimeFieldBoundary(
+        field_name=field,
+        concern_kinds=concern_kinds,
+        semantic_owner=_semantic_owner(field, concern_kinds),
+        enforcement_status=_enforcement_status(field, concern_kinds),
+        delegated_paths=_DELEGATED_PATHS.get(field, ()),
+        observation_only_paths=_OBSERVATION_ONLY_PATHS.get(field, ()),
+    )
 
 
 def runtime_configuration_boundary_inventory() -> tuple[RuntimeFieldBoundary, ...]:
@@ -220,35 +258,7 @@ def runtime_configuration_boundary_inventory() -> tuple[RuntimeFieldBoundary, ..
     expected = tuple(RuntimeConfiguration.model_fields)
     if set(concerns_by_field) != set(expected):
         raise RuntimeError("RuntimeConfiguration concern inventory is incomplete or contains excess fields")
-    return tuple(
-        RuntimeFieldBoundary(
-            field_name=field,
-            concern_kinds=concerns_by_field[field],
-            semantic_owner=(
-                "canonical-runtime-realization-concern+existing-resource-owner"
-                if concerns_by_field[field] and field in _DELEGATED_PATHS
-                else "existing-resource-owner"
-                if field in _DELEGATED_PATHS
-                else "canonical-runtime-realization-concern"
-            ),
-            enforcement_status=(
-                "delegated-to-existing-owner"
-                if not concerns_by_field[field] and field in _DELEGATED_PATHS
-                else (
-                    "registered-with-delegated-and-observation-only-paths"
-                    if field in _DELEGATED_PATHS and field in _OBSERVATION_ONLY_PATHS
-                    else "registered-with-delegated-paths"
-                    if field in _DELEGATED_PATHS
-                    else "registered-with-observation-only-paths"
-                    if field in _OBSERVATION_ONLY_PATHS
-                    else "registered-fail-closed"
-                )
-            ),
-            delegated_paths=_DELEGATED_PATHS.get(field, ()),
-            observation_only_paths=_OBSERVATION_ONLY_PATHS.get(field, ()),
-        )
-        for field in expected
-    )
+    return tuple(_runtime_field_boundary(field, concerns_by_field) for field in expected)
 
 
 __all__ = [

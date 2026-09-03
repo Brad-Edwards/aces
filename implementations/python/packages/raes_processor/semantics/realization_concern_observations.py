@@ -41,33 +41,46 @@ def validate_value_commitment(value: object) -> None:
         raise ValueError("realization value commitment uses an unsupported format")
 
 
+def _restore_presence_marker(
+    value: Mapping[str, Any],
+    *,
+    key: str,
+    present: object,
+    restored: dict[str, object],
+) -> None:
+    raw_field = key.removesuffix("_present")
+    if raw_field not in {"value", "values", "bind_source"}:
+        raise ValueError("runtime concern observation uses an unknown presence marker")
+    if not isinstance(present, bool):
+        raise ValueError("runtime concern observation presence markers must be boolean")
+    commitment = value.get(f"{raw_field}_commitment")
+    if commitment is not None:
+        if present is not True:
+            raise ValueError("a realization value commitment requires a true presence marker")
+        validate_value_commitment(commitment)
+    restored[raw_field] = [] if raw_field == "values" else ""
+
+
+def _restore_committed_mapping(value: Mapping[str, Any]) -> dict[str, object]:
+    restored = {
+        key: _restore_committed_runtime_fields(item)
+        for key, item in value.items()
+        if not key.endswith(("_present", "_commitment"))
+    }
+    for key, present in value.items():
+        if key.endswith("_present"):
+            _restore_presence_marker(value, key=key, present=present, restored=restored)
+    for key in value:
+        if key.endswith("_commitment") and f"{key.removesuffix('_commitment')}_present" not in value:
+            raise ValueError("runtime concern commitment requires its presence marker")
+    return restored
+
+
 def _restore_committed_runtime_fields(value: object) -> object:
     """Restore value-free projection markers for closed model validation."""
 
     if isinstance(value, Mapping):
-        restored = {
-            key: _restore_committed_runtime_fields(item)
-            for key, item in value.items()
-            if not key.endswith("_present") and not key.endswith("_commitment")
-        }
-        for key, present in value.items():
-            if not key.endswith("_present"):
-                continue
-            raw_field = key.removesuffix("_present")
-            if raw_field not in {"value", "values", "bind_source"}:
-                raise ValueError("runtime concern observation uses an unknown presence marker")
-            if not isinstance(present, bool):
-                raise ValueError("runtime concern observation presence markers must be boolean")
-            commitment = value.get(f"{raw_field}_commitment")
-            if commitment is not None:
-                if present is not True:
-                    raise ValueError("a realization value commitment requires a true presence marker")
-                validate_value_commitment(commitment)
-            restored[raw_field] = [] if raw_field == "values" else ""
-        for key in value:
-            if key.endswith("_commitment") and f"{key.removesuffix('_commitment')}_present" not in value:
-                raise ValueError("runtime concern commitment requires its presence marker")
-        return restored
+        return _restore_committed_mapping(value)
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [_restore_committed_runtime_fields(item) for item in value]
     return value
@@ -79,7 +92,7 @@ def _overlay_committed_runtime_fields(normalized: object, original: object) -> o
     if isinstance(normalized, Mapping) and isinstance(original, Mapping):
         overlaid = dict(normalized)
         for key, item in original.items():
-            if key.endswith("_present") or key.endswith("_commitment"):
+            if key.endswith(("_present", "_commitment")):
                 overlaid[key] = item
             elif key in overlaid:
                 overlaid[key] = _overlay_committed_runtime_fields(overlaid[key], item)

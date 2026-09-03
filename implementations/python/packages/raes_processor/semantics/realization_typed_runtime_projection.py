@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from functools import partial
 from typing import Any
 
@@ -41,6 +41,49 @@ def _runtime_local_identity(record: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _has_raw_sensitive_value(value: object) -> bool:
+    return value not in ("", None, [])
+
+
+def _validate_sensitive_raw_value(
+    raw_value: object,
+    *,
+    classification: object,
+    observed: bool,
+) -> None:
+    if classification in _PROTECTED and _has_raw_sensitive_value(raw_value):
+        raise ValueError("protected realization values must not carry raw material")
+    if observed and classification == "secret_fixture" and _has_raw_sensitive_value(raw_value):
+        raise ValueError("observed secret fixtures must use a value commitment")
+
+
+def _supplied_commitment_projection(
+    raw_value: object,
+    *,
+    present_key: str,
+    commitment_key: str,
+    supplied_commitment: object,
+) -> dict[str, object]:
+    if _has_raw_sensitive_value(raw_value):
+        raise ValueError("realization values must not carry raw material beside a commitment")
+    validate_value_commitment(supplied_commitment)
+    return {present_key: True, commitment_key: supplied_commitment}
+
+
+def _validate_sensitive_presence(
+    record: Mapping[str, Any],
+    *,
+    present_key: str,
+    supplied_present: object,
+    expected_present: bool,
+    observed: bool,
+) -> None:
+    if observed and expected_present and present_key not in record:
+        raise ValueError("observed protected realization values require an explicit presence marker")
+    if present_key in record and supplied_present is not expected_present:
+        raise ValueError("realization value presence marker contradicts its classification")
+
+
 def _project_sensitive_field(
     record: Mapping[str, Any],
     *,
@@ -55,21 +98,23 @@ def _project_sensitive_field(
     commitment_key = f"{raw_field}_commitment"
     supplied_present = record.get(present_key)
     supplied_commitment = record.get(commitment_key)
-    if classification in _PROTECTED and raw_value not in ("", None, []):
-        raise ValueError("protected realization values must not carry raw material")
-    if observed and classification == "secret_fixture" and raw_value not in ("", None, []):
-        raise ValueError("observed secret fixtures must use a value commitment")
+    _validate_sensitive_raw_value(raw_value, classification=classification, observed=observed)
     if supplied_commitment is not None:
-        if raw_value not in ("", None, []):
-            raise ValueError("realization values must not carry raw material beside a commitment")
-        validate_value_commitment(supplied_commitment)
-        return {present_key: True, commitment_key: supplied_commitment}
+        return _supplied_commitment_projection(
+            raw_value,
+            present_key=present_key,
+            commitment_key=commitment_key,
+            supplied_commitment=supplied_commitment,
+        )
     expected_present = classification in _PROTECTED
-    if observed and expected_present and present_key not in record:
-        raise ValueError("observed protected realization values require an explicit presence marker")
-    if present_key in record and supplied_present is not expected_present:
-        raise ValueError("realization value presence marker contradicts its classification")
-    if raw_value not in ("", None, []):
+    _validate_sensitive_presence(
+        record,
+        present_key=present_key,
+        supplied_present=supplied_present,
+        expected_present=expected_present,
+        observed=observed,
+    )
+    if _has_raw_sensitive_value(raw_value):
         return {
             present_key: True,
             commitment_key: _commitment(
@@ -85,6 +130,74 @@ def _record_sort_key(record: Mapping[str, Any]) -> tuple[str, str]:
     return _runtime_local_identity(record) or "", canonical_json_digest(dict(record))
 
 
+def _project_runtime_mapping(
+    value: Mapping[str, Any],
+    *,
+    concern_kind: str,
+    excluded_fields: frozenset[str],
+    observed: bool,
+    path: tuple[str, ...],
+) -> dict[str, object]:
+    local_identity = _runtime_local_identity(value)
+    semantic_path = (*path, local_identity) if local_identity is not None else path
+    identity = ":".join(semantic_path)
+    sensitive_fields = {
+        raw_field: classification
+        for raw_field in _SENSITIVE_FIELD_CLASSIFICATIONS
+        if (classification := _sensitive_classification(value, raw_field)) is not None
+    }
+    marker_fields = {
+        marker for raw_field in sensitive_fields for marker in (f"{raw_field}_present", f"{raw_field}_commitment")
+    }
+    omitted_fields = RUNTIME_NON_REALIZATION_FIELDS | excluded_fields | sensitive_fields.keys() | marker_fields
+    projected = {
+        key: _project_typed_runtime_value(
+            item,
+            concern_kind=concern_kind,
+            excluded_fields=excluded_fields,
+            observed=observed,
+            path=(*semantic_path, key),
+        )
+        for key, item in value.items()
+        if key not in omitted_fields
+    }
+    for raw_field, (_classification_field, classification) in sensitive_fields.items():
+        projected.update(
+            _project_sensitive_field(
+                value,
+                raw_field=raw_field,
+                classification=classification,
+                concern_kind=concern_kind,
+                identity=identity,
+                observed=observed,
+            )
+        )
+    return projected
+
+
+def _project_runtime_sequence(
+    value: Sequence[object],
+    *,
+    concern_kind: str,
+    excluded_fields: frozenset[str],
+    observed: bool,
+    path: tuple[str, ...],
+) -> list[object]:
+    projected = [
+        _project_typed_runtime_value(
+            item,
+            concern_kind=concern_kind,
+            excluded_fields=excluded_fields,
+            observed=observed,
+            path=path,
+        )
+        for item in value
+    ]
+    if projected and all(isinstance(item, Mapping) for item in projected):
+        projected = sorted(projected, key=_record_sort_key)
+    return projected
+
+
 def _project_typed_runtime_value(
     value: object,
     *,
@@ -93,61 +206,24 @@ def _project_typed_runtime_value(
     observed: bool,
     path: tuple[str, ...] = (),
 ) -> object:
+    projected = value
     if isinstance(value, Mapping):
-        local_identity = _runtime_local_identity(value)
-        semantic_path = (*path, local_identity) if local_identity is not None else path
-        identity = ":".join(semantic_path)
-        projected: dict[str, object] = {}
-        sensitive_fields = {
-            raw_field: classification
-            for raw_field in _SENSITIVE_FIELD_CLASSIFICATIONS
-            if (classification := _sensitive_classification(value, raw_field)) is not None
-        }
-        marker_fields = {
-            marker for raw_field in sensitive_fields for marker in (f"{raw_field}_present", f"{raw_field}_commitment")
-        }
-        for key, item in value.items():
-            if (
-                key in RUNTIME_NON_REALIZATION_FIELDS
-                or key in excluded_fields
-                or key in sensitive_fields
-                or key in marker_fields
-            ):
-                continue
-            projected[key] = _project_typed_runtime_value(
-                item,
-                concern_kind=concern_kind,
-                excluded_fields=excluded_fields,
-                observed=observed,
-                path=(*semantic_path, key),
-            )
-        for raw_field, (_classification_field, classification) in sensitive_fields.items():
-            projected.update(
-                _project_sensitive_field(
-                    value,
-                    raw_field=raw_field,
-                    classification=classification,
-                    concern_kind=concern_kind,
-                    identity=identity,
-                    observed=observed,
-                )
-            )
-        return projected
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        projected = [
-            _project_typed_runtime_value(
-                item,
-                concern_kind=concern_kind,
-                excluded_fields=excluded_fields,
-                observed=observed,
-                path=path,
-            )
-            for item in value
-        ]
-        if projected and all(isinstance(item, Mapping) for item in projected):
-            return sorted(projected, key=_record_sort_key)
-        return projected
-    return value
+        projected = _project_runtime_mapping(
+            value,
+            concern_kind=concern_kind,
+            excluded_fields=excluded_fields,
+            observed=observed,
+            path=path,
+        )
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        projected = _project_runtime_sequence(
+            value,
+            concern_kind=concern_kind,
+            excluded_fields=excluded_fields,
+            observed=observed,
+            path=path,
+        )
+    return projected
 
 
 def project_typed_runtime_concern(
@@ -180,7 +256,7 @@ def typed_runtime_projector(
     concern_kind: str,
     excluded_fields: frozenset[str] = frozenset(),
     sort_scalar_sequence: bool = False,
-):
+) -> Callable[..., object]:
     """Bind a closed Pydantic annotation to a reusable concern projector."""
 
     return partial(

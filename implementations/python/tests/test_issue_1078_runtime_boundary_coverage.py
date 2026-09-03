@@ -211,9 +211,11 @@ def test_service_projection_excludes_outcomes_and_commits_sensitive_values() -> 
             }
         ],
     )
-    assert isinstance(withheld, list) and isinstance(withheld[0], dict)
+    assert isinstance(withheld, list)
+    assert isinstance(withheld[0], dict)
     withheld_settings = withheld[0]["settings"]
-    assert isinstance(withheld_settings, list) and isinstance(withheld_settings[0], dict)
+    assert isinstance(withheld_settings, list)
+    assert isinstance(withheld_settings[0], dict)
     withheld_settings[0]["value_present"] = False
     with pytest.raises(ValueError):
         project_realization_concern("runtime-database-services", withheld, observed=True)
@@ -243,7 +245,8 @@ def test_typed_projection_canonicalizes_model_defaults() -> None:
         [{"database_service_id": "primary"}],
     )
 
-    assert isinstance(minimal, list) and isinstance(minimal[0], dict)
+    assert isinstance(minimal, list)
+    assert isinstance(minimal[0], dict)
     assert minimal[0]["engine"] == "other"
     assert minimal[0]["protocol"] == "other"
     assert minimal == project_realization_concern("runtime-database-services", minimal)

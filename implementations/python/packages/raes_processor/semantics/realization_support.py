@@ -81,32 +81,34 @@ def _open_support_diagnostic(
     requirement: CompiledRealizationRequirement,
     declarations: list[RealizationSupportDeclaration],
 ) -> Diagnostic | None:
-    if requirement.requirement_kind == "compute-substrate":
-        return None
-    supporting = [
-        declaration
-        for declaration in declarations
-        if declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION
-    ]
-    if supporting:
-        if requirement.verification_scope is None or has_required_observation_support(
-            requirement,
-            supporting,
-            observation_kind=_observation_kind(requirement),
-        ):
-            return None
-        return _under_observed_support_diagnostic(requirement, posture="open")
-    return Diagnostic(
-        code="realization.unsupported-open-requirement",
-        domain=requirement.domain,
-        address=requirement.address,
-        message=(
-            "Backend declares no open realization support for "
-            f"'{requirement.requirement_kind}' requirement at "
-            f"'{requirement.field_path}' in domain '{requirement.domain}'."
-        ),
-        severity=Severity.ERROR,
-    )
+    diagnostic = None
+    if requirement.requirement_kind != "compute-substrate":
+        supporting = [
+            declaration
+            for declaration in declarations
+            if declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION
+        ]
+        if supporting:
+            sufficiently_observed = requirement.verification_scope is None or has_required_observation_support(
+                requirement,
+                supporting,
+                observation_kind=_observation_kind(requirement),
+            )
+            if not sufficiently_observed:
+                diagnostic = _under_observed_support_diagnostic(requirement, posture="open")
+        else:
+            diagnostic = Diagnostic(
+                code="realization.unsupported-open-requirement",
+                domain=requirement.domain,
+                address=requirement.address,
+                message=(
+                    "Backend declares no open realization support for "
+                    f"'{requirement.requirement_kind}' requirement at "
+                    f"'{requirement.field_path}' in domain '{requirement.domain}'."
+                ),
+                severity=Severity.ERROR,
+            )
+    return diagnostic
 
 
 def _exact_support_diagnostic(

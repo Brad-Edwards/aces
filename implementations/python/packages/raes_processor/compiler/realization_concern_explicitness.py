@@ -26,7 +26,7 @@ def semantic_explicitness_record(
     candidates = {
         path: record
         for path, record in explicitness.items()
-        if (path == field_path or path.startswith(f"{field_path}.") or path.startswith(f"{field_path}["))
+        if (path == field_path or path.startswith((f"{field_path}.", f"{field_path}[")))
         and not excluded_fields.intersection(_PATH_TOKEN_RE.findall(path[len(field_path) :]))
     }
     if not candidates:
@@ -34,9 +34,7 @@ def semantic_explicitness_record(
     leaf_records = [
         record
         for path, record in candidates.items()
-        if not any(
-            other != path and (other.startswith(f"{path}.") or other.startswith(f"{path}[")) for other in candidates
-        )
+        if not any(other != path and other.startswith((f"{path}.", f"{path}[")) for other in candidates)
     ]
     weakest = min(leaf_records, key=lambda item: _RANK[item.classification])
     variables = tuple(sorted({name for item in leaf_records for name in item.variables}))
