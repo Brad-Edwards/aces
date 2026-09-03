@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import importlib
 import re
+import sys
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Set
 from typing import Protocol, cast
 
 from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
@@ -31,11 +32,22 @@ _RAES_UUID_NAMESPACE = uuid.UUID("af20aedd-47bd-5870-b3f8-2f1baebde508")
 # "do not treat every libvirt lookup exception as not found").
 _VIR_ERR_NO_DOMAIN = 42
 _VIR_ERR_NO_NETWORK = 43
+_VIR_ERR_NO_NWFILTER = 62
 # Raised by destroy() on an object that is not running; stopping an already-stopped
 # object is a benign no-op on the teardown path, distinct from a permission/internal
 # stop failure that must fail closed.
 _VIR_ERR_OPERATION_INVALID = 55
-_ABSENCE_ERROR_CODES: frozenset[int] = frozenset({_VIR_ERR_NO_DOMAIN, _VIR_ERR_NO_NETWORK})
+_ABSENCE_ERROR_CODES: frozenset[int] = frozenset({_VIR_ERR_NO_DOMAIN, _VIR_ERR_NO_NETWORK, _VIR_ERR_NO_NWFILTER})
+_DEACTIVATE_TOLERATED_ERROR_CODES = _ABSENCE_ERROR_CODES | {_VIR_ERR_OPERATION_INVALID}
+_LOOKUP_ABSENCE_ERROR_CODES = {
+    "lookupByName": frozenset({_VIR_ERR_NO_DOMAIN}),
+    "networkLookupByName": frozenset({_VIR_ERR_NO_NETWORK}),
+    "nwfilterLookupByName": frozenset({_VIR_ERR_NO_NWFILTER}),
+}
+_LIST_ABSENCE_ERROR_CODES = {
+    "listAllDomains": frozenset({_VIR_ERR_NO_DOMAIN}),
+    "listAllNetworks": frozenset({_VIR_ERR_NO_NETWORK}),
+}
 
 
 class _OwnershipConflict(Exception):
@@ -53,15 +65,44 @@ def _error_code(exc: BaseException) -> int | None:
     int, yields None so callers treat it as an unclassified real failure.
     """
 
-    getter = getattr(exc, "get_error_code", None)
-    if not callable(getter):
+    if not _is_libvirt_error(exc):
         return None
     try:
+        getter = getattr(exc, "get_error_code", None)
+        if not callable(getter):
+            return None
         code = getter()
-    except Exception as exc:
-        _record_suppressed_failure("_error_code", exc)
+    except Exception as classifier_error:
+        _record_suppressed_failure("_error_code", classifier_error)
         return None
     return code if isinstance(code, int) else None
+
+
+def _is_libvirt_error(exc: BaseException) -> bool:
+    """Recognize the loaded binding's native exception family by identity."""
+
+    try:
+        module = sys.modules.get("libvirt")
+        error_type = getattr(module, "libvirtError", None)
+        return isinstance(error_type, type) and issubclass(error_type, BaseException) and isinstance(exc, error_type)
+    except Exception:
+        return False
+
+
+def _is_expected_lookup_absence(exc: BaseException, method_name: str) -> bool:
+    return _error_code(exc) in _lookup_absence_error_codes(method_name)
+
+
+def _is_expected_list_absence(exc: BaseException, method_name: str) -> bool:
+    return _error_code(exc) in _list_absence_error_codes(method_name)
+
+
+def _lookup_absence_error_codes(method_name: str) -> Set[int]:
+    return _LOOKUP_ABSENCE_ERROR_CODES.get(method_name, frozenset())
+
+
+def _list_absence_error_codes(method_name: str) -> Set[int]:
+    return _LIST_ABSENCE_ERROR_CODES.get(method_name, frozenset())
 
 
 def _is_absence_error(exc: BaseException) -> bool:
@@ -141,7 +182,7 @@ def _lookup(connection: object, method_name: str, name: str) -> object | None:
         return method(name)
     except Exception as exc:
         code = _error_code(exc)
-        if code not in _ABSENCE_ERROR_CODES:
+        if code not in _lookup_absence_error_codes(method_name):
             _record_suppressed_failure("_lookup", exc, native_code=code)
         return None
 
@@ -161,7 +202,7 @@ def _stop_native(native: object) -> None:
         cast(_NativeResource, native).destroy()
     except Exception as exc:
         code = _error_code(exc)
-        if code == _VIR_ERR_OPERATION_INVALID or code in _ABSENCE_ERROR_CODES:
+        if code in _DEACTIVATE_TOLERATED_ERROR_CODES:
             return
         raise
 
@@ -182,7 +223,7 @@ def _find_native(connection: object, method_name: str, name: str) -> object | No
     try:
         return method(name)
     except Exception as exc:
-        if _is_absence_error(exc):
+        if _is_expected_lookup_absence(exc, method_name):
             return None
         raise _NativeLookupError(method_name) from exc
 

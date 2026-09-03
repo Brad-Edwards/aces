@@ -13,7 +13,21 @@ import logging
 import re
 
 LOGGER = logging.getLogger("raes_backend_libvirt")
-_SAFE_TYPE_RE = re.compile(r"[^A-Za-z0-9_.-]+")
+_SAFE_TOKEN_RE = re.compile(r"[^A-Za-z0-9_.-]+")
+_MAX_TOKEN_LENGTH = 80
+_MIN_SAFE_INTEGER = -(2**31)
+_MAX_SAFE_INTEGER = 2**31 - 1
+
+
+def _safe_token(value: object, *, fallback: str) -> str:
+    candidate = value if type(value) is str else fallback
+    return _SAFE_TOKEN_RE.sub("-", candidate)[:_MAX_TOKEN_LENGTH] or fallback
+
+
+def _bounded_integer(value: object) -> int | None:
+    if type(value) is not int or not _MIN_SAFE_INTEGER <= value <= _MAX_SAFE_INTEGER:
+        return None
+    return value
 
 
 def record_suppressed_failure(
@@ -24,10 +38,22 @@ def record_suppressed_failure(
 ) -> None:
     """Record bounded failure classification without exception text or traceback."""
 
-    exception_type = _SAFE_TYPE_RE.sub("-", type(exc).__name__)[:80] or "Exception"
+    operation_token = _safe_token(operation, fallback="operation")
+    exception_type = _safe_token(type(exc).__name__, fallback="Exception")
     fields = [f"exception_type={exception_type}"]
-    if isinstance(exc, OSError) and type(exc.errno) is int:
-        fields.append(f"errno={exc.errno}")
-    if type(native_code) is int:
-        fields.append(f"native_code={native_code}")
-    LOGGER.debug("%s suppressed backend failure (%s)", operation, ", ".join(fields))
+    error_number = None
+    if isinstance(exc, OSError):
+        try:
+            error_number = _bounded_integer(exc.errno)
+        except Exception:
+            error_number = None
+    if error_number is not None:
+        fields.append(f"errno={error_number}")
+    bounded_native_code = _bounded_integer(native_code)
+    if bounded_native_code is not None:
+        fields.append(f"native_code={bounded_native_code}")
+    try:
+        LOGGER.debug("%s suppressed backend failure (%s)", operation_token, ", ".join(fields))
+    except Exception:
+        # Operator telemetry must never replace the portable backend outcome.
+        return
