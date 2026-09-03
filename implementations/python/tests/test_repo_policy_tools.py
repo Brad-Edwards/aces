@@ -19,9 +19,36 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+
+class _FakeNoxOptions:
+    default_venv_backend = ""
+    reuse_existing_virtualenvs = False
+    sessions: list[str] = []
+
+
+def _fake_nox_session(*args: object, **_kwargs: object) -> object:
+    if args and callable(args[0]):
+        return args[0]
+
+    def decorate(function: object) -> object:
+        return function
+
+    return decorate
+
+
+sys.modules.setdefault(
+    "nox",
+    types.SimpleNamespace(options=_FakeNoxOptions(), Session=object, session=_fake_nox_session),
+)
+
 import pytest
 import tools.check_generated_schemas as check_generated_schemas
 import tools.check_json_artifacts as check_json_artifacts
+import tools.nox_support.config as nox_config
+import tools.nox_support.graph as nox_graph
+import tools.nox_support.policy_lanes as nox_policy_lanes
+import tools.nox_support.runner as nox_runner
+import tools.nox_support.test_lanes as nox_test_lanes
 import tools.osv_scanner_tool as osv_scanner_tool
 import tools.policy.conftest_tool as conftest_tool
 import yaml
@@ -55,24 +82,15 @@ def test_sonar_project_binding_matches_scanner_configuration() -> None:
 
     assert ground_control["sonarcloud"]["project_key"] == sonar_properties["sonar.projectKey"]
     assert ground_control["sonarcloud"]["organization"] == sonar_properties["sonar.organization"]
+    assert set(sonar_properties["sonar.sources"].split(",")) == {
+        "implementations/python/packages",
+        "noxfile.py",
+        "tools",
+    }
 
 
 def load_noxfile_with_fake_nox(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
-    class FakeOptions:
-        default_venv_backend = ""
-        reuse_existing_virtualenvs = False
-        sessions: list[str] = []
-
-    def session(*args: object, **_kwargs: object) -> object:
-        if args and callable(args[0]):
-            return args[0]
-
-        def decorate(function: object) -> object:
-            return function
-
-        return decorate
-
-    fake_nox = types.SimpleNamespace(options=FakeOptions(), Session=object, session=session)
+    fake_nox = types.SimpleNamespace(options=_FakeNoxOptions(), Session=object, session=_fake_nox_session)
     monkeypatch.setitem(sys.modules, "nox", fake_nox)
 
     spec = importlib.util.spec_from_file_location("_raes_test_noxfile", REPO_ROOT / "noxfile.py")
@@ -82,24 +100,6 @@ def load_noxfile_with_fake_nox(monkeypatch: pytest.MonkeyPatch) -> types.ModuleT
     monkeypatch.setitem(sys.modules, "_raes_test_noxfile", module)
     spec.loader.exec_module(module)
     return module
-
-
-def _patch_nox_globals(
-    monkeypatch: pytest.MonkeyPatch,
-    noxfile: types.ModuleType,
-    name: str,
-    value: object,
-) -> None:
-    """Patch a noxfile global everywhere the split support modules read it."""
-
-    modules = [noxfile] + [
-        sys.modules[f"tools.nox_support.{module_name}"]
-        for module_name in NOX_SUPPORT_MODULES
-        if f"tools.nox_support.{module_name}" in sys.modules
-    ]
-    for module in modules:
-        if hasattr(module, name):
-            monkeypatch.setattr(module, name, value)
 
 
 def test_nox_support_has_one_authoritative_definition_per_symbol() -> None:
@@ -117,6 +117,7 @@ def test_nox_support_has_one_authoritative_definition_per_symbol() -> None:
 
 def test_noxfile_owns_session_registration_and_nox_configuration() -> None:
     noxfile_source = (REPO_ROOT / "noxfile.py").read_text(encoding="utf-8")
+    noxfile_tree = ast.parse(noxfile_source)
     assert 'nox.options.default_venv_backend = "none"' in noxfile_source
     assert "nox.options.reuse_existing_virtualenvs = True" in noxfile_source
     assert 'nox.options.sessions = ["verify"]' in noxfile_source
@@ -124,6 +125,15 @@ def test_noxfile_owns_session_registration_and_nox_configuration() -> None:
         support_source = (REPO_ROOT / "tools" / "nox_support" / f"{module_name}.py").read_text(encoding="utf-8")
         assert "@nox.session" not in support_source
         assert "nox.options." not in support_source
+
+    loaded_names = {node.id for node in ast.walk(noxfile_tree) if isinstance(node, ast.Name)}
+    support_imports = {
+        alias.asname or alias.name
+        for node in noxfile_tree.body
+        if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("tools.nox_support")
+        for alias in node.names
+    }
+    assert support_imports <= loaded_names
 
 
 def test_noxfile_registers_the_exact_public_session_inventory() -> None:
@@ -192,8 +202,6 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-
     class FakeSession:
         def __init__(self) -> None:
             self.commands: list[tuple[tuple[str, ...], dict[str, Any]]] = []
@@ -206,7 +214,7 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
 
     session = FakeSession()
     coverage_file = tmp_path / ".coverage"
-    noxfile._run_pytest(
+    nox_runner._run_pytest(
         session,
         "-q",
         coverage_file=coverage_file,
@@ -231,8 +239,8 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
     assert kwargs["env"] == {"COVERAGE_FILE": str(coverage_file)}
 
     session.commands.clear()
-    _patch_nox_globals(monkeypatch, noxfile, "_enforce_line_coverage", lambda _path: 90.0)
-    noxfile._run_pytest(
+    monkeypatch.setattr(nox_runner, "_enforce_line_coverage", lambda _path: 90.0)
+    nox_runner._run_pytest(
         session,
         "-m",
         "integration",
@@ -350,55 +358,48 @@ class ImmediateReporter:
 
 
 def test_policy_lanes_route_commands_and_report_skips(monkeypatch: pytest.MonkeyPatch) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-    runner = sys.modules["tools.nox_support.runner"]
     session = types.SimpleNamespace()
     reporter = ImmediateReporter()
     commands: list[tuple[str, ...]] = []
 
-    _patch_nox_globals(monkeypatch, noxfile, "_sync_project", lambda _session: commands.append(("sync",)))
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(nox_policy_lanes, "_sync_project", lambda _session: commands.append(("sync",)))
+    monkeypatch.setattr(
+        nox_policy_lanes,
         "_run",
         lambda _session, *args, **_kwargs: commands.append(tuple(args)),
     )
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(
+        nox_policy_lanes,
         "_run_project_python",
         lambda _session, *args: commands.append(tuple(args)),
     )
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(
+        nox_policy_lanes,
         "_run_pre_commit_hook",
         lambda _session, command, *args, paths: commands.append((command, *args, *paths)),
     )
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(
+        nox_policy_lanes,
         "_run_gitleaks_dir_scan",
         lambda _session, paths: commands.append(("gitleaks", *paths)),
     )
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(
+        nox_policy_lanes,
         "_run_ruff",
         lambda _session, *args, **_kwargs: commands.append(("ruff", *args)),
     )
 
-    selection = runner.HygieneSelection(
+    selection = nox_runner.HygieneSelection(
         paths=["README.md", "config.yaml", "data.json"],
         source="test selection",
     )
-    _patch_nox_globals(monkeypatch, noxfile, "_parse_hygiene_posargs", lambda *_args, **_kwargs: selection)
-    _patch_nox_globals(monkeypatch, noxfile, "_text_paths", lambda paths: paths[:1])
-    noxfile._run_hygiene(session, reporter, posargs=[], default_all_files=False)
+    monkeypatch.setattr(nox_policy_lanes, "_parse_hygiene_posargs", lambda *_args, **_kwargs: selection)
+    monkeypatch.setattr(nox_policy_lanes, "_text_paths", lambda paths: paths[:1])
+    nox_policy_lanes._run_hygiene(session, reporter, posargs=[], default_all_files=False)
 
-    noxfile._run_policy(session, reporter, "--base-rev", "base", "--requirement-uid", "ASR-1")
-    noxfile._run_policy(session, reporter, "--staged", "--skip-requirement")
-    noxfile._run_contracts(
+    nox_policy_lanes._run_policy(session, reporter, "--base-rev", "base", "--requirement-uid", "ASR-1")
+    nox_policy_lanes._run_policy(session, reporter, "--staged", "--skip-requirement")
+    nox_policy_lanes._run_contracts(
         session,
         reporter,
         "--staged",
@@ -410,14 +411,14 @@ def test_policy_lanes_route_commands_and_report_skips(monkeypatch: pytest.Monkey
         "--unknown",
         "artifact.json",
     )
-    noxfile._run_lint(session, reporter)
-    noxfile._run_changed_lint(
+    nox_policy_lanes._run_lint(session, reporter)
+    nox_policy_lanes._run_changed_lint(
         session,
         reporter,
         ["implementations/python/tests/test_example.py", "tools/check_example.py", "noxfile.py"],
     )
-    noxfile._run_changed_lint(session, reporter, [])
-    noxfile._run_participant_opacity_proof(session, reporter)
+    nox_policy_lanes._run_changed_lint(session, reporter, [])
+    nox_policy_lanes._run_participant_opacity_proof(session, reporter)
 
     assert ("tools/check_schema_publication.py", "--base-rev", "base") in commands
     assert ("tools/check_json_artifacts.py", "--staged", "--base-rev", "base", "artifact.json") in commands
@@ -429,23 +430,21 @@ def test_policy_lanes_route_commands_and_report_skips(monkeypatch: pytest.Monkey
 
 
 def test_hygiene_lane_handles_empty_and_non_text_selections(monkeypatch: pytest.MonkeyPatch) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-    runner = sys.modules["tools.nox_support.runner"]
     reporter = ImmediateReporter()
 
     selections = iter(
         [
-            runner.HygieneSelection(paths=[], source="empty"),
-            runner.HygieneSelection(paths=["binary.dat"], source="binary"),
+            nox_runner.HygieneSelection(paths=[], source="empty"),
+            nox_runner.HygieneSelection(paths=["binary.dat"], source="binary"),
         ]
     )
-    _patch_nox_globals(monkeypatch, noxfile, "_parse_hygiene_posargs", lambda *_args, **_kwargs: next(selections))
-    _patch_nox_globals(monkeypatch, noxfile, "_text_paths", lambda _paths: [])
-    _patch_nox_globals(monkeypatch, noxfile, "_run_pre_commit_hook", lambda *_args, **_kwargs: None)
-    _patch_nox_globals(monkeypatch, noxfile, "_run_gitleaks_dir_scan", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(nox_policy_lanes, "_parse_hygiene_posargs", lambda *_args, **_kwargs: next(selections))
+    monkeypatch.setattr(nox_policy_lanes, "_text_paths", lambda _paths: [])
+    monkeypatch.setattr(nox_policy_lanes, "_run_pre_commit_hook", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(nox_policy_lanes, "_run_gitleaks_dir_scan", lambda *_args, **_kwargs: None)
 
-    noxfile._run_hygiene(types.SimpleNamespace(), reporter, posargs=[], default_all_files=False)
-    noxfile._run_hygiene(types.SimpleNamespace(), reporter, posargs=[], default_all_files=False)
+    nox_policy_lanes._run_hygiene(types.SimpleNamespace(), reporter, posargs=[], default_all_files=False)
+    nox_policy_lanes._run_hygiene(types.SimpleNamespace(), reporter, posargs=[], default_all_files=False)
 
     assert ("hygiene / candidate path resolution", "no files selected from empty") in reporter.skips
     skipped_stages = {name for name, _reason in reporter.skips}
@@ -457,9 +456,6 @@ def test_hygiene_lane_handles_empty_and_non_text_selections(monkeypatch: pytest.
 def test_parallel_graph_executes_success_and_reports_all_failures(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-    graph = sys.modules["tools.nox_support.graph"]
-
     class FakeSession:
         posargs = ["--base-rev", "base"]
 
@@ -472,33 +468,31 @@ def test_parallel_graph_executes_success_and_reports_all_failures(
     session = FakeSession()
     reporter = ImmediateReporter()
     calls: list[str] = []
-    _patch_nox_globals(monkeypatch, noxfile, "_sync_project", lambda _session: calls.append("sync"))
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(nox_graph, "_sync_project", lambda _session: calls.append("sync"))
+    monkeypatch.setattr(
+        nox_graph,
         "_run_project_python",
         lambda _session, *_args: calls.append("toolchain"),
     )
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(
+        nox_graph,
         "_finalize_parallel_coverage",
         lambda _session, _path: calls.append("coverage"),
     )
-    monkeypatch.setattr(graph, "_available_cpu_count", lambda: 8)
+    monkeypatch.setattr(nox_graph, "_available_cpu_count", lambda: 8)
 
     results = [
         types.SimpleNamespace(name="unit-tests", returncode=0, output="passed\n", duration_s=0.01),
         types.SimpleNamespace(name="contracts", returncode=0, output="", duration_s=0.02),
     ]
-    monkeypatch.setattr(graph, "run_verification_lanes", lambda *_args, **_kwargs: results)
-    noxfile._run_parallel_verification(session, reporter, include_policy=True)
+    monkeypatch.setattr(nox_graph, "run_verification_lanes", lambda *_args, **_kwargs: results)
+    nox_graph._run_parallel_verification(session, reporter, include_policy=True)
 
     assert calls == ["sync", "toolchain", "coverage"]
     assert any("lane unit-tests: PASS" in message for message in session.messages)
 
     monkeypatch.setattr(
-        graph,
+        nox_graph,
         "run_verification_lanes",
         lambda *_args, **_kwargs: [
             types.SimpleNamespace(name="unit-tests", returncode=2, output="failed", duration_s=0.01),
@@ -507,13 +501,10 @@ def test_parallel_graph_executes_success_and_reports_all_failures(
     )
     failure_reporter = ImmediateReporter()
     with pytest.raises(RuntimeError, match=r"unit-tests \(exit 2\), contracts \(exit 3\)"):
-        noxfile._run_parallel_verification(session, failure_reporter, include_policy=False)
+        nox_graph._run_parallel_verification(session, failure_reporter, include_policy=False)
 
 
 def test_change_selected_graph_routes_plans_and_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-    graph = sys.modules["tools.nox_support.graph"]
-
     class FakeSession:
         def __init__(self) -> None:
             self.messages: list[str] = []
@@ -525,13 +516,13 @@ def test_change_selected_graph_routes_plans_and_fails_closed(monkeypatch: pytest
     reporter = ImmediateReporter()
     calls: list[str] = []
     plan = types.SimpleNamespace(contracts=False, regression=False, fuzz=False, docs=False, reason="prose")
-    monkeypatch.setattr(graph, "collect_git_changes", lambda *_args: [types.SimpleNamespace(path="README.md")])
-    monkeypatch.setattr(graph, "plan_for_changes", lambda _changes: plan)
-    monkeypatch.setattr(graph, "_requirement_aware_policy_args", lambda *args: list(args))
+    monkeypatch.setattr(nox_graph, "collect_git_changes", lambda *_args: [types.SimpleNamespace(path="README.md")])
+    monkeypatch.setattr(nox_graph, "plan_for_changes", lambda _changes: plan)
+    monkeypatch.setattr(nox_graph, "_requirement_aware_policy_args", lambda *args: list(args))
     for name in ("_run_hygiene", "_run_policy", "_run_lint", "_run_contracts", "_run_tests", "_run_fuzz", "_run_docs"):
-        monkeypatch.setattr(graph, name, lambda *_args, _name=name, **_kwargs: calls.append(_name))
+        monkeypatch.setattr(nox_graph, name, lambda *_args, _name=name, **_kwargs: calls.append(_name))
 
-    noxfile._run_changed_verification(session, reporter, ["--base-rev", "base"])
+    nox_graph._run_changed_verification(session, reporter, ["--base-rev", "base"])
     assert calls == ["_run_hygiene", "_run_policy", "_run_lint"]
     assert {name for name, _reason in reporter.skips} == {
         "contracts / governed artifact graph",
@@ -542,8 +533,12 @@ def test_change_selected_graph_routes_plans_and_fails_closed(monkeypatch: pytest
 
     plan.contracts = plan.regression = plan.fuzz = plan.docs = True
     calls.clear()
-    monkeypatch.setattr(graph, "_changed_base_rev", lambda _posargs: (_ for _ in ()).throw(RuntimeError("no upstream")))
-    noxfile._run_changed_verification(session, ImmediateReporter(), [])
+    monkeypatch.setattr(
+        nox_graph,
+        "_changed_base_rev",
+        lambda _posargs: (_ for _ in ()).throw(RuntimeError("no upstream")),
+    )
+    nox_graph._run_changed_verification(session, ImmediateReporter(), [])
     assert calls == [
         "_run_hygiene",
         "_run_policy",
@@ -557,24 +552,21 @@ def test_change_selected_graph_routes_plans_and_fails_closed(monkeypatch: pytest
 
 
 def test_graph_base_revision_and_cpu_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
-    load_noxfile_with_fake_nox(monkeypatch)
-    graph = sys.modules["tools.nox_support.graph"]
-
-    assert graph._changed_base_rev(["--base-rev", "base"]) == "base"
+    assert nox_graph._changed_base_rev(["--base-rev", "base"]) == "base"
     with pytest.raises(ValueError, match="requires a revision"):
-        graph._changed_base_rev(["--base-rev"])
-    monkeypatch.setattr(graph, "resolve_upstream", lambda _root: "origin/dev")
-    assert graph._changed_base_rev([]) == "origin/dev"
+        nox_graph._changed_base_rev(["--base-rev"])
+    monkeypatch.setattr(nox_graph, "resolve_upstream", lambda _root: "origin/dev")
+    assert nox_graph._changed_base_rev([]) == "origin/dev"
 
-    monkeypatch.setattr(graph.os, "sched_getaffinity", lambda _pid: {0, 1})
-    assert graph._available_cpu_count() == 2
+    monkeypatch.setattr(nox_graph.os, "sched_getaffinity", lambda _pid: {0, 1})
+    assert nox_graph._available_cpu_count() == 2
 
     def unavailable(_pid: int) -> set[int]:
         raise OSError("unsupported")
 
-    monkeypatch.setattr(graph.os, "sched_getaffinity", unavailable)
-    monkeypatch.setattr(graph.os, "cpu_count", lambda: None)
-    assert graph._available_cpu_count() == 1
+    monkeypatch.setattr(nox_graph.os, "sched_getaffinity", unavailable)
+    monkeypatch.setattr(nox_graph.os, "cpu_count", lambda: None)
+    assert nox_graph._available_cpu_count() == 1
 
 
 def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -584,7 +576,7 @@ def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytes
     assert "_run_changed_verification" not in source
     assert "_run_parallel_verification" in source
 
-    lanes = noxfile._verification_lanes(
+    lanes = nox_graph._verification_lanes(
         posargs=["--base-rev", "base"],
         coverage_dir=Path("/coverage"),
         include_policy=True,
@@ -604,12 +596,8 @@ def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytes
     assert lanes_by_name["integration-tests"].env["RAES_VERIFY_COVERAGE_FILE"] == "/coverage/.coverage.integration"
 
 
-def test_completion_verification_omits_policy_only_from_static_lane(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-
-    lanes = noxfile._verification_lanes(
+def test_completion_verification_omits_policy_only_from_static_lane() -> None:
+    lanes = nox_graph._verification_lanes(
         posargs=["--requirement-uid", "ASR-535"],
         coverage_dir=Path("/coverage"),
         include_policy=False,
@@ -628,16 +616,14 @@ def test_completion_verification_omits_policy_only_from_static_lane(
     ]
     assert lanes_by_name["contracts"].env["RAES_JSON_SCHEMA_WORKERS"] == "1"
     assert lanes_by_name["unit-tests"].env["PYTEST_XDIST_AUTO_NUM_WORKERS"] == "2"
-    assert noxfile._verification_lane_workers(cpu_count=4, lane_count=len(lanes)) == 2
-    assert noxfile._verification_lane_workers(cpu_count=16, lane_count=len(lanes)) == 4
+    assert nox_graph._verification_lane_workers(cpu_count=4, lane_count=len(lanes)) == 2
+    assert nox_graph._verification_lane_workers(cpu_count=16, lane_count=len(lanes)) == 4
 
 
 def test_parallel_coverage_is_combined_before_reporting(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-
     class FakeSession:
         def __init__(self) -> None:
             self.commands: list[tuple[tuple[str, ...], dict[str, Any]]] = []
@@ -649,8 +635,8 @@ def test_parallel_coverage_is_combined_before_reporting(
             return nullcontext()
 
     session = FakeSession()
-    _patch_nox_globals(monkeypatch, noxfile, "_enforce_line_coverage", lambda _path: 90.0)
-    noxfile._finalize_parallel_coverage(session, tmp_path)
+    monkeypatch.setattr(nox_runner, "_enforce_line_coverage", lambda _path: 90.0)
+    nox_test_lanes._finalize_parallel_coverage(session, tmp_path)
 
     coverage_commands = [
         (command, options)
@@ -665,12 +651,8 @@ def test_parallel_coverage_is_combined_before_reporting(
     )
 
 
-def test_policy_session_split_routes_base_revision_to_both_policy_layers(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-
-    repo_args, requirement_args, skip_requirement = noxfile._split_policy_session_args(
+def test_policy_session_split_routes_base_revision_to_both_policy_layers() -> None:
+    repo_args, requirement_args, skip_requirement = nox_runner._split_policy_session_args(
         ["--base-rev", "origin/dev", "--requirement-uid", "API-404"]
     )
 
@@ -683,8 +665,7 @@ def _exercise_python_compatibility(
     monkeypatch: pytest.MonkeyPatch,
     *,
     build_artifacts: bool,
-) -> tuple[types.ModuleType, list[tuple[str, ...]], list[tuple[str, ...]], list[str]]:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+) -> tuple[list[tuple[str, ...]], list[tuple[str, ...]], list[str]]:
     commands: list[tuple[str, ...]] = []
     pytest_calls: list[tuple[str, ...]] = []
     logs: list[str] = []
@@ -707,25 +688,25 @@ def _exercise_python_compatibility(
             (output_dir / "raes-3.3.0-py3-none-any.whl").write_bytes(b"wheel")
             (output_dir / "raes-3.3.0.tar.gz").write_bytes(b"sdist")
 
-    monkeypatch.setenv(noxfile.EXPECTED_PYTHON_ENV, "3.14")
+    monkeypatch.setenv(nox_config.EXPECTED_PYTHON_ENV, "3.14")
     monkeypatch.setenv("UV_PYTHON", "cpython-3.14")
-    monkeypatch.setenv(noxfile.EXPECT_FREE_THREADED_ENV, "1")
-    _patch_nox_globals(monkeypatch, noxfile, "_run", fake_run)
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setenv(nox_config.EXPECT_FREE_THREADED_ENV, "1")
+    monkeypatch.setattr(nox_test_lanes, "_run", fake_run)
+    monkeypatch.setattr(nox_test_lanes, "_sync_project", lambda _session: None)
+    monkeypatch.setattr(
+        nox_test_lanes,
         "_run_pytest",
         lambda _session, *args, **_kwargs: pytest_calls.append(tuple(args)),
     )
-    reporter = noxfile.SessionReporter(FakeSession(), "python-compatibility")
-    noxfile._run_python_compatibility(reporter.session, reporter)
-    return noxfile, commands, pytest_calls, [result.name for result in reporter.results]
+    reporter = nox_runner.SessionReporter(FakeSession(), "python-compatibility")
+    nox_test_lanes._run_python_compatibility(reporter.session, reporter)
+    return commands, pytest_calls, [result.name for result in reporter.results]
 
 
 def test_python_compatibility_graph_builds_and_checks_clean_distribution(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    noxfile, commands, pytest_calls, stages = _exercise_python_compatibility(
+    commands, pytest_calls, stages = _exercise_python_compatibility(
         monkeypatch,
         build_artifacts=True,
     )
@@ -749,7 +730,7 @@ def test_python_compatibility_graph_builds_and_checks_clean_distribution(
     installed_python = next(command for command in commands if command and command[0].endswith("/bin/python"))
     assert installed_python[-1] == "3.14"
     assert any(command and command[0].endswith("/bin/raes") and command[-1] == "--version" for command in commands)
-    assert noxfile.PROJECT_ROOT.as_posix() in build_command
+    assert nox_config.PROJECT_ROOT.as_posix() in build_command
 
 
 @pytest.mark.parametrize(
@@ -765,13 +746,12 @@ def test_python_compatibility_rejects_unsupported_or_missing_interpreter_selecti
     selector: str,
     message: str,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-    monkeypatch.setenv(noxfile.EXPECTED_PYTHON_ENV, expected)
+    monkeypatch.setenv(nox_config.EXPECTED_PYTHON_ENV, expected)
     monkeypatch.setenv("UV_PYTHON", selector)
-    reporter = noxfile.SessionReporter(types.SimpleNamespace(log=lambda _message: None), "python-compatibility")
+    reporter = nox_runner.SessionReporter(types.SimpleNamespace(log=lambda _message: None), "python-compatibility")
 
     with pytest.raises(RuntimeError, match=message):
-        noxfile._run_python_compatibility(reporter.session, reporter)
+        nox_test_lanes._run_python_compatibility(reporter.session, reporter)
 
 
 def test_python_compatibility_rejects_incomplete_distribution_build(
@@ -784,19 +764,20 @@ def test_python_compatibility_rejects_incomplete_distribution_build(
 def test_python_compatibility_and_osv_session_wrappers_always_summarize(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
     calls: list[str] = []
     logs: list[str] = []
     session = types.SimpleNamespace(log=logs.append, posargs=[])
-    _patch_nox_globals(
-        monkeypatch,
-        noxfile,
+    monkeypatch.setattr(
+        nox_test_lanes,
         "_run_python_compatibility",
         lambda _session, _reporter: calls.append("python"),
     )
-    _patch_nox_globals(
-        monkeypatch, noxfile, "_run_osv_scan", lambda _session, _reporter, **_kwargs: calls.append("osv")
+    monkeypatch.setattr(
+        nox_test_lanes,
+        "_run_osv_scan",
+        lambda _session, _reporter, **_kwargs: calls.append("osv"),
     )
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
 
     noxfile.python_compatibility(session)
     noxfile.osv_scan(session)
@@ -826,21 +807,20 @@ def test_line_coverage_threshold_is_fixed_at_ninety_percent(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
     report_path = tmp_path / "coverage.json"
     report_path.write_text(
         json.dumps({"totals": {"covered_lines": 90, "num_statements": 100}}),
         encoding="utf-8",
     )
 
-    assert noxfile._enforce_line_coverage(report_path) == 90.0
+    assert nox_runner._enforce_line_coverage(report_path) == 90.0
 
     report_path.write_text(
         json.dumps({"totals": {"covered_lines": 899, "num_statements": 1000}}),
         encoding="utf-8",
     )
     with pytest.raises(RuntimeError, match="89.900% is below required 90.000%"):
-        noxfile._enforce_line_coverage(report_path)
+        nox_runner._enforce_line_coverage(report_path)
 
 
 def test_make_policy_skips_only_requirement_governance_without_a_uid() -> None:
@@ -869,24 +849,22 @@ def test_make_policy_skips_only_requirement_governance_without_a_uid() -> None:
 
 
 def test_hook_policy_context_skips_only_requirement_free_branches(monkeypatch: pytest.MonkeyPatch) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
     monkeypatch.delenv("RAES_REQUIREMENT_UID", raising=False)
-    _patch_nox_globals(monkeypatch, noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
-    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged", "--skip-requirement"]
+    monkeypatch.setattr(nox_runner, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert nox_runner._requirement_aware_policy_args("--staged") == ["--staged", "--skip-requirement"]
 
-    _patch_nox_globals(monkeypatch, noxfile, "_git_lines", lambda *_args: ["1104-ASR-505-coverage-policy"])
-    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
+    monkeypatch.setattr(nox_runner, "_git_lines", lambda *_args: ["1104-ASR-505-coverage-policy"])
+    assert nox_runner._requirement_aware_policy_args("--staged") == ["--staged"]
 
     monkeypatch.setenv("RAES_REQUIREMENT_UID", "ASR-505")
-    _patch_nox_globals(monkeypatch, noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
-    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
+    monkeypatch.setattr(nox_runner, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert nox_runner._requirement_aware_policy_args("--staged") == ["--staged"]
 
 
 def test_docs_graph_uses_curated_root_and_reader_style_gate(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
     commands: list[tuple[str, ...]] = []
 
     class FakeSession:
@@ -898,15 +876,15 @@ def test_docs_graph_uses_curated_root_and_reader_style_gate(
 
     fake_vale = tmp_path / "vale"
     fake_vale.write_text("", encoding="utf-8")
-    _patch_nox_globals(monkeypatch, noxfile, "ensure_vale", lambda _repo_root: fake_vale)
-    _patch_nox_globals(monkeypatch, noxfile, "REPO_ROOT", tmp_path)
-    _patch_nox_globals(monkeypatch, noxfile, "PROJECT_ROOT", tmp_path / "implementations" / "python")
+    monkeypatch.setattr(nox_test_lanes, "ensure_vale", lambda _repo_root: fake_vale)
+    monkeypatch.setattr(nox_test_lanes, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(nox_test_lanes, "PROJECT_ROOT", tmp_path / "implementations" / "python")
     public_root = tmp_path / "docs" / "public"
-    _patch_nox_globals(monkeypatch, noxfile, "PUBLIC_DOCS_ROOT", public_root)
-    _patch_nox_globals(monkeypatch, noxfile, "DOCS_BUILD_ROOT", tmp_path / "docs" / "_build")
-    reporter = noxfile.SessionReporter(FakeSession(), "docs")
+    monkeypatch.setattr(nox_test_lanes, "PUBLIC_DOCS_ROOT", public_root)
+    monkeypatch.setattr(nox_test_lanes, "DOCS_BUILD_ROOT", tmp_path / "docs" / "_build")
+    reporter = nox_runner.SessionReporter(FakeSession(), "docs")
 
-    noxfile._run_docs(reporter.session, reporter)
+    nox_test_lanes._run_docs(reporter.session, reporter)
 
     assert [result.name for result in reporter.results] == [
         "docs / public source boundary",
@@ -939,7 +917,6 @@ def test_local_docs_graph_excludes_external_link_check(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
     commands: list[tuple[str, ...]] = []
 
     class FakeSession:
@@ -951,14 +928,14 @@ def test_local_docs_graph_excludes_external_link_check(
 
     fake_vale = tmp_path / "vale"
     fake_vale.write_text("", encoding="utf-8")
-    _patch_nox_globals(monkeypatch, noxfile, "ensure_vale", lambda _repo_root: fake_vale)
-    _patch_nox_globals(monkeypatch, noxfile, "REPO_ROOT", tmp_path)
-    _patch_nox_globals(monkeypatch, noxfile, "PROJECT_ROOT", tmp_path / "implementations" / "python")
-    _patch_nox_globals(monkeypatch, noxfile, "PUBLIC_DOCS_ROOT", tmp_path / "docs" / "public")
-    _patch_nox_globals(monkeypatch, noxfile, "DOCS_BUILD_ROOT", tmp_path / "docs" / "_build")
-    reporter = noxfile.SessionReporter(FakeSession(), "docs-local")
+    monkeypatch.setattr(nox_test_lanes, "ensure_vale", lambda _repo_root: fake_vale)
+    monkeypatch.setattr(nox_test_lanes, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(nox_test_lanes, "PROJECT_ROOT", tmp_path / "implementations" / "python")
+    monkeypatch.setattr(nox_test_lanes, "PUBLIC_DOCS_ROOT", tmp_path / "docs" / "public")
+    monkeypatch.setattr(nox_test_lanes, "DOCS_BUILD_ROOT", tmp_path / "docs" / "_build")
+    reporter = nox_runner.SessionReporter(FakeSession(), "docs-local")
 
-    noxfile._run_docs(reporter.session, reporter, include_external_links=False)
+    nox_test_lanes._run_docs(reporter.session, reporter, include_external_links=False)
 
     assert "docs / Sphinx link check" not in [result.name for result in reporter.results]
     sphinx_commands = [command for command in commands if "sphinx-build" in command]
@@ -1049,20 +1026,19 @@ def _write_test_policy(repo_root: Path, policy: dict[str, Any]) -> None:
 
 
 def test_hygiene_parser_ignores_policy_only_verify_args(monkeypatch: pytest.MonkeyPatch) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
     calls: list[dict[str, object]] = []
 
     def fake_changed_paths(*, staged: bool = False, base_rev: str | None = None) -> list[str]:
         calls.append({"staged": staged, "base_rev": base_rev})
         return ["noxfile.py"]
 
-    _patch_nox_globals(monkeypatch, noxfile, "_changed_paths", fake_changed_paths)
+    monkeypatch.setattr(nox_runner, "_changed_paths", fake_changed_paths)
 
-    skip_selection = noxfile._parse_hygiene_posargs(
+    skip_selection = nox_runner._parse_hygiene_posargs(
         ["--base-rev", "origin/dev", "--skip-requirement"],
         default_all_files=False,
     )
-    uid_selection = noxfile._parse_hygiene_posargs(
+    uid_selection = nox_runner._parse_hygiene_posargs(
         ["--base-rev", "origin/dev", "--requirement-uid", "GOV-918"],
         default_all_files=False,
     )
@@ -1084,13 +1060,12 @@ def test_policy_arg_parsers_reject_missing_option_values(
     option: str,
     trailing: list[str],
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
     args = [option, *trailing]
 
     with pytest.raises(ValueError, match=rf"^{option} requires a value$"):
-        noxfile._split_policy_session_args(args)
+        nox_runner._split_policy_session_args(args)
     with pytest.raises(ValueError, match=rf"^{option} requires a value$"):
-        noxfile._parse_hygiene_posargs(args, default_all_files=False)
+        nox_runner._parse_hygiene_posargs(args, default_all_files=False)
 
 
 def test_structural_policy_runner_receives_policy_input(tmp_path: Path) -> None:
@@ -3284,8 +3259,6 @@ def _run_nox_osv_scan(
     *,
     exit_code: int,
 ) -> None:
-    noxfile = load_noxfile_with_fake_nox(monkeypatch)
-
     class FakeSession:
         def log(self, _message: str) -> None:
             pass
@@ -3295,10 +3268,10 @@ def _run_nox_osv_scan(
     lockfile.write_text("", encoding="utf-8")
     report = lockfile.with_name("osv-scanner-report.json")
     scanner_binary = tmp_path / "osv-scanner"
-    _patch_nox_globals(monkeypatch, noxfile, "REPO_ROOT", tmp_path)
-    _patch_nox_globals(monkeypatch, noxfile, "OSV_LOCKFILE_PATH", lockfile)
-    _patch_nox_globals(monkeypatch, noxfile, "OSV_REPORT_PATH", report)
-    _patch_nox_globals(monkeypatch, noxfile, "ensure_osv_scanner", lambda _repo_root: scanner_binary)
+    monkeypatch.setattr(nox_test_lanes, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(nox_test_lanes, "OSV_LOCKFILE_PATH", lockfile)
+    monkeypatch.setattr(nox_test_lanes, "OSV_REPORT_PATH", report)
+    monkeypatch.setattr(nox_test_lanes, "ensure_osv_scanner", lambda _repo_root: scanner_binary)
 
     def fake_run_osv_scanner(actual_lockfile: Path, actual_report: Path, *, binary: Path) -> int:
         assert actual_lockfile == lockfile
@@ -3306,8 +3279,9 @@ def _run_nox_osv_scan(
         assert binary == scanner_binary
         return exit_code
 
-    _patch_nox_globals(monkeypatch, noxfile, "run_osv_scanner", fake_run_osv_scanner)
-    noxfile.osv_scan(FakeSession())
+    monkeypatch.setattr(nox_test_lanes, "run_osv_scanner", fake_run_osv_scanner)
+    session = FakeSession()
+    nox_test_lanes._run_osv_scan(session, nox_runner.SessionReporter(session, "osv_scan"))
 
 
 def test_nox_osv_scan_accepts_only_a_clean_result(
