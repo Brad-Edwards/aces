@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "b2d7484b00bb3239e43119a1a176bca322b226cc313996becd7ade7381756fdd",
+  "content_hash": "4339c86ad1ec1a43ee2c0bb027d2e26ff9e171a37215e38a17ba262e6efadc57",
   "last_change": {
-    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
-    "content_hash": "b2d7484b00bb3239e43119a1a176bca322b226cc313996becd7ade7381756fdd"
+    "summary": "Added generated-artifact output environment consumption for issue #1074 and DSL-435 alongside participant-interaction commutativity and merge rules from issue #1101.",
+    "content_hash": "4339c86ad1ec1a43ee2c0bb027d2e26ff9e171a37215e38a17ba262e6efadc57"
   }
 }

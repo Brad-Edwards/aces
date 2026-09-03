@@ -50,4 +50,4 @@ Requirement inventory expansion. Participant-feature boundaries need to be expli
 - TESTS → TEST `implementations/python/tests/test_runtime_conformance.py` (API-407 runtime conformance capability-preflight tests)
 - IMPLEMENTS → GITHUB_ISSUE `801` (Declare participant I/O policy capability and realization support (API-407))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_backend_protocols/participant_feature_admission.py` (API-407 participant feature support admission)
-- IMPLEMENTS → GITHUB_ISSUE `RAESystem/rae#965` (Declare and validate backend participant-opacity realization)
+- IMPLEMENTS → GITHUB_ISSUE `OpenRAE/rae#965` (Declare and validate backend participant-opacity realization)

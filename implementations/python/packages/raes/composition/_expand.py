@@ -45,9 +45,10 @@ from .._source_profile import (
     SDLParserLimits,
     SDLSourceParseOptions,
 )
-from ..instantiate import _bind_scenario_content
+from ..instantiate import _bind_scenario_content, _BoundScenarioResult
 from ..module_registry import (
     Lockfile,
+    ResolvedModule,
     TrustPolicy,
     _VerifiedSourceBundle,
     load_lockfile,
@@ -327,6 +328,25 @@ def _expand_one_import(
     context.budget.check_namespaces(namespaced_payload, path=import_path)
     merged = _merge_sections(merged, namespaced_payload, path=import_path)
 
+    return (merged, *_import_provenance_additions(resolved_import, import_decl, bound, inner_provenance, symbols))
+
+
+def _import_provenance_additions(
+    resolved_import: ResolvedModule,
+    import_decl: ImportDecl,
+    bound: _BoundScenarioResult,
+    inner_provenance: ExpansionProvenance,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> tuple[
+    list[ResolvedImportProvenance],
+    list[CapabilityConstraint],
+    list[ExplicitnessProvenanceRecord],
+    list[RealizationDesignationRecord],
+    list[RealizationConstraintRecord],
+]:
+    """Build the namespaced provenance additions contributed by one import."""
+
+    namespace = import_decl.namespace
     import_records: list[ResolvedImportProvenance] = [
         _resolved_import_record(resolved_import, requested=import_decl, bindings=bound)
     ]
@@ -349,7 +369,6 @@ def _expand_one_import(
         for record in inner_provenance.realization_constraints
     ]
     return (
-        merged,
         import_records,
         capability_constraints,
         explicitness_records,

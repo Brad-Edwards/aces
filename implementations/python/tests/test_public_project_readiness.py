@@ -70,6 +70,16 @@ def test_live_repository_identity_uses_openrae_owner() -> None:
         assert f"{previous_owner}/rae" not in source, relative_path
 
 
+def test_requirement_issue_links_use_current_repository_identity() -> None:
+    previous_repository = ("RAE" + "System") + "/rae"
+    requirement_files = sorted((REPO_ROOT / "docs/requirements").glob("*/requirement.md"))
+
+    assert requirement_files
+    for requirement_file in requirement_files:
+        source = requirement_file.read_text(encoding="utf-8")
+        assert previous_repository not in source, requirement_file.relative_to(REPO_ROOT)
+
+
 def test_publishers_build_only_the_curated_public_source() -> None:
     rtd = yaml.safe_load((REPO_ROOT / ".readthedocs.yaml").read_text(encoding="utf-8"))
     assert rtd["sphinx"] == {
@@ -121,6 +131,6 @@ def test_python_support_metadata_and_blocking_matrix_are_aligned() -> None:
         "RAES_EXPECT_FREE_THREADED": "1",
     }
 
-    noxfile = (REPO_ROOT / "noxfile.py").read_text(encoding="utf-8")
-    assert 'assert is_gil_enabled() is False, "interpreter is not free-threaded"' in noxfile
-    assert 'assert is_gil_enabled() is True, "standard lane selected a free-threaded interpreter"' in noxfile
+    compatibility_lane = (REPO_ROOT / "tools" / "nox_support" / "test_lanes.py").read_text(encoding="utf-8")
+    assert 'assert is_gil_enabled() is False, "interpreter is not free-threaded"' in compatibility_lane
+    assert 'assert is_gil_enabled() is True, "standard lane selected a free-threaded interpreter"' in compatibility_lane

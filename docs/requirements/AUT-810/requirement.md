@@ -22,7 +22,7 @@ Narrowed to the RAES semantic transformation kernel; env-packs and Hub own pack 
 ## Traceability
 
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/composition/__init__.py` (AUT-810 composition and reference preservation)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#265` (Safe deterministic RAES artifact transformations (AUT-810))
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#265` (Safe deterministic RAES artifact transformations (AUT-810))
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/transformations.py` (AUT-810 public artifact-transformation API)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/_transformation_rename.py` (AUT-810 deterministic rename operation)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/_transformation_remove.py` (AUT-810 policy-gated removal operation)

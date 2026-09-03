@@ -1,0 +1,38 @@
+name: PR Body Policy
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [dev]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: pr-body-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  body-guard:
+    runs-on: ubuntu-latest
+    steps:
+      # Load the checker from the base revision so checker changes do not
+      # self-validate. The workflow remains review-protected repository code,
+      # consistent with the trust model in ADR-015 and ADR-103.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Validate pull request body
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f tools/check_pr_body.py ]; then
+            echo "::notice::body guard is not on the base ref yet; bootstrap PR only"
+            exit 0
+          fi
+          python tools/check_pr_body.py

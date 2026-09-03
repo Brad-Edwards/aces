@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from raes.runtime_capabilities import RuntimeCapabilityPolicy
 from raes.runtime_configuration import RuntimeEnvironmentVariable
 from raes.runtime_forwarding_agent import RuntimeForwardingAgent, RuntimeForwardingSetting
@@ -83,17 +83,22 @@ def _enum_value(value: object) -> object:
 def validate_environment_observation(value: object) -> None:
     """Validate raw or commitment-safe environment readback."""
 
-    base_fields = frozenset({"name", "value_classification", "provenance", "source"})
-    for item in _sequence(value, label="runtime environment"):
-        record = _mapping(item, label="runtime environment entry")
-        if "value_commitment" in record or "value_present" in record:
-            _validate_safe_committed_record(
-                record,
-                base_fields=base_fields,
-                model=RuntimeEnvironmentVariable,
-            )
-        else:
-            RuntimeEnvironmentVariable.model_validate(record)
+    try:
+        for item in _sequence(value, label="runtime environment"):
+            record = _mapping(item, label="runtime environment entry")
+            base_fields = frozenset({"name", "value_classification", "provenance", "source"})
+            if "value_from" in record:
+                base_fields |= {"value_from"}
+            if "value_commitment" in record or "value_present" in record:
+                _validate_safe_committed_record(
+                    record,
+                    base_fields=base_fields,
+                    model=RuntimeEnvironmentVariable,
+                )
+            else:
+                RuntimeEnvironmentVariable.model_validate(record)
+    except ValidationError:
+        raise ValueError("runtime environment observation violates its closed contract") from None
 
 
 def validate_mounts_observation(value: object) -> None:

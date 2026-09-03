@@ -46,10 +46,13 @@ with non-Python checks (gitleaks, OPA, sphinx-build).
 
 ### 1. nox is the single canonical verification graph
 
-`noxfile.py` at the repository root defines every verification stage as
-a session with explicit substages, run sequentially through a
-`SessionReporter` that emits structured `START` / `PASS` / `FAIL` /
-`SKIP` events. The canonical sessions are:
+`noxfile.py` at the repository root is the sole public session registry and
+entry point. Private configuration, execution, lane, and graph helpers live in
+the acyclic `tools/nox_support/` package; support modules do not register nox
+sessions or import `noxfile.py`. Together they define every verification stage
+with explicit substages, run sequentially through a `SessionReporter` that
+emits structured `START` / `PASS` / `FAIL` / `SKIP` events. The canonical
+sessions are:
 
 - `hygiene` — text/YAML/JSON/secret/large-file/merge-conflict checks
 - `policy` — Conftest self-verify, repo policy, requirement governance
@@ -85,8 +88,9 @@ that the pre-push and completion boundaries already run.
 
 Pre-commit's repo-side configuration declares one hook per nox session
 that pre-commit needs to invoke (currently `hook-pre-commit` and
-`hook-pre-push`). The substantive command list lives in `noxfile.py`,
-not in `.pre-commit-config.yaml`. This mirrors a common pattern in
+`hook-pre-push`). The substantive command list lives in the canonical graph
+rooted at `noxfile.py` and implemented by `tools/nox_support/`, not in
+`.pre-commit-config.yaml`. This mirrors a common pattern in
 modern Python projects (e.g., calling `pytest` from a single hook
 rather than re-listing pytest options in YAML) and removes the
 multi-source-of-truth failure mode that the previous configuration had
@@ -168,9 +172,10 @@ that pins the uv version we use elsewhere. Selected.
 - Pre-commit and CI cannot drift apart on what a "passed" state
   means, because both invocations resolve through the same `_run_*`
   helpers.
-- Adding a new gate is a one-place change in `noxfile.py`; CI and
-  pre-commit pick it up automatically through `verify` /
-  `hook-pre-push` / `hook-pre-commit`.
+- Adding a new gate changes one canonical graph: its session registration stays
+  in `noxfile.py`, while its implementation and composition are each defined
+  once in `tools/nox_support/`. CI and pre-commit pick it up automatically
+  through `verify` / `hook-pre-push` / `hook-pre-commit`.
 - The `.ground-control.yaml` workflow block is the single point where
   agents (Codex, Claude Code, the `/implement` skill) read these
   commands; they do not have to parse `.pre-commit-config.yaml` or
@@ -185,11 +190,12 @@ that pins the uv version we use elsewhere. Selected.
 - nox session startup is not free. Mitigated by
   `nox.options.reuse_existing_virtualenvs = True` and by the uv-backed
   install path, which is fast on a warm cache.
-- A bug in `noxfile.py` itself can break every gate at once. Mitigated
-  by the `tooling` lint targets that include `noxfile.py` and by tests
-  under `implementations/python/tests/test_repo_policy_tools.py` and
-  `test_requirement_governance.py` that exercise the underlying
-  helpers independently.
+- A bug in `noxfile.py` or `tools/nox_support/` can break every gate at once.
+  Mitigated by tooling lint, Coverage.py and Sonar analysis of both surfaces,
+  exact session/lane inventory tests, and focused tests under
+  `implementations/python/tests/test_repo_policy_tools.py` and
+  `test_requirement_governance.py` that exercise the underlying helpers
+  independently.
 
 ### Risks
 
@@ -225,3 +231,4 @@ local hooks, CI, and ground-control automation.
 |---|---|---|
 | 2026-07-31 | #963 | Replaced the serial `verify` composition with six isolated, CPU-budgeted concurrent nox lanes, primed shared policy tooling before cold-cache lanes, batched JSON artifacts by shared schema with bounded concurrency, combined unit and integration coverage deterministically, scoped pre-commit to staged changes and directly changed tests without duplicating the mandatory full pre-push/completion regression, and separated network-dependent external-link validation into dedicated docs CI. Ground Control's completion half omits policy because its mechanically enforced policy half runs immediately afterward; direct `verify` and CI retain policy. |
 | 2026-08-14 | #1134 | Added a required CI matrix that runs the canonical `python-compatibility` session for each supported CPython feature release while retaining `verify` as the reproducible single-interpreter local gate. |
+| 2026-09-03 | #1164 | Split private nox configuration, runner, lane, and graph helpers into the acyclic `tools/nox_support/` package while retaining root `noxfile.py` as the sole public session registry, preserving one canonical graph, and keeping both surfaces in coverage and static analysis. |

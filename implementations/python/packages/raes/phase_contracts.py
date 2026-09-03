@@ -153,6 +153,26 @@ class ResolvedImportProvenance(FrozenPhaseModel):
         return self
 
 
+def _is_ordinary_constraint_pointer(parts: list[str]) -> bool:
+    return len(parts) == 4 and (parts[1], parts[3]) in {
+        ("nodes", "os"),
+        ("nodes", "os_distribution"),
+        ("nodes", "os_version"),
+        ("nodes", "architecture"),
+        ("infrastructure", "count"),
+    }
+
+
+def _is_process_limit_constraint_pointer(parts: list[str]) -> bool:
+    return (
+        len(parts) == 9
+        and parts[1] == "nodes"
+        and parts[3:7] == ["runtime", "operational_policy", "resource_limits", "process_limits"]
+        and parts[7].isdigit()
+        and parts[8] in {"soft", "hard"}
+    )
+
+
 class CapabilityConstraint(FrozenPhaseModel):
     """Pre-instantiation constraint retained for one concrete field."""
 
@@ -169,21 +189,7 @@ class CapabilityConstraint(FrozenPhaseModel):
         if not self.field_pointer.startswith("/") or _JSON_POINTER_RE.fullmatch(self.field_pointer) is None:
             raise ValueError("field_pointer must be a non-root RFC 6901 JSON Pointer")
         parts = self.field_pointer.split("/")
-        ordinary_pointer = len(parts) == 4 and (parts[1], parts[3]) in {
-            ("nodes", "os"),
-            ("nodes", "os_distribution"),
-            ("nodes", "os_version"),
-            ("nodes", "architecture"),
-            ("infrastructure", "count"),
-        }
-        process_limit_pointer = (
-            len(parts) == 9
-            and parts[1] == "nodes"
-            and parts[3:7] == ["runtime", "operational_policy", "resource_limits", "process_limits"]
-            and parts[7].isdigit()
-            and parts[8] in {"soft", "hard"}
-        )
-        if not ordinary_pointer and not process_limit_pointer:
+        if not _is_ordinary_constraint_pointer(parts) and not _is_process_limit_constraint_pointer(parts):
             raise ValueError(
                 "field_pointer must address /nodes/<id>/(os|os_distribution|os_version|architecture), "
                 "/infrastructure/<id>/count, or "

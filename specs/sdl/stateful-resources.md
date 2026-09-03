@@ -77,6 +77,47 @@ inputs to consumers; every consumer therefore declares `read_only` access.
 Output selection changes only a consumer projection: generation, lifecycle,
 provenance, dependencies, reconciliation, and deletion remain artifact-wide.
 
+## Generated-artifact delivery modes
+
+A generated-artifact output reaches a consumer through one of three portable
+**delivery modes**:
+
+- `mount` — the read-only file projection declared directly on
+  `generated_artifacts[].consumers[]` (above); this is the default and only mode
+  authored on the artifact.
+- `environment` — one node process-environment variable, declared on
+  `nodes.<node>.runtime.environment[]` with a value-free `value_from`
+  reference to a generated-artifact output *instead of* a literal `value`.
+- `env_file` — an opaque env-file input, declared on
+  `nodes.<node>.runtime.environment_files[]` with a `value_from` reference. RAES
+  treats the file as one runtime environment input and does not parse or compare
+  its individual key/value entries.
+
+`environment` and `env_file` bindings are authored **once**, on the node's
+runtime environment; the compiler derives the matching generated-artifact
+consumer projection into the provisioning resource. Authors never duplicate the
+binding under `generated_artifacts[].consumers[]`. Because an artifact may be
+consumed only through environment bindings, its authored `consumers` list may be
+empty — but semantic admission still rejects an artifact that no file consumer
+and no environment binding consumes.
+
+A `value_from` reference names the producing `generated_artifacts.<id>` (bare id
+or namespaced form) and one of its outputs; it carries no bytes. The referenced
+output must resolve unambiguously, must exist, and must not be `producer_private`.
+The realized value never enters the SDL, plans, snapshots, diagnostics, audit, or
+HTTP envelopes: a generated *secret* environment value omits any raw `value` and
+is classified `redacted`. `operator_secret` is **not** used for generated
+material — it remains reserved for out-of-SDL operator-controlled secrets.
+
+A provisioner declares each delivery mode it can realize in
+`supported_generated_artifact_delivery_modes`; supporting generated artifacts
+implies at least `mount`. Admission rejects a binding whose delivery mode the
+backend does not claim, so a backend cannot silently downgrade an environment or
+env-file injection into a file mount. A runtime-generated value may become
+available only after its producer boots; a consumer reference does not imply an
+ordering edge, so declare `ordering_dependencies` / `refresh_dependencies` where
+the value must exist before a dependent process starts.
+
 ## Persistent volumes
 
 A persistent volume declares `retain` or `ephemeral` lifecycle, portable

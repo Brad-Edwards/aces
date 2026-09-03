@@ -32,6 +32,36 @@ def _read_identity_dependency(request: Request) -> ControlPlaneIdentity:
 _ReadIdentity = Annotated[ControlPlaneIdentity, Depends(_read_identity_dependency)]
 
 
+async def _resolved_governed_view(
+    control_plane: RuntimeControlPlane,
+    request: Request,
+    identity: ControlPlaneIdentity,
+    participant_address: str,
+    *,
+    action: str,
+    not_found_detail: str,
+    resolve: Callable[[ParticipantAudienceSubjectBinding | None, str], _ViewT | None],
+) -> _ViewT:
+    """Resolve one governed participant view with the shared audit and error flow."""
+
+    audience_binding = _require_governed_audience_candidate(control_plane, identity, participant_address)
+    calls = _control_plane_calls(request)
+    view = await calls.mutate(
+        _governed_view,
+        lambda: resolve(audience_binding, request.headers.get("idempotency-key", "")),
+    )
+    if view is None:
+        raise HTTPException(status_code=404, detail=not_found_detail)
+    await calls.run(
+        control_plane.record_audit,
+        action=action,
+        identity=identity.identity,
+        allowed=True,
+        target=str(request.url.path),
+    )
+    return view
+
+
 def register_participant_retrieval_routes(
     app: FastAPI,
     control_plane: RuntimeControlPlane,
@@ -45,27 +75,20 @@ def register_participant_retrieval_routes(
         request: Request,
         identity: _ReadIdentity,
     ) -> ParticipantStatusViewModel:
-        audience_binding = _require_governed_audience_candidate(control_plane, identity, participant_address)
-        calls = _control_plane_calls(request)
-        view = await calls.mutate(
-            _governed_view,
-            lambda: control_plane.get_participant_status_view(
+        return await _resolved_governed_view(
+            control_plane,
+            request,
+            identity,
+            participant_address,
+            action="get_participant_status_view",
+            not_found_detail=f"Unknown participant: {participant_address}",
+            resolve=lambda audience_binding, idempotency_key: control_plane.get_participant_status_view(
                 participant_address,
                 identity=identity,
                 audience_binding=audience_binding,
-                idempotency_key=request.headers.get("idempotency-key", ""),
+                idempotency_key=idempotency_key,
             ),
         )
-        if view is None:
-            raise HTTPException(status_code=404, detail=f"Unknown participant: {participant_address}")
-        await calls.run(
-            control_plane.record_audit,
-            action="get_participant_status_view",
-            identity=identity.identity,
-            allowed=True,
-            target=str(request.url.path),
-        )
-        return view
 
     @app.get(
         "/participants/{participant_address}/episodes/{episode_id}/history",
@@ -77,31 +100,21 @@ def register_participant_retrieval_routes(
         request: Request,
         identity: _ReadIdentity,
     ) -> ParticipantHistoryViewModel:
-        audience_binding = _require_governed_audience_candidate(control_plane, identity, participant_address)
-        calls = _control_plane_calls(request)
-        view = await calls.mutate(
-            _governed_view,
-            lambda: control_plane.get_participant_history_view(
+        return await _resolved_governed_view(
+            control_plane,
+            request,
+            identity,
+            participant_address,
+            action="get_participant_history_view",
+            not_found_detail=f"Unknown participant episode: {participant_address}/{episode_id}",
+            resolve=lambda audience_binding, idempotency_key: control_plane.get_participant_history_view(
                 participant_address,
                 episode_id,
                 identity=identity,
                 audience_binding=audience_binding,
-                idempotency_key=request.headers.get("idempotency-key", ""),
+                idempotency_key=idempotency_key,
             ),
         )
-        if view is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Unknown participant episode: {participant_address}/{episode_id}",
-            )
-        await calls.run(
-            control_plane.record_audit,
-            action="get_participant_history_view",
-            identity=identity.identity,
-            allowed=True,
-            target=str(request.url.path),
-        )
-        return view
 
     @app.get(
         "/participants/{participant_address}/context",
@@ -116,11 +129,14 @@ def register_participant_retrieval_routes(
         derivation_basis_ref: str | None = None,
         payload_ref: str | None = None,
     ) -> ParticipantContextViewModel:
-        audience_binding = _require_governed_audience_candidate(control_plane, identity, participant_address)
-        calls = _control_plane_calls(request)
-        view = await calls.mutate(
-            _governed_view,
-            lambda: control_plane.get_participant_context_view(
+        return await _resolved_governed_view(
+            control_plane,
+            request,
+            identity,
+            participant_address,
+            action="get_participant_context_view",
+            not_found_detail=f"Unknown participant: {participant_address}",
+            resolve=lambda audience_binding, idempotency_key: control_plane.get_participant_context_view(
                 participant_address,
                 view_ref=view_ref,
                 episode_id=episode_id,
@@ -128,19 +144,9 @@ def register_participant_retrieval_routes(
                 payload_ref=payload_ref,
                 identity=identity,
                 audience_binding=audience_binding,
-                idempotency_key=request.headers.get("idempotency-key", ""),
+                idempotency_key=idempotency_key,
             ),
         )
-        if view is None:
-            raise HTTPException(status_code=404, detail=f"Unknown participant: {participant_address}")
-        await calls.run(
-            control_plane.record_audit,
-            action="get_participant_context_view",
-            identity=identity.identity,
-            allowed=True,
-            target=str(request.url.path),
-        )
-        return view
 
 
 def _require_governed_audience_candidate(
