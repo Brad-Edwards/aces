@@ -77,7 +77,7 @@ def test_backend_manifest_rejects_hollow_defaults():
             name="stub",
             provisioner=ProvisionerCapabilities(
                 name="stub-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -339,6 +339,7 @@ def test_observation_capability_claims_require_published_contract_evidence():
         concept_bindings=manifest.concept_bindings,
         constraints=manifest.constraints,
         capabilities=manifest.capabilities,
+        realization_envelope=manifest.realization_envelope,
     )
 
     assert observation_capability_contract_gaps(manifest) == ()
@@ -453,6 +454,7 @@ def test_backend_manifest_payload_renders_api_407_feature_support_entries():
         concept_bindings=manifest.concept_bindings,
         constraints=manifest.constraints,
         capabilities=capabilities,
+        realization_envelope=manifest.realization_envelope,
     )
 
     payload = backend_manifest_payload(manifest)
@@ -544,6 +546,7 @@ def test_participant_runtime_capability_claims_require_published_contract_eviden
         concept_bindings=manifest.concept_bindings,
         constraints=manifest.constraints,
         capabilities=manifest.capabilities,
+        realization_envelope=manifest.realization_envelope,
     )
 
     assert participant_runtime_capability_contract_gaps(manifest) == ()
@@ -757,6 +760,7 @@ def test_participant_policy_feature_support_admission_fails_closed_and_demotes_a
         concept_bindings=base.concept_bindings,
         constraints=base.constraints,
         capabilities=replace(base.capabilities, participant_runtime=participant_runtime),
+        realization_envelope=base.realization_envelope,
     )
 
     assert participant_feature_support_gaps(manifest, (feature,)) == (
@@ -995,7 +999,7 @@ def test_backend_manifest_runtime_rejects_unknown_supported_contract_versions():
             concept_bindings=create_stub_manifest().concept_bindings,
             provisioner=ProvisionerCapabilities(
                 name="stub-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1024,7 +1028,7 @@ def test_backend_manifest_v2_rejects_empty_compatibility():
                 "capabilities": {
                     "provisioner": {
                         "name": "stub-provisioner",
-                        "supported_node_types": ["vm"],
+                        "supported_node_types": ["compute"],
                         "supported_os_families": ["linux"],
                     }
                 },
@@ -1074,7 +1078,7 @@ def test_backend_manifest_v2_rejects_hollow_realization_support():
                 "capabilities": {
                     "provisioner": {
                         "name": "stub-provisioner",
-                        "supported_node_types": ["vm"],
+                        "supported_node_types": ["compute"],
                         "supported_os_families": ["linux"],
                     }
                 },
@@ -1175,7 +1179,7 @@ def test_backend_manifest_rejects_unguarded_vocabulary_values():
 def test_runtime_capabilities_accept_governed_extension_vocabulary_values():
     provisioner = ProvisionerCapabilities(
         name="stub-provisioner",
-        supported_node_types=frozenset({"vm", "x-acme:bare-metal"}),
+        supported_node_types=frozenset({"compute", "x-acme:bare-metal"}),
         supported_os_families=frozenset({"linux"}),
     )
     orchestrator = OrchestratorCapabilities(
@@ -1193,7 +1197,7 @@ def test_runtime_capabilities_reject_unguarded_vocabulary_values():
     with pytest.raises(ValueError, match="provisioner-node-types"):
         ProvisionerCapabilities(
             name="stub-provisioner",
-            supported_node_types=frozenset({"vm", "bare-metal"}),
+            supported_node_types=frozenset({"compute", "bare-metal"}),
             supported_os_families=frozenset({"linux"}),
         )
 
@@ -1211,6 +1215,6 @@ def test_backend_manifest_v2_rejects_duplicate_binding_scopes():
 def test_backend_manifest_v2_concept_bindings_roundtrip():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
     model = BackendManifestV2Model.model_validate(payload)
-    assert len(model.concept_bindings) == 14
+    assert len(model.concept_bindings) == 15
     assert model.concept_bindings[0].scope == "capabilities.provisioner.supported_node_types"
     assert model.concept_bindings[0].family == "assets"

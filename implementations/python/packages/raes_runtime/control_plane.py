@@ -15,6 +15,7 @@ from uuid import uuid4
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.manifest_authority import PARTICIPANT_RUNTIME_POLICY_FEATURES
+from raes_contracts.plan_projection import provisioning_plan_digest
 from raes_contracts.planning import (
     EvaluationPlan,
     OrchestrationPlan,
@@ -74,6 +75,30 @@ def _require_crossing_policy_configuration(
         raise ValueError(f"participant policy capabilities require a crossing policy resolver: {features}")
 
 
+def _require_final_sink_flow_control_configuration(
+    resolver: ParticipantCrossingPolicyResolver | None,
+    enforce_final_sink_flow_control: bool,
+) -> None:
+    """Reject a policy resolver that cannot resolve the SEM-233 final-sink permit.
+
+    Final-sink enforcement is fail-closed by default: a control plane that
+    governs participant crossings must resolve a fresh exact-cut SEM-233 permit
+    immediately before every effect. A resolver without ``resolve_flow_sink_decision``
+    cannot, so the control plane refuses to construct rather than silently
+    admitting effects with no final-sink decision. A deployment that intentionally
+    runs the legacy API-423-only path passes ``enforce_final_sink_flow_control=False``.
+    """
+
+    if not enforce_final_sink_flow_control or resolver is None:
+        return
+    if not callable(getattr(resolver, "resolve_flow_sink_decision", None)):
+        raise ValueError(
+            "participant final-sink flow-control enforcement requires the crossing policy "
+            "resolver to implement resolve_flow_sink_decision; pass "
+            "enforce_final_sink_flow_control=False to run the legacy API-423-only path"
+        )
+
+
 class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, ParticipantRetrievalMixin):
     """Reference control plane for async runtime submission and observation."""
 
@@ -86,16 +111,22 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         behavior_specifications: Mapping[str, ParticipantBehaviorSpecificationRuntime] | None = None,
         crossing_policy_resolver: ParticipantCrossingPolicyResolver | None = None,
         information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+        enforce_final_sink_flow_control: bool = True,
     ) -> None:
         _require_crossing_policy_configuration(target, crossing_policy_resolver)
+        _require_final_sink_flow_control_configuration(crossing_policy_resolver, enforce_final_sink_flow_control)
         self._target = target
+        self._enforce_final_sink_flow_control = enforce_final_sink_flow_control
         self._store = store or InMemoryControlPlaneStore(initial_snapshot)
         self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
         self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
+        self._operation_lock = RLock()
         self._behavior_specifications = dict(behavior_specifications or {})
         self._crossing_policy_resolver = crossing_policy_resolver
         self._information_state_context_resolver = information_state_context_resolver
         self._participant_control_lock = RLock()
+        self._trusted_provisioning_plan_lock = RLock()
+        self._trusted_provisioning_plan_digests: set[str] = set()
         require_participant_information_state_snapshot(
             self._snapshot,
             information_state_context_resolver,
@@ -120,13 +151,34 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         """Return a compact operational view over existing control-plane carriers."""
 
         audit_events = self._store.read_audit()
-        operation_records = list(self._operations.values())
+        with self._operation_lock:
+            operation_records = list(self._operations.values())
         return operational_apparatus_summary(
             target_name=self._target.name,
             snapshot=self._snapshot,
             operation_records=operation_records,
             audit_events=audit_events,
         )
+
+    def register_planner_produced_provisioning_plan(self, plan: ProvisioningPlan) -> str:
+        """Trust one exact planner artifact for later HTTP relay submission.
+
+        This method is an in-process authority boundary and is deliberately not
+        exposed by the HTTP control plane. Relay principals can submit a
+        registered artifact, but cannot mint or widen its realization policy.
+        """
+
+        digest = provisioning_plan_digest(plan)
+        with self._trusted_provisioning_plan_lock:
+            self._trusted_provisioning_plan_digests.add(digest)
+        return digest
+
+    def is_planner_authorized_provisioning_plan(self, plan: ProvisioningPlan) -> bool:
+        """Return whether the exact published plan was registered in-process."""
+
+        digest = provisioning_plan_digest(plan)
+        with self._trusted_provisioning_plan_lock:
+            return digest in self._trusted_provisioning_plan_digests
 
     def submit_provisioning(
         self,
@@ -239,7 +291,8 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         )
 
     def get_operation(self, operation_id: str) -> OperationStatus | None:
-        record = self._operations.get(operation_id)
+        with self._operation_lock:
+            record = self._operations.get(operation_id)
         return None if record is None else record.status
 
     def get_snapshot(self) -> RuntimeSnapshotEnvelope:
@@ -338,9 +391,11 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             return None
         if record.request_fingerprint and request_fingerprint and record.request_fingerprint != request_fingerprint:
             raise ValueError("Idempotency-Key was reused with a different request body.")
-        self._operations[record.receipt.operation_id] = record
+        with self._operation_lock:
+            self._operations[record.receipt.operation_id] = record
         return record.receipt
 
     def _persist_record(self, record: ControlPlaneOperationRecord) -> None:
-        self._operations[record.receipt.operation_id] = record
+        with self._operation_lock:
+            self._operations[record.receipt.operation_id] = record
         self._store.save_record(record)

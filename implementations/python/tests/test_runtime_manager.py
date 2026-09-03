@@ -8,7 +8,14 @@ from datetime import UTC, datetime
 
 import pytest
 from raes import parse_sdl
-from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
+from raes_backend_stubs.manifest import load_stub_realization_envelope
+from raes_backend_stubs.stubs import (
+    StubProvisioner,
+    create_stub_target,
+)
+from raes_backend_stubs.stubs import (
+    create_stub_manifest as _create_stub_manifest,
+)
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import (
     EVALUATION_STATE_SCHEMA_VERSION,
@@ -21,6 +28,13 @@ from raes_processor.models import (
 from raes_processor.planner import plan
 from raes_runtime.manager import RuntimeManager
 from raes_runtime.registry import RuntimeTarget
+
+
+def create_stub_manifest(**kwargs):
+    """Return the evidence-bearing stub manifest used by runtime lifecycle tests."""
+
+    kwargs.setdefault("with_realization_envelope", True)
+    return _create_stub_manifest(**kwargs)
 
 
 def _scenario(yaml_str: str):
@@ -56,8 +70,7 @@ def _full_scenario():
 name: full
 nodes:
   vm:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -85,8 +98,7 @@ def _provisioning_only_scenario():
 name: provisioning-only
 nodes:
   vm:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
 """)
 
@@ -96,8 +108,7 @@ def _workflow_scenario():
 name: workflow
 nodes:
   vm:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -134,8 +145,7 @@ def _workflow_call_scenario():
 name: workflow-call
 nodes:
   vm:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -189,17 +199,7 @@ class RecordingProvisioner:
             else "provision-apply"
         )
         self.calls.append(label)
-        next_snapshot = _apply_ops(
-            snapshot,
-            RuntimeDomain.PROVISIONING,
-            plan.operations,
-            status="applied",
-        )
-        return ApplyResult(
-            success=True,
-            snapshot=next_snapshot,
-            changed_addresses=[op.address for op in plan.operations if op.action != ChangeAction.UNCHANGED],
-        )
+        return StubProvisioner(load_stub_realization_envelope()).apply(plan, snapshot)
 
 
 class FailingProvisioner(RecordingProvisioner):
@@ -211,6 +211,8 @@ class FailingProvisioner(RecordingProvisioner):
             plan.operations[:1],
             status="partial",
         )
+        observed = StubProvisioner(load_stub_realization_envelope()).apply(plan, snapshot).snapshot
+        next_snapshot = observed.with_entries(next_snapshot.entries)
         return ApplyResult(success=False, snapshot=next_snapshot)
 
 
@@ -1400,6 +1402,7 @@ class TestRuntimeManager:
             orchestrator=altered_manifest.orchestrator,
             evaluator=altered_manifest.evaluator,
             cleanup=altered_manifest.cleanup,
+            realization_envelope=altered_manifest.realization_envelope,
         )
         manager_target = RuntimeTarget(
             name="recording",
@@ -1456,9 +1459,8 @@ class TestRuntimeManager:
 name: provisioning-only
 nodes:
   vm:
-    type: vm
-    os: windows
-    resources: {ram: 1 gib, cpu: 1}
+    type: compute
+    resources: {ram: 2 gib, cpu: 1}
 """)
 
         manager = RuntimeManager(target, initial_snapshot=initial_snapshot)
@@ -1466,7 +1468,7 @@ nodes:
 
         assert result.success
         assert calls == ["provision-apply"]
-        assert manager.snapshot.entries["provision.node.vm"].payload["os_family"] == "windows"
+        assert manager.snapshot.entries["provision.node.vm"].payload["spec"]["node"]["resources"]["ram"] == 2**31
 
     def test_identical_second_apply_skips_runtime_service_restarts(self):
         calls: list[str] = []

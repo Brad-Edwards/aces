@@ -1,0 +1,30 @@
+---
+id: SEM-206
+title: "Assessment Semantics"
+status: ACTIVE
+type: FUNCTIONAL
+priority: MUST
+wave: 1
+created_at: 2026-04-03T05:55:58.596332Z
+updated_at: 2026-05-10T16:57:33.275882Z
+---
+
+# SEM-206 — Assessment Semantics
+
+## Statement
+
+The ecosystem shall define explicit semantics for the assessment pipeline and its scoring, aggregation, and reference constraints.
+
+## Rationale
+
+Requirement inventory phase. Status audit deferred until the full canonical graph is complete.
+
+## Traceability
+
+- IMPLEMENTS → SPEC `specs/formal/assessment/README.md` (Assessment-pipeline formal artifacts — scope and implementation mapping)
+- IMPLEMENTS → SPEC `specs/formal/assessment/pipeline-consistency.md` (Assessment-pipeline consistency rules, aggregation, and dependency/refresh semantics)
+- IMPLEMENTS → DOCUMENTATION `docs/explain/reference/assessment-semantics.md` (Assessment-pipeline architecture guardrails (SEM-206 preflight note))
+- TESTS → TEST `implementations/python/tests/test_semantics_assessment.py` (Assessment-pipeline semantic helper tests)
+- TESTS → TEST `implementations/python/tests/test_fm2_semantics.py` (Cross-stage assessment-pipeline agreement tests (TestAssessmentPipelineAgreement))
+- DOCUMENTS → ADR `ADR-073` (ADR-073 (proposed): Scoring and Reward Language Scope in the SDL — re-examines whether the OCR/CybORG scoring/reward surfaces belong in the SDL assessment pipeline)
+- IMPLEMENTS → GITHUB_ISSUE `682` (SEM-206 — realize ADR-073 (remove SDL scoring/reward; narrow objective success to conditions))

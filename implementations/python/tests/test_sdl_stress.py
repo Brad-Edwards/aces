@@ -32,7 +32,7 @@ nodes:
   main-switch:
     type: Switch
   win-10:
-    type: VM
+    type: compute
     source: windows10
     resources:
       ram: 4 gib
@@ -50,7 +50,7 @@ nodes:
     vulnerabilities:
       - sqli-vuln
   deb-server:
-    type: VM
+    type: compute
     source:
       name: debian11
       version: "2.0.0"
@@ -191,13 +191,13 @@ nodes:
   private-net:
     type: Switch
   attacker:
-    type: VM
+    type: compute
     source: kali-box
     resources:
       ram: 2 gib
       cpu: 2
   gateway:
-    type: VM
+    type: compute
     source: ubuntu-gateway
     resources:
       ram: 1 gib
@@ -206,7 +206,7 @@ nodes:
       - ssh-brute
       - ms17-010
   internal:
-    type: VM
+    type: compute
     source: ubuntu-internal
     resources:
       ram: 1 gib
@@ -214,7 +214,7 @@ nodes:
     vulnerabilities:
       - ms17-010
   defender:
-    type: VM
+    type: compute
     source: velociraptor-server
     resources:
       ram: 2 gib
@@ -304,58 +304,58 @@ nodes:
   operational-net:
     type: Switch
   user0:
-    type: VM
+    type: compute
     source: windows-user
     resources: {ram: 1 gib, cpu: 1}
   user1:
-    type: VM
+    type: compute
     source: windows-user
     resources: {ram: 1 gib, cpu: 1}
   user2:
-    type: VM
+    type: compute
     source: windows-user
     resources: {ram: 1 gib, cpu: 1}
   user3:
-    type: VM
+    type: compute
     source: windows-user
     resources: {ram: 1 gib, cpu: 1}
   user4:
-    type: VM
+    type: compute
     source: windows-user
     resources: {ram: 1 gib, cpu: 1}
   enterprise0:
-    type: VM
+    type: compute
     source: gateway
     resources: {ram: 1 gib, cpu: 1}
     vulnerabilities: [eternal-blue, bluekeep]
   enterprise1:
-    type: VM
+    type: compute
     source: internal-server
     resources: {ram: 1 gib, cpu: 1}
     vulnerabilities: [eternal-blue, http-rfi]
   enterprise2:
-    type: VM
+    type: compute
     source: internal-server
     resources: {ram: 1 gib, cpu: 1}
     vulnerabilities: [haraka-rce, ftp-traversal]
   defender:
-    type: VM
+    type: compute
     source: velociraptor-server
     resources: {ram: 2 gib, cpu: 2}
   op-server0:
-    type: VM
+    type: compute
     source: ot-server
     resources: {ram: 1 gib, cpu: 1}
   op-host0:
-    type: VM
+    type: compute
     source: ot-host
     resources: {ram: 1 gib, cpu: 1}
   op-host1:
-    type: VM
+    type: compute
     source: ot-host
     resources: {ram: 1 gib, cpu: 1}
   op-host2:
-    type: VM
+    type: compute
     source: ot-host
     resources: {ram: 1 gib, cpu: 1}
 
@@ -435,8 +435,8 @@ description: >
 
 nodes:
   lab-net: {type: Switch}
-  victim: {type: VM, os: linux, resources: {ram: 2 gib, cpu: 1}}
-  kali: {type: VM, os: linux, resources: {ram: 2 gib, cpu: 2}}
+  victim: {type: compute, os: linux, resources: {ram: 2 gib, cpu: 1}}
+  kali: {type: compute, os: linux, resources: {ram: 2 gib, cpu: 2}}
 
 infrastructure:
   lab-net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
@@ -466,8 +466,9 @@ description: >
 nodes:
   lab-net: {type: Switch}
   target:
-    type: VM
+    type: compute
     os: windows
+    os_distribution: windows-client
     os_version: "10"
     resources: {ram: 4 gib, cpu: 2}
     vulnerabilities: [lsass-access]
@@ -506,7 +507,7 @@ nodes:
   lan-switch:
     type: Switch
   firewall:
-    type: VM
+    type: compute
     source: pfsense
     resources: {ram: 512 mib, cpu: 1}
     features:
@@ -514,7 +515,7 @@ nodes:
     roles:
       admin: root
   webserver:
-    type: VM
+    type: compute
     source: ubuntu-apache
     resources: {ram: 1 gib, cpu: 1}
     features:
@@ -526,7 +527,7 @@ nodes:
     roles:
       www: www-data
   database:
-    type: VM
+    type: compute
     source: ubuntu-mysql
     resources: {ram: 1 gib, cpu: 1}
     features:
@@ -536,7 +537,7 @@ nodes:
     roles:
       dba: mysql
   attacker:
-    type: VM
+    type: compute
     source: kali-linux
     resources: {ram: 2 gib, cpu: 2}
 
@@ -617,12 +618,12 @@ nodes:
   training-net:
     type: Switch
   challenge-server:
-    type: VM
+    type: compute
     source: ubuntu-ctf
     resources: {ram: 2 gib, cpu: 2}
     vulnerabilities: [weak-ssh, exposed-backup, suid-binary]
   scoreboard:
-    type: VM
+    type: compute
     source: ctfd-server
     resources: {ram: 1 gib, cpu: 1}
 
@@ -694,7 +695,7 @@ nodes:
   challenge-net:
     type: Switch
   target:
-    type: VM
+    type: compute
     source: htb-machine-easy
     resources: {ram: 1 gib, cpu: 1}
     features:
@@ -766,42 +767,42 @@ nodes:
   mgmt-net:
     type: Switch
   dc01:
-    type: VM
+    type: compute
     source: windows-server-2022
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-forest-root: admin}
     vulnerabilities: [as-rep-roast, gpp-passwords]
     roles: {admin: Administrator}
   dc02:
-    type: VM
+    type: compute
     source: windows-server-2022
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-child-domain: admin}
     vulnerabilities: [unconstrained-deleg]
     roles: {admin: Administrator}
   exchange:
-    type: VM
+    type: compute
     source: windows-server-2019
     resources: {ram: 8 gib, cpu: 4}
     features: {exchange-server: admin}
     vulnerabilities: [proxylogon]
     roles: {admin: Administrator}
   fileserver:
-    type: VM
+    type: compute
     source: windows-server-2022
     resources: {ram: 2 gib, cpu: 1}
     vulnerabilities: [open-smb-shares]
   ws01:
-    type: VM
+    type: compute
     source: windows-10-enterprise
     resources: {ram: 4 gib, cpu: 2}
     vulnerabilities: [local-admin-reuse]
   ws02:
-    type: VM
+    type: compute
     source: windows-10-enterprise
     resources: {ram: 4 gib, cpu: 2}
   linux-jump:
-    type: VM
+    type: compute
     source: ubuntu-22.04
     resources: {ram: 1 gib, cpu: 1}
     features: {ssh-bastion: admin}
@@ -906,25 +907,25 @@ nodes:
     type: Switch
     description: Site-to-site VPN tunnel
   web-alb:
-    type: VM
+    type: compute
     source: nginx-proxy
     resources: {ram: 512 mib, cpu: 1}
     description: Application load balancer
   app-server-1:
-    type: VM
+    type: compute
     source: nodejs-app
     resources: {ram: 2 gib, cpu: 2}
     features: {node-app: app-svc}
     vulnerabilities: [ssrf-vuln]
     roles: {app-svc: node}
   app-server-2:
-    type: VM
+    type: compute
     source: nodejs-app
     resources: {ram: 2 gib, cpu: 2}
     features: {node-app: app-svc}
     roles: {app-svc: node}
   rds-primary:
-    type: VM
+    type: compute
     source: postgres-14
     resources: {ram: 4 gib, cpu: 2}
     features: {postgres-db: dba}
@@ -933,13 +934,13 @@ nodes:
     roles:
       dba: postgres
   onprem-dc:
-    type: VM
+    type: compute
     source: windows-server-2019
     resources: {ram: 4 gib, cpu: 2}
     description: On-premises domain controller
     vulnerabilities: [zerologon]
   onprem-workstation:
-    type: VM
+    type: compute
     source: windows-10
     resources: {ram: 4 gib, cpu: 2}
 
@@ -1013,9 +1014,10 @@ nodes:
   dmz-net:
     type: Switch
   exchange:
-    type: VM
+    type: compute
     os: windows
-    os_version: "Server 2019"
+    os_distribution: windows-server
+    os_version: "2019"
     source: exchange-2019
     resources: {ram: 8 gib, cpu: 4}
     features: [exchange-server, outlook-web]
@@ -1035,14 +1037,15 @@ nodes:
       integrity: high
       availability: critical
   dc:
-    type: VM
+    type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     source: windows-server-2022
     resources: {ram: 4 gib, cpu: 2}
     features: [ad-ds]
   attacker:
-    type: VM
+    type: compute
     os: linux
     source: kali
     resources: {ram: 2 gib, cpu: 2}
@@ -1203,12 +1206,12 @@ nodes:
   user-net: {type: Switch}
   enterprise-net: {type: Switch}
   op-net: {type: Switch}
-  user0: {type: VM, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  user1: {type: VM, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  enterprise0: {type: VM, os: linux, resources: {ram: 1 gib, cpu: 1}, vulnerabilities: [eternalblue]}
-  enterprise1: {type: VM, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  defender: {type: VM, os: linux, resources: {ram: 2 gib, cpu: 2}, features: {velociraptor: velo-admin}, roles: {velo-admin: ubuntu}}
-  op-server0: {type: VM, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  user0: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  user1: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  enterprise0: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}, vulnerabilities: [eternalblue]}
+  enterprise1: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  defender: {type: compute, os: linux, resources: {ram: 2 gib, cpu: 2}, features: {velociraptor: velo-admin}, roles: {velo-admin: ubuntu}}
+  op-server0: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 
 infrastructure:
   user-net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
@@ -1397,27 +1400,29 @@ nodes:
   corp-net: {type: Switch}
   dmz-net: {type: Switch}
   dc01:
-    type: VM
+    type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-forest-root: admin}
     roles: {admin: Administrator}
   dc02:
-    type: VM
+    type: compute
     os: windows
-    os_version: "Server 2022"
+    os_distribution: windows-server
+    os_version: "2022"
     resources: {ram: 4 gib, cpu: 2}
     features: {ad-child-domain: admin}
     roles: {admin: Administrator}
   adfs:
-    type: VM
+    type: compute
     os: windows
     resources: {ram: 2 gib, cpu: 1}
     features: {adfs-service: admin}
     roles: {admin: Administrator}
   ws01:
-    type: VM
+    type: compute
     os: windows
     resources: {ram: 4 gib, cpu: 2}
 

@@ -27,7 +27,7 @@ def _scenario_yaml() -> str:
         name: dsl-142
         nodes:
           web:
-            type: vm
+            type: compute
             resources: {{ram: 1 gib, cpu: 1}}
         entities:
           red-team:

@@ -10,7 +10,7 @@ from typing import BinaryIO, cast
 import rfc8785
 from blake3 import blake3
 from raes import canonical_sdl_digest
-from raes.scenario import Scenario
+from raes.scenario import ExpandedScenario, InstantiatedScenario, Scenario
 
 from .contracts import (
     AssociatedArtifactManifestModel,
@@ -97,11 +97,21 @@ def _diagnostic(code: str, address: str, message: str) -> Diagnostic:
 
 def _scenario_parent_matches(manifest: AssociatedArtifactManifestModel, parent: object) -> bool:
     reference = manifest.parent_ref
-    matches = isinstance(parent, Scenario) and parent.name == reference.ref_id
-    if matches and reference.ref_kind == "scenario-snapshot":
+    if reference.ref_kind == "scenario":
+        # Generic scenario association remains the incumbent id-only contract.
+        return isinstance(parent, Scenario) and parent.name == reference.ref_id
+
+    snapshot_types = (Scenario, ExpandedScenario)
+    matches = (
+        isinstance(parent, snapshot_types)
+        and not isinstance(parent, InstantiatedScenario)
+        and parent.semantic_validated
+        and parent.name == reference.ref_id
+    )
+    if matches:
         matches = reference.ref_version is None or parent.version == reference.ref_version
-        if matches and reference.ref_digest is not None:
-            matches = canonical_sdl_digest(parent).value.casefold() == reference.ref_digest.casefold()
+    if matches and reference.ref_digest is not None:
+        matches = canonical_sdl_digest(parent).value.casefold() == reference.ref_digest.casefold()
     return matches
 
 
@@ -294,6 +304,11 @@ def validate_associated_artifact_manifest(
     limits: AssociatedArtifactValidationLimits | None = None,
 ) -> tuple[Diagnostic, ...]:
     """Validate parent/set identity and every payload through bounded readers.
+
+    Scenario snapshots accept only semantically validated ``Scenario`` or
+    ``ExpandedScenario`` authoring parents. Generic scenario association keeps
+    its id-only ``Scenario`` behavior; instantiated scenarios are never
+    canonical authoring snapshot parents.
 
     The caller acquires and immutably stages payloads. This function performs no
     URI fetching, directory traversal, archive extraction, or ambient lookup.

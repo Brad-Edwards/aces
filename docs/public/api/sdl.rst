@@ -55,6 +55,7 @@ Composition
 
 .. automodule:: raes.composition
    :members:
+   :imported-members:
 
 Artifact Transformations
 ------------------------
@@ -136,6 +137,7 @@ Orchestration
 
 .. automodule:: raes.orchestration
    :members:
+   :imported-members:
 
 Objectives
 ~~~~~~~~~~

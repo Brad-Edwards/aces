@@ -3,8 +3,8 @@
   "scope": "node",
   "domains": {
     "os": {"kind": "enum", "values": ["linux", "windows"]},
-    "vm": {"kind": "exact", "value": "vm"},
-    "node": {"kind": "record", "fields": {"type": "vm", "os": "os"}, "extra": false}
+    "compute": {"kind": "exact", "value": "compute"},
+    "node": {"kind": "record", "fields": {"type": "compute", "os": "os"}, "extra": false}
   },
   "bindings": [
     {"path": "nodes.web", "scope": "node", "posture": "constrained", "domain": "node"}

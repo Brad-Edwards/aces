@@ -403,6 +403,7 @@ def test_supervisory_control_derives_handoff_semantics_and_commits_one_transitio
         ),
         behavior_specifications={specification.address: specification},
         crossing_policy_resolver=resolver,
+        enforce_final_sink_flow_control=False,
     )
     intent = ParticipantHandoffControlIntent(
         declaration_ref=specification.control_transitions[0].address,
@@ -445,6 +446,7 @@ def test_crossing_history_restarts_and_operation_replays_idempotently(tmp_path: 
         policy_capable_target(),
         store=LocalControlPlaneStore(store_path),
         crossing_policy_resolver=restarted_resolver,
+        enforce_final_sink_flow_control=False,
     )
     retry = admit(restarted, idempotency_key="restart-crossing")
 
@@ -506,6 +508,7 @@ def test_concurrent_operation_cannot_commit_against_a_stale_history_cut() -> Non
     base = RuntimeControlPlane(
         policy_capable_target(),
         crossing_policy_resolver=StaticCrossingResolver(),
+        enforce_final_sink_flow_control=False,
     )
     base.initialize_participant_episode(PARTICIPANT, episode_id="episode-1")
     store = base._store
@@ -515,6 +518,7 @@ def test_concurrent_operation_cannot_commit_against_a_stale_history_cut() -> Non
             policy_capable_target(),
             store=store,
             crossing_policy_resolver=_BarrierResolver(barrier),
+            enforce_final_sink_flow_control=False,
         )
         for _ in range(2)
     ]

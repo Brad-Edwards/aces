@@ -4,4 +4,4 @@ nodes:
     type: switch
   conflict:
     <<: *base
-    type: vm
+    type: compute

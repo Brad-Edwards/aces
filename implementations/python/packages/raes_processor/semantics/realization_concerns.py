@@ -5,13 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
-from raes_contracts.vocabulary import RealizationVerificationScope
+from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 
 from .realization_concern_observations import (
     validate_capability_policy_observation,
     validate_environment_observation,
     validate_forwarding_agents_observation,
     validate_mounts_observation,
+    validate_process_resource_limits_observation,
     validate_published_ports_observation,
     validate_service_listeners_observation,
 )
@@ -20,6 +21,7 @@ from .realization_concern_projections import (
     project_environment,
     project_forwarding_agents,
     project_mounts,
+    project_process_resource_limits,
     project_published_ports,
     project_service_listeners,
     sanitize_mount_observation,
@@ -37,7 +39,8 @@ class RealizationConcernDescriptor:
     projector: Callable[[object, bool], object] | None = None
     sanitizer: Callable[[object, bool], object] | None = None
     observed_validator: Callable[[object], None] | None = None
-    verification_scope: Callable[[object], RealizationVerificationScope] | None = None
+    verification_scope: Callable[[object], RealizationVerificationScope | None] | None = None
+    observation_strength: ObservationStrength | None = None
     non_stateful_mounts_only: bool = False
 
     @property
@@ -70,6 +73,11 @@ class RealizationConcernDescriptor:
         """Return the authored inventory scope that must be corroborated."""
 
         return self.verification_scope(value) if self.verification_scope is not None else None
+
+    def required_observation_strength(self) -> ObservationStrength | None:
+        """Return the minimum independent evidence strength for this concern."""
+
+        return self.observation_strength
 
 
 @dataclass(frozen=True)
@@ -110,13 +118,37 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         section="nodes",
         authored_path=("type",),
         concern_kind="node-type",
-        payload_path=("node_type",),
+        payload_path=("node_kind",),
     ),
     RealizationConcernDescriptor(
         section="nodes",
         authored_path=("os",),
         concern_kind="os-family",
         payload_path=("os_family",),
+        verification_scope=lambda value: RealizationVerificationScope.PRESENCE if value else None,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    ),
+    RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("os_distribution",),
+        concern_kind="os-distribution",
+        payload_path=("os_distribution",),
+        verification_scope=lambda value: RealizationVerificationScope.PRESENCE if value else None,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    ),
+    RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("os_version",),
+        concern_kind="os-version",
+        payload_path=("os_version",),
+        verification_scope=lambda value: RealizationVerificationScope.PRESENCE if value else None,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    ),
+    RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("architecture",),
+        concern_kind="node-architecture",
+        payload_path=("architecture",),
     ),
     RealizationConcernDescriptor(
         section="content",
@@ -149,6 +181,23 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("spec", "node", "runtime", "linux_capabilities"),
         projector=project_capability_policy,
         observed_validator=validate_capability_policy_observation,
+    ),
+    RealizationConcernDescriptor(
+        section="nodes",
+        authored_path=("runtime", "operational_policy", "resource_limits", "process_limits"),
+        concern_kind="process-resource-limits",
+        payload_path=(
+            "spec",
+            "node",
+            "runtime",
+            "operational_policy",
+            "resource_limits",
+            "process_limits",
+        ),
+        projector=project_process_resource_limits,
+        observed_validator=validate_process_resource_limits_observation,
+        verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
     ),
     RealizationConcernDescriptor(
         section="nodes",
@@ -247,6 +296,38 @@ def realization_concern_descriptor(
     return _DESCRIPTOR_BY_KIND.get(concern_kind)
 
 
+def realization_concern_descriptors() -> tuple[RealizationConcernDescriptor, ...]:
+    """Return the canonical unbound concern inventory in declaration order."""
+
+    return _REALIZATION_CONCERNS
+
+
+def processor_derived_provisioning_concern_kinds(
+    resource_type: object,
+    payload: object,
+) -> tuple[str, ...]:
+    """Return exact provisioning concerns derived from a typed resource."""
+
+    if not isinstance(resource_type, str) or not isinstance(payload, Mapping):
+        return ()
+    concerns: list[str] = []
+    if payload.get("domain_topology") is not None:
+        concerns.append("domain-topology")
+    if resource_type == "generated-artifact":
+        concerns.append("generated-artifact")
+    elif resource_type == "persistent-volume":
+        concerns.append("persistent-volume")
+    elif resource_type == "content-placement":
+        binding = payload.get("service_materialization")
+        if isinstance(binding, Mapping):
+            concerns.append(
+                "service-search-index-schema-materialization"
+                if binding.get("interface_profile") == "service-search-index-schema"
+                else "service-content-materialization"
+            )
+    return tuple(concerns)
+
+
 def project_realization_concern(
     concern_kind: str,
     value: object,
@@ -264,7 +345,9 @@ __all__ = [
     "RealizationConcernDescriptor",
     "RegisteredRealizationConcern",
     "project_realization_concern",
+    "processor_derived_provisioning_concern_kinds",
     "realization_concern_descriptor",
+    "realization_concern_descriptors",
     "registered_realization_concern_descriptors",
     "registered_realization_concerns",
     "resolve_realization_concern",

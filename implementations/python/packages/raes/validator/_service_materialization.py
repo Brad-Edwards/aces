@@ -12,7 +12,7 @@ class _ServiceMaterializationMixin:
         service_target = binding.target_service_ref
         target_owner = self._split_node_service_ref(service_target)
         if not self._is_unresolved_var(service_target) and target_owner is None:
-            self._err(f"{label} target_service_ref '{service_target}' must resolve to a named VM service")
+            self._err(f"{label} target_service_ref '{service_target}' must resolve to a named compute service")
         elif target_owner is not None and target_owner[0] != item.target:
             self._err(f"{label} target_service_ref must belong to content target node '{item.target}'")
         self._verify_membership_refs(

@@ -28,13 +28,13 @@ def _scenario(*, access: str = "") -> str:
         name: participant-interactive-access
         nodes:
           workstation:
-            type: vm
+            type: compute
             os: windows
             resources: {ram: 2 GiB, cpu: 2}
             services:
               - {name: ssh, port: 22}
           other-host:
-            type: vm
+            type: compute
             os: linux
             resources: {ram: 1 GiB, cpu: 1}
           transit:
@@ -146,14 +146,14 @@ def test_interactive_access_rejects_locator_and_secret_fields(field: str) -> Non
             interactive_access:
               console: {target_ref: ghost, channel: ssh, account_ref: operator}
             """,
-            "target_ref 'ghost' does not reference a declared VM node",
+            "target_ref 'ghost' does not reference a declared compute node",
         ),
         (
             """
             interactive_access:
               console: {target_ref: transit, channel: ssh, account_ref: operator}
             """,
-            "target_ref 'transit' must reference a VM node",
+            "target_ref 'transit' must reference a compute node",
         ),
         (
             """
@@ -284,7 +284,7 @@ def test_module_composition_rewrites_bare_and_qualified_access_refs(tmp_path: Pa
                 entities: [team]
                 agents: [operator]
             nodes:
-              vm: {type: vm, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+              vm: {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}}
             accounts:
               login: {username: operator, node: vm}
             entities:

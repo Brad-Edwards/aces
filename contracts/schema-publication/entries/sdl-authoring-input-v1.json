@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "b06b178b3611f9ce587968b1dc7d73e50b500cfe3cbb367b641e77cfcea0b6a0",
+  "content_hash": "8136627d5cddf9220703786b90b90ad748cc8e484a2bace65e0eebf2d40050d3",
   "last_change": {
-    "summary": "Added forwarding-agent ownership roles for issue #1043.",
-    "content_hash": "b06b178b3611f9ce587968b1dc7d73e50b500cfe3cbb367b641e77cfcea0b6a0"
+    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
+    "content_hash": "8136627d5cddf9220703786b90b90ad748cc8e484a2bace65e0eebf2d40050d3"
   }
 }

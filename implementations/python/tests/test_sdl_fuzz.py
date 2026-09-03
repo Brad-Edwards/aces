@@ -41,7 +41,7 @@ ram_values = st.sampled_from(["256 mib", "512 mib", "1 gib", "2 gib", "4 gib", "
 os_families = st.sampled_from(["windows", "linux", "macos", "freebsd", "other"])
 
 # Node types
-node_types = st.sampled_from(["vm", "switch"])
+node_types = st.sampled_from(["compute", "switch"])
 
 # Feature types
 feature_types = st.sampled_from(["service", "configuration", "artifact"])
@@ -85,14 +85,14 @@ metric_types = st.sampled_from(["manual", "conditional"])
 
 @st.composite
 def vm_nodes(draw):
-    """Generate a dict of VM nodes."""
+    """Generate a dict of compute nodes."""
     n = draw(st.integers(min_value=1, max_value=5))
     nodes = {}
     for _ in range(n):
         name = draw(slugs)
         assume(name not in nodes)
         nodes[name] = {
-            "type": "vm",
+            "type": "compute",
             "os": draw(os_families),
             "resources": {"ram": draw(ram_values), "cpu": draw(small_ints)},
         }
@@ -305,7 +305,7 @@ def test_extra_fields_rejected_cleanly(data):
         slugs,
         st.fixed_dictionaries(
             {
-                "type": st.just("vm"),
+                "type": st.just("compute"),
                 "resources": st.fixed_dictionaries(
                     {
                         "ram": ram_values,

@@ -58,7 +58,7 @@ def _listener(**overrides) -> dict:
 
 def _node(listener: dict | None = None) -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "1 gib", "cpu": 1},
         "services": [
             {"port": 80, "protocol": "tcp", "name": "http"},
@@ -87,7 +87,7 @@ def test_runtime_service_listeners_are_node_scoped_not_top_level() -> None:
 
 
 def test_vm_runtime_service_listener_surface() -> None:
-    node = Node(type="vm", runtime={"service_listeners": [_listener()]})
+    node = Node(type="compute", runtime={"service_listeners": [_listener()]})
 
     listener = node.runtime.service_listeners[0]
     assert listener.service_listener_id == "nginx-http-ipv4"
@@ -104,7 +104,7 @@ def test_parser_accepts_canonical_runtime_service_listeners() -> None:
         name: listener-parser
         nodes:
           misp:
-            type: vm
+            type: compute
             resources: {ram: 1 gib, cpu: 1}
             services:
               - {port: 80, protocol: tcp, name: http}
@@ -262,7 +262,7 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
         name: misp-listeners
         nodes:
           misp:
-            type: vm
+            type: compute
             resources: {ram: 2 gib, cpu: 2}
             services:
               - {port: 80, protocol: tcp, name: http}

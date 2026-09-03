@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "9d6d499a20736a20d0a931d3c5a473eca4388fdb994ee995e9ca9d7464e2885f",
+  "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d",
   "last_change": {
-    "summary": "Propagated forwarding-agent ownership roles for issue #1043.",
-    "content_hash": "9d6d499a20736a20d0a931d3c5a473eca4388fdb994ee995e9ca9d7464e2885f"
+    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
+    "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d"
   }
 }

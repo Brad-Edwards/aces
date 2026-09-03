@@ -1,0 +1,1170 @@
+{
+  "$defs": {
+    "DiagnosticModel": {
+      "additionalProperties": false,
+      "description": "Closed portable diagnostic shape for published contracts.",
+      "properties": {
+        "address": {
+          "maxLength": 4096,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Address",
+          "type": "string"
+        },
+        "code": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "domain": {
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Domain",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "error"
+        }
+      },
+      "required": [
+        "code",
+        "domain",
+        "address",
+        "message"
+      ],
+      "title": "DiagnosticModel",
+      "type": "object"
+    },
+    "ExternalConceptLifecyclePhase": {
+      "enum": [
+        "normalized-authoring",
+        "expanded-authoring",
+        "instantiated",
+        "canonical-snapshot",
+        "compiled",
+        "realized",
+        "observed",
+        "reported"
+      ],
+      "title": "ExternalConceptLifecyclePhase",
+      "type": "string"
+    },
+    "ExternalConceptSubjectModel": {
+      "additionalProperties": false,
+      "description": "Exact, digest-pinned coordinate for one RAES subject.",
+      "properties": {
+        "artifact_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Artifact Digest",
+          "type": "string"
+        },
+        "canonical_ref": {
+          "minLength": 1,
+          "title": "Canonical Ref",
+          "type": "string"
+        },
+        "lifecycle_phase": {
+          "$ref": "#/$defs/ExternalConceptLifecyclePhase"
+        },
+        "owning_contract_id": {
+          "minLength": 1,
+          "title": "Owning Contract Id",
+          "type": "string"
+        },
+        "subject_kind": {
+          "minLength": 1,
+          "title": "Subject Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_kind",
+        "owning_contract_id",
+        "lifecycle_phase",
+        "canonical_ref",
+        "artifact_digest"
+      ],
+      "title": "ExternalConceptSubjectModel",
+      "type": "object"
+    },
+    "SemanticProjectionApplicableCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinate_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Coordinate Digest",
+          "type": "string"
+        },
+        "coordinate_id": {
+          "minLength": 1,
+          "title": "Coordinate Id",
+          "type": "string"
+        },
+        "coordinate_version": {
+          "minLength": 1,
+          "title": "Coordinate Version",
+          "type": "string"
+        },
+        "cut_ref": {
+          "minLength": 1,
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "posture": {
+          "const": "applicable",
+          "title": "Posture",
+          "type": "string"
+        }
+      },
+      "required": [
+        "posture",
+        "coordinate_id",
+        "coordinate_version",
+        "coordinate_digest",
+        "cut_ref"
+      ],
+      "title": "SemanticProjectionApplicableCoordinateModel",
+      "type": "object"
+    },
+    "SemanticProjectionBindingCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_set_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Binding Set Digest",
+          "type": "string"
+        },
+        "binding_set_id": {
+          "minLength": 1,
+          "title": "Binding Set Id",
+          "type": "string"
+        },
+        "binding_set_version": {
+          "minLength": 1,
+          "title": "Binding Set Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "external-concept-bindings/v1",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "binding_set_id",
+        "binding_set_version",
+        "binding_set_digest"
+      ],
+      "title": "SemanticProjectionBindingCoordinateModel",
+      "type": "object"
+    },
+    "SemanticProjectionBindingObservationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "approximation_posture": {
+          "enum": [
+            "exact",
+            "approximate",
+            "lossy"
+          ],
+          "title": "Approximation Posture",
+          "type": "string"
+        },
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "confidence_posture": {
+          "minLength": 1,
+          "title": "Confidence Posture",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "loss_details": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Loss Details",
+          "type": "array"
+        },
+        "relationship_kind": {
+          "minLength": 1,
+          "title": "Relationship Kind",
+          "type": "string"
+        },
+        "resolution_outcome": {
+          "enum": [
+            "resolved-current",
+            "unavailable",
+            "stale",
+            "ambiguous",
+            "superseded",
+            "unknown-concept",
+            "subject-not-found"
+          ],
+          "title": "Resolution Outcome",
+          "type": "string"
+        },
+        "review_status": {
+          "minLength": 1,
+          "title": "Review Status",
+          "type": "string"
+        },
+        "semantic_effect": {
+          "minLength": 1,
+          "title": "Semantic Effect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_id",
+        "resolution_outcome",
+        "relationship_kind",
+        "semantic_effect",
+        "confidence_posture",
+        "approximation_posture",
+        "limitations",
+        "review_status"
+      ],
+      "title": "SemanticProjectionBindingObservationModel",
+      "type": "object"
+    },
+    "SemanticProjectionClassification": {
+      "enum": [
+        "witness",
+        "gap",
+        "unknown",
+        "ambiguous",
+        "excluded"
+      ],
+      "title": "SemanticProjectionClassification",
+      "type": "string"
+    },
+    "SemanticProjectionEvidenceBoundaryModel": {
+      "additionalProperties": false,
+      "properties": {
+        "boundary_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Boundary Digest",
+          "type": "string"
+        },
+        "boundary_id": {
+          "minLength": 1,
+          "title": "Boundary Id",
+          "type": "string"
+        },
+        "boundary_revision": {
+          "minLength": 1,
+          "title": "Boundary Revision",
+          "type": "string"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "evaluation_cut_ref": {
+          "minLength": 1,
+          "title": "Evaluation Cut Ref",
+          "type": "string"
+        },
+        "freshness_policy_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Freshness Policy Digest",
+          "type": "string"
+        },
+        "freshness_policy_id": {
+          "minLength": 1,
+          "title": "Freshness Policy Id",
+          "type": "string"
+        },
+        "freshness_policy_revision": {
+          "minLength": 1,
+          "title": "Freshness Policy Revision",
+          "type": "string"
+        },
+        "time_domain": {
+          "minLength": 1,
+          "title": "Time Domain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "boundary_id",
+        "boundary_revision",
+        "boundary_digest",
+        "freshness_policy_id",
+        "freshness_policy_revision",
+        "freshness_policy_digest",
+        "evaluation_cut_ref",
+        "time_domain",
+        "clock_authority"
+      ],
+      "title": "SemanticProjectionEvidenceBoundaryModel",
+      "type": "object"
+    },
+    "SemanticProjectionFrameModel": {
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/SemanticProjectionBindingCoordinateModel"
+        },
+        "configuration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SemanticProjectionApplicableCoordinateModel"
+            },
+            {
+              "$ref": "#/$defs/SemanticProjectionNotApplicableCoordinateModel"
+            }
+          ],
+          "title": "Configuration"
+        },
+        "evidence_boundary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SemanticProjectionEvidenceBoundaryModel"
+            },
+            {
+              "$ref": "#/$defs/SemanticProjectionNotApplicableCoordinateModel"
+            }
+          ],
+          "title": "Evidence Boundary"
+        },
+        "perspective": {
+          "$ref": "#/$defs/SemanticProjectionPerspectiveModel"
+        },
+        "predicate_profile": {
+          "$ref": "#/$defs/SemanticProjectionPredicateProfileModel"
+        },
+        "quantifier": {
+          "$ref": "#/$defs/SemanticProjectionQuantifierModel"
+        },
+        "scheme": {
+          "$ref": "#/$defs/SemanticProjectionSchemeScopeModel"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SemanticProjectionApplicableCoordinateModel"
+            },
+            {
+              "$ref": "#/$defs/SemanticProjectionNotApplicableCoordinateModel"
+            }
+          ],
+          "title": "State"
+        },
+        "subject_scope": {
+          "$ref": "#/$defs/SemanticProjectionSubjectScopeModel"
+        },
+        "transformations": {
+          "items": {
+            "$ref": "#/$defs/SemanticProjectionTransformationCoordinateModel"
+          },
+          "maxItems": 64,
+          "title": "Transformations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scheme",
+        "subject_scope",
+        "predicate_profile",
+        "perspective",
+        "configuration",
+        "state",
+        "quantifier",
+        "evidence_boundary",
+        "binding",
+        "transformations"
+      ],
+      "title": "SemanticProjectionFrameModel",
+      "type": "object"
+    },
+    "SemanticProjectionNotApplicableCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_ref": {
+          "minLength": 1,
+          "title": "Basis Ref",
+          "type": "string"
+        },
+        "posture": {
+          "const": "not-applicable",
+          "title": "Posture",
+          "type": "string"
+        }
+      },
+      "required": [
+        "posture",
+        "basis_ref"
+      ],
+      "title": "SemanticProjectionNotApplicableCoordinateModel",
+      "type": "object"
+    },
+    "SemanticProjectionPerspectiveModel": {
+      "additionalProperties": false,
+      "properties": {
+        "applicable_cut_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicable Cut Ref"
+        },
+        "audience_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience Ref"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Episode Id"
+        },
+        "participant_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Address"
+        },
+        "party_ref": {
+          "minLength": 1,
+          "title": "Party Ref",
+          "type": "string"
+        },
+        "perspective_kind": {
+          "enum": [
+            "author",
+            "validator",
+            "observer",
+            "verifier",
+            "participant"
+          ],
+          "title": "Perspective Kind",
+          "type": "string"
+        },
+        "projection_policy_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Projection Policy Digest"
+        },
+        "projection_policy_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Projection Policy Id"
+        },
+        "projection_policy_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Projection Policy Revision"
+        }
+      },
+      "required": [
+        "perspective_kind",
+        "party_ref"
+      ],
+      "title": "SemanticProjectionPerspectiveModel",
+      "type": "object"
+    },
+    "SemanticProjectionPredicateProfileModel": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Adapter Digest",
+          "type": "string"
+        },
+        "adapter_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Adapter Id",
+          "type": "string"
+        },
+        "adapter_version": {
+          "minLength": 1,
+          "title": "Adapter Version",
+          "type": "string"
+        },
+        "allow_approximate_bindings": {
+          "default": false,
+          "title": "Allow Approximate Bindings",
+          "type": "boolean"
+        },
+        "allow_lossy_bindings": {
+          "default": false,
+          "title": "Allow Lossy Bindings",
+          "type": "boolean"
+        },
+        "configuration_axis": {
+          "enum": [
+            "applicable",
+            "not-applicable"
+          ],
+          "title": "Configuration Axis",
+          "type": "string"
+        },
+        "predicate_id": {
+          "enum": [
+            "declared",
+            "admitted",
+            "observed",
+            "verified"
+          ],
+          "title": "Predicate Id",
+          "type": "string"
+        },
+        "producer_contract_id": {
+          "minLength": 1,
+          "title": "Producer Contract Id",
+          "type": "string"
+        },
+        "profile_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Profile Digest",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*/v[1-9][0-9]*$",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_version": {
+          "minLength": 1,
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "state_axis": {
+          "enum": [
+            "applicable",
+            "not-applicable"
+          ],
+          "title": "State Axis",
+          "type": "string"
+        },
+        "transformations_axis": {
+          "enum": [
+            "applicable",
+            "forbidden"
+          ],
+          "title": "Transformations Axis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "predicate_id",
+        "profile_id",
+        "profile_version",
+        "profile_digest",
+        "producer_contract_id",
+        "adapter_id",
+        "adapter_version",
+        "adapter_digest",
+        "configuration_axis",
+        "state_axis",
+        "transformations_axis"
+      ],
+      "title": "SemanticProjectionPredicateProfileModel",
+      "type": "object"
+    },
+    "SemanticProjectionQuantifierModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "existential",
+            "universal",
+            "threshold"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "quantified_unit": {
+          "enum": [
+            "distinct-native-subjects",
+            "binding-subject-pairs"
+          ],
+          "title": "Quantified Unit",
+          "type": "string"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "maximum": 4096,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold"
+        }
+      },
+      "required": [
+        "kind",
+        "quantified_unit"
+      ],
+      "title": "SemanticProjectionQuantifierModel",
+      "type": "object"
+    },
+    "SemanticProjectionRowModel": {
+      "additionalProperties": false,
+      "properties": {
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/SemanticProjectionBindingObservationModel"
+          },
+          "maxItems": 4096,
+          "title": "Bindings",
+          "type": "array"
+        },
+        "classification": {
+          "$ref": "#/$defs/SemanticProjectionClassification"
+        },
+        "concept_id": {
+          "minLength": 1,
+          "title": "Concept Id",
+          "type": "string"
+        },
+        "reason_codes": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 128,
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "witnesses": {
+          "items": {
+            "$ref": "#/$defs/SemanticProjectionWitnessModel"
+          },
+          "maxItems": 4096,
+          "title": "Witnesses",
+          "type": "array"
+        }
+      },
+      "required": [
+        "concept_id",
+        "classification",
+        "bindings",
+        "witnesses"
+      ],
+      "title": "SemanticProjectionRowModel",
+      "type": "object"
+    },
+    "SemanticProjectionSchemeScopeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "included_concept_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 4096,
+          "minItems": 1,
+          "title": "Included Concept Ids",
+          "type": "array"
+        },
+        "revision": {
+          "minLength": 1,
+          "title": "Revision",
+          "type": "string"
+        },
+        "scheme_id": {
+          "minLength": 1,
+          "title": "Scheme Id",
+          "type": "string"
+        },
+        "source_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Source Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scheme_id",
+        "authority",
+        "revision",
+        "source_digest",
+        "included_concept_ids"
+      ],
+      "title": "SemanticProjectionSchemeScopeModel",
+      "type": "object"
+    },
+    "SemanticProjectionSubjectScopeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_digests": {
+          "items": {
+            "minLength": 1,
+            "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+            "type": "string"
+          },
+          "maxItems": 4096,
+          "minItems": 1,
+          "title": "Artifact Digests",
+          "type": "array"
+        },
+        "complete": {
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "lifecycle_phase": {
+          "$ref": "#/$defs/ExternalConceptLifecyclePhase"
+        },
+        "owning_contract_id": {
+          "minLength": 1,
+          "title": "Owning Contract Id",
+          "type": "string"
+        },
+        "subject_kind": {
+          "minLength": 1,
+          "title": "Subject Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_kind",
+        "owning_contract_id",
+        "lifecycle_phase",
+        "artifact_digests",
+        "complete"
+      ],
+      "title": "SemanticProjectionSubjectScopeModel",
+      "type": "object"
+    },
+    "SemanticProjectionSummaryModel": {
+      "additionalProperties": false,
+      "properties": {
+        "ambiguous_count": {
+          "maximum": 4096,
+          "minimum": 0,
+          "title": "Ambiguous Count",
+          "type": "integer"
+        },
+        "excluded_count": {
+          "maximum": 4096,
+          "minimum": 0,
+          "title": "Excluded Count",
+          "type": "integer"
+        },
+        "frame_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Frame Digest",
+          "type": "string"
+        },
+        "gap_count": {
+          "maximum": 4096,
+          "minimum": 0,
+          "title": "Gap Count",
+          "type": "integer"
+        },
+        "included_denominator": {
+          "maximum": 4096,
+          "minimum": 1,
+          "title": "Included Denominator",
+          "type": "integer"
+        },
+        "predicate_id": {
+          "enum": [
+            "declared",
+            "admitted",
+            "observed",
+            "verified"
+          ],
+          "title": "Predicate Id",
+          "type": "string"
+        },
+        "predicate_profile_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Predicate Profile Digest",
+          "type": "string"
+        },
+        "qualified_fraction": {
+          "minLength": 1,
+          "title": "Qualified Fraction",
+          "type": "string"
+        },
+        "unknown_count": {
+          "maximum": 4096,
+          "minimum": 0,
+          "title": "Unknown Count",
+          "type": "integer"
+        },
+        "witness_count": {
+          "maximum": 4096,
+          "minimum": 0,
+          "title": "Witness Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "predicate_id",
+        "predicate_profile_digest",
+        "frame_digest",
+        "included_denominator",
+        "witness_count",
+        "gap_count",
+        "unknown_count",
+        "ambiguous_count",
+        "excluded_count",
+        "qualified_fraction"
+      ],
+      "title": "SemanticProjectionSummaryModel",
+      "type": "object"
+    },
+    "SemanticProjectionTransformationCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "enum": [
+            "sdl-authoring",
+            "portable-contract"
+          ],
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "canonicalization_profile": {
+          "minLength": 1,
+          "title": "Canonicalization Profile",
+          "type": "string"
+        },
+        "derivation_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Derivation Digest",
+          "type": "string"
+        },
+        "policy_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "preservation_outcome": {
+          "enum": [
+            "verified",
+            "failed",
+            "not-applicable"
+          ],
+          "title": "Preservation Outcome",
+          "type": "string"
+        },
+        "preservation_profile": {
+          "minLength": 1,
+          "title": "Preservation Profile",
+          "type": "string"
+        },
+        "source_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "source_profile": {
+          "minLength": 1,
+          "title": "Source Profile",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "refused"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "target_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Digest"
+        },
+        "target_profile": {
+          "minLength": 1,
+          "title": "Target Profile",
+          "type": "string"
+        },
+        "transformation_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Transformation Digest",
+          "type": "string"
+        },
+        "transformation_id": {
+          "minLength": 1,
+          "title": "Transformation Id",
+          "type": "string"
+        },
+        "transformation_version": {
+          "minLength": 1,
+          "title": "Transformation Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transformation_id",
+        "transformation_version",
+        "transformation_digest",
+        "status",
+        "artifact_kind",
+        "source_profile",
+        "target_profile",
+        "canonicalization_profile",
+        "source_digest",
+        "policy_digest",
+        "derivation_digest",
+        "preservation_profile",
+        "preservation_outcome"
+      ],
+      "title": "SemanticProjectionTransformationCoordinateModel",
+      "type": "object"
+    },
+    "SemanticProjectionWitnessModel": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_digests": {
+          "items": {
+            "minLength": 1,
+            "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Evidence Digests",
+          "type": "array"
+        },
+        "native_result_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Native Result Digest",
+          "type": "string"
+        },
+        "native_result_id": {
+          "minLength": 1,
+          "title": "Native Result Id",
+          "type": "string"
+        },
+        "predicate_profile_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Predicate Profile Digest",
+          "type": "string"
+        },
+        "producer_contract_id": {
+          "minLength": 1,
+          "title": "Producer Contract Id",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ExternalConceptSubjectModel"
+        }
+      },
+      "required": [
+        "subject",
+        "native_result_id",
+        "native_result_digest",
+        "producer_contract_id",
+        "predicate_profile_digest",
+        "evidence_digests"
+      ],
+      "title": "SemanticProjectionWitnessModel",
+      "type": "object"
+    },
+    "Severity": {
+      "description": "Diagnostic severity level.",
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "$id": "https://openrae.github.io/rae/schemas/semantic-projection-report-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "diagnostics": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DiagnosticModel"
+      },
+      "maxItems": 64,
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "frame": {
+      "$ref": "#/$defs/SemanticProjectionFrameModel"
+    },
+    "frame_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Frame Digest",
+      "type": "string"
+    },
+    "rows": {
+      "items": {
+        "$ref": "#/$defs/SemanticProjectionRowModel"
+      },
+      "maxItems": 8192,
+      "minItems": 1,
+      "title": "Rows",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "semantic-projection-report/v1",
+      "default": "semantic-projection-report/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "summary": {
+      "$ref": "#/$defs/SemanticProjectionSummaryModel"
+    }
+  },
+  "required": [
+    "frame",
+    "frame_digest",
+    "rows",
+    "summary"
+  ],
+  "title": "SemanticProjectionReportModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "The complete digest-bound frame selects one native predicate and every explicitly included concept appears in exactly one structural report partition.",
+      "id": "semantic-projection-exact-frame-partition",
+      "inputs": [
+        {
+          "contract_id": "semantic-projection-report-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.SemanticProjectionReportModel.model_validate"
+    },
+    {
+      "description": "Only witness rows carry digest-stable native results whose subject, producer, and profile join the embedded frame; contextual evidence admission is validated with referenced authority artifacts.",
+      "id": "semantic-projection-evidence-bounded-witnesses",
+      "inputs": [
+        {
+          "contract_id": "semantic-projection-report-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.SemanticProjectionReportModel.model_validate"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "semantic-projection-report-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

@@ -25,13 +25,13 @@ class TestRuntimeModelCompilation:
 name: bindings
 nodes:
   vm1:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
     roles: {web: appuser}
   vm2:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -56,7 +56,7 @@ features:
 name: shuffle-runtime-inventory
 nodes:
   shuffle-backend:
-    type: vm
+    type: compute
     os: linux
     runtime:
       mounts:
@@ -261,7 +261,7 @@ nodes:
 name: directory-identity-runtime
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     resources: {ram: 2 gib, cpu: 2}
     services:
@@ -302,7 +302,7 @@ nodes:
 name: fileshare-runtime
 nodes:
   fileshare:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     services:
@@ -393,7 +393,7 @@ nodes:
 name: feature-deps
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web, php-config: web}
@@ -422,7 +422,7 @@ features:
 name: feature-deps
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {php-config: web}
@@ -449,7 +449,7 @@ features:
 name: bindings
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -490,7 +490,7 @@ injects:
 name: orchestration
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -587,7 +587,7 @@ workflows:
 name: broken-window
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -637,7 +637,7 @@ workflows:
 name: broken-bindings
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -662,7 +662,7 @@ nodes:
 name: broken-graph
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -719,7 +719,7 @@ workflows:
 name: retry-test
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -799,7 +799,7 @@ workflows:
 name: parallel-join
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -914,7 +914,7 @@ module:
     workflows: [response]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -980,7 +980,7 @@ imports:
                     name: advanced-workflow
                     nodes:
                       vm:
-                        type: vm
+                        type: compute
                         os: linux
                         resources: {ram: 1 gib, cpu: 1}
                         conditions: {health: ops}
@@ -1054,7 +1054,7 @@ imports:
                     name: compensation
                     nodes:
                       vm:
-                        type: vm
+                        type: compute
                         os: linux
                         resources: {ram: 1 gib, cpu: 1}
                         conditions: {health: ops}

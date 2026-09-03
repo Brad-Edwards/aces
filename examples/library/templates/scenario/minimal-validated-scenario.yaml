@@ -12,7 +12,8 @@ body:
   description: Minimal scenario template exercising identity, target, objective, and workflow refs.
   nodes:
     app:
-      type: VM
+      type: compute
+      architecture: x86_64
       resources: {ram: 1 GiB, cpu: 1}
       services:
         - {port: 443, name: https}

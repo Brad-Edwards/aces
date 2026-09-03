@@ -13,7 +13,7 @@ from ._source import Source
 
 
 class FeatureType(str, Enum):
-    """Kind of feature deployed to a VM."""
+    """Kind of feature deployed to a compute node."""
 
     SERVICE = "service"
     CONFIGURATION = "configuration"
@@ -21,7 +21,7 @@ class FeatureType(str, Enum):
 
 
 class Feature(SDLModel):
-    """A software artifact, service, or configuration deployed to a VM."""
+    """A software artifact, service, or configuration deployed to a compute node."""
 
     name: str = ""
     type: FeatureType = Field(alias="type")

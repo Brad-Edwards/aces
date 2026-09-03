@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+from dataclasses import replace
 
 import pytest
 from paths import EXAMPLES_DIR
@@ -10,14 +11,23 @@ from raes import SDLInstantiationError, parse_sdl
 from raes_backend_protocols.capabilities import (
     BackendManifest,
     EvaluatorCapabilities,
+    OperatingSystemCompatibility,
     OrchestratorCapabilities,
     ProvisionerCapabilities,
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
 from raes_backend_stubs.stubs import create_stub_manifest
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.vocabulary import RealizationSupportMode
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
+from raes_contracts.vocabulary import (
+    ObservationStrength,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
 from raes_processor.planner import plan
@@ -85,12 +95,39 @@ def _limited_backend_manifest(
                 ),
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset({"runtime-snapshot-v1"}),
+                observation_capabilities={
+                    "operating-system": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    )
+                },
             ),
         ),
         concept_bindings=(ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),),
-        provisioner=provisioner,
+        provisioner=replace(
+            provisioner,
+            operating_systems=tuple(
+                OperatingSystemCompatibility(family, distribution, frozenset({version}))
+                for family, distribution, version in (
+                    ("linux", "ubuntu", "22.04"),
+                    ("windows", "windows-server", "2022"),
+                    ("other", "solaris", "11.4"),
+                )
+                if family in provisioner.supported_os_families
+            ),
+        ),
         orchestrator=orchestrator,
         evaluator=evaluator,
+    )
+
+
+def _os_capable_stub_manifest() -> BackendManifest:
+    base = create_stub_manifest()
+    return _limited_backend_manifest(
+        name="os-capable-stub",
+        provisioner=base.provisioner,
+        orchestrator=base.orchestrator,
+        evaluator=base.evaluator,
     )
 
 
@@ -104,7 +141,7 @@ class TestRuntimePlanner:
                 _scenario("""
 name: provenance
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -122,7 +159,7 @@ nodes:
                 _scenario("""
 name: provenance
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             create_stub_manifest(),
@@ -136,7 +173,7 @@ nodes:
                 _scenario("""
 name: payload-shape
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             create_stub_manifest(),
@@ -155,8 +192,8 @@ nodes:
             _scenario("""
 name: original
 nodes:
-  vm1: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  vm2: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm1: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm2: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
         )
         old_plan = plan(old_model, create_stub_manifest())
@@ -166,7 +203,7 @@ nodes:
             _scenario("""
 name: original
 nodes:
-  vm1: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm1: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 """)
         )
         new_plan = plan(new_model, create_stub_manifest(), snapshot)
@@ -183,8 +220,8 @@ nodes:
                     textwrap.dedent("""
 name: provisioning-cycle
 nodes:
-  a: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  b: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  a: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  b: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   a: {dependencies: [b]}
   b: {dependencies: [a]}
@@ -206,7 +243,7 @@ infrastructure:
 name: objective-cycle
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -246,7 +283,7 @@ objectives:
 name: original
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -278,7 +315,7 @@ objectives:
 name: original
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -317,14 +354,12 @@ objectives:
 name: ambiguous
 nodes:
   a:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
   b:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
@@ -357,8 +392,7 @@ events:
 name: injects
 nodes:
   web:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
 injects:
   mail: {source: inbox}
@@ -378,7 +412,7 @@ events:
 name: unbound
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 conditions:
@@ -422,7 +456,7 @@ events:
 name: workflows
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -462,7 +496,7 @@ workflows:
 name: workflows
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -671,7 +705,7 @@ workflows:
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -713,7 +747,7 @@ workflows:
 name: workflow
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -757,7 +791,7 @@ workflows:
 name: cross-domain
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -804,7 +838,7 @@ events:
 name: objective-window
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -843,7 +877,7 @@ workflows:
         )
 
         objective = model.objectives["evaluation.objective.initial"]
-        execution_plan = plan(model, create_stub_manifest())
+        execution_plan = plan(model, _os_capable_stub_manifest())
 
         assert "orchestration.workflow.flow" not in objective.ordering_dependencies
         assert "orchestration.workflow.flow" in objective.refresh_dependencies
@@ -860,7 +894,7 @@ workflows:
 name: windows
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -923,7 +957,7 @@ workflows:
 name: provision
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -944,7 +978,7 @@ accounts:
 name: provision
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -968,7 +1002,7 @@ accounts:
 name: provision
 nodes:
   web:
-    type: vm
+    type: compute
     os: windows
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -992,7 +1026,7 @@ accounts:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm", "switch"}),
+                supported_node_types=frozenset({"compute", "switch"}),
                 supported_os_families=frozenset({"linux"}),
                 supported_content_types=frozenset({"file"}),
                 supported_account_features=frozenset({"groups"}),
@@ -1018,9 +1052,9 @@ accounts:
 name: limited
 nodes:
   corp: {type: switch}
-  stateful: {type: vm, os: linux}
+  stateful: {type: compute, os: linux}
   dc:
-    type: vm
+    type: compute
     os: windows
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -1107,12 +1141,139 @@ workflows:
         assert "evaluator.objectives-unsupported" in codes
         assert not execution_plan.is_valid
 
+    def test_evaluator_admission_enforces_compiled_proposition_capabilities(self):
+        limited = _limited_backend_manifest(
+            provisioner=ProvisionerCapabilities(
+                name="limited-provisioner",
+                supported_node_types=frozenset({"compute"}),
+                supported_os_families=frozenset({"linux"}),
+            ),
+            evaluator=EvaluatorCapabilities(
+                name="boolean-api-evaluator",
+                supported_sections=frozenset({"propositions", "assertions"}),
+                supported_predicate_families=frozenset({"boolean"}),
+                supported_quantifiers=frozenset({"all"}),
+                supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+                supported_evidence_channels=frozenset({"api_response"}),
+                supported_time_domains=frozenset({"wall_clock_time"}),
+                preserves_binding_provenance=True,
+            ),
+        )
+        model = compile_runtime_model(
+            _scenario("""
+name: evaluator-capability-mismatch
+nodes:
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+evidence_requirements:
+  runtime-log:
+    source_refs: [nodes.vm]
+    scope: evaluator admission test
+    boundary_kind: assertion_evaluation
+    channel: log
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
+propositions:
+  load:
+    description: The runtime load equals the expected value.
+    subjects: [nodes.vm]
+    basis: observed_state
+    quantifier: any
+    predicate:
+      kind: number
+      property: runtime.load
+      semantic_ref: urn:raes:observed-property:runtime.load
+      expected: 1
+      unit: count
+      unit_semantic_ref: urn:raes:unit:count
+    evidence_requirements: [runtime-log]
+assertions:
+  load: {proposition: load, role: postcondition}
+""")
+        )
+
+        proposition = model.propositions["evaluation.proposition.load"]
+        execution_plan = plan(model, limited)
+        codes = {diagnostic.code for diagnostic in execution_plan.diagnostics}
+
+        assert proposition.quantifier == "any"
+        assert proposition.evidence_channels == ("log",)
+        assert proposition.required_time_domain == "scenario_time"
+        assert {
+            "evaluator.unsupported-predicate-family",
+            "evaluator.unsupported-quantifier",
+            "evaluator.unsupported-evidence-channel",
+            "evaluator.unsupported-time-domain",
+        } <= codes
+        assert not execution_plan.is_valid
+
+    def test_evaluator_admission_rejects_opaque_evidence_channel_refs(self):
+        evaluator = EvaluatorCapabilities(
+            name="complete-evaluator",
+            supported_sections=frozenset({"propositions", "assertions"}),
+            supported_predicate_families=frozenset({"boolean"}),
+            supported_quantifiers=frozenset({"all"}),
+            supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+            supported_evidence_channels=frozenset({"log"}),
+            supported_time_domains=frozenset({"scenario_time"}),
+            preserves_binding_provenance=True,
+        )
+        manifest = _limited_backend_manifest(
+            provisioner=ProvisionerCapabilities(
+                name="limited-provisioner",
+                supported_node_types=frozenset({"compute"}),
+                supported_os_families=frozenset({"linux"}),
+            ),
+            evaluator=evaluator,
+        )
+        model = compile_runtime_model(
+            _scenario("""
+name: unresolved-evidence-channel
+nodes:
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+evidence_requirements:
+  opaque-capture:
+    source_refs: [nodes.vm]
+    scope: evaluator admission test
+    boundary_kind: assertion_evaluation
+    channel_refs: [nodes.vm]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
+propositions:
+  healthy:
+    description: The observed runtime is healthy.
+    subjects: [nodes.vm]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: runtime.healthy
+      semantic_ref: urn:raes:observed-property:runtime.healthy
+      expected: true
+    evidence_requirements: [opaque-capture]
+assertions:
+  healthy: {proposition: healthy, role: postcondition}
+""")
+        )
+
+        execution_plan = plan(model, manifest)
+
+        assert model.propositions["evaluation.proposition.healthy"].unresolved_evidence_channel_refs == (
+            "opaque-capture",
+        )
+        assert "evaluator.evidence-channel-unresolved" in {diagnostic.code for diagnostic in execution_plan.diagnostics}
+        assert not execution_plan.is_valid
+
     def test_acl_capability_validation_covers_node_attached_rules(self):
         limited = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 supports_acls=False,
             ),
@@ -1122,7 +1283,7 @@ workflows:
 name: node-acl
 nodes:
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 infrastructure:
@@ -1146,7 +1307,7 @@ infrastructure:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux", "windows"}),
             ),
         )
@@ -1161,7 +1322,7 @@ variables:
     default: linux
     allowed_values: [linux, windows]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -1172,12 +1333,12 @@ nodes:
         assert "provisioner.unsupported-os-family" not in codes
         assert execution_plan.is_valid
 
-    def test_variable_backed_os_allowed_values_fail_when_any_are_unsupported(self):
+    def test_variable_backed_os_allowed_values_pass_with_nonempty_supported_intersection(self):
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1192,7 +1353,7 @@ variables:
     default: linux
     allowed_values: [linux, windows]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -1200,8 +1361,8 @@ nodes:
 
         codes = {diag.code for diag in execution_plan.diagnostics}
 
-        assert "provisioner.unsupported-os-family" in codes
-        assert not execution_plan.is_valid
+        assert "provisioner.unsupported-os-family" not in codes
+        assert execution_plan.is_valid
 
     def test_variable_backed_os_defaults_must_be_valid_for_nodes_os(self):
         with pytest.raises(SDLInstantiationError) as exc:
@@ -1214,17 +1375,17 @@ variables:
     default: banana
     allowed_values: [banana]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             )
         assert "/nodes/vm/os" in str(exc.value)
 
-    def test_variable_backed_os_without_allowed_values_uses_instantiated_default(self):
+    def test_variable_backed_os_without_allowed_values_is_narrowed_to_feasible_authority(self):
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1238,7 +1399,7 @@ variables:
     type: string
     default: linux
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             ),
             manifest,
@@ -1248,14 +1409,21 @@ nodes:
 
         assert "provisioner.os-family-validation-deferred" not in codes
         assert "provisioner.unsupported-os-family" not in codes
+        assert "realization.authority-bound-unavailable" not in codes
         assert execution_plan.is_valid
+        authority = next(
+            entry
+            for entry in execution_plan.provisioning.realization_authority
+            if entry.requirement_kind == "os-family"
+        )
+        assert authority.bounds[0].domain.values == ["linux"]
 
     def test_variable_backed_os_with_undeclared_variable_fails_instantiation(self):
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1263,7 +1431,7 @@ nodes:
             textwrap.dedent("""
 name: variable-os
 nodes:
-  vm: {type: vm, os: '${missing_os}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${missing_os}', resources: {ram: 1 gib, cpu: 1}}
 """),
             skip_semantic_validation=True,
         )
@@ -1277,7 +1445,7 @@ nodes:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=2,
             ),
@@ -1293,7 +1461,7 @@ variables:
     default: 1
     allowed_values: [1, 3]
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${node_count}
 """)
@@ -1306,7 +1474,7 @@ infrastructure:
         assert "provisioner.max-total-nodes-exceeded" in codes
         assert not execution_plan.is_valid
 
-    def test_imported_module_allowed_values_enforce_against_backend(self, tmp_path):
+    def test_imported_module_allowed_values_retain_supported_intersection(self, tmp_path):
         # SDL module-import composition strips imported variables from the
         # merged payload, so the side-channel provenance must carry both the
         # imported variable spec AND the imported nodes' captured refs onto
@@ -1336,7 +1504,7 @@ variables:
     allowed_values: [linux, windows]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: '${os_name}'
     resources: {ram: 1 gib, cpu: 1}
 """,
@@ -1357,7 +1525,7 @@ imports:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1367,15 +1535,15 @@ imports:
 
         codes = {diag.code for diag in execution_plan.diagnostics}
 
-        assert "provisioner.unsupported-os-family" in codes
-        assert not execution_plan.is_valid
+        assert "provisioner.unsupported-os-family" not in codes
+        assert execution_plan.is_valid
 
     def test_variable_backed_counts_defaults_must_be_valid_for_infrastructure_count(self):
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=10,
             ),
@@ -1391,23 +1559,23 @@ variables:
     default: 0
     allowed_values: [0]
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${node_count}
 """)
             )
         assert "/infrastructure/vm/count" in str(exc.value)
 
-    def test_variable_backed_os_allowed_values_fail_when_pre_instantiated(self):
+    def test_variable_backed_os_allowed_values_retain_intersection_when_pre_instantiated(self):
         # Manager-path coverage: when the caller instantiates upstream and
         # passes an InstantiatedScenario to compile_runtime_model, the
         # captured-ref snapshot must still flow through so the
-        # allowed_values-vs-supported_os_families check fires.
+        # allowed_values-vs-supported_os_families intersection remains available.
         manifest = _limited_backend_manifest(
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
             ),
         )
@@ -1423,15 +1591,15 @@ variables:
     default: linux
     allowed_values: [linux, windows]
 nodes:
-  vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """),
         )
         execution_plan = plan(compile_runtime_model(instantiated), manifest)
 
         codes = {diag.code for diag in execution_plan.diagnostics}
 
-        assert "provisioner.unsupported-os-family" in codes
-        assert not execution_plan.is_valid
+        assert "provisioner.unsupported-os-family" not in codes
+        assert execution_plan.is_valid
 
     def test_variable_backed_switch_count_enforces_max_nodes(self):
         # Switch (network) resources go through the same max_total_nodes
@@ -1442,7 +1610,7 @@ nodes:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm", "switch"}),
+                supported_node_types=frozenset({"compute", "switch"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=2,
             ),
@@ -1476,7 +1644,7 @@ infrastructure:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=1,
             ),
@@ -1491,7 +1659,7 @@ variables:
     type: integer
     default: 3
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${node_count}
 """)
@@ -1510,7 +1678,7 @@ infrastructure:
             name="limited",
             provisioner=ProvisionerCapabilities(
                 name="limited-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"compute"}),
                 supported_os_families=frozenset({"linux"}),
                 max_total_nodes=1,
             ),
@@ -1519,7 +1687,7 @@ infrastructure:
             textwrap.dedent("""
 name: variable-count
 nodes:
-  vm: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  vm: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 infrastructure:
   vm: ${missing_count}
 """),
@@ -1538,7 +1706,7 @@ name: ordering
 nodes:
   corp: {type: switch}
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: {nginx: web}
@@ -1620,7 +1788,7 @@ workflows:
         scenario_path = EXAMPLES_DIR / "satcom-release-poisoning.sdl.yaml"
         content = scenario_path.read_text(encoding="utf-8")
         model = compile_runtime_model(parse_sdl(content))
-        execution_plan = plan(model, create_stub_manifest())
+        execution_plan = plan(model, _os_capable_stub_manifest())
 
         # Pinned counts from the satcom example. A partial regression
         # (e.g. half the nodes failing to compile) keeps `> 5` green; exact

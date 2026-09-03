@@ -25,10 +25,10 @@ that names a concern a backend will later realize, three questions:
    value or structure, and under what bounds?
 3. if the realizer cannot honor a binding declaration, what must happen?
 
-The note owns one typed scenario-root SDL `realization` designation surface.
-It does not add realization fields to nested models, define new
-exact-requirement kinds, or describe wave-3 participant semantics that build
-on this boundary. Those are governed elsewhere.
+The note owns one typed scenario-root SDL `realization` designation surface and
+the compute-substrate concern carried by that surface. It does not add
+realization fields to nested models or describe wave-3 participant semantics
+that build on this boundary. Those are governed elsewhere.
 
 ## Realization Status
 
@@ -60,18 +60,23 @@ is `active`. What is *enforced today* spans authoring through observation:
   preserves authored explicitness metadata across parameter/default
   substitution without promoting substituted concrete values to false
   exact declarations;
-- the typed compiler emission in `compile_runtime_model`, which lowers
-  each authored realization concern into a `CompiledRealizationRequirement`
-  on the `RuntimeModel` preserving its exact / constrained / open class;
+- the typed compiler emission in `compile_runtime_model`, which preserves
+  realizable demand in `CompiledRealizationRequirement` and the complete
+  closed / open / constrained / exact boundary in
+  `CompiledRealizationAuthority` on the `RuntimeModel`;
 - the planner realization-support gate in `raes_processor.planner.plan`,
   which matches each compiled exact / constrained / open requirement against
   the selected backend's `realization_support` and rejects open demand unless
   the selected domain explicitly declares `OPEN_REALIZATION`;
+- the mandatory `ProvisioningPlan.realization_authority` handoff, which
+  resolves delegation against the selected apparatus and publishes a typed,
+  value-free entry for every applicable registered concern, including closed
+  omissions, together with the selected realization-envelope identity;
 - the runtime non-approximation gate on backend adapters in
-  `raes_processor.semantics.realization.realization_disclosure` (invoked from
-  `raes_runtime.backend_calls._call_backend_apply`, the runtime adapter
-  boundary), which compares each realized exact concern against the author
-  declaration and rejects a silent approximation with a
+  `raes_processor.planner.realization_authority_disclosure` (invoked from
+  `raes_runtime.backend_calls._call_backend_apply` for both in-process and
+  control-plane execution), which applies the same plan-owned authority that
+  was admitted before mutation and rejects a silent approximation with a
   `runtime.backend-contract-invalid` diagnostic before the backend snapshot is
   accepted into runtime state;
 - the SEM-218 provenance ledger (`realization_provenance`) on the runtime
@@ -176,6 +181,104 @@ no semantic effect. Imported declarations and designation scopes are qualified
 through the composition symbol map, so a module default cannot govern host or
 sibling declarations.
 
+### Compute resource kind and substrate concern
+
+`nodes.<id>.type` classifies the structural resource kind. Its canonical values
+are `compute` and `switch`; it MUST NOT encode the apparatus mechanism. A
+`compute` node therefore imposes no virtual-machine, container, physical-device,
+or emulator requirement by itself. A `switch` remains a strict connectivity
+resource and MUST reject compute-only fields and compute-substrate constraints.
+
+`compute-substrate` is the registered mechanism concern for compute nodes. An
+author MAY constrain it through `Scenario.realization.constraints`, addressed by
+module `namespace` and the node's canonical RFC 6901 `field_pointer`. Its posture
+is exactly one of `open` with no domain, `constrained` with an enum or
+governed-reference domain, or `exact` with one exact governed value. The
+portable base values are `virtual-machine`, `operating-system-container`, and
+`physical-device`; governed extension values use the `compute-substrates`
+vocabulary. Absence of a compute-substrate constraint is, by this owning
+semantic rule, an intentionally portable open concern. It does not weaken any
+other closed-world SDL field.
+
+Historical `type: vm` source is non-canonical and MUST fail under strict
+parsing. An explicitly selected migration MAY accept it only by producing
+`type: compute` plus an exact `virtual-machine` compute-substrate constraint and
+recording `legacy-node-type-vm` provenance. A collision with an authored
+constraint MUST fail; migration MUST NOT silently choose precedence. Canonical
+serialization emits only the migrated form. The versioned deserializer for
+historical instantiated `v1` snapshots applies the same meaning-preserving
+upgrade so immutable evidence remains replayable without weakening current
+authoring.
+
+Every compute node MUST compile to one typed compute-substrate requirement.
+Planning MUST keep the structural resource kind, authored substrate constraint,
+and selected apparatus envelope as distinct data. A backend's
+`supported_node_types` claim answers only whether it can provision `compute`;
+it does not prove which substrate will be used. Exact and constrained demand
+MUST be admitted by the selected envelope's compute-substrate claim, and
+out-of-domain demand MUST be rejected before mutation.
+
+The actual selected substrate is runtime evidence, not authored or planned
+state. A value-bearing compute-substrate observation MUST identify the governed
+selected value and bind it to the runtime operation, selected envelope digest,
+configuration digest, observer version, monotonic sequence, and a verified
+execution binding. Plan values, requested configuration, backend handles, and
+manifest capability declarations alone MUST NOT be treated as observations.
+Bounded demand requires daemon-observed or stronger independent readback; open
+demand requires at least driver-reported readback. A claimed value outside the
+selected envelope or authored domain MUST reject the runtime result. An
+in-process emulator may disclose a governed extension value but does not count
+as an independent native container, virtual-machine, or physical mechanism.
+
+### Resolved backend-facing authority
+
+Every backend-facing provisioning plan MUST contain a
+`realization_authority` collection. The collection MUST be complete for every
+registered realization concern applicable to every non-delete node, network,
+or content-placement operation. A closed omission is therefore an affirmative
+denial entry even though no realized value is present. Delete operations MUST
+NOT retain stale authority.
+
+Each entry MUST carry the canonical resource address, semantic field path,
+realization domain and requirement kind, canonical operation-payload JSON
+Pointer, effective mode, resolution source, provenance, governing scope, and
+any required observation posture. The effective mode is exactly one of
+`closed`, `open`, `constrained`, or `exact`. Explicit root delegation MUST be
+resolved during planning; `apparatus-default` remains its source, not an
+unresolved fifth mode. Omitted legacy designation resolves closed with a
+distinct `legacy-default` source.
+
+Constrained entries MUST contain one or more publication-safe typed bounds;
+other modes MUST NOT contain bounds. Exact values remain in their owning
+operation payload and MUST NOT be duplicated in authority. Credentials,
+environment values, source bodies, backend-native state, and arbitrary
+authoring designation tables MUST NOT enter the authority collection.
+
+Completeness and canonical payload pointers MUST be recomputed from the
+registered concern inventory at execution admission. The selected backend's
+capability and realization envelope only narrow the author boundary: they MUST
+NOT create permission absent from an open or constrained authority entry. A
+plan whose authority was not admitted against the selected envelope identity,
+or whose non-closed mode lacks matching backend support, MUST be rejected
+before backend mutation.
+
+An authenticated transport principal MUST NOT thereby acquire authority to
+mint or rewrite this collection. A remote operation-bearing provisioning plan
+MUST be bound to planner-produced content by a trusted verifier or immutable
+server-side reference before submission admission. The reference control plane
+computes the canonical full-plan digest and resolves it against an in-process
+registry populated from trusted planner objects; a caller-provided digest,
+request fingerprint, or authentication identity alone is insufficient.
+
+Runtime non-approximation, safe observation projection, and provenance MUST
+consume this plan-owned collection. Internal compiler requirements may remain
+as planning inputs and as contracts for non-registered concerns such as source
+artifacts, but MUST NOT replace or override the backend-facing authority for a
+registered concern. A value added at a closed concern is excess scenario state
+and MUST fail without replacing the baseline snapshot. Backend/apparatus-only
+state remains governed by its owning manifest, artifact, observation, audit,
+or metadata contract and MUST NOT be reclassified as scenario provenance.
+
 ### Five invariants
 
 The following invariants are normative for every stage that has authority
@@ -212,12 +315,57 @@ manifest declaration. Missing, malformed, under-scoped, or unsupported
 corroboration is a `runtime.backend-contract-invalid` failure before snapshot
 persistence.
 
-The initial qualified concern is `forwarding-agents`. Its scopes are `presence`
-(identity, placement, and implementation inventory) and `configuration`
-(authored child/configuration projection). The existing `ObservationStrength`
-values remain the source axis; they do not prove forwarding behavior. Delivery,
-transform, reload, health, and failure claims belong to governed proposition,
-probe, truth, and evidence contracts.
+The qualified concerns include `forwarding-agents` and
+`process-resource-limits`. Forwarding-agent scopes are `presence` (identity,
+placement, and implementation inventory) and `configuration` (authored
+child/configuration projection). Process-resource limits require
+`configuration` scope and `guest-observed` strength because desired-payload,
+container-runtime, or hypervisor configuration does not prove the effective
+limit inside the workload. The existing `ObservationStrength` values remain
+the source axis; they do not prove forwarding behavior, process readiness, or
+resource sufficiency. Delivery, transform, reload, health, and failure claims
+belong to governed proposition, probe, truth, and evidence contracts.
+
+### Portable process-resource-limit concern
+
+The registered `process-resource-limits` concern is the complete
+`nodes.<node>.runtime.operational_policy.resource_limits.process_limits`
+collection. Each record MUST contain a governed resource term, explicit soft
+and hard values, a structural `RuntimeProcessIdentity` selector, and a
+`process` or `subtree` scope. The initial governed resources are
+`open_file_descriptors` and `locked_memory_bytes`. A value MUST be a
+non-negative integer, `unlimited`, or a whole-field variable reference.
+Concrete finite values MUST satisfy `soft <= hard`; unlimited soft requires
+unlimited hard. Duplicate `(resource, normalized subject, scope)` identities
+MUST be rejected. The normalized subject contract MUST be shared by structural
+validation, declared-process matching, duplicate identity, canonical
+projection, and runtime comparison. Every active selector field MUST match one
+declared `runtime.processes` record. When `command_redacted` is true, command
+content MUST be absent and another stable projected selector MUST be present;
+an implementation MUST NOT erase supplied command content from semantic
+identity.
+
+Exact comparison MUST compare the canonical complete collection, independent
+of record order. Omitted, substituted, and excess records are mismatches. A
+constrained variable MUST retain its finite `allowed-values` domain through
+instantiation and compilation, keyed by semantic record identity plus the
+soft/hard leaf, and the realized value MUST be a member. Open realization MUST
+have author designation permission as required by I3 and a typed apparatus
+domain; a backend support-mode claim alone MUST NOT create a limit.
+
+The backend declaration's `process_resource_limits` entries are the typed
+apparatus authority for supported resource terms, scopes, finite bounds, and
+the `unlimited` sentinel. They MUST be used for exact, constrained, and open
+admission instead of a native option name or free-form `constraints` entry.
+The selected realization-envelope configuration MUST repeat an admitted entry
+exactly. Planning and runtime evaluation MUST use only capabilities present in
+both the compatible global declaration and that selected material
+configuration; an unbound or divergent global claim MUST NOT authorize a
+realization.
+A backend lacking compatible materialization and effective inside-workload
+readback MUST reject the demand before mutation. A missing, weak,
+out-of-domain, or mismatched result MUST fail through the existing runtime
+backend-contract diagnostic and MUST NOT replace the baseline snapshot.
 
 **I3 — Openness is explicit.** A backend MAY realize an underspecified
 concern only at a point where the owning SDL schema or semantic rule
@@ -287,25 +435,28 @@ Provenance lives on the existing runtime plan / result / snapshot /
 participant-episode contracts; no new private channel may carry
 realization decisions out of band. The provenance contract above is realized
 on the existing runtime snapshot contract. Backend-filled open slots carry a
-stable `governing_scope` reference, never the realized value itself.
+stable `governing_scope` reference; the provenance ledger never carries the
+realized value itself. Value-bearing concerns such as compute-substrate record
+the actual selection separately in the bound runtime observation surface.
 
 ### Phase responsibilities
 
 The seven canonical `SEM-200` lifecycle phases interact with the
 invariants as follows. The list is normative for the phase boundary, not
 for the engineering layout of any one phase. The **Status** column
-records what is enforced in the repository today; every phase boundary is
-now enforced by named, tested code.
+records what is enforced in the repository today. The portable provisioning
+handoff is part of the enforced boundary; in-process metadata is not a
+substitute for that published contract.
 
 | Phase | Responsibility | Status |
 | --- | --- | --- |
 | Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | active — closed Pydantic models, the leaf classifier, and the typed scenario/scoped `realization` designation surface carry author intent without conflating it with apparatus capability. |
 | Validation | Apparatus declarations and SDL designation scopes are structurally and semantically validated, including canonical pointers, namespace ownership, and equal-specificity conflicts. | active — contract shape gates and `SemanticValidator` enforce both authorities fail closed. |
 | Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | active — `instantiate_scenario` preserves explicitness plus typed designation provenance and revalidates concrete content. |
-| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | active — `compile_runtime_model` applies leaf precedence and the scoped cascade, carrying open and delegated demand plus its governing scope. |
-| Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | active — the planner rejects open demand without explicit `OPEN_REALIZATION` support and never approximates it. |
-| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | active — the runtime non-approximation gate `raes_processor.semantics.realization.realization_disclosure` (invoked from `raes_runtime.backend_calls._call_backend_apply`) compares each realized exact concern against the author declaration and rejects a silent approximation with a `runtime.backend-contract-invalid` diagnostic before the backend snapshot is accepted. |
-| Observation | Realized values land in plan, result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state. | active — realized concerns are recorded on the runtime snapshot envelope's `realization_provenance` ledger with their explicitness class and author-declared / processor-derived / backend-realized origin; the snapshot is the aggregate observation surface that carries result and history data. |
+| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. Every compute node emits a separate compute-substrate requirement. | active — `compile_runtime_model` applies leaf precedence, retains realizable demand, and separately carries complete authority for closed, open, constrained, exact, legacy, and delegated concerns. |
+| Planning | Matches every compiled requirement against the candidate backend manifest and selected envelope. Structural node-kind support, compute-substrate mechanism constraints, and resolved backend authority remain separate. Unsupported demand MUST cause plan rejection before deployment. | active — support and envelope gates intersect author permission, delegation is resolved with its source retained, and the provisioning plan carries both the complete typed authority boundary and author substrate constraints. |
+| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, silently narrow an open realization beyond its declared constraints, or add values at closed concerns. | active — direct-manager and control-plane execution validate plan-owned authority, envelope identity, backend support, typed bounds, and non-approximation before accepting a snapshot; operation-bearing plans are bound to trusted planner content. |
+| Observation | Realized values land in result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state or plan echo. | active — admitted authority drives safe projection and value-free provenance, while bound compute-substrate observations carry the selected value and reject missing, weak, stale, unbound, or out-of-domain readback. |
 
 ## Cross-Cutting Gates
 
@@ -349,7 +500,9 @@ realization status, are:
   `raes_processor.planner.plan`. Exact registered inventory concerns with a
   required verification scope also fail with
   `realization.under-observed-exact-requirement` when the manifest capability
-  is absent or weaker.
+  is absent or weaker. Process-resource-limit requirements also fail with
+  `realization.unsupported-process-resource-limits` when no declaration admits
+  their typed resource, scope, value domain, and guest observation demand.
 - **Error-envelope gate** — unsupported exact requirements and
   forbidden approximations MUST be surfaced through stable validation
   errors or structured diagnostics (I1, I2). *Enforced today*; the
@@ -367,8 +520,10 @@ realization status, are:
   explicitness class, origin, and governing designation scope and round-trips
   through the control-plane snapshot serializers and authenticated snapshot
   response model. Concern corroboration is carried separately by
-  `realization_observations`, which records no realized value and is checked
-  against the compiled scope and selected backend manifest before persistence.
+  `realization_observations`, whose ordinary inventory corroboration remains
+  value-free. Compute-substrate is the value-bearing exception: it is checked
+  against the compiled domain, selected envelope, operation/configuration
+  binding, and independently reported runtime observation before persistence.
 - **Host / OS exposure gate** — exact values, credentials, and backend
   tokens MUST NOT be passed through process argv, logs, audit details,
   diagnostics, JSON fixtures, or semantic-profile artifacts when they
@@ -497,6 +652,21 @@ invariant I1–I5 is enforced by named code.
   exact concern against the author declaration and rejects a silent
   approximation with a `runtime.backend-contract-invalid` diagnostic before the
   backend snapshot is accepted.
+- I1–I4 portable process-resource-limit gate —
+  `raes.runtime_resource_limits`,
+  `raes_processor.compiler.realization_requirements`, and
+  `raes_processor.semantics.realization` preserve semantic identities and
+  finite leaf domains, admit only typed apparatus resource/scope/value claims,
+  and require configuration-scope guest observation; runtime evaluation in
+  `realization_runtime_evaluation` checks complete-set equality or constrained
+  domain membership before accepting the snapshot.
+- I1–I5 compute-substrate separation — `raes.nodes`,
+  `raes.realization_designation`, compiler realization requirements, planner
+  envelope admission, and runtime realization evaluation preserve resource
+  kind, authored mechanism constraint, apparatus claim, and independently
+  observed selection as four distinct values. Reference OCI and libvirt drivers
+  obtain their observation from daemon readback; the in-process reference mode
+  discloses only its governed emulation extension.
 - I5 runtime provenance — the `realization_provenance` ledger
   (`RealizationProvenanceEntry` in
   `implementations/python/packages/raes_contracts/runtime_state.py`, published as
@@ -537,6 +707,15 @@ invariant I1–I5 is enforced by named code.
   namespace isolation, canonical-pointer rejection, open-support planning,
   fine-envelope subsumption, governing-scope disclosure, authenticated
   persistence delivery, and schema/model differential coverage.
+- `implementations/python/tests/test_issue_1066_runtime_resource_limits.py` —
+  portable model validation, semantic selector cross-references, exact /
+  constrained / open compilation and apparatus admission, effective
+  observation, complete-set runtime comparison, baseline retention,
+  canonical ordering, and command redaction.
+- `implementations/python/tests/test_issue_1076_compute_realization.py` —
+  portable compute authoring, strict-switch rejection, explicit legacy
+  migration, exact and constrained mechanism planning, independent runtime
+  observation binding, two native mechanisms, and out-of-domain rejection.
 
 ## Non-Goals
 
@@ -560,9 +739,7 @@ This spec does not:
 
 The semantics above synthesize patterns from established declarative
 languages, scenario / playbook DSLs, and academically-supported cyber
-SDLs. The repository's curated primary-source corpus is at
-`research/research/primary/literature/`. The most directly relevant
-precedents:
+SDLs. The most directly relevant primary-source precedents are linked below:
 
 - **Modelica `fixed` and `start` attributes** (Modelica Language
   Specification): the `fixed = true` annotation on an initial value
@@ -591,22 +768,22 @@ precedents:
   SDL points the ecosystem is closed-world by default, because honest
   reproducibility requires the failure mode "I cannot realize this" to
   be louder than the failure mode "I quietly assumed something".
-- **OASIS CACAO v2** (`research/research/primary/literature/dsl-and-standards/cacao_v2_spec.pdf`):
+- **[OASIS CACAO v2](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)**:
   RFC 2119 field-level MUST / SHOULD / MAY semantics in a security
   playbook DSL; consumers MUST reject playbooks whose
   `playbook_extensions` are not supported, rather than silently dropping
   them. Direct analogue for I1 / I2 / I4.
-- **OASIS OpenC2 v2** (`research/research/primary/literature/dsl-and-standards/openc2_v2_spec.html`):
+- **[OASIS OpenC2 v2](https://docs.oasis-open.org/openc2/oc2ls/v2.0/oc2ls-v2.0.html)**:
   required `target` versus optional `args`; actuators advertise
   supported actions and reject commands outside that surface.
   Apparatus-manifest analogue for I4.
-- **Costa et al 2020, *VSDL — A Virtual Scenario Description Language***
-  (`research/research/primary/literature/dsl-and-standards/costa2020_vsdl.pdf`): distinguishes scenario
+- **[Costa et al 2020, *Automating the Generation of Cyber Range Virtual
+  Scenarios with VSDL*](https://arxiv.org/abs/2001.06681)**: distinguishes scenario
   template (open over parameters) from instantiated scenario (closed
   after binding); processor rejects scenarios it cannot fully
   instantiate rather than approximating. Precedent for the
   authoring / validation / instantiation boundary above.
-- **Sigma rules** (`research/research/primary/literature/dsl-and-standards/sigma_rules_spec.yml`):
+- **[Sigma rules](https://sigmahq.io/sigma-specification/specification/sigma-rules-specification.html)**:
   detection rules with backend-translation semantics that require a
   backend to signal `unsupported` rather than silently drop or
   approximate a field. Reinforces I2.
@@ -614,12 +791,9 @@ precedents:
   backend profiles** all share the same general shape with the
   `RealizationSupportDeclaration` per-domain mode used here. SEM-218
   adopts the shape and makes its semantics normative for RAES.
-- **Pham et al 2016 *CyRIS***
-  (`research/research/primary/literature/dsl-and-standards/pham2016_cyris.pdf`),
-  **Vykopal et al 2017 *KYPO***
-  (`research/research/primary/literature/dsl-and-standards/vykopal2017_kypo.pdf`),
-  **Standen et al 2021 *CybORG***
-  (`research/research/primary/literature/dsl-and-standards/standen2021_cyborg.pdf`): academically
+- **[Pham et al 2016 *CyRIS*](https://hdl.handle.net/10119/15062)**,
+  **[Vykopal et al 2017 *KYPO*](https://www.scitepress.org/Papers/2017/64282/)**,
+  **[Standen et al 2021 *CybORG*](https://arxiv.org/abs/2108.09118)**: academically
   published cyber-range and agent-evaluation systems whose authoring
   layers separate declared scenario structure from runtime instantiation
   choices. Aligned with the lifecycle-phase responsibilities above.

@@ -22,6 +22,7 @@ from ..semantics.realization import (
     materialize_realization_requirements,
     realization_envelope_diagnostics,
     realization_support_diagnostics,
+    resolve_apparatus_realization_defaults,
 )
 from .manifest_validation import _validate_manifest
 from .operations import (
@@ -31,6 +32,7 @@ from .operations import (
     _build_provisioning_plan,
 )
 from .ordering import _ordering_cycle_diagnostics
+from .realization_authority import materialize_realization_authority
 from .resources import _collect_resources
 
 
@@ -95,10 +97,20 @@ def plan(
     """Reconcile a compiled runtime model against the current snapshot."""
 
     snapshot = snapshot or RuntimeSnapshot()
-    effective_requirements = materialize_realization_requirements(
+    apparatus_decisions = resolve_apparatus_realization_defaults(
         model.realization_requirements,
         manifest,
         apparatus_default=apparatus_realization_default,
+    )
+    effective_requirements = materialize_realization_requirements(
+        model.realization_requirements,
+        manifest,
+        apparatus_decisions=apparatus_decisions,
+    )
+    resolved_authority, authority_diagnostics = materialize_realization_authority(
+        model,
+        manifest,
+        apparatus_decisions=apparatus_decisions,
     )
     effective_model = replace(model, realization_requirements=effective_requirements)
     resources = _collect_resources(effective_model)
@@ -125,6 +137,7 @@ def plan(
             manifest,
             availability=artifact_availability,
         ),
+        *authority_diagnostics,
         *envelope_diagnostics,
         *_ordering_cycle_diagnostics(resources),
     ]
@@ -134,7 +147,14 @@ def plan(
         effective_requirements,
     )
 
-    provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
+    provisioning = _build_provisioning_plan(
+        resources,
+        actions,
+        deleted_entries,
+        manifest,
+        effective_requirements,
+        resolved_authority,
+    )
     materialization_diagnostics = service_materialization_plan_diagnostics(
         provisioning,
         manifest.provisioner,

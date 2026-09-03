@@ -132,7 +132,7 @@ def _suricata_engine(**overrides) -> dict:
 
 def _detection_node(engine: dict | None = None) -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "2 gib", "cpu": 2},
         "runtime": {
             "processes": [{"name": "suricata", "pid": 1, "command": ["suricata", "--pcap"]}],
@@ -172,7 +172,7 @@ def test_network_detection_surface_is_node_scoped_not_top_level() -> None:
 
 
 def test_vm_runtime_network_detection_engine_inventory() -> None:
-    node = Node(type="vm", runtime={"network_detection_engines": [_suricata_engine()]})
+    node = Node(type="compute", runtime={"network_detection_engines": [_suricata_engine()]})
 
     engine = node.runtime.network_detection_engines[0]
     assert engine.network_detection_engine_id == "suricata-engine"
@@ -192,7 +192,7 @@ def test_parser_accepts_canonical_runtime_network_detection_engines() -> None:
         nodes:
           dmz-net: {type: switch}
           suricata:
-            type: vm
+            type: compute
             resources: {ram: 2 gib, cpu: 2}
             runtime:
               network_sensors:

@@ -1,8 +1,6 @@
-"""Schema-first external contract models for RAES artifact boundaries."""
+"""Schema-first re-export facade for RAES artifact-boundary contracts."""
 
-# This module is an intentional re-export facade governed by PUBLIC_EXPORTS.
 # ruff: noqa: F401, F403
-
 from ..artifact_requirements import (
     ArtifactAcquisitionTimingModel,
     ArtifactAvailabilityContext,
@@ -13,48 +11,6 @@ from ..artifact_requirements import (
     ArtifactSatisfactionDisclosureModel,
     artifact_requirement_invariant_violations,
     validate_artifact_requirement_invariants,
-)
-from ..versions import (
-    ACTIVITYSTREAMS_ACTIVITY_TYPES_SOURCE_SCHEMA_VERSION,
-    ARTIFACT_REQUIREMENT_SCHEMA_VERSION,
-    ARTIFACT_TRANSFORMATION_REPORT_SCHEMA_VERSION,
-    ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
-    ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
-    ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
-    BACKEND_MANIFEST_V2_SCHEMA_VERSION,
-    BEHAVIORAL_RELATION_PROFILE_SCHEMA_VERSION,
-    CONCEPT_FAMILIES_SCHEMA_VERSION,
-    CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
-    EVALUATION_STATE_SCHEMA_VERSION,
-    EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION,
-    EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION,
-    EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION,
-    EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION,
-    EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION,
-    EXPERIMENT_RUN_SCHEMA_VERSION,
-    EXPERIMENT_STUDY_SCHEMA_VERSION,
-    EXPERIMENT_TASK_SCHEMA_VERSION,
-    EXTERNAL_CONCEPT_BINDINGS_SCHEMA_VERSION,
-    FIPA_COMMUNICATIVE_ACTS_SOURCE_SCHEMA_VERSION,
-    NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION,
-    OPERATION_SCHEMA_VERSION,
-    PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
-    PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION,
-    PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION,
-    PARTICIPANT_OPACITY_ANALYSIS_EVIDENCE_SCHEMA_VERSION,
-    PARTICIPANT_OPACITY_ANALYSIS_INPUT_SCHEMA_VERSION,
-    PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
-    RANDOM_STREAM_PROFILE_SCHEMA_VERSION,
-    RANDOM_STREAM_VECTOR_SCHEMA_VERSION,
-    REFERENCE_MODELS_SCHEMA_VERSION,
-    REUSABLE_ASSET_TRUST_POLICY_SCHEMA_VERSION,
-    RUNTIME_FACT_BINDING_PLANE_V1_SCHEMA_VERSION,
-    RUNTIME_SNAPSHOT_SCHEMA_VERSION,
-    SCENARIO_INSTANTIATION_REQUEST_SCHEMA_VERSION,
-    SEMANTIC_PROFILE_SCHEMA_VERSION,
-    UCO_ALIGNMENT_SCHEMA_VERSION,
-    WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION,
-    WORKFLOW_STATE_SCHEMA_VERSION,
 )
 from ..vocabulary import (
     ConceptFamilyId,
@@ -67,6 +23,7 @@ from ..vocabulary import (
     WorkflowStatePredicateFeature,
 )
 from ._exports import PUBLIC_EXPORTS as __all__
+from ._version_exports import *
 from .admitted_trial_plan import AdmittedApparatusBindingModel as AdmittedApparatusBindingModel
 from .admitted_trial_plan import AdmittedBindingModel as AdmittedBindingModel
 from .admitted_trial_plan import AdmittedExecutionControlModel as AdmittedExecutionControlModel
@@ -108,12 +65,38 @@ from .batch_execution import BatchExecutionReceiptModel as BatchExecutionReceipt
 from .batch_execution import validate_batch_execution_receipt as validate_batch_execution_receipt
 from .batch_execution import validate_scheduler_isolation_proof as validate_scheduler_isolation_proof
 from .bundle import schema_bundle
+from .candidate_synthesis import (
+    CandidateSynthesisAssumptionModel,
+    CandidateSynthesisChoiceModel,
+    CandidateSynthesisConstructTraceModel,
+    CandidateSynthesisContributionModel,
+    CandidateSynthesisDecisionModel,
+    CandidateSynthesisDisposition,
+    CandidateSynthesisInputModel,
+    CandidateSynthesisProfileCoordinateModel,
+    CandidateSynthesisProfileDefinitionModel,
+    CandidateSynthesisProfileLimitsModel,
+    CandidateSynthesisReason,
+    CandidateSynthesisRecordModel,
+    CandidateSynthesisSourceModel,
+    CandidateSynthesisTargetModel,
+    ConceptSourceAssertionModel,
+    ExampleSourceAssertionModel,
+    OrderingSourceAssertionModel,
+    ParameterizationSourceAssertionModel,
+    PreconditionSourceAssertionModel,
+    RelationshipSourceAssertionModel,
+    SourceAssertion,
+    SynthesisContributionKind,
+)
 from .capabilities import (
     ApparatusIdentityModel,
     BackendCompatibilityModel,
     EvaluatorCapabilitiesModel,
+    OperatingSystemCompatibilityModel,
     OrchestratorCapabilitiesModel,
     ProcessorCompatibilityModel,
+    ProcessResourceLimitCapabilityModel,
     ProvisionerCapabilitiesModel,
     RealizationObservationCapabilityModel,
     RealizationSupportDeclarationModel,
@@ -283,6 +266,38 @@ from .participant_envelopes import (
     SourcePipelineModel,
     SourceStatusModel,
 )
+from .participant_flow_control import (
+    ParticipantBoundaryFlowPolicyProfileModel,
+    ParticipantEffectiveFlowLabelModel,
+    ParticipantFlowBindingKind,
+    ParticipantFlowControlRelationModel,
+    ParticipantFlowCoordinateResult,
+    ParticipantFlowDeclassificationModel,
+    ParticipantFlowDerivationModel,
+    ParticipantFlowEndorsementModel,
+    ParticipantFlowFinalDisposition,
+    ParticipantFlowLabelResolutionStatus,
+    ParticipantFlowPolicyCutReferenceModel,
+    ParticipantFlowProfileReferenceModel,
+    ParticipantFlowRelationTargetKind,
+    ParticipantFlowReleaseKind,
+    ParticipantFlowRuleReferenceModel,
+    ParticipantFlowSinkDecisionModel,
+    ParticipantFlowSinkKind,
+    ParticipantFlowSubjectKind,
+    ParticipantFlowSubjectReferenceModel,
+)
+from .participant_flow_control_validation import (
+    ParticipantFlowActionAdmissionResolution,
+    ParticipantFlowCapabilityResolution,
+    ParticipantFlowControlContextResolver,
+    ParticipantFlowControlValidationContext,
+    ParticipantFlowHistoryHeadResolution,
+    ParticipantFlowReleaseAuthorityCoordinate,
+    ParticipantFlowSinkCoordinate,
+    validate_participant_flow_control_context,
+    validate_participant_flow_control_resolved_context,
+)
 from .participant_information_state import (
     ParticipantInformationReconstructionProfileModel,
     ParticipantInformationStateContextResolver,
@@ -369,14 +384,18 @@ from .random_stream import (
 )
 from .realization_plans import (
     EvaluationPlanModel,
+    ObservedOperatingSystemIdentityModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
+    PlannedRealizationConstraintModel,
     PlanOperationModel,
     ProvisioningPlanModel,
+    RealizationAuthorityBoundModel,
     RealizationEnvelopeIdentityModel,
     RealizationObservationDisclosureModel,
     RealizationProvenanceEntryModel,
+    ResolvedRealizationAuthorityModel,
     RuntimeSnapshotEnvelopeModel,
     SnapshotEntryModel,
 )
@@ -419,6 +438,7 @@ from .semantic_profiles import (
     SemanticProfileModel,
     SemanticProfilePhaseModel,
 )
+from .semantic_projection import *
 from .trial_analysis import (
     AdmittedTrialPlanReconciliation,
     reconcile_admitted_trial_plan,

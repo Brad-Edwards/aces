@@ -466,7 +466,7 @@ def test_refusal_only_coverage_never_establishes_a_declared_capability() -> None
         case for case in report.cases if case.policy_binding and case.policy_binding.obligation == "denial"
     )
     assert denial_case.passed, "the refusal itself is correct behavior"
-    unprobed = [case for case in report.cases if case.outcome == "unsupported"]
+    unprobed = [case for case in report.cases if case.outcome == "unsupported" and case.capability_feature is not None]
     assert {case.capability_feature for case in unprobed} == set(PROBED_POLICY_FEATURES)
     assert not report.passed
 

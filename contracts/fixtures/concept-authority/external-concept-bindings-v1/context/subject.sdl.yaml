@@ -1,4 +1,4 @@
 name: external-binding-subject
 nodes:
   web:
-    type: VM
+    type: compute

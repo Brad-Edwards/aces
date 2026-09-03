@@ -117,7 +117,7 @@ def _resolve_node_ref(
         code = f"{code_prefix}-unbound"
         message = f"Reference '{ref_name}' does not resolve to a defined {node_label}."
     elif required_type is not None and node.type != required_type:
-        expected = "a VM node" if required_type == NodeType.VM else "a switch/network node"
+        expected = "a compute node" if required_type == NodeType.COMPUTE else "a switch/network node"
         code = f"{code_prefix}-invalid-type"
         message = f"Reference '{ref_name}' must resolve to {expected} for {node_label}."
     else:

@@ -9,6 +9,9 @@ from raes_contracts.contracts import (
     ArtifactTransformationReportModel,
     AssociatedArtifactManifestModel,
     BackendManifestV2Model,
+    CandidateSynthesisInputModel,
+    CandidateSynthesisProfileDefinitionModel,
+    CandidateSynthesisRecordModel,
     EvaluationHistoryEventModel,
     EvaluationPlanModel,
     EvaluationResultStateModel,
@@ -26,11 +29,14 @@ from raes_contracts.contracts import (
     OperationStatusModel,
     OrchestrationPlanModel,
     ParticipantBehaviorHistoryEventModel,
+    ParticipantBoundaryFlowPolicyProfileModel,
     ParticipantConfigurationResultModel,
     ParticipantControlOccurrenceModel,
     ParticipantCrossingOccurrenceModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
+    ParticipantFlowControlContextResolver,
+    ParticipantFlowControlRelationModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
     ParticipantInformationReconstructionProfileModel,
@@ -42,9 +48,11 @@ from raes_contracts.contracts import (
     ProvisioningPlanModel,
     RuntimeFactBindingPlaneModel,
     RuntimeSnapshotEnvelopeModel,
+    SemanticProjectionReportModel,
     ValidationBasisDisclosureDocumentModel,
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
+    validate_participant_flow_control_resolved_context,
     validate_participant_information_state_resolved_context,
 )
 from raes_contracts.contracts.participant_execution import (
@@ -92,9 +100,11 @@ _MODEL_VALIDATORS = {
     "participant-information-reconstruction-profile-v1": (
         ParticipantInformationReconstructionProfileModel.model_validate
     ),
+    "participant-boundary-flow-policy-v1": ParticipantBoundaryFlowPolicyProfileModel.model_validate,
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
     "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_validate,
     "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_validate,
+    "participant-flow-control-relation-v1": ParticipantFlowControlRelationModel.model_validate,
     "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_validate,
     "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
     "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
@@ -107,9 +117,13 @@ _MODEL_VALIDATORS = {
 _STRUCTURAL_ONLY_VALIDATORS = {
     "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
     "artifact-transformation-report-v1": ArtifactTransformationReportModel.model_validate,
+    "sdl-candidate-synthesis-input-v1": CandidateSynthesisInputModel.model_validate,
+    "sdl-candidate-synthesis-profile-v1": CandidateSynthesisProfileDefinitionModel.model_validate,
+    "sdl-candidate-synthesis-record-v1": CandidateSynthesisRecordModel.model_validate,
     "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
     "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,
+    "semantic-projection-report-v1": SemanticProjectionReportModel.model_validate,
     "fipa-communicative-acts-source-v1": FipaCommunicativeActsSourceModel.model_validate,
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_validate,
     "experiment-authoring-input-v1": ExperimentSpecModel.model_validate,
@@ -131,7 +145,9 @@ _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset(
     {
         "associated-artifact-manifest-v1",
         "external-concept-bindings-v1",
+        "semantic-projection-report-v1",
         "participant-information-state-record-v1",
+        "participant-flow-control-relation-v1",
     }
 )
 
@@ -255,17 +271,51 @@ def _information_state_context_diagnostics(
     return diagnostics
 
 
+def _flow_control_context_diagnostics(
+    payload: object,
+    flow_control_context_resolver: ParticipantFlowControlContextResolver | None = None,
+) -> list[Diagnostic]:
+    contract_name = "participant-flow-control-relation-v1"
+    if flow_control_context_resolver is None:
+        return [
+            _diagnostic(
+                "conformance.semantic-context-required",
+                contract_name,
+                "participant flow-control context resolver is required",
+            )
+        ]
+    try:
+        document = ParticipantFlowControlRelationModel.model_validate(payload)
+        validate_participant_flow_control_resolved_context(
+            document,
+            flow_control_context_resolver,
+            payload,
+        )
+    except (TypeError, ValueError) as exc:
+        return [
+            _diagnostic(
+                "conformance.semantic-invalid",
+                contract_name,
+                "participant flow-control context is invalid: " + sanitized_failure_message(exc),
+            )
+        ]
+    return []
+
+
 def validate_contract_payload(
     contract_name: str,
     payload: object,
     *,
     information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+    flow_control_context_resolver: ParticipantFlowControlContextResolver | None = None,
 ) -> tuple[Diagnostic, ...]:
     """Validate one payload through its structural and available contextual boundary."""
 
     diagnostics = _validate_payload(contract_name, payload)
     if not diagnostics and contract_name == "participant-information-state-record-v1":
         diagnostics.extend(_information_state_context_diagnostics(payload, information_state_context_resolver))
+    if not diagnostics and contract_name == "participant-flow-control-relation-v1":
+        diagnostics.extend(_flow_control_context_diagnostics(payload, flow_control_context_resolver))
     return tuple(diagnostics)
 
 

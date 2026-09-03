@@ -19,7 +19,14 @@ from raes_contracts.contracts import (
     ParticipantStatusViewModel,
 )
 from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
-from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
+from raes_contracts.planning import (
+    ChangeAction,
+    ProvisioningPlan,
+    ProvisionOp,
+    RealizationAuthorityMode,
+    RealizationResolutionSource,
+    ResolvedRealizationAuthority,
+)
 from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import (
@@ -46,7 +53,7 @@ def _participant_binding_scenario_yaml() -> str:
 name: participant-binding
 nodes:
   web:
-    type: VM
+    type: compute
     resources: {ram: 1 GiB, cpu: 1}
     services: [{port: 80, name: http}]
 entities:
@@ -264,8 +271,7 @@ def test_control_plane_submits_provisioning_and_updates_snapshot():
 name: provision
 nodes:
   vm:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
 """)
     execution_plan = plan(compile_runtime_model(scenario), create_stub_target().manifest)
@@ -376,15 +382,31 @@ def _stateful_plan(
     *,
     spec: dict[str, Any] | None = None,
 ) -> ProvisioningPlan:
+    address = f"provision.{resource_type}.config"
+    requirement_kind = "generated-artifact" if resource_type == "generated-artifact" else "persistent-volume"
+    field_section = "generated_artifacts" if resource_type == "generated-artifact" else "persistent_volumes"
+    manifest = create_stub_manifest()
     return ProvisioningPlan(
         operations=[
             ProvisionOp(
                 action=ChangeAction.CREATE,
-                address=f"provision.{resource_type}.config",
+                address=address,
                 resource_type=resource_type,
                 payload={"spec": spec if spec is not None else _generated_artifact_spec()},
             )
-        ]
+        ],
+        realization_authority=(
+            ResolvedRealizationAuthority(
+                address=address,
+                field_path=f"{field_section}.config",
+                domain="runtime-realization",
+                requirement_kind=requirement_kind,
+                payload_pointer="/spec",
+                mode=RealizationAuthorityMode.EXACT,
+                source=RealizationResolutionSource.PROCESSOR_DERIVED,
+            ),
+        ),
+        realization_envelope=manifest.realization_envelope.identity if manifest.realization_envelope else None,
     )
 
 
@@ -552,8 +574,7 @@ def test_control_plane_submits_orchestration_with_portable_workflow_state():
 name: workflow
 nodes:
   vm:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}

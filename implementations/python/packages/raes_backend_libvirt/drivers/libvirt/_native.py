@@ -15,6 +15,8 @@ import uuid
 from collections.abc import Callable
 from typing import Protocol, cast
 
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
+
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 # Fixed namespace for deriving a per-address libvirt UUID. The UUID proves an
 # existing host object was realized by RAES for *this* address, so convergence
@@ -56,7 +58,8 @@ def _error_code(exc: BaseException) -> int | None:
         return None
     try:
         code = getter()
-    except Exception:
+    except Exception as exc:
+        _record_suppressed_failure("_error_code", exc)
         return None
     return code if isinstance(code, int) else None
 
@@ -101,7 +104,8 @@ def _existing_uuid(native: object) -> str | None:
         return None
     try:
         return reader()
-    except Exception:
+    except Exception as exc:
+        _record_suppressed_failure("_existing_uuid", exc)
         return None
 
 
@@ -135,7 +139,10 @@ def _lookup(connection: object, method_name: str, name: str) -> object | None:
         return None
     try:
         return method(name)
-    except Exception:
+    except Exception as exc:
+        code = _error_code(exc)
+        if code not in _ABSENCE_ERROR_CODES:
+            _record_suppressed_failure("_lookup", exc, native_code=code)
         return None
 
 

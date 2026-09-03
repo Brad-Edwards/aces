@@ -98,7 +98,7 @@ plan = manager.plan(parse_sdl(textwrap.dedent("""
     name: demo
     nodes:
       web:
-        type: vm
+        type: compute
         os: linux
         resources: {ram: 1 gib, cpu: 1}
 """)))

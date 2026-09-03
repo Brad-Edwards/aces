@@ -811,6 +811,36 @@
       "title": "ObservationStrength",
       "type": "string"
     },
+    "ObservedOperatingSystemIdentityModel": {
+      "additionalProperties": false,
+      "description": "Typed guest-observed OS identity carried by a bound disclosure.",
+      "properties": {
+        "distribution": {
+          "minLength": 1,
+          "title": "Distribution",
+          "type": "string"
+        },
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[!-~](?:[ -~]{0,126}[!-~])?$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "family",
+        "distribution",
+        "version"
+      ],
+      "title": "ObservedOperatingSystemIdentityModel",
+      "type": "object"
+    },
     "OutcomeInterpretationSourceLayer": {
       "description": "Semantic layers that may feed a SEM-215 interpretation rule.",
       "enum": [
@@ -10441,7 +10471,7 @@
     },
     "RealizationObservationDisclosureModel": {
       "additionalProperties": false,
-      "description": "Value-free corroboration metadata for one realized inventory concern.",
+      "description": "Corroboration metadata, with governed substrate evidence when applicable.",
       "properties": {
         "address": {
           "maxLength": 2048,
@@ -10453,10 +10483,41 @@
           "title": "Address",
           "type": "string"
         },
+        "binding_verified": {
+          "default": false,
+          "title": "Binding Verified",
+          "type": "boolean"
+        },
+        "configuration_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Configuration Digest"
+        },
         "domain": {
           "minLength": 1,
           "title": "Domain",
           "type": "string"
+        },
+        "envelope_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Envelope Digest"
         },
         "field_path": {
           "minLength": 1,
@@ -10469,10 +10530,73 @@
             "const": "none"
           }
         },
+        "observed_value": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed Value"
+        },
+        "observer_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observer Version"
+        },
+        "operating_system": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservedOperatingSystemIdentityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        },
         "requirement_kind": {
           "minLength": 1,
           "title": "Requirement Kind",
           "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
         },
         "verification_scope": {
           "$ref": "#/$defs/RealizationVerificationScope"

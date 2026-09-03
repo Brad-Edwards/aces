@@ -64,6 +64,7 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "participant-resource-budget-event-v1",
     "participant-control-occurrence-v1",
     "participant-crossing-occurrence-v1",
+    "participant-flow-control-relation-v1",
     "participant-lifecycle-event-v1",
     "participant-observation-envelope-v1",
     "participant-shared-state-record-v1",
@@ -96,10 +97,28 @@ PARTICIPANT_RUNTIME_POLICY_FEATURES = frozenset(
     }
 )
 
+# Issue #1004 adversarial-control apparatus/backend declaration terms. These are
+# evidence-required (a positive claim carries conformance evidence, below-exact
+# carries disclosure + limitation, bounded carries constraints) but, like
+# participant_predicate_opacity, they are NOT runtime policy features: #1003 /
+# RUN-319 own final-sink enforcement and the reference backend's auto-emitted
+# policy declarations. A declaration is never proof of realization, isolation,
+# monitor independence, non-collusion, flow propagation, or sink enforcement.
+PARTICIPANT_ADVERSARIAL_CONTROL_FEATURES = frozenset(
+    {
+        "participant_boundary_flow_resolution",
+        "participant_final_sink_mediation",
+        "participant_quarantined_processing",
+        "participant_processing_role_trust",
+        "participant_monitor_topology",
+    }
+)
+
 PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES = frozenset(
     {
         *PARTICIPANT_RUNTIME_POLICY_FEATURES,
         "participant_predicate_opacity",
+        *PARTICIPANT_ADVERSARIAL_CONTROL_FEATURES,
     }
 )
 
@@ -180,6 +199,27 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
             {"participant-control-occurrence-v1", "participant-crossing-occurrence-v1"}
         ),
         "participant_transformation": frozenset({"participant-crossing-occurrence-v1"}),
+        # Issue #1004 adversarial-control apparatus/backend declarations. Each
+        # term requires the backend-facing published contract that OWNS its
+        # claimed realization, not merely a generic occurrence carrier: the
+        # SEM-233 flow-control relation (resolved by the RUN-319 runtime at the
+        # final sink) for flow/sink/quarantine terms, the ACT-617/API-409
+        # control occurrence for processing-role trust, and the ASR-536
+        # experiment evidence record for monitor topology. The authored
+        # boundary-flow-policy profile stays out of backend support lists.
+        "participant_boundary_flow_resolution": frozenset(
+            {"participant-flow-control-relation-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_final_sink_mediation": frozenset(
+            {"participant-flow-control-relation-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_quarantined_processing": frozenset(
+            {"participant-flow-control-relation-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_processing_role_trust": frozenset(
+            {"participant-control-occurrence-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_monitor_topology": frozenset({"experiment-evidence-record-v1"}),
         "preconditions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
         "state_transitions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
         "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,

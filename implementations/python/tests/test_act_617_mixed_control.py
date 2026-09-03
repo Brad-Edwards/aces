@@ -98,10 +98,10 @@ def _scenario_yaml(*, mode: str = "mixed-control", include_declaration: bool = T
         name: act-617
         nodes:
           web:
-            type: VM
+            type: compute
             resources: {{ram: 1 GiB, cpu: 1}}
           internal:
-            type: VM
+            type: compute
             resources: {{ram: 1 GiB, cpu: 1}}
         entities:
           red-team:

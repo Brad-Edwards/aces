@@ -14,6 +14,8 @@ from raes.runtime_forwarding_agent import RuntimeForwardingAgent, RuntimeForward
 from raes.runtime_listeners import RuntimeServiceListener
 from raes.runtime_mounts import RuntimeMount
 from raes.runtime_network import RuntimePublishedPort
+from raes.runtime_resource_limits import RuntimeProcessResourceLimit
+from raes.value_parsing import is_variable_ref
 
 _COMMITMENT_PREFIX = "raes-runtime-value-jcs-sha256-v1:"
 _COMMITMENT_RE = re.compile(rf"^{re.escape(_COMMITMENT_PREFIX)}sha256:[0-9a-f]{{64}}$")
@@ -133,6 +135,15 @@ def validate_capability_policy_observation(value: object) -> None:
     RuntimeCapabilityPolicy.model_validate(_mapping(value, label="Linux capability policy"))
 
 
+def validate_process_resource_limits_observation(value: object) -> None:
+    """Validate effective readback as closed portable process-limit records."""
+
+    for item in _sequence(value, label="process resource limits"):
+        model = RuntimeProcessResourceLimit.model_validate(_mapping(item, label="process resource limits entry"))
+        if is_variable_ref(model.soft) or is_variable_ref(model.hard):
+            raise ValueError("effective process resource limit observation must contain concrete values")
+
+
 def validate_published_ports_observation(value: object) -> None:
     _validate_model_records(value, label="published ports", model=RuntimePublishedPort)
 
@@ -171,6 +182,7 @@ __all__ = [
     "validate_forwarding_agents_observation",
     "validate_mounts_observation",
     "validate_published_ports_observation",
+    "validate_process_resource_limits_observation",
     "validate_service_listeners_observation",
     "validate_value_commitment",
 ]

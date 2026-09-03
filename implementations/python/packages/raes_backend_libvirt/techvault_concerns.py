@@ -159,14 +159,17 @@ def _guest_placement_bounds_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
 
 
 def _guest_service_bounds_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
-    invalid = any(not _SAFE_TOKEN_RE.match(service.name) or not 1 <= service.port <= 65535 for service in spec.services)
+    invalid = any(
+        not _SAFE_TOKEN_RE.match(service.name) or not 1 <= service.port <= 65535 or service.protocol.lower() != "tcp"
+        for service in spec.services
+    )
     if not invalid:
         return []
     return [
         _diagnostic(
             _CODE_SERVICE_UNSUPPORTED,
             spec.address,
-            "Guest-certified services require a libvirt-safe name and a valid port.",
+            "Guest-certified services require a libvirt-safe name, a valid port, and protocol tcp.",
         )
     ]
 

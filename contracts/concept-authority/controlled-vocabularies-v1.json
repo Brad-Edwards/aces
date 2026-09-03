@@ -695,13 +695,38 @@
       "extension_policy": "governed-extension",
       "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
       "terms": {
-        "vm": {
-          "title": "Virtual Machine",
-          "description": "Provisioner can realize virtual machine nodes."
+        "compute": {
+          "title": "Compute",
+          "description": "Provisioner can realize backend-neutral compute endpoint nodes."
         },
         "switch": {
           "title": "Switch",
           "description": "Provisioner can realize switch nodes."
+        }
+      }
+    },
+    "compute-substrates": {
+      "title": "Compute Substrates",
+      "description": "Portable execution or isolation substrate vocabulary for compute-node realization constraints and observations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "scenario.realization.constraints.compute-substrate",
+        "runtime.snapshot.realization_observations.compute-substrate"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "virtual-machine": {
+          "title": "Virtual Machine",
+          "description": "A compute endpoint realized as a hardware-virtualized machine."
+        },
+        "operating-system-container": {
+          "title": "Operating-System Container",
+          "description": "A compute endpoint realized through operating-system-level container isolation."
+        },
+        "physical-device": {
+          "title": "Physical Device",
+          "description": "A compute endpoint realized on a physical computer or special-purpose device without requiring a virtualization substrate."
         }
       }
     },
@@ -734,6 +759,68 @@
         "other": {
           "title": "Other",
           "description": "Portable catch-all when no standard family applies."
+        }
+      }
+    },
+    "os-distributions": {
+      "title": "Operating System Distributions and Product Lines",
+      "description": "Portable operating-system distribution or product-line identifiers shared by SDL and backend compatibility declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "nodes.os_distribution",
+        "capabilities.provisioner.operating_systems.distribution",
+        "runtime.snapshot.realization_observations.operating-system.distribution"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "ubuntu": {
+          "title": "Ubuntu",
+          "description": "Ubuntu Linux distribution."
+        },
+        "debian": {
+          "title": "Debian",
+          "description": "Debian GNU/Linux distribution."
+        },
+        "rocky-linux": {
+          "title": "Rocky Linux",
+          "description": "Rocky Linux distribution."
+        },
+        "red-hat-enterprise-linux": {
+          "title": "Red Hat Enterprise Linux",
+          "description": "Red Hat Enterprise Linux product line."
+        },
+        "windows-server": {
+          "title": "Windows Server",
+          "description": "Microsoft Windows Server product line."
+        },
+        "windows-client": {
+          "title": "Windows Client",
+          "description": "Microsoft Windows client product line."
+        },
+        "solaris": {
+          "title": "Solaris",
+          "description": "Oracle Solaris operating-system product line."
+        }
+      }
+    },
+    "provisioner-node-architectures": {
+      "title": "Provisioner Node CPU Architectures",
+      "description": "Target-node CPU architecture vocabulary shared by SDL Node.architecture and provisioner capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_node_architectures"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "x86_64": {
+          "title": "x86-64",
+          "description": "64-bit x86 CPU architecture (AMD64 / Intel 64)."
+        },
+        "aarch64": {
+          "title": "AArch64",
+          "description": "64-bit ARM CPU architecture (ARMv8-A and later)."
         }
       }
     },
@@ -781,6 +868,51 @@
         }
       }
     },
+    "account-authentication-methods": {
+      "title": "Account Authentication Methods",
+      "description": "Portable authentication methods shared by account posture and credential bindings.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "sdl.accounts.auth_method",
+        "sdl.accounts.credential_bindings.auth_method"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "password": {
+          "title": "Password",
+          "description": "Authentication using password material."
+        },
+        "key": {
+          "title": "Key",
+          "description": "Authentication using key material."
+        },
+        "certificate": {
+          "title": "Certificate",
+          "description": "Authentication using certificate material."
+        }
+      }
+    },
+    "account-credential-purposes": {
+      "title": "Account Credential Purposes",
+      "description": "Portable purposes served by account credential bindings.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "sdl.accounts.credential_bindings.purpose"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "primary_authentication": {
+          "title": "Primary Authentication",
+          "description": "The primary authentication method matching account posture."
+        },
+        "administrative_authentication": {
+          "title": "Administrative Authentication",
+          "description": "An additional credential used for administrative authentication."
+        }
+      }
+    },
     "provisioner-account-features": {
       "title": "Provisioner Account Features",
       "description": "Provisioner-supported account feature vocabulary.",
@@ -818,6 +950,10 @@
         "auth_method": {
           "title": "Authentication Method",
           "description": "Authentication method attribute support."
+        },
+        "credential_bindings": {
+          "title": "Credential Bindings",
+          "description": "Typed account credential-binding realization support."
         }
       }
     },
@@ -994,6 +1130,26 @@
         "participant_transformation": {
           "title": "Participant Transformation",
           "description": "Backend supports governed non-mutating participant-boundary transformations with fresh result identity."
+        },
+        "participant_boundary_flow_resolution": {
+          "title": "Participant Boundary Flow Resolution",
+          "description": "Backend declares evidence-bound resolution of SEM-233 two-coordinate boundary flow labels with conservative provenance-preserving propagation; a declaration is not proof of realization."
+        },
+        "participant_final_sink_mediation": {
+          "title": "Participant Final Sink Mediation",
+          "description": "Backend declares evidence-bound fail-closed exact-cut permit mediation immediately before an RAES-controlled external effect; enforcement remains the RUN-319 runtime boundary, not this declaration."
+        },
+        "participant_quarantined_processing": {
+          "title": "Participant Quarantined Processing",
+          "description": "Backend declares evidence-bound bounded quarantine of unknown or untrusted source material; quarantine has no consequential authority unless the final-sink path still permits the exact effect."
+        },
+        "participant_processing_role_trust": {
+          "title": "Participant Processing Role Trust",
+          "description": "Backend declares trusted versus untrusted processing roles bound to controller and authority state; a role name is not an integrity label, endorsement, independence, or non-collusion proof."
+        },
+        "participant_monitor_topology": {
+          "title": "Participant Monitor Topology",
+          "description": "Backend declares evidence-bound monitor topology as bounded apparatus evidence; distinct model or process identities are not independence or non-collusion evidence and monitor output is advisory only."
         },
         "preconditions": {
           "title": "Preconditions",
@@ -1429,6 +1585,246 @@
         "audited": {
           "title": "Audited",
           "description": "Audit or evidence retention for a prior crossing fact."
+        }
+      }
+    },
+    "participant-flow-label-resolution-statuses": {
+      "title": "Participant Flow Label Resolution Statuses",
+      "description": "Closed resolution postures for independent SEM-233 confidentiality and integrity labels.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.labels.resolution_status"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "resolved": {
+          "title": "Resolved",
+          "description": "Both label coordinates resolve under the exact profile and policy cut."
+        },
+        "unresolved": {
+          "title": "Unresolved",
+          "description": "At least one required source or coordinate is unresolved and deny-equivalent."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "The selected profile cannot resolve the required source or coordinate."
+        }
+      }
+    },
+    "participant-flow-subject-kinds": {
+      "title": "Participant Flow Subject Kinds",
+      "description": "Closed value-free subject identities admitted by the SEM-233 relation contract.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.labels.subject.subject_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "runtime-fact-version": {
+          "title": "Runtime Fact Version",
+          "description": "One exact immutable runtime-fact version identity."
+        },
+        "action-argument": {
+          "title": "Action Argument",
+          "description": "One normalized action-argument name without its value."
+        },
+        "participant-control-occurrence": {
+          "title": "Participant Control Occurrence",
+          "description": "One exact API-409 occurrence identity."
+        },
+        "participant-crossing-occurrence": {
+          "title": "Participant Crossing Occurrence",
+          "description": "One exact API-423 occurrence identity."
+        },
+        "derived-result": {
+          "title": "Derived Result",
+          "description": "A fresh value-free result identity produced by derivation or release."
+        }
+      }
+    },
+    "participant-flow-release-kinds": {
+      "title": "Participant Flow Release Kinds",
+      "description": "Closed coordinate-specific SEM-233 release operations.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.releases.kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "declassification": {
+          "title": "Declassification",
+          "description": "An authorized fresh-result change to confidentiality obligations only."
+        },
+        "endorsement": {
+          "title": "Endorsement",
+          "description": "An authorized fresh-result change to integrity obligations only."
+        }
+      }
+    },
+    "participant-flow-coordinate-results": {
+      "title": "Participant Flow Coordinate Results",
+      "description": "Closed results for each independent final-sink flow coordinate.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.sink_decisions.coordinate_result"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "satisfied": {
+          "title": "Satisfied",
+          "description": "The exact coordinate obligations are satisfied at the selected cut."
+        },
+        "deny": {
+          "title": "Deny",
+          "description": "The exact coordinate is denied."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "The coordinate cannot be supported."
+        },
+        "stale": {
+          "title": "Stale",
+          "description": "A required coordinate or history head is stale."
+        },
+        "unresolved": {
+          "title": "Unresolved",
+          "description": "A required coordinate did not resolve."
+        },
+        "unknown": {
+          "title": "Unknown",
+          "description": "The coordinate result is unknown and not permission."
+        },
+        "ambiguous": {
+          "title": "Ambiguous",
+          "description": "More than one incompatible coordinate resolution remains."
+        }
+      }
+    },
+    "participant-flow-final-dispositions": {
+      "title": "Participant Flow Final Dispositions",
+      "description": "Closed deny-first final-sink dispositions for SEM-233.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.sink_decisions.final_disposition"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "permit": {
+          "title": "Permit",
+          "description": "Both coordinates and every incumbent contextual conjunct permit."
+        },
+        "deny": {
+          "title": "Deny",
+          "description": "At least one exact conjunct denies."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "At least one required conjunct is unsupported."
+        },
+        "stale": {
+          "title": "Stale",
+          "description": "At least one required conjunct is stale."
+        },
+        "unresolved": {
+          "title": "Unresolved",
+          "description": "At least one required conjunct is unknown, ambiguous, or unresolved."
+        }
+      }
+    },
+    "participant-flow-sink-kinds": {
+      "title": "Participant Flow Sink Kinds",
+      "description": "Closed final effect and disclosure sink categories governed by SEM-233.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.sink_decisions.sink.sink_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "runtime-fact-sink": {
+          "title": "Runtime Fact Sink",
+          "description": "A compiled action input bound through the runtime-fact plane."
+        },
+        "action-argument": {
+          "title": "Action Argument",
+          "description": "A normalized participant action argument."
+        },
+        "participant-crossing": {
+          "title": "Participant Crossing",
+          "description": "An exact API-423 participant-boundary crossing."
+        },
+        "participant-output": {
+          "title": "Participant Output",
+          "description": "A participant-facing output disclosure."
+        },
+        "persistent-write": {
+          "title": "Persistent Write",
+          "description": "A persistent external or runtime write."
+        },
+        "callback": {
+          "title": "Callback",
+          "description": "An externally observable callback."
+        },
+        "error": {
+          "title": "Error",
+          "description": "An externally observable error surface."
+        },
+        "stream-chunk": {
+          "title": "Stream Chunk",
+          "description": "One independently governed streamed output chunk."
+        }
+      }
+    },
+    "participant-flow-binding-kinds": {
+      "title": "Participant Flow Binding Kinds",
+      "description": "Closed incumbent carrier families that can bind into a SEM-233 relation.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.bindings.kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "runtime-fact": {
+          "title": "Runtime Fact",
+          "description": "An exact declaration, version, sink, and binding-event join."
+        },
+        "action-argument": {
+          "title": "Action Argument",
+          "description": "An exact normalized argument name and admission join."
+        },
+        "participant-control": {
+          "title": "Participant Control",
+          "description": "An exact API-409 control-occurrence join."
+        },
+        "participant-crossing": {
+          "title": "Participant Crossing",
+          "description": "An exact API-423 crossing-occurrence join."
+        }
+      }
+    },
+    "participant-flow-relation-target-kinds": {
+      "title": "Participant Flow Relation Target Kinds",
+      "description": "Closed SEM-233 aggregate records that an incumbent carrier binding may target.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-flow-control-relation.bindings.relation_target.target_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "label": {
+          "title": "Label",
+          "description": "One effective two-coordinate flow label."
+        },
+        "derivation": {
+          "title": "Derivation",
+          "description": "One complete possible-input derivation."
+        },
+        "release": {
+          "title": "Release",
+          "description": "One coordinate-specific fresh-result release."
+        },
+        "sink-decision": {
+          "title": "Sink Decision",
+          "description": "One deny-first exact final-sink decision."
         }
       }
     },

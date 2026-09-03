@@ -36,6 +36,9 @@ phases:
       - ^SEM-
     blocked_until:
       - reference-implementations
+  - id: participant-model
+    patterns:
+      - ^ACT-
   - id: api400-deferred
     requirements:
       - API-405
@@ -118,21 +121,26 @@ ownership:
     - contracts/fixtures/backend-manifest
     - contracts/fixtures/concept-authority
     - contracts/provenance
+    - contracts/schema-publication
     - contracts/schema-publication-manifest.json
     - contracts/schemas/backend-manifest
     - contracts/schemas/plans
+    - contracts/schemas/satisfiability
     - contracts/schemas/sdl
     - docs/decisions/issue-541-sdl-spec-second-review-preflight.md
     - docs/decisions/issue-805-participant-interactive-access-preflight.md
     - docs/decisions/adrs
     - docs/explain/sdl
     - docs/index.md
+    - docs/research/formal-semantic-validation
     - docs/research/lineage/source-audit-2026-07-12.md
     - docs/research/participant-interactive-access
+    - implementations/python/packages/raes_backend_libvirt
     - implementations/python/packages/raes_backend_protocols
     - implementations/python/packages/raes_backend_stubs
     - implementations/python/packages/raes_contracts
     - implementations/python/packages/raes_processor
+    - implementations/python/packages/raes_reference_backend
     - implementations/python/packages/raes
     - implementations/python/tests
     - specs/formal/participant-semantics
@@ -185,6 +193,24 @@ ownership:
     - implementations/python/packages/raes
     - implementations/python/tests
     - specs/formal
+    - CHANGELOG.md
+  participant-model:
+    - contracts/concept-authority
+    - contracts/fixtures
+    - contracts/schemas
+    - contracts/schema-publication-manifest.json
+    - docs/decisions
+    - docs/explain/reference
+    - docs/explain/sdl
+    - specs/formal
+    - specs/sdl
+    - implementations/python/packages/raes
+    - implementations/python/packages/raes_processor
+    - implementations/python/packages/raes_contracts
+    - implementations/python/packages/raes_backend_protocols
+    - implementations/python/packages/raes_runtime
+    - implementations/python/tests
+    - tools/policy/requirement_order.yaml
     - CHANGELOG.md
   documentation-surfaces:
     - .bestpractices.json

@@ -11,17 +11,16 @@ from raes.scenario import InstantiatedScenario, Scenario
 
 from raes_contracts.artifact_requirements import ArtifactRequirementContractModel
 
+from . import semantic_profiles, semantic_projection
 from .admitted_trial_plan import AdmittedTrialPlanModel
-from .artifact_transformations import ArtifactTransformationReportModel
-from .associated_artifacts import AssociatedArtifactManifestModel
 from .batch_execution import BatchExecutionReceiptModel
+from .bundle_runtime import _runtime_schema_bundle
 from .catalogs import (
     ConceptFamilyCatalogModel,
     ReferenceModelCatalogModel,
     UcoAlignmentCatalogModel,
 )
 from .execution_state import (
-    EvaluationHistoryEventModel,
     EvaluationResultStateModel,
     InstantiationRequestModel,
     PropositionTruthResultModel,
@@ -32,7 +31,6 @@ from .execution_state import (
 from .experiment_apparatus import ExperimentApparatusContextModel, ExperimentTaskModel
 from .experiment_bindings import (
     ExperimentBindingDescriptorSetModel,
-    ParticipantConfigurationResultModel,
 )
 from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
@@ -40,63 +38,28 @@ from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
 from .external_concept_bindings import ExternalConceptBindingDocumentModel
 from .manifests import ProcessorManifestV2Model
-from .participant_context import ParticipantContextViewModel
-from .participant_control import ParticipantControlOccurrenceModel
-from .participant_crossing import ParticipantCrossingOccurrenceModel
-from .participant_decision_surface import ParticipantDecisionSurfaceModel
-from .participant_decision_surface_v2 import ParticipantDecisionSurfaceV2Model
-from .participant_envelopes import (
-    ParticipantJointActionRecordModel,
-    ParticipantLifecycleEventModel,
-    ParticipantSharedStateRecordModel,
-    ParticipantTimeManagementContextModel,
-)
-from .participant_execution import (
-    ParticipantExecutionBindingModel,
-    ParticipantExecutionControlRequestModel,
-    ParticipantExecutionServiceStateModel,
+from .participant_flow_control import (
+    ParticipantBoundaryFlowPolicyProfileModel,
 )
 from .participant_information_state import (
     ParticipantInformationReconstructionProfileModel,
-    ParticipantInformationStateRecordModel,
 )
 from .participant_manifests import (
     BackendManifestV2Model,
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
 )
-from .participant_observation import ParticipantObservationEnvelopeModel
-from .participant_resource_budgets import (
-    ParticipantResourceBudgetEventModel,
-    ParticipantResourceBudgetPolicyModel,
-    ParticipantResourceBudgetStateModel,
-    ParticipantResourcePoolCapacityModel,
-)
-from .participant_runtime import (
-    ParticipantBehaviorHistoryEventModel,
-    ParticipantEpisodeHistoryEventModel,
-    ParticipantEpisodeStateModel,
-)
-from .participant_views import (
-    ParticipantHistoryViewModel,
-    ParticipantOutcomeReportModel,
-    ParticipantStatusViewModel,
-)
 from .random_stream import RandomStreamProfileModel, RandomStreamVectorModel
 from .realization_plans import (
     EvaluationPlanModel,
-    OperationReceiptModel,
-    OperationStatusModel,
     OrchestrationPlanModel,
     ProvisioningPlanModel,
     RuntimeSnapshotEnvelopeModel,
 )
 from .reusable_assets import (
-    ReusableAssetTrustPolicyModel,
     _backend_profile_schema_for_bundle,
     _event_stream_schema,
 )
-from .runtime_facts import RuntimeFactBindingPlaneModel
 from .schema_constraints import (
     _attach_compiled_address_map_constraints,
     _attach_instantiation_invariants,
@@ -113,8 +76,8 @@ from .schema_invariants import (
     _attach_raes_semantic_profile,
     _attach_stateful_resource_invariants,
 )
-from .semantic_profiles import SemanticProfileModel
 from .time_model import RealizedTimeModelProvenanceModel, TimeModelDeclarationModel, TimeRuntimeStateModel
+from .transformation_schemas import transformation_schema_bundle
 from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .vocabulary_sources import (
@@ -129,6 +92,7 @@ from .vocabulary_sources import (
 
 def _core_schema_bundle() -> dict[str, dict[str, Any]]:
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
+    from raes_contracts.semantic_comparison import SemanticComparisonRequestModel, SemanticComparisonResultModel
 
     from ..behavioral_relation_profiles import BehavioralRelationProfileModel
     from ..behavioral_relations import BehavioralRelationCatalogModel
@@ -154,7 +118,9 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
         "artifact-requirement-v1": ArtifactRequirementContractModel.model_json_schema(),
-        "artifact-transformation-report-v1": ArtifactTransformationReportModel.model_json_schema(),
+        **transformation_schema_bundle(),
+        "semantic-comparison-request-v1": SemanticComparisonRequestModel.model_json_schema(),
+        "semantic-comparison-result-v1": SemanticComparisonResultModel.model_json_schema(),
         "exploit-path-analysis-evidence-v1": ExploitPathAnalysisEvidenceModel.model_json_schema(),
         "scenario-satisfiability-evidence-v1": ScenarioSatisfiabilityEvidenceModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
@@ -173,17 +139,19 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
         "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_json_schema(),
+        "semantic-projection-report-v1": semantic_projection.SemanticProjectionReportModel.model_json_schema(),
         "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "atlas-tactics-source-v1": AtlasTacticsSourceModel.model_json_schema(),
         "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
         "w3c-activitystreams-activity-types-source-v1": ActivityStreamsActivityTypesSourceModel.model_json_schema(),
         "fipa-communicative-acts-source-v1": FipaCommunicativeActsSourceModel.model_json_schema(),
-        "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
+        "semantic-profile-v1": semantic_profiles.SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "random-stream-profile-v1": RandomStreamProfileModel.model_json_schema(),
         "participant-information-reconstruction-profile-v1": (
             ParticipantInformationReconstructionProfileModel.model_json_schema()
         ),
+        "participant-boundary-flow-policy-v1": ParticipantBoundaryFlowPolicyProfileModel.model_json_schema(),
         "random-stream-vector-v1": RandomStreamVectorModel.model_json_schema(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
         "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
@@ -219,51 +187,6 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
         "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_json_schema(),
         "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_json_schema(),
-    }
-
-
-def _runtime_schema_bundle() -> dict[str, dict[str, Any]]:
-    return {
-        "evaluation-history-event-stream-v1": _event_stream_schema(
-            "EvaluationHistoryEventStream",
-            EvaluationHistoryEventModel.model_json_schema(),
-        ),
-        "participant-episode-state-envelope-v1": ParticipantEpisodeStateModel.model_json_schema(),
-        "participant-episode-history-event-stream-v1": _event_stream_schema(
-            "ParticipantEpisodeHistoryEventStream",
-            ParticipantEpisodeHistoryEventModel.model_json_schema(),
-        ),
-        "participant-behavior-history-event-stream-v1": _event_stream_schema(
-            "ParticipantBehaviorHistoryEventStream",
-            ParticipantBehaviorHistoryEventModel.model_json_schema(),
-        ),
-        "participant-execution-binding-v1": ParticipantExecutionBindingModel.model_json_schema(),
-        "participant-execution-control-v1": ParticipantExecutionControlRequestModel.model_json_schema(),
-        "participant-execution-service-state-v1": ParticipantExecutionServiceStateModel.model_json_schema(),
-        "participant-resource-budget-policy-v1": ParticipantResourceBudgetPolicyModel.model_json_schema(),
-        "participant-resource-pool-capacity-v1": ParticipantResourcePoolCapacityModel.model_json_schema(),
-        "participant-resource-budget-state-v1": ParticipantResourceBudgetStateModel.model_json_schema(),
-        "participant-resource-budget-event-v1": ParticipantResourceBudgetEventModel.model_json_schema(),
-        "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
-        "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
-        "participant-information-state-record-v1": ParticipantInformationStateRecordModel.model_json_schema(),
-        "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),
-        "participant-joint-action-record-v1": ParticipantJointActionRecordModel.model_json_schema(),
-        "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),
-        "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_json_schema(),
-        "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_json_schema(),
-        "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
-        "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
-        "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
-        "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
-        "runtime-fact-binding-plane-v1": RuntimeFactBindingPlaneModel.model_json_schema(),
-        "participant-decision-surface-v1": ParticipantDecisionSurfaceModel.model_json_schema(),
-        "participant-decision-surface-v2": ParticipantDecisionSurfaceV2Model.model_json_schema(),
-        "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_json_schema(),
-        "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
-        "operation-status-v1": OperationStatusModel.model_json_schema(),
-        "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
-        "reusable-asset-trust-policy-v1": ReusableAssetTrustPolicyModel.model_json_schema(),
     }
 
 

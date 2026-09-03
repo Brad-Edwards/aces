@@ -416,6 +416,42 @@ Composition is registry-ready as well:
 - `raes sdl verify-imports` verifies lockfile, trust, digests, and signatures
 - `raes sdl publish` packages a publishable SDL module as an OCI image layout
 
+OCI acquisition bounds the compressed response and the complete decoded tar
+stream before parsing any tar header. The decoded-stream limit includes PAX/GNU
+metadata and padding and has both absolute and expansion-ratio ceilings. Safe
+extraction requires the standard-library `data` filter; Python 3.11.0 through
+3.11.3 fail closed for OCI extraction rather than using unfiltered extraction.
+
+Resolved module caches and published layouts use immutable version directories
+under a logical slot plus one atomically replaced `.raes-current` pointer. A
+cache hit streams a trusted expected inventory directly from the verified,
+bounded tar, then re-hashes the exact extracted tree against its canonical
+completion manifest. The comparison covers every path and entry type plus each
+file's filtered mode, size, and digest. The cache's own writable manifest is not
+its authority. A hit performs no extraction or version staging; only the
+bounded decoded-tar spool may spill beyond its memory threshold. Missing,
+extra, linked, mode-changed, byte-changed, or coordinated tree-plus-manifest
+edits rebuild cleanly.
+Publication returns the selected immutable OCI-layout version path; a failed
+writer leaves the prior pointer and every extant reader path intact. Startup
+repair removes incomplete stages and can repoint to a complete validated orphan
+version left by process death.
+
+For publication, the stable `<module>-<version>.oci` name is the private logical
+slot, not a directly consumable OCI layout. CLI/API `layout_dir` points to the
+selected immutable `versions/<id>` child, which contains the standard
+`oci-layout`, `index.json`, and `blobs/` inventory. Consumers should use that
+reported path rather than infer the slot. Each slot retains at most eight
+complete versions: current, the immediately prior pointer target, and the
+newest remaining versions. This window protects an in-flight prior reader but
+is not archival retention; push or copy layouts that must outlive later
+publications.
+
+An older root-level OCI layout at the stable slot name is not silently upgraded
+into a dual layout. Publication fails with instructions to move or remove that
+legacy output first, preventing older consumers from continuing to read stale
+root `index.json` and `blobs/` while newer consumers use a version child.
+
 Resolution and trust happen before instantiation and semantic validation.
 Planner/runtime semantics see one admitted concrete scenario; replay-relevant
 resolution and binding facts remain under its typed provenance rather than in
@@ -447,6 +483,29 @@ header identities and no bearer tokens are built in. Deployments that use
 header identity must pass an explicit `ControlPlaneSecurityConfig`, set
 `trust_proxy_identity_headers=True`, and only trust those headers behind an
 authenticated proxy that strips caller-supplied identity headers.
+
+Bearer and verified-proxy authentication require the same exact target binding.
+An identity with no target, and an explicitly supplied bearer that is unknown,
+revoked, or scoped to another target, is rejected; a rejected bearer never
+falls back to proxy headers. Request admission is also bounded before FastAPI
+parses or dispatches a body: a public ASGI wrapper checks one digits-only
+`Content-Length`, then consumes at most the configured byte limit and replays
+one coalesced body message. This boundary does not rely on framework-private
+request caches and returns a stable `413` before a route can run.
+
+The HTTP adapter offloads synchronous backend and store calls to AnyIO's
+bounded worker pool. An application-scoped async lock serializes target
+mutations without occupying a worker while requests wait; independent reads
+remain responsive while a backend is slow. The pending mutation count is
+bounded by `ControlPlaneSecurityConfig.max_pending_mutations` and overload
+returns `503` plus `Retry-After`. This in-process execution boundary neither
+replaces backend I/O timeouts nor claims durable or distributed job queuing.
+Request-size rejection also offloads audit persistence; an audit-store failure
+cannot admit an invalid body or replace the stable `400`/`413` response. These
+pre-routing audits use a separate one-worker limiter and a bounded pending
+count, so an unauthenticated rejection flood cannot consume the default AnyIO
+workers required by authenticated reads; excess audit records are dropped with
+an operational warning.
 
 ## Current Scope
 

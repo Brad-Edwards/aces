@@ -17,11 +17,12 @@
     "network_policy": "generated-appliance-network",
     "supported_node_types": [
       "switch",
-      "vm"
+      "compute"
     ],
     "supported_os_families": [
       "linux"
     ],
+    "operating_systems": [],
     "supported_content_types": [
       "file"
     ],
@@ -41,9 +42,23 @@
       "minimum": 1,
       "maximum": 2
     },
-    "configuration_digest": "sha256:fbb560799256b26deb85fead1de2a681f5f93d16a03bb7c3e7d9792fcf88ea6c"
+    "configuration_digest": "sha256:bc773acad54a27a26f63ddaae96d7c8b0f8d37226dc19815fc146fa092884dbf"
   },
   "concerns": [
+    {
+      "concern": "compute-substrate",
+      "disposition": "realized",
+      "observation_strength": "daemon-observed",
+      "mechanism": "virtual-machine",
+      "transformations": []
+    },
+    {
+      "concern": "operating-system",
+      "disposition": "unsupported",
+      "observation_strength": "none",
+      "mechanism": null,
+      "transformations": []
+    },
     {
       "concern": "topology",
       "disposition": "realized",
@@ -115,5 +130,5 @@
       "transformations": []
     }
   ],
-  "digest": "sha256:9f5e7b452821febb9e4f160b843dfc76f7d2ace1fb3dd2adb675fc9ce020aaa7"
+  "digest": "sha256:39becb940224f84350d4c16bfa0c2159e5aae3478004265b0cb675423c339aba"
 }

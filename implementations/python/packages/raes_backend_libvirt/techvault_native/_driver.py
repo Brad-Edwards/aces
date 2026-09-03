@@ -10,15 +10,20 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast
-from urllib.parse import urlsplit
 
 from raes_contracts.diagnostics import Diagnostic
 
-from .._techvault_native_helpers import default_connector as _default_connector
-from .._techvault_native_helpers import default_kernel_path as _default_kernel_path
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
+
+from .._techvault_native_helpers import (
+    default_connector as _default_connector,
+)
+from .._techvault_native_helpers import (
+    default_kernel_path as _default_kernel_path,
+)
 from .._techvault_native_ops import (
     _CODE_OPERATION_FAILED,
     _CODE_OWNERSHIP_CONFLICT,
@@ -28,6 +33,7 @@ from .._techvault_native_ops import (
     _artifact_token,
     _diagnostic,
 )
+from ._finalize import _verify_and_finalize
 
 if TYPE_CHECKING:
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
@@ -43,10 +49,11 @@ from ..driver import (
 from ..drivers.libvirt import Connector, _existing_uuid, _raes_uuid
 from ..envelopes import load_libvirt_realization_envelope
 from ..techvault_appliance import BusyboxInitramfsBuilder, InitramfsBuilder
-from ..techvault_concerns import techvault_observation_diagnostics, techvault_spec_diagnostics
+from ..techvault_concerns import techvault_spec_diagnostics
 from ..techvault_lifecycle import (
     NativeOwnershipConflict as _OwnershipConflict,
 )
+from ..techvault_lifecycle import NativeResolution as _NativeResolution
 from ..techvault_lifecycle import (
     deactivate_and_undefine as _deactivate_and_undefine,
 )
@@ -62,15 +69,16 @@ from ..techvault_matrix import (
 from ..techvault_matrix import (
     native_matrix as _native_matrix,
 )
-from ..techvault_matrix import (
-    safe_name as _safe_name,
-)
 from ..techvault_observation import (
     canonical_digest,
     file_digest,
-    snapshot_from_observations,
+    native_active,
+    substrate_observation,
 )
 from ._define import define_domain, define_domains, define_network, define_networks
+from ._preflight import artifact_preflight_diagnostics, validate_driver_configuration
+
+_CONNECTION_ADDRESS = "runtime.libvirt.connection"
 
 
 @dataclass
@@ -91,8 +99,12 @@ class TechVaultNativeLibvirtDriver:
     last_snapshot: dict[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self._validate_connection_uri()
-        self._validate_appliance_flags()
+        validate_driver_configuration(
+            connection_uri=self.connection_uri,
+            name_prefix=self.name_prefix,
+            define_only=self.define_only,
+            clean_existing=self.clean_existing,
+        )
         self.state_dir = Path(self.state_dir)
         self.kernel_path = Path(self.kernel_path) if self.kernel_path is not None else _default_kernel_path()
         self.connector = self.connector or _default_connector
@@ -100,48 +112,41 @@ class TechVaultNativeLibvirtDriver:
         self._realized: set[str] = set()
         self._artifacts: dict[str, tuple[Path, ...]] = {}
 
-    def _validate_connection_uri(self) -> None:
-        if not self.connection_uri or not self.connection_uri.strip():
-            raise ValueError("TechVaultNativeLibvirtDriver connection_uri must be non-empty.")
-        parsed_uri = urlsplit(self.connection_uri)
-        if parsed_uri.username is not None or parsed_uri.password is not None:
-            raise ValueError("TechVaultNativeLibvirtDriver connection URI must not carry credentials.")
-
-    def _validate_appliance_flags(self) -> None:
-        if not self.name_prefix or not self.name_prefix.strip():
-            raise ValueError("TechVaultNativeLibvirtDriver name_prefix must be non-empty.")
-        if self.define_only:
-            raise ValueError("TechVaultNativeLibvirtDriver define-only mode cannot make realization claims.")
-        if self.clean_existing:
-            raise ValueError("TechVaultNativeLibvirtDriver refuses unsafe prefix-wide cleanup.")
-        safe_prefix = _safe_name(self.name_prefix, fallback="raes-techvault", prefix="")
-        if safe_prefix != self.name_prefix:
-            raise ValueError("TechVaultNativeLibvirtDriver name_prefix must already be libvirt-safe.")
-
     def realize(
         self,
         *,
         networks: tuple[NetworkSpec, ...],
         domains: tuple[DomainSpec, ...],
     ) -> DriverResult:
+        self._begin_operation()
         envelope = load_libvirt_realization_envelope(self.driver_mode)
-        spec_diagnostics = self._admission_diagnostics(networks, domains, envelope)
-        if spec_diagnostics:
-            return DriverResult(diagnostics=tuple(spec_diagnostics))
-        matrix = self._build_matrix(networks, domains)
-        self.state_dir.mkdir(parents=True, exist_ok=True)
-        try:
-            connection = self._conn()
-        except Exception:
-            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
-        return self._realize_matrix(
-            connection,
-            matrix,
-            networks=networks,
-            domains=domains,
-            envelope_digest=envelope.digest,
-            configuration_digest=envelope.configuration.configuration_digest,
-        )
+        diagnostics = self._admission_diagnostics(networks, domains, envelope)
+        if not diagnostics:
+            diagnostics = self._artifact_preflight_diagnostics(domains)
+        if diagnostics:
+            result = DriverResult(diagnostics=tuple(diagnostics))
+        else:
+            matrix = self._build_matrix(networks, domains)
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            diagnostics = self._prepare_operation(matrix)
+            if diagnostics:
+                result = DriverResult(diagnostics=tuple(diagnostics))
+            else:
+                try:
+                    connection = self._conn()
+                except Exception as exc:
+                    _record_suppressed_failure("realize", exc)
+                    result = DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
+                else:
+                    result = self._realize_matrix(
+                        connection,
+                        matrix,
+                        networks=networks,
+                        domains=domains,
+                        envelope_digest=envelope.digest,
+                        configuration_digest=envelope.configuration.configuration_digest,
+                    )
+        return result
 
     def _realize_matrix(
         self,
@@ -162,54 +167,14 @@ class TechVaultNativeLibvirtDriver:
             domain_diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
             return DriverResult(diagnostics=tuple(domain_diagnostics))
         observations = (*network_observations, *domain_observations)
-        return self._verify_and_finalize(
+        return _verify_and_finalize(
+            self,
             connection,
             matrix,
             specs=(networks, domains),
             handles=(network_handles, domain_handles),
             observations=observations,
-            envelope_digest=envelope_digest,
-            configuration_digest=configuration_digest,
-        )
-
-    def _verify_and_finalize(
-        self,
-        connection: object,
-        matrix: Mapping[str, object],
-        *,
-        specs: tuple[tuple[NetworkSpec, ...], tuple[DomainSpec, ...]],
-        handles: tuple[list[NetworkHandle], list[DomainHandle]],
-        observations: tuple[RealizationObservation, ...],
-        envelope_digest: str,
-        configuration_digest: str,
-    ) -> DriverResult:
-        networks, domains = specs
-        network_handles, domain_handles = handles
-        diagnostics = techvault_observation_diagnostics(
-            networks=networks,
-            domains=domains,
-            result=DriverResult(observations=observations),
-        )
-        # Staged: the guest observation runs only after the daemon gate passes and a
-        # later stage never repairs an earlier one.
-        guest_observations: tuple[RealizationObservation, ...] = ()
-        if not diagnostics:
-            guest_observations, diagnostics = self._guest_stage(connection, matrix, specs, observations)
-        if diagnostics:
-            diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
-            return DriverResult(diagnostics=tuple(diagnostics))
-        try:
-            binding = self._material_binding(envelope_digest, configuration_digest)
-            snapshot = snapshot_from_observations(matrix, observations, binding=binding)
-        except Exception:
-            binding_diagnostics = [_diagnostic(_CODE_OPERATION_FAILED, "runtime.libvirt.binding")]
-            binding_diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
-            return DriverResult(diagnostics=tuple(binding_diagnostics))
-        self.last_snapshot = snapshot
-        return DriverResult(
-            networks=tuple(network_handles),
-            domains=tuple(domain_handles),
-            observations=(*observations, *guest_observations),
+            binding_digests=(envelope_digest, configuration_digest),
         )
 
     def _admission_diagnostics(
@@ -231,6 +196,24 @@ class TechVaultNativeLibvirtDriver:
         domains: tuple[DomainSpec, ...],
     ) -> dict[str, object]:
         return _native_matrix(networks=networks, domains=domains, name_prefix=self.name_prefix)
+
+    def _artifact_preflight_diagnostics(self, domains: tuple[DomainSpec, ...]) -> list[Diagnostic]:
+        return artifact_preflight_diagnostics(
+            domains=domains,
+            kernel_path=self.kernel_path,
+            initramfs_builder=self.initramfs_builder,
+        )
+
+    @staticmethod
+    def _begin_operation() -> None:
+        """Clear operation-scoped subclass evidence before any admission gate."""
+
+    @staticmethod
+    def _prepare_operation(matrix: Mapping[str, object]) -> list[Diagnostic]:
+        """Prepare operation-scoped evidence state before opening libvirt."""
+
+        del matrix
+        return []
 
     # Base extension hooks need no instance state; the guest-certified subclass overrides them.
     @staticmethod
@@ -280,8 +263,9 @@ class TechVaultNativeLibvirtDriver:
     ) -> DriverResult:
         try:
             connection = self._conn()
-        except Exception:
-            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
+        except Exception as exc:
+            _record_suppressed_failure("destroy", exc)
+            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
         domain_handles: list[DomainHandle] = []
         network_handles: list[NetworkHandle] = []
         diagnostics: list[Diagnostic] = []
@@ -312,6 +296,59 @@ class TechVaultNativeLibvirtDriver:
             domains=tuple(domain_handles),
             diagnostics=tuple(diagnostics),
         )
+
+    def observe(self, *, domains: tuple[DomainSpec, ...]) -> DriverResult:
+        """Read current owned domains without defining or restarting them."""
+
+        try:
+            connection = self._conn()
+        except Exception as exc:
+            _record_suppressed_failure("observe", exc)
+            return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, _CONNECTION_ADDRESS),))
+        envelope = load_libvirt_realization_envelope(self.driver_mode)
+        observations: list[RealizationObservation] = []
+        handles: list[DomainHandle] = []
+        diagnostics: list[Diagnostic] = []
+        for spec in domains:
+            resolved = self._observed_domain(connection, spec.address)
+            if resolved is None:
+                diagnostics.append(_diagnostic(_CODE_OPERATION_FAILED, spec.address))
+                continue
+            if resolved.name is not None:
+                self._names[spec.address] = resolved.name
+            self._realized.add(spec.address)
+            handles.append(DomainHandle(address=spec.address, realized=True))
+            observations.append(
+                replace(
+                    substrate_observation(spec.address),
+                    envelope_digest=envelope.digest,
+                    configuration_digest=envelope.configuration.configuration_digest,
+                    sequence=len(observations),
+                )
+            )
+        return DriverResult(
+            domains=tuple(handles),
+            diagnostics=tuple(diagnostics),
+            observations=tuple(observations),
+        )
+
+    def _observed_domain(self, connection: object, address: str) -> _NativeResolution | None:
+        try:
+            resolved = _resolve_native(
+                connection,
+                "lookupByName",
+                "listAllDomains",
+                address,
+                known_name=self._names.get(address),
+                name_prefix=self.name_prefix,
+            )
+            native = None if resolved is None else resolved.native
+            if native is None or _existing_uuid(native) != _raes_uuid(address) or not native_active(native):
+                return None
+        except Exception as exc:
+            _record_suppressed_failure("_observed_domain", exc)
+            return None
+        return resolved
 
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)
@@ -412,5 +449,6 @@ class TechVaultNativeLibvirtDriver:
     def _try_destroy(self, connection: object, lookup_method: str, address: str) -> bool:
         try:
             return self._destroy_one(connection, lookup_method, address)
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("_try_destroy", exc)
             return False

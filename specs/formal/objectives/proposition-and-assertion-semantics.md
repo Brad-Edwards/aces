@@ -164,6 +164,20 @@ portable outcomes, evidence channels, time domains, and binding-provenance
 preservation. Admission reports unsupported instead of substituting a weaker
 predicate or clock.
 
+Planner admission compares every compiled proposition's predicate family and
+quantifier with the evaluator declaration. For each cited evidence requirement,
+it compares the explicit `channel` kind with `supported_evidence_channels`.
+An evidence requirement that supplies only opaque `channel_refs` or a boundary
+kind does not establish a channel kind and fails evaluator admission; the
+planner MUST NOT infer modality from a reference name.
+
+The current v1 runtime projection requires `scenario_time` for observed-state
+proposition evaluation and no evaluator time domain for declared-state
+propositions. The planner compares that requirement with
+`supported_time_domains`. This projection does not establish a wall clock or
+clock authority. A future authored per-proposition time domain requires a new
+governed language/profile revision rather than a backend-local inference.
+
 A runtime truth result is admitted only if its proposition and assertion
 addresses resolve to semantic entries in the same snapshot, the proposition
 entry has the same evaluation basis, and the assertion entry has the same

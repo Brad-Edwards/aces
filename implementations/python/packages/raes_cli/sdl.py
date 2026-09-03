@@ -95,7 +95,7 @@ def publish(
     output_dir: Path = typer.Option(
         Path("dist"),
         "--output-dir",
-        help="Directory where the OCI layout will be written.",
+        help="Directory for the versioned OCI layout slot; result layout_dir is the usable immutable layout.",
     ),
     signer_id: str = typer.Option("", "--signer-id", help="Signer identity label."),
     private_key: Path | None = typer.Option(
@@ -106,7 +106,7 @@ def publish(
         help="Optional Ed25519 PEM private key used to sign the module bundle.",
     ),
 ) -> None:
-    """Package an SDL module as an OCI image layout."""
+    """Package an SDL module and report its usable immutable OCI layout."""
     result = publish_module_to_oci_layout(
         path,
         output_dir=output_dir,

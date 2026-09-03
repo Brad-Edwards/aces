@@ -120,11 +120,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "The project identity cutover to RAES changed canonical result bytes and their digest; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, and issue #1077 separation of OS distribution and release identity; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "accepted",
         "diagnostic_kind": null,
-        "result_digest": "3a1b039ac1946679a41f5db71871e7fff8014110c7487b0d8cbe28095bb05ee2"
+        "result_digest": "8291a196859dbb09e9b2ef586ce179f1138139f469b92f03f16afb35877461a1"
       }
     },
     {
@@ -158,11 +158,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "The project identity cutover to RAES changed canonical result bytes and their digest; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, issue #1067 publication of resolved realization authority, and issue #1077 separation of OS distribution and release identity; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "stable",
         "diagnostic_kind": null,
-        "result_digest": "6a0db7d28a756d83974dd681df810f6c93ddd97c371d369242fe2425cbdd0d11"
+        "result_digest": "4bb77034a8f2b1a577700ad03772a80acc0f4515a6831c8a35ac1bf50482d760"
       }
     },
     {
@@ -177,11 +177,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "The project identity cutover to RAES changed canonical result bytes and their digest; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, issue #1067 publication of resolved realization authority, and issue #1077 separation of OS distribution and release identity; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "distinguishable",
         "diagnostic_kind": null,
-        "result_digest": "333be367e829e54fb836ac20297fe98b92c9d5b7e81b23c5a6891171564af531"
+        "result_digest": "6cdc44529a87fb9addaf4040795c7f9ae702c5f6ae30e29a5086ee60072ded73"
       }
     }
   ],
@@ -251,7 +251,7 @@
         "This is a positive control for one objective-reference slice."
       ],
       "replayable": true,
-      "result_digest": "3a1b039ac1946679a41f5db71871e7fff8014110c7487b0d8cbe28095bb05ee2",
+      "result_digest": "8291a196859dbb09e9b2ef586ce179f1138139f469b92f03f16afb35877461a1",
       "source_digest": null
     },
     {
@@ -476,7 +476,7 @@
         "The witness ends at compiled output."
       ],
       "replayable": true,
-      "result_digest": "6a0db7d28a756d83974dd681df810f6c93ddd97c371d369242fe2425cbdd0d11",
+      "result_digest": "4bb77034a8f2b1a577700ad03772a80acc0f4515a6831c8a35ac1bf50482d760",
       "source_digest": null
     },
     {
@@ -499,7 +499,7 @@
         "Distinct digests are a non-vacuity control, not semantic non-equivalence proof."
       ],
       "replayable": true,
-      "result_digest": "333be367e829e54fb836ac20297fe98b92c9d5b7e81b23c5a6891171564af531",
+      "result_digest": "6cdc44529a87fb9addaf4040795c7f9ae702c5f6ae30e29a5086ee60072ded73",
       "source_digest": null
     },
     {
@@ -554,8 +554,8 @@
       "configuration_id": "raes-python-reference-offline-v2",
       "diagnostic_kind": "scenario-satisfiability-evidence/v1",
       "evidence_artifact_path": "docs/research/formal-semantic-validation/evidence/finite-domain-satisfiable-v2.json",
-      "evidence_artifact_sha256": "1cf327121bb9bdd4a1e766e07f2716d844e469dcf16ecf21d89e8332ce6003cf",
-      "evidence_digest": "sha256:aeacacaf7d90aec84cfe09bd56cd6b17d9c9e16991bf32d81eef670f3d1919ca",
+      "evidence_artifact_sha256": "3702f6dca95bd66208499035639a3e44986e754262d32cee672b446448bae208",
+      "evidence_digest": "sha256:03925bfe0b209c3c77069c97061aa63e8795389be7ed7b78376020b7dc87853c",
       "evidence_profile": "scenario-satisfiability-evidence/v1",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/satisfiable-control.sdl.yaml",
@@ -567,7 +567,7 @@
         "Demonstrates only the pinned finite-domain theory, translation, solver profile, and source."
       ],
       "replayable": true,
-      "result_digest": "sha256:aeacacaf7d90aec84cfe09bd56cd6b17d9c9e16991bf32d81eef670f3d1919ca",
+      "result_digest": "sha256:03925bfe0b209c3c77069c97061aa63e8795389be7ed7b78376020b7dc87853c",
       "source_digest": "sha256:0ca9eaba9dc47171f7a042dc6753faa6c820c65ee966538f9d65fac5342202e8"
     },
     {
@@ -602,8 +602,8 @@
       "configuration_id": "raes-python-reference-offline-v2",
       "diagnostic_kind": "exploit-path-analysis-evidence/v1",
       "evidence_artifact_path": "docs/research/formal-semantic-validation/evidence/typed-exploit-path-valid-v2.json",
-      "evidence_artifact_sha256": "1f09fac9630a3d1780a22ccfe2fa1d61fc88f198991b1d4cecde732c1c84df06",
-      "evidence_digest": "sha256:3474f036d7f554e9a37a02867ecb5a8d043e369995463346241988561bb39cbc",
+      "evidence_artifact_sha256": "cee30582ef1bd11ed8ca341627342eea3928c1dcaa1eda9f349a7105d6431de4",
+      "evidence_digest": "sha256:0683b55cd2a52ba626bb5cfbf10de109798d8d31ba467aabd13d4930df204798",
       "evidence_profile": "exploit-path-analysis-evidence/v1",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/exploit-path-valid-v2.json",
@@ -615,8 +615,8 @@
         "The witness is bounded to the admitted snapshot, normalized graph, query, semantics, and search profile; it does not establish backend execution."
       ],
       "replayable": true,
-      "result_digest": "sha256:3474f036d7f554e9a37a02867ecb5a8d043e369995463346241988561bb39cbc",
-      "source_digest": "sha256:0de4a3244da1930f39959906f63f99851834a1ca4ba987a51cfbe9db82e68e0a"
+      "result_digest": "sha256:0683b55cd2a52ba626bb5cfbf10de109798d8d31ba467aabd13d4930df204798",
+      "source_digest": "sha256:23693f83f135c35960c144ab3434e866acec2313dc5f467fcccc8a18044f8b96"
     },
     {
       "actual_outcome": "invalid-path",
@@ -626,8 +626,8 @@
       "configuration_id": "raes-python-reference-offline-v2",
       "diagnostic_kind": "exploit-path-analysis-evidence/v1",
       "evidence_artifact_path": "docs/research/formal-semantic-validation/evidence/typed-exploit-path-invalid-v2.json",
-      "evidence_artifact_sha256": "e2627ab54a5ce107c4542eaee5a68384b4baec3263e1eeb97471036c8ed4f378",
-      "evidence_digest": "sha256:8169876a8013fa697f7c50d832103215f6c69a4fb16abdd0e64ac5e25a07395f",
+      "evidence_artifact_sha256": "7b85055f5541aad24b4a11c8a5432e725f3511f7147651247f5d8b25c188e2a8",
+      "evidence_digest": "sha256:1ec2ff4423088ad2ac6328aba7fbced5cd89b1569cff057e44ad30ef5c5befc0",
       "evidence_profile": "exploit-path-analysis-evidence/v1",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/exploit-path-invalid-v2.json",
@@ -639,8 +639,8 @@
         "Structured rejection proves only that this bounded graph/query cannot reach its goal; it does not establish real-world non-exploitability."
       ],
       "replayable": true,
-      "result_digest": "sha256:8169876a8013fa697f7c50d832103215f6c69a4fb16abdd0e64ac5e25a07395f",
-      "source_digest": "sha256:707047c343e8fa6e50e139f70fb8e00f4824366a26493b300825af46d4896467"
+      "result_digest": "sha256:1ec2ff4423088ad2ac6328aba7fbced5cd89b1569cff057e44ad30ef5c5befc0",
+      "source_digest": "sha256:ad6636d5334d381bfda8d22183120d3f6a697a6ad92300e101e8cd2328f2ecd7"
     }
   ],
   "participant_observations": [

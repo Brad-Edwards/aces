@@ -30,12 +30,12 @@ def _family() -> ExpandedScenario:
         },
         "nodes": {
             "primary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
             },
             "secondary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
             },
@@ -82,13 +82,13 @@ def _all_kinds_family() -> ExpandedScenario:
         },
         "nodes": {
             "primary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "features": {"baseline": ""},
             },
             "secondary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
             },

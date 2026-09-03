@@ -6,8 +6,4 @@
 # this list is empty. Do NOT add new entries — split the file instead. This set
 # was re-baselined to the 500-line cap on 2026-07-12 (#561); see ADR-015 §2 and
 # its Amendments section.
-files:
-  - implementations/python/packages/raes/composition.py
-  - implementations/python/packages/raes/orchestration.py
-  - implementations/python/packages/raes/participant_behavior.py
-  - implementations/python/packages/raes/runtime_mail_service.py
+files: []

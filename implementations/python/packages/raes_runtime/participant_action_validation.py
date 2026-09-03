@@ -13,6 +13,10 @@ from raes_contracts.participant_binding import (
 from raes_contracts.runtime_state import RuntimeSnapshot
 
 _TERMINAL_ACTION_STATUSES = frozenset({"succeeded", "failed", "partial_success", "rejected", "withheld"})
+_PROTECTED_SCHEDULER_SNAPSHOT_FIELDS = (
+    "participant_autonomous_execution_states",
+    "participant_execution_services",
+)
 
 
 def autonomous_action_result_violation(
@@ -27,6 +31,9 @@ def autonomous_action_result_violation(
     violation = _native_result_violation(result, episode_id)
     if violation is None:
         assert isinstance(result, ParticipantActionApplyResult)
+        violation = _protected_scheduler_state_violation(result, predecessor)
+    if violation is None:
+        assert isinstance(result, ParticipantActionApplyResult)
         action_result = result.action_result
         assert action_result is not None
         bound_request, violation = _bound_request_result(request, action_result)
@@ -38,6 +45,18 @@ def autonomous_action_result_violation(
     if violation is None:
         violation = _terminal_observation_violation(bound_request, appended, action_result)
     return violation
+
+
+def _protected_scheduler_state_violation(
+    result: ParticipantActionApplyResult,
+    predecessor: RuntimeSnapshot,
+) -> str | None:
+    """Keep scheduler reservations and counters under serialized ownership."""
+
+    for field_name in _PROTECTED_SCHEDULER_SNAPSHOT_FIELDS:
+        if getattr(result.snapshot, field_name) != getattr(predecessor, field_name):
+            return f"participant runtime changed scheduler-owned snapshot field {field_name}"
+    return None
 
 
 def _bound_request_result(

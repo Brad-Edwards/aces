@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
+from collections.abc import Callable
 
 import libvirt
 from raes_backend_libvirt import LibvirtProvisioner
@@ -35,26 +36,29 @@ from raes_contracts.runtime_state import RuntimeSnapshot
 URI = "qemu:///system"
 PREFIX = "raestest"
 CIRROS = "/var/lib/libvirt/images/cirros.img"
+LAN_ADDRESS = "provision.network.lan"
+WEB_ADDRESS = "provision.node.web"
+FW_ADDRESS = "provision.node.fw"
 
 RESULTS: list[tuple[str, bool, str]] = []
 
 
-def check(name: str, fn) -> None:
+def check(name: str, fn: Callable[[], str | None]) -> None:
     try:
         detail = fn()
         RESULTS.append((name, True, detail or ""))
         print(f"PASS  {name}  {detail or ''}")
-    except Exception as exc:  # noqa: BLE001 - harness reports every failure
+    except Exception as exc:  # noqa: BLE001  # harness reports every failure
         RESULTS.append((name, False, f"{type(exc).__name__}: {exc}"))
         print(f"FAIL  {name}  {type(exc).__name__}: {exc}")
         traceback.print_exc()
 
 
-def raw():
+def raw() -> libvirt.virConnect:
     return libvirt.open(URI)
 
 
-def dom_exists(conn, name: str) -> bool:
+def dom_exists(conn: libvirt.virConnect, name: str) -> bool:
     try:
         conn.lookupByName(name)
         return True
@@ -64,7 +68,7 @@ def dom_exists(conn, name: str) -> bool:
         raise
 
 
-def net_exists(conn, name: str) -> bool:
+def net_exists(conn: libvirt.virConnect, name: str) -> bool:
     try:
         conn.networkLookupByName(name)
         return True
@@ -74,7 +78,7 @@ def net_exists(conn, name: str) -> bool:
         raise
 
 
-def dom_state_running(conn, name: str) -> bool:
+def dom_state_running(conn: libvirt.virConnect, name: str) -> bool:
     dom = conn.lookupByName(name)
     return dom.isActive() == 1
 
@@ -83,7 +87,7 @@ def new_driver() -> LibvirtDeploymentDriver:
     return LibvirtDeploymentDriver(connection_uri=URI, name_prefix=PREFIX)
 
 
-def purge():
+def purge() -> None:
     """Best-effort removal of any leftover raestest-* / raesprov-* objects."""
     conn = raw()
     for obj in [*conn.listAllDomains(), *conn.listAllNetworks()]:
@@ -114,7 +118,7 @@ def purge():
 # ---------------------------------------------------------------------------
 
 
-def t_abi_absence_behavior():
+def t_abi_absence_behavior() -> str:
     conn = raw()
     try:
         try:
@@ -132,25 +136,23 @@ def t_abi_absence_behavior():
         conn.close()
 
 
-def t_create_network_and_domain():
+def t_create_network_and_domain() -> str:
     d = new_driver()
     res = d.realize(
-        networks=(
-            NetworkSpec(address="provision.network.lan", name="lan", cidr="192.168.221.0/24", gateway="192.168.221.1"),
-        ),
+        networks=(NetworkSpec(address=LAN_ADDRESS, name="lan", cidr="192.168.221.0/24", gateway="192.168.221.1"),),
         domains=(
             DomainSpec(
-                address="provision.node.web",
+                address=WEB_ADDRESS,
                 name="web",
                 image_ref=None,
                 memory_mib=256,
                 vcpus=1,
-                networks=("provision.network.lan",),
+                networks=(LAN_ADDRESS,),
             ),
         ),
     )
     assert not res.diagnostics, [x.code for x in res.diagnostics]
-    assert d.realized_addresses() == {"provision.network.lan", "provision.node.web"}
+    assert d.realized_addresses() == {LAN_ADDRESS, WEB_ADDRESS}
     conn = raw()
     try:
         assert net_exists(conn, "raestest-lan"), "network not defined"
@@ -162,20 +164,21 @@ def t_create_network_and_domain():
     return "real network active + real domain running under QEMU"
 
 
-def t_update_reconverges_no_duplicate():
+def t_update_reconverges_no_duplicate() -> str:
     # Same driver instance, re-realize -> converge (stop+undefine+redefine), no dup.
     d = new_driver()
-    specs = dict(
-        networks=(
+    specs = {
+        "networks": (
             NetworkSpec(
                 address="provision.network.lan2", name="lan2", cidr="192.168.224.0/24", gateway="192.168.224.1"
             ),
         ),
-        domains=(DomainSpec(address="provision.node.web2", name="web2", image_ref=None, memory_mib=256, vcpus=1),),
-    )
+        "domains": (DomainSpec(address="provision.node.web2", name="web2", image_ref=None, memory_mib=256, vcpus=1),),
+    }
     r1 = d.realize(**specs)
     assert not r1.diagnostics, [x.code for x in r1.diagnostics]
-    r2 = d.realize(**specs)  # UPDATE / converge
+    # UPDATE / converge
+    r2 = d.realize(**specs)
     assert not r2.diagnostics, [x.code for x in r2.diagnostics]
     conn = raw()
     try:
@@ -191,10 +194,10 @@ def t_update_reconverges_no_duplicate():
     return "re-realize converged in place; exactly one domain/network, no duplicate"
 
 
-def t_teardown_removes_everything():
+def t_teardown_removes_everything() -> str:
     # tear down the objects from t_create via a FRESH driver (snapshot-style teardown).
     d = new_driver()
-    res = d.destroy(networks=("provision.network.lan",), domains=("provision.node.web",))
+    res = d.destroy(networks=(LAN_ADDRESS,), domains=(WEB_ADDRESS,))
     assert not res.diagnostics, [x.code for x in res.diagnostics]
     assert all(not h.realized for h in (*res.networks, *res.domains))
     conn = raw()
@@ -206,9 +209,9 @@ def t_teardown_removes_everything():
     return "fresh-driver teardown removed real domain + network (no orphans)"
 
 
-def t_teardown_idempotent():
+def t_teardown_idempotent() -> str:
     d = new_driver()
-    res = d.destroy(networks=("provision.network.lan",), domains=("provision.node.web",))
+    res = d.destroy(networks=(LAN_ADDRESS,), domains=(WEB_ADDRESS,))
     assert not res.diagnostics, [x.code for x in res.diagnostics]
     assert all(not h.realized for h in (*res.networks, *res.domains))
     # also a never-realized address
@@ -218,7 +221,7 @@ def t_teardown_idempotent():
     return "repeated teardown + never-realized teardown are clean no-ops"
 
 
-def t_teardown_inactive_domain():
+def t_teardown_inactive_domain() -> str:
     # finding-2 benign path: stop out-of-band (inactive+defined), then teardown.
     d = new_driver()
     r = d.realize(
@@ -228,7 +231,8 @@ def t_teardown_inactive_domain():
     conn = raw()
     try:
         dom = conn.lookupByName("raestest-inact")
-        dom.destroy()  # stop it out of band -> defined but inactive
+        # stop it out of band -> defined but inactive
+        dom.destroy()
         assert dom.isActive() == 0
     finally:
         conn.close()
@@ -242,7 +246,7 @@ def t_teardown_inactive_domain():
     return "teardown of an already-inactive domain (VIR_ERR_OPERATION_INVALID on stop) succeeds"
 
 
-def t_ownership_conflict_not_destroyed():
+def t_ownership_conflict_not_destroyed() -> str:
     # Define a FOREIGN domain at our runtime name with a different UUID; driver
     # teardown must refuse and leave it intact.
     name = "raestest-foreign"
@@ -264,29 +268,29 @@ def t_ownership_conflict_not_destroyed():
     try:
         assert dom_exists(conn, name), "foreign domain was wrongly destroyed"
         assert conn.lookupByName(name).UUIDString() == foreign_uuid
-        conn.lookupByName(name).undefine()  # cleanup foreign
+        # cleanup foreign
+        conn.lookupByName(name).undefine()
     finally:
         conn.close()
     return "foreign domain at same name refused (ownership-conflict), left intact"
 
 
-def t_nwfilter_lifecycle():
+def t_nwfilter_lifecycle() -> str:
     d = new_driver()
     acl = NetworkAcl(name="deny", action="drop", direction="inout", protocol="all")
     r = d.realize(
         networks=(),
-        domains=(
-            DomainSpec(address="provision.node.fw", name="fw", image_ref=None, memory_mib=256, network_acls=(acl,)),
-        ),
+        domains=(DomainSpec(address=FW_ADDRESS, name="fw", image_ref=None, memory_mib=256, network_acls=(acl,)),),
     )
     assert not r.diagnostics, [x.code for x in r.diagnostics]
     conn = raw()
     try:
-        nf = conn.nwfilterLookupByName("raestest-fw-acl")  # raises if missing
-        assert nf.UUIDString() == _filter_owner_uuid("provision.node.fw")
+        # raises if missing
+        nf = conn.nwfilterLookupByName("raestest-fw-acl")
+        assert nf.UUIDString() == _filter_owner_uuid(FW_ADDRESS)
     finally:
         conn.close()
-    d.destroy(networks=(), domains=("provision.node.fw",))
+    d.destroy(networks=(), domains=(FW_ADDRESS,))
     conn = raw()
     try:
         gone = False
@@ -300,7 +304,7 @@ def t_nwfilter_lifecycle():
     return "nwfilter defined on realize, owner-stamped, undefined on teardown"
 
 
-def t_partial_create_rollback():
+def t_partial_create_rollback() -> str:
     # Real partial CREATE: define succeeds, create() fails (bad disk) -> the driver
     # must roll back the just-defined domain so nothing is orphaned.
     d = new_driver()
@@ -321,22 +325,22 @@ def t_partial_create_rollback():
     return "domain whose start failed was rolled back (undefined) - no orphan"
 
 
-def _node_payload(addr_tail: str, *, source: str | None = None, networks=()):
-    node = {"type": "vm", "resources": {"ram": 268435456, "cpu": 1}}
+def _node_payload(addr_tail: str, *, source: str | None = None, networks: tuple[str, ...] = ()) -> dict[str, object]:
+    node = {"type": "compute", "resources": {"ram": 268435456, "cpu": 1}}
     if source is not None:
         node["source"] = {"name": source}
     spec = {"node": node, "infrastructure": {"networks": list(networks)}}
     return {"name": addr_tail, "node_name": addr_tail, "node_type": "vm", "os_family": "linux", "spec": spec}
 
 
-def _net_payload(addr_tail: str, cidr: str, gw: str):
+def _net_payload(addr_tail: str, cidr: str, gw: str) -> dict[str, object]:
     return {
         "name": addr_tail,
         "spec": {"infrastructure": {"properties": {"internal": True, "cidr": cidr, "gateway": gw}}},
     }
 
 
-def _plan(*resources, action=ChangeAction.CREATE):
+def _plan(*resources: PlannedResource, action: ChangeAction = ChangeAction.CREATE) -> ProvisioningPlan:
     return ProvisioningPlan(
         resources={r.address: r for r in resources},
         operations=[
@@ -353,7 +357,7 @@ def _plan(*resources, action=ChangeAction.CREATE):
     )
 
 
-def t_provisioner_full_stack():
+def t_provisioner_full_stack() -> str:
     # LibvirtProvisioner -> real driver: CREATE then DELETE (teardown) then idempotent re-DELETE.
     drv = LibvirtDeploymentDriver(connection_uri=URI, name_prefix="raesprov")
     prov = LibvirtProvisioner(drv)
@@ -410,7 +414,7 @@ def t_provisioner_full_stack():
     return "provisioner CREATE->teardown->idempotent re-teardown through real libvirt"
 
 
-def t_cirros_real_boot_and_teardown():
+def t_cirros_real_boot_and_teardown() -> str:
     # Full realize path: cirros overlay disk + cloud-init seed (genisoimage) ->
     # a real guest OS boots, then is torn down.
     overlay = os.path.join(tempfile.gettempdir(), "raes-cirros-overlay.qcow2")
@@ -450,7 +454,7 @@ def t_cirros_real_boot_and_teardown():
     return "real cirros guest booted with cloud-init seed ISO, then torn down cleanly"
 
 
-def t_no_orphans_at_end():
+def t_no_orphans_at_end() -> str:
     conn = raw()
     try:
         doms = [x.name() for x in conn.listAllDomains() if x.name().startswith((PREFIX, "raesprov"))]

@@ -5,6 +5,7 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 
 from ipaddress import ip_address, ip_network
 
+from ..architectures import architectures_compatible
 from ..infrastructure import SimpleProperties
 from ..nodes import MAX_NODE_NAME_LENGTH, NodeType
 
@@ -26,6 +27,51 @@ class _NodesInfraNetworkMixin:
                     continue
                 if vuln_name not in self._s.vulnerabilities:
                     self._err(f"Node '{name}' references undefined vulnerability '{vuln_name}'")
+            self._verify_node_operating_system(name, node)
+            self._verify_node_architecture(name, node)
+
+    def _verify_node_operating_system(self, name: str, node: object) -> None:
+        """Enforce the family -> distribution -> release dependency chain."""
+
+        distribution = node.os_distribution
+        version = node.os_version
+        if distribution is not None and node.os is None:
+            self._err(f"Node '{name}' OS distribution requires an OS family")
+        if version and distribution is None:
+            self._err(f"Node '{name}' OS version requires an OS distribution")
+
+    def _verify_node_architecture(self, name: str, node: object) -> None:
+        """Enforce target-node/runtime-package CPU architecture compatibility.
+
+        Deterministic, fail-closed rules (issue #674): an architecture-constrained
+        package requires an exactly-compatible node architecture, and a node
+        without a target architecture may not carry an architecture-constrained
+        package (package metadata must not imply a target-node requirement).
+        Variable references defer the comparison to instantiation, where this pass
+        runs again on the bound tree.
+        """
+        node_architecture = node.architecture
+        runtime = node.runtime
+        packages = runtime.packages if runtime is not None else []
+        for package in packages:
+            package_architecture = package.architecture
+            if not package_architecture or self._is_unresolved_var(package_architecture):
+                continue
+            if node_architecture is None:
+                self._err(
+                    f"Node '{name}' package '{package.name}' declares architecture "
+                    f"'{package_architecture}' but the node declares no target architecture; "
+                    "package metadata must not imply a target-node architecture"
+                )
+                continue
+            if self._is_unresolved_var(node_architecture):
+                continue
+            if not architectures_compatible(node_architecture, package_architecture):
+                node_token = getattr(node_architecture, "value", node_architecture)
+                self._err(
+                    f"Node '{name}' target architecture '{node_token}' is incompatible with "
+                    f"package '{package.name}' architecture '{package_architecture}'"
+                )
 
     def _verify_node_ref_role_map(
         self, name: str, node: object, mapping: dict[str, str], valid: object, *, kind: str
@@ -69,7 +115,7 @@ class _NodesInfraNetworkMixin:
         node = self._s.nodes[name]
         if node.type == NodeType.SWITCH and isinstance(infra.count, int) and infra.count > 1:
             self._err(f"Switch node '{name}' cannot have count > 1")
-        if node.type == NodeType.VM and node.conditions and isinstance(infra.count, int) and infra.count > 1:
+        if node.type == NodeType.COMPUTE and node.conditions and isinstance(infra.count, int) and infra.count > 1:
             self._err(f"Node '{name}' has conditions and cannot have count > 1")
 
     def _verify_infra_property_ips(self, name: str, infra: object) -> None:
@@ -171,8 +217,8 @@ class _NodesInfraNetworkMixin:
         self._verify_network_namespace_source(source_name, target_name, source)
 
     def _verify_network_namespace_target(self, source_name: str, target_name: str, target: object) -> None:
-        if target.type != NodeType.VM:
-            self._err(f"Node '{source_name}' network namespace target '{target_name}' must reference a VM node")
+        if target.type != NodeType.COMPUTE:
+            self._err(f"Node '{source_name}' network namespace target '{target_name}' must reference a compute node")
         if self._network_namespace(target) is not None:
             self._err(
                 f"Node '{source_name}' network namespace target '{target_name}' must be a canonical namespace owner"

@@ -58,7 +58,7 @@ def _shared_service_context(
         if not unresolved and (tenant_name is None or service_node is None):
             issue_record = issue(
                 "deployment-tenancy.shared-service.endpoint-invalid",
-                f"Relationship '{relationship_name}' must connect a deployment tenant to a named VM service",
+                f"Relationship '{relationship_name}' must connect a deployment tenant to a named compute service",
             )
         elif tenant_name is not None and service_node is not None:
             service_cell = cell_index.node_cell.get(service_node)

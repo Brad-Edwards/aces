@@ -70,12 +70,12 @@ def _analyze_target(
     if target_name is None:
         issue = ParticipantInteractiveAccessIssue(
             code="participant.interactive-access-target-unbound",
-            message=f"{label} target_ref '{target_ref}' does not reference a declared VM node",
+            message=f"{label} target_ref '{target_ref}' does not reference a declared compute node",
         )
     elif not is_vm_node(target_name):
         issue = ParticipantInteractiveAccessIssue(
             code="participant.interactive-access-target-not-vm",
-            message=f"{label} target_ref '{target_ref}' must reference a VM node",
+            message=f"{label} target_ref '{target_ref}' must reference a compute node",
         )
     return target_name, () if issue is None else (issue,)
 

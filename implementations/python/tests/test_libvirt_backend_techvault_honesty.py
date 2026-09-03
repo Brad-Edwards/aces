@@ -17,6 +17,7 @@ from raes_contracts.realization_envelope import ObservationStrength, Realization
 from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_store import LocalControlPlaneStore
+from realization_authority_fixtures import complete_test_realization_authority
 
 
 class _RecordingTechVaultDriver:
@@ -120,7 +121,7 @@ def _node_resource(
     acls: list[dict[str, object]] | None = None,
 ) -> PlannedResource:
     node: dict[str, object] = {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": memory_mib, "cpu": vcpus},
         "services": services or [],
     }
@@ -135,7 +136,7 @@ def _node_resource(
         resource_type="node",
         payload={
             "name": "demo",
-            "node_type": "vm",
+            "node_kind": "compute",
             "os_family": "linux",
             "spec": {"node": node, "infrastructure": infrastructure},
         },
@@ -161,18 +162,20 @@ def _placement_resource(resource_type: str) -> PlannedResource:
 
 
 def _plan(*resources: PlannedResource, action: ChangeAction = ChangeAction.CREATE) -> ProvisioningPlan:
-    return ProvisioningPlan(
-        resources={resource.address: resource for resource in resources},
-        operations=[
-            ProvisionOp(
-                action=action,
-                address=resource.address,
-                resource_type=resource.resource_type,
-                payload=resource.payload,
-            )
-            for resource in resources
-        ],
-        realization_envelope=load_libvirt_realization_envelope("techvault-appliance").identity,
+    return complete_test_realization_authority(
+        ProvisioningPlan(
+            resources={resource.address: resource for resource in resources},
+            operations=[
+                ProvisionOp(
+                    action=action,
+                    address=resource.address,
+                    resource_type=resource.resource_type,
+                    payload=resource.payload,
+                )
+                for resource in resources
+            ],
+            realization_envelope=load_libvirt_realization_envelope("techvault-appliance").identity,
+        )
     )
 
 
@@ -201,8 +204,21 @@ def test_techvault_rejects_silent_transformations_before_driver_io(resource, cod
     assert driver.realize_calls == []
 
 
-@pytest.mark.parametrize("resource_type", ("account-placement", "content-placement", "feature-binding"))
-def test_techvault_rejects_unsupported_guest_placements_before_driver_io(resource_type):
+@pytest.mark.parametrize(
+    ("resource_type", "expected_codes"),
+    (
+        ("account-placement", ["libvirt-backend.techvault.guest-placement-unsupported"]),
+        (
+            "content-placement",
+            [
+                "libvirt-backend.realization.unsupported-content-type",
+                "libvirt-backend.techvault.guest-placement-unsupported",
+            ],
+        ),
+        ("feature-binding", ["libvirt-backend.techvault.guest-placement-unsupported"]),
+    ),
+)
+def test_techvault_rejects_unsupported_guest_placements_before_driver_io(resource_type, expected_codes):
     driver = _RecordingTechVaultDriver()
     node = _node_resource()
     placement = _placement_resource(resource_type)
@@ -213,7 +229,8 @@ def test_techvault_rejects_unsupported_guest_placements_before_driver_io(resourc
     assert result.success is False
     assert result.snapshot is baseline
     assert result.changed_addresses == []
-    assert any(diagnostic.address == placement.address for diagnostic in result.diagnostics)
+    assert [diagnostic.code for diagnostic in result.diagnostics] == expected_codes
+    assert {diagnostic.address for diagnostic in result.diagnostics} == {placement.address}
     assert driver.realize_calls == []
 
 

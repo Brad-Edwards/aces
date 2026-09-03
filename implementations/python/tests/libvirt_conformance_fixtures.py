@@ -26,6 +26,10 @@ from raes_backend_libvirt.driver import (
     NetworkHandle,
     NetworkSpec,
 )
+from raes_backend_libvirt.envelopes import load_libvirt_realization_envelope
+from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from raes_contracts.realization_observation import RealizationObservation
 
 
 @dataclass(frozen=True)
@@ -35,6 +39,29 @@ class RecordedOp:
     verb: str
     kind: str
     address: str
+
+
+def daemon_compute_substrate_observations(
+    domains: tuple[DomainSpec, ...],
+) -> tuple[RealizationObservation, ...]:
+    """Model independent libvirt daemon readback in hermetic driver doubles."""
+
+    envelope = load_libvirt_realization_envelope("generic")
+    return tuple(
+        RealizationObservation(
+            address=spec.address,
+            field_path="compute-substrate",
+            concern=RealizationConcern.COMPUTE_SUBSTRATE,
+            source=ObservationStrength.DAEMON_OBSERVED,
+            value="virtual-machine",
+            envelope_digest=envelope.digest,
+            configuration_digest=envelope.configuration.configuration_digest,
+            observer_version="hermetic-libvirt-daemon/v1",
+            sequence=index,
+            binding_verified=True,
+        )
+        for index, spec in enumerate(domains)
+    )
 
 
 @dataclass
@@ -62,7 +89,11 @@ class RecordingLibvirtDriver:
             self.recorded_ops.append(RecordedOp(verb="realize", kind="domain", address=spec.address))
             self._realized.add(spec.address)
             domain_handles.append(DomainHandle(address=spec.address, realized=True))
-        return DriverResult(networks=tuple(network_handles), domains=tuple(domain_handles))
+        return DriverResult(
+            networks=tuple(network_handles),
+            domains=tuple(domain_handles),
+            observations=daemon_compute_substrate_observations(domains),
+        )
 
     def destroy(
         self,
@@ -81,6 +112,27 @@ class RecordingLibvirtDriver:
             self._realized.discard(address)
             network_handles.append(NetworkHandle(address=address, realized=False))
         return DriverResult(networks=tuple(network_handles), domains=tuple(domain_handles))
+
+    def observe(self, *, domains: tuple[DomainSpec, ...]) -> DriverResult:
+        """Model observation-only daemon readback for already realized domains."""
+
+        observed = tuple(spec for spec in domains if spec.address in self._realized)
+        missing = tuple(spec for spec in domains if spec.address not in self._realized)
+        for spec in observed:
+            self.recorded_ops.append(RecordedOp(verb="observe", kind="domain", address=spec.address))
+        return DriverResult(
+            domains=tuple(DomainHandle(address=spec.address, realized=True) for spec in observed),
+            diagnostics=tuple(
+                Diagnostic(
+                    code="libvirt-backend.driver.compute-substrate-unobserved",
+                    domain="runtime",
+                    address=spec.address,
+                    message=f"Hermetic libvirt daemon did not observe '{spec.address}'.",
+                )
+                for spec in missing
+            ),
+            observations=daemon_compute_substrate_observations(observed),
+        )
 
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)

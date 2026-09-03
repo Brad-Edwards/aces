@@ -14,6 +14,7 @@ constants as the package's public surface.
 
 from __future__ import annotations
 
+import json
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
@@ -38,9 +39,19 @@ from raes_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
+from raes_contracts.corpus import REALIZATION_ENVELOPES, corpus_family_root
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
-from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
+from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
+from raes_contracts.vocabulary import (
+    ParticipantFeatureSupportLevel,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(BACKEND_SUPPORTED_CONTRACT_IDS) - {
     "experiment-binding-descriptors-v1",
@@ -94,8 +105,11 @@ def _stub_supported_contract_versions(
     with_participant_runtime: bool,
     with_observation: bool,
     with_time: bool,
+    with_realization_envelope: bool,
 ) -> frozenset[str]:
     versions = set(REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS)
+    if with_realization_envelope:
+        versions.add("realization-envelope-v1")
     if not with_participant_runtime:
         versions -= _PARTICIPANT_CONTRACT_VERSIONS
     if not with_observation:
@@ -114,6 +128,7 @@ def _stub_concept_bindings(
     bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+        ConceptBinding(scope="capabilities.provisioner.supported_node_architectures", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
         ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
         ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
@@ -151,23 +166,41 @@ def _stub_concept_bindings(
     return bindings
 
 
-def _stub_realization_support() -> tuple[RealizationSupportDeclaration, ...]:
+def load_stub_realization_envelope() -> BackendRealizationEnvelopeModel:
+    """Load the governed in-process emulation apparatus used by the stub."""
+
+    path = corpus_family_root(REALIZATION_ENVELOPES) / "reference-emulation" / "in-process-v1.json"
+    return BackendRealizationEnvelopeModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
+
+
+def _stub_realization_support(
+    envelope: BackendRealizationEnvelopeModel | None,
+) -> tuple[RealizationSupportDeclaration, ...]:
+    supported_constraint_kinds = {
+        "node-type",
+        "os-family",
+        "node-architecture",
+        "content-type",
+        "account-feature",
+        "workflow-feature",
+        "workflow-state-predicate",
+    }
+    observation_capabilities = {}
+    if envelope is not None:
+        supported_constraint_kinds.add("compute-substrate")
+        substrate_claim = next(claim for claim in envelope.concerns if claim.concern.value == "compute-substrate")
+        observation_capabilities["compute-substrate"] = RealizationObservationCapability(
+            verification_scope=RealizationVerificationScope.PRESENCE,
+            observation_strength=substrate_claim.observation_strength,
+        )
     return (
         RealizationSupportDeclaration(
             domain="runtime-realization",
             support_mode=RealizationSupportMode.CONSTRAINED,
-            supported_constraint_kinds=frozenset(
-                {
-                    "node-type",
-                    "os-family",
-                    "content-type",
-                    "account-feature",
-                    "workflow-feature",
-                    "workflow-state-predicate",
-                }
-            ),
+            supported_constraint_kinds=frozenset(supported_constraint_kinds),
             supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
             disclosure_kinds=frozenset({"backend-manifest-v2", "runtime-snapshot-v1", "operation-status-v1"}),
+            observation_capabilities=observation_capabilities,
         ),
     )
 
@@ -175,8 +208,9 @@ def _stub_realization_support() -> tuple[RealizationSupportDeclaration, ...]:
 def _stub_provisioner() -> ProvisionerCapabilities:
     return ProvisionerCapabilities(
         name="stub-provisioner",
-        supported_node_types=frozenset({"vm", "switch"}),
+        supported_node_types=frozenset({"compute", "switch"}),
         supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
+        supported_node_architectures=frozenset({"x86_64", "aarch64"}),
         supported_content_types=frozenset({"file", "dataset", "directory"}),
         supported_account_features=frozenset({"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}),
         supported_domain_profiles=frozenset({"active_directory"}),
@@ -328,6 +362,7 @@ def create_stub_manifest(
     with_participant_runtime: bool = True,
     with_observation: bool = True,
     with_time: bool = False,
+    with_realization_envelope: bool = False,
     **config,
 ) -> BackendManifest:
     """Return the fully capable stub manifest.
@@ -340,6 +375,7 @@ def create_stub_manifest(
     """
 
     del config
+    realization_envelope = load_stub_realization_envelope() if with_realization_envelope else None
     return BackendManifest(
         name="stub",
         version=_current_backend_version(),
@@ -347,6 +383,7 @@ def create_stub_manifest(
             with_participant_runtime=with_participant_runtime,
             with_observation=with_observation,
             with_time=with_time,
+            with_realization_envelope=with_realization_envelope,
         ),
         compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=_stub_concept_bindings(
@@ -354,10 +391,11 @@ def create_stub_manifest(
             with_observation=with_observation,
             with_time=with_time,
         ),
-        realization_support=_stub_realization_support(),
+        realization_support=_stub_realization_support(realization_envelope),
         capabilities=_stub_capabilities(
             with_participant_runtime=with_participant_runtime,
             with_observation=with_observation,
             with_time=with_time,
         ),
+        realization_envelope=realization_envelope,
     )

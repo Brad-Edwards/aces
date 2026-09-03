@@ -2,6 +2,7 @@
 validator.py). Public API is unchanged: import ``SemanticValidator``.
 """
 
+from ._accounts import _AccountsMixin
 from ._content_objectives import _ContentObjectivesMixin
 from ._core import _ValidatorCore
 from ._deployment_tenancy import _DeploymentTenancyMixin
@@ -19,6 +20,7 @@ from ._runtime_identity_data import _RuntimeIdentityDataMixin
 from ._runtime_mail import _RuntimeMailMixin
 from ._runtime_orchestration import _RuntimeOrchestrationMixin
 from ._runtime_platform import _RuntimePlatformMixin
+from ._runtime_process_limits import _RuntimeProcessLimitsMixin
 from ._runtime_services import _RuntimeServicesMixin
 from ._sections import _SectionsMixin
 from ._service_materialization import _ServiceMaterializationMixin
@@ -33,6 +35,7 @@ __all__ = ["SemanticValidator"]
 class SemanticValidator(
     _NodesInfraNetworkMixin,
     _RuntimeServicesMixin,
+    _RuntimeProcessLimitsMixin,
     _RuntimeIdentityDataMixin,
     _RuntimePlatformMixin,
     _RuntimeOrchestrationMixin,
@@ -46,6 +49,7 @@ class SemanticValidator(
     _ParticipantInjectDeliveriesMixin,
     _ParticipantToolAffordancesMixin,
     _ServiceMaterializationMixin,
+    _AccountsMixin,
     _ContentObjectivesMixin,
     _PropositionsMixin,
     _EvidenceRequirementsMixin,

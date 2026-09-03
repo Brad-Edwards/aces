@@ -214,5 +214,5 @@ def test_positioning_check_reports_invalid_mcp_metadata(
 
 
 def test_positioning_check_is_registered_in_canonical_policy_graph() -> None:
-    noxfile_source = (REPO_ROOT / "noxfile.py").read_text(encoding="utf-8")
-    assert '"tools/check_project_positioning.py"' in noxfile_source
+    policy_lane_source = (REPO_ROOT / "tools" / "nox_support" / "policy_lanes.py").read_text(encoding="utf-8")
+    assert '"tools/check_project_positioning.py"' in policy_lane_source

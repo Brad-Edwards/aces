@@ -19,7 +19,7 @@ def register(mcp: FastMCP) -> None:
             "Parse an SDL YAML scenario and return a structured summary: "
             "scenario name/description, which sections are populated, element "
             "counts, variables defined, entities hierarchy, and high-level "
-            "topology stats (VM count, switch count, network links).  "
+            "topology stats (compute count, switch count, network links).  "
             "Useful for getting a quick understanding of an existing scenario."
         ),
     )
@@ -90,7 +90,7 @@ def register(mcp: FastMCP) -> None:
         name="sdl_diagram",
         description=(
             "Generate an ASCII topology diagram of the scenario's network "
-            "layout showing switches, VMs connected to each switch, and "
+            "layout showing switches, compute nodes connected to each switch, and "
             "inter-node dependencies.  Useful for visualizing the scenario "
             "structure."
         ),

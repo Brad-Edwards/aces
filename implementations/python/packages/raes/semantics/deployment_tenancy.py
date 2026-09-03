@@ -65,10 +65,10 @@ def _missing_vm_issues(
     return [
         issue(
             "deployment-tenancy.cell.node-missing",
-            f"VM node '{node_name}' must belong to exactly one deployment cell",
+            f"Compute node '{node_name}' must belong to exactly one deployment cell",
         )
         for node_name, node in nodes.items()
-        if getattr(node, "type", None) == NodeType.VM and node_name not in node_cell
+        if getattr(node, "type", None) == NodeType.COMPUTE and node_name not in node_cell
     ]
 
 
@@ -177,12 +177,12 @@ def _placement_endpoint_issue(
     if (
         source is None
         or target is None
-        or getattr(nodes.get(source), "type", None) != NodeType.VM
-        or getattr(nodes.get(target), "type", None) != NodeType.VM
+        or getattr(nodes.get(source), "type", None) != NodeType.COMPUTE
+        or getattr(nodes.get(target), "type", None) != NodeType.COMPUTE
     ):
         return issue(
             "deployment-tenancy.placement.endpoint-invalid",
-            f"Relationship '{relationship_name}' carrier placement endpoints must resolve to VM nodes",
+            f"Relationship '{relationship_name}' carrier placement endpoints must resolve to compute nodes",
         )
     return None
 

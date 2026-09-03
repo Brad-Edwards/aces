@@ -2,9 +2,9 @@
   "contract_id": "provisioning-plan-v1",
   "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
   "stability": "draft",
-  "content_hash": "1bdc518fe38af9ea2d94f06793a103a660475a51cded7e7506c4760137279933",
+  "content_hash": "18166a63a4da604a62d4957fac6cca4344a285de17c7fa67746bfcbeae58ac5c",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "1bdc518fe38af9ea2d94f06793a103a660475a51cded7e7506c4760137279933"
+    "summary": "Added mandatory resolved realization authority, operation identity, and separate authored compute-substrate constraints to provisioning plans for issues #1067 and #1076.",
+    "content_hash": "18166a63a4da604a62d4957fac6cca4344a285de17c7fa67746bfcbeae58ac5c"
   }
 }

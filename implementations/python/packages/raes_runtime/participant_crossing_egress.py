@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from typing import TypeVar, cast
 from uuid import uuid4
 
+from raes_contracts.contracts import ParticipantFlowSinkKind
 from raes_contracts.contracts.base import ContractModel
 from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingDirection,
@@ -29,8 +30,15 @@ from .participant_crossing_mediation import (
     prepare_participant_crossing,
 )
 from .participant_crossing_records import _expected_history_heads
+from .participant_flow_sink import (
+    ParticipantFlowSinkDecision,
+    flow_sink_audit_details,
+    resolve_participant_flow_sink_decision,
+)
 
 _ViewT = TypeVar("_ViewT", bound=ContractModel)
+
+_PROJECTION_NOT_PERMITTED = "participant projection was not permitted"
 
 
 @dataclass(frozen=True)
@@ -105,7 +113,7 @@ def serialize_participant_view(
         )
         if prepared.existing_receipt is not None:
             if not prepared.existing_receipt.accepted:
-                raise PermissionError("participant projection was not permitted")
+                raise PermissionError(_PROJECTION_NOT_PERMITTED)
             if prepared.record.result_payload is None:
                 raise ValueError("idempotent participant projection is missing its governed result")
             return type(view).model_validate(prepared.record.result_payload)
@@ -116,30 +124,18 @@ def serialize_participant_view(
                 delivered=False,
             )
             commit_prepared_crossing(control_plane, prepared)
-            raise PermissionError("participant projection was not permitted")
+            raise PermissionError(_PROJECTION_NOT_PERMITTED)
 
-        governed = view
-        if prepared.governed_subject != subject:
-            transformer = getattr(control_plane._crossing_policy_resolver, "transform_egress", None)
-            if not callable(transformer):
-                raise ValueError("transformed participant egress requires a trusted view transformer")
-            candidate = transformer(prepared.intent, prepared.governed_subject, view)
-            if not isinstance(candidate, type(view)):
-                raise ValueError("participant egress transformation returned an invalid governed view")
-            governed = candidate
-            actual = _view_subject(
-                governed,
-                participant_address=serialization.participant_address,
-                episode_id=serialization.episode_id,
-                subject_kind=prepared.governed_subject.subject_kind,
-            )
-            if actual != prepared.governed_subject:
-                raise ValueError("trusted egress transformation does not match its governed identity")
+        sink_decision = _enforce_egress_flow_sink(control_plane, prepared)
+
+        governed = _governed_egress_view(control_plane, prepared, view, serialization, subject)
         prepared = _with_opacity_egress_observation(
             control_plane,
             prepared,
             delivered=True,
         )
+        if sink_decision is not None:
+            prepared = _with_flow_sink_permitted_audit(prepared, sink_decision)
         prepared = cast(
             PreparedParticipantCrossing,
             replace(
@@ -152,6 +148,93 @@ def serialize_participant_view(
         )
         commit_prepared_crossing(control_plane, prepared)
         return governed
+
+
+def _governed_egress_view(
+    control_plane: object,
+    prepared: PreparedParticipantCrossing,
+    view: _ViewT,
+    serialization: ParticipantViewSerialization,
+    subject: ParticipantCrossingSubjectReferenceModel,
+) -> _ViewT:
+    """Return the trusted governed projection, revalidating any egress transformation."""
+
+    if prepared.governed_subject == subject:
+        return view
+    transformer = getattr(control_plane._crossing_policy_resolver, "transform_egress", None)
+    if not callable(transformer):
+        raise ValueError("transformed participant egress requires a trusted view transformer")
+    candidate = transformer(prepared.intent, prepared.governed_subject, view)
+    if not isinstance(candidate, type(view)):
+        raise ValueError("participant egress transformation returned an invalid governed view")
+    actual = _view_subject(
+        candidate,
+        participant_address=serialization.participant_address,
+        episode_id=serialization.episode_id,
+        subject_kind=prepared.governed_subject.subject_kind,
+    )
+    if actual != prepared.governed_subject:
+        raise ValueError("trusted egress transformation does not match its governed identity")
+    return candidate
+
+
+def _enforce_egress_flow_sink(
+    control_plane: object,
+    prepared: PreparedParticipantCrossing,
+) -> ParticipantFlowSinkDecision | None:
+    """Resolve the SEM-233 permit; commit a denial and refuse serialization on non-permit."""
+
+    sink_decision = resolve_participant_flow_sink_decision(
+        control_plane,
+        prepared,
+        sink_kind=ParticipantFlowSinkKind.PARTICIPANT_OUTPUT,
+    )
+    if sink_decision is not None and not sink_decision.permitted:
+        denied = _with_flow_sink_denied_audit(
+            _with_opacity_egress_observation(control_plane, prepared, delivered=False),
+            sink_decision,
+        )
+        commit_prepared_crossing(control_plane, denied)
+        raise PermissionError(_PROJECTION_NOT_PERMITTED)
+    return sink_decision
+
+
+def _with_flow_sink_permitted_audit(
+    prepared: PreparedParticipantCrossing,
+    decision: ParticipantFlowSinkDecision,
+) -> PreparedParticipantCrossing:
+    """Fold the permitted SEM-233 reference into the committed egress audit."""
+
+    return cast(
+        PreparedParticipantCrossing,
+        replace(
+            prepared,
+            audit_event=replace(
+                prepared.audit_event,
+                details={**prepared.audit_event.details, **flow_sink_audit_details(decision)},
+            ),
+        ),
+    )
+
+
+def _with_flow_sink_denied_audit(
+    prepared: PreparedParticipantCrossing,
+    decision: ParticipantFlowSinkDecision,
+) -> PreparedParticipantCrossing:
+    """Record a SEM-233 final-sink denial in the atomic egress audit event."""
+
+    return cast(
+        PreparedParticipantCrossing,
+        replace(
+            prepared,
+            audit_event=replace(
+                prepared.audit_event,
+                allowed=False,
+                reason="flow-sink-denied",
+                details={**prepared.audit_event.details, **flow_sink_audit_details(decision)},
+            ),
+        ),
+    )
 
 
 def _with_opacity_egress_observation(

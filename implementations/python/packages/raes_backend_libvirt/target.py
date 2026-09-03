@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from raes_backend_protocols.capabilities import BackendManifest
+from raes_backend_protocols.capabilities import BackendManifest, OperatingSystemCompatibility
 from raes_runtime.registry import BackendRegistry, RuntimeTarget, RuntimeTargetComponents
 
 from .driver import LibvirtDriver
 from .drivers.libvirt import LibvirtDeploymentDriver
 from .envelopes import LibvirtDriverMode
-from .manifest import LIBVIRT_BACKEND_NAME, create_libvirt_manifest
+from .manifest import LIBVIRT_BACKEND_NAME, create_libvirt_manifest, realized_target_architecture
 from .participant_runtime import LibvirtParticipantRuntime
 from .provisioner import LibvirtProvisioner
 
@@ -117,6 +117,15 @@ def _validate_manifest_mode(manifest: BackendManifest, mode: LibvirtDriverMode) 
     expected = {
         "supported_node_types": frozenset(configuration.supported_node_types),
         "supported_os_families": frozenset(configuration.supported_os_families),
+        "operating_systems": tuple(
+            OperatingSystemCompatibility(
+                family=entry.family,
+                distribution=entry.distribution,
+                versions=frozenset(entry.versions),
+            )
+            for entry in configuration.operating_systems
+        ),
+        "supported_node_architectures": frozenset({realized_target_architecture(configuration)}),
         "supported_content_types": frozenset(configuration.supported_content_types),
         "supported_account_features": frozenset(configuration.supported_account_features),
         "supported_domain_profiles": frozenset(configuration.supported_domain_profiles),

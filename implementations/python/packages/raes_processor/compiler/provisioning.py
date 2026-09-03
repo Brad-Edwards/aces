@@ -75,6 +75,10 @@ def _compile_capability_constraints(
     compiled: list[CompiledCapabilityConstraint] = []
     for constraint in scenario.instantiation_provenance.capability_constraints:
         parts = constraint.field_pointer.split("/")
+        if len(parts) != 4:
+            # Nested process-limit domains are owned by the SEM-218 compiled
+            # realization requirement, keyed by semantic record identity.
+            continue
         section_name, encoded_name, field_name = parts[1:]
         node_name = encoded_name.replace("~1", "/").replace("~0", "~")
         node = scenario.nodes[node_name]
@@ -179,8 +183,11 @@ def _record_node_runtime(
         address=_node_address(node_name),
         name=node_name,
         node_name=node_name,
-        node_type=node_spec.get("type", ""),
+        node_kind=node_spec.get("type", ""),
         os_family=node_spec.get("os", "") or "",
+        os_distribution=node_spec.get("os_distribution", "") or "",
+        os_version=node_spec.get("os_version", "") or "",
+        architecture=node_spec.get("architecture", "") or "",
         count=infra_spec.get("count"),
         network_namespace_target=network_namespace_target,
         domain_topology=domain_topology,
@@ -235,7 +242,7 @@ def _compile_feature_bindings(
 ) -> dict[str, FeatureBinding]:
     feature_bindings: dict[str, FeatureBinding] = {}
     for node_name, node in scenario.nodes.items():
-        if node.type != NodeType.VM:
+        if node.type != NodeType.COMPUTE:
             continue
         node_addr = _node_address(node_name)
         for feature_name, role_name in node.features.items():

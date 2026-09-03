@@ -35,7 +35,7 @@ def _scenario():
             name: portable-time
             nodes:
               worker:
-                type: VM
+                type: compute
                 resources: {ram: 1 GiB, cpu: 1}
             time_domains:
               scenario:

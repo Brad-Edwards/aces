@@ -41,7 +41,7 @@ def _scenario(*, configured: bool = True) -> str:
     name: issue-1043-corroboration
     nodes:
       worker:
-        type: vm
+        type: compute
         resources: {{ram: 1 gib, cpu: 1}}
         runtime:
           forwarding_agents:
@@ -71,6 +71,14 @@ def _manifest(scope: RealizationVerificationScope):
 
 def _compiled(configured: bool = True):
     return compile_runtime_model(parse_sdl(_scenario(configured=configured)))
+
+
+def _forwarding_requirements(model):
+    return tuple(
+        requirement
+        for requirement in model.realization_requirements
+        if requirement.requirement_kind == "forwarding-agents"
+    )
 
 
 def _returned_snapshot(execution_plan, model, scope: RealizationVerificationScope) -> RuntimeSnapshot:
@@ -172,7 +180,7 @@ def test_runtime_rejects_matching_configuration_without_observation_disclosure()
     snapshot.realization_observations = ()
 
     diagnostics, _provenance = realization_disclosure(
-        model.realization_requirements,
+        _forwarding_requirements(model),
         execution_plan.provisioning,
         snapshot,
         manifest=manifest,
@@ -192,13 +200,13 @@ def test_runtime_rejects_under_scoped_observation_but_accepts_configuration_read
     strong_snapshot = _returned_snapshot(execution_plan, model, RealizationVerificationScope.CONFIGURATION)
 
     weak_diagnostics, _ = realization_disclosure(
-        model.realization_requirements,
+        _forwarding_requirements(model),
         execution_plan.provisioning,
         weak_snapshot,
         manifest=manifest,
     )
     strong_diagnostics, strong_provenance = realization_disclosure(
-        model.realization_requirements,
+        _forwarding_requirements(model),
         execution_plan.provisioning,
         strong_snapshot,
         manifest=manifest,

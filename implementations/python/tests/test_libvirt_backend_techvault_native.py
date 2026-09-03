@@ -2,19 +2,28 @@
 
 from __future__ import annotations
 
-import gzip
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from libvirt_interface_fixtures import (
+    HOSTILE_INTERFACE_CASES,
+    QUOTED_ADDRESS_COMMAND,
+    QUOTED_MAC_ARM,
+    VALID_INTERFACE,
+    domain_with_interface,
+    domain_with_malformed_entry,
+)
 from paths import EXAMPLES_DIR
 from raes import parse_sdl
 from raes_backend_libvirt import create_libvirt_target
 from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
 from raes_backend_libvirt.envelopes import load_libvirt_realization_envelope
+from raes_backend_libvirt.techvault_appliance import _init_script
 from raes_backend_libvirt.techvault_native import (
     BusyboxInitramfsBuilder,
     ProbeResult,
@@ -205,8 +214,7 @@ name: bounded
 nodes:
   lab: {type: switch}
   demo:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 128 MiB, cpu: 1}
     services: []
 infrastructure:
@@ -239,6 +247,100 @@ def _bounded_specs() -> tuple[NetworkSpec, DomainSpec]:
     return network, domain
 
 
+def test_native_driver_rejects_missing_initramfs_toolchain_before_libvirt_io(tmp_path):
+    connection = _FakeConnection()
+    kernel = tmp_path / "vmlinuz"
+    kernel.write_bytes(b"kernel")
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connection=connection,
+        kernel_path=kernel,
+        initramfs_builder=BusyboxInitramfsBuilder(busybox_path=tmp_path / "missing-busybox"),
+    )
+    network, domain = _bounded_specs()
+
+    result = driver.realize(networks=(network,), domains=(domain,))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == [
+        "libvirt-backend.techvault-native.initramfs-toolchain-unavailable"
+    ]
+    assert connection.network_xml == []
+    assert connection.domain_xml == []
+    assert not driver.state_dir.exists()
+
+
+def test_native_driver_rejects_missing_kernel_before_libvirt_io(tmp_path):
+    connection = _FakeConnection()
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connection=connection,
+        kernel_path=tmp_path / "missing-kernel",
+        initramfs_builder=_Builder(),
+    )
+    network, domain = _bounded_specs()
+
+    result = driver.realize(networks=(network,), domains=(domain,))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == [
+        "libvirt-backend.techvault-native.kernel-unavailable"
+    ]
+    assert connection.network_xml == []
+    assert connection.domain_xml == []
+
+
+def test_native_artifact_preflight_skips_boot_toolchain_for_network_only_plan(tmp_path: Path) -> None:
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connection=_FakeConnection(),
+        kernel_path=None,
+        initramfs_builder=object(),
+    )
+
+    assert driver._artifact_preflight_diagnostics(()) == []
+
+
+def test_native_artifact_preflight_normalizes_builder_exception(tmp_path: Path) -> None:
+    class _ExplodingPreflightBuilder:
+        def preflight(self) -> object:
+            raise RuntimeError("host-specific toolchain detail")
+
+    kernel = tmp_path / "vmlinuz"
+    kernel.write_bytes(b"kernel")
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connection=_FakeConnection(),
+        kernel_path=kernel,
+        initramfs_builder=_ExplodingPreflightBuilder(),
+    )
+    _network, domain = _bounded_specs()
+
+    diagnostics = driver._artifact_preflight_diagnostics((domain,))
+
+    assert [diagnostic.code for diagnostic in diagnostics] == [
+        "libvirt-backend.techvault-native.initramfs-toolchain-unavailable"
+    ]
+
+
+def test_native_driver_normalizes_connection_failure(tmp_path: Path) -> None:
+    def unavailable_connector(_uri: str) -> object:
+        raise RuntimeError("host-specific connection detail")
+
+    kernel = tmp_path / "vmlinuz"
+    kernel.write_bytes(b"kernel")
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connector=unavailable_connector,
+        kernel_path=kernel,
+        initramfs_builder=_Builder(),
+    )
+    network, domain = _bounded_specs()
+
+    result = driver.realize(networks=(network,), domains=(domain,))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["libvirt-backend.techvault-native.unavailable"]
+    assert result.diagnostics[0].address == "runtime.libvirt.connection"
+
+
 def _submit_native_scenario(path: Path, tmp_path: Path):
     connection = _FakeConnection()
     kernel = tmp_path / "vmlinuz"
@@ -252,7 +354,8 @@ def _submit_native_scenario(path: Path, tmp_path: Path):
     )
     target = create_libvirt_target(driver=driver, name_prefix="native-test")
     manager = RuntimeManager(target)
-    scenario = parse_sdl(path.read_text(encoding="utf-8"))
+    content = re.sub(r"(?m)^\s+os(?:_distribution|_version)?:.*\n", "", path.read_text(encoding="utf-8"))
+    scenario = parse_sdl(content)
     execution_plan = manager.plan(scenario)
     control_plane = RuntimeControlPlane(target)
     receipt = control_plane.submit_provisioning(execution_plan.provisioning)
@@ -328,8 +431,18 @@ def test_bounded_substrate_emits_complete_daemon_observations(tmp_path):
     result = driver.realize(networks=(network,), domains=(domain,))
 
     assert not result.diagnostics
-    assert len(result.observations) == 13
+    assert len(result.observations) == 14
     assert {observation.source.value for observation in result.observations} == {"daemon-observed"}
+    substrate = next(
+        observation for observation in result.observations if observation.concern.value == "compute-substrate"
+    )
+    assert substrate.value == "virtual-machine"
+    assert substrate.binding_verified
+    definitions_before = tuple(connection.domain_xml)
+    readback = driver.observe(domains=(domain,))
+    assert not readback.diagnostics
+    assert [item.value for item in readback.observations] == ["virtual-machine"]
+    assert tuple(connection.domain_xml) == definitions_before
     surface = expected_surface(driver.last_snapshot)
     assert surface["source"] == "daemon-observed"
     assert surface["domains"] == (provider_resource_name(domain.address, prefix="native-test"),)
@@ -874,6 +987,8 @@ def test_native_driver_refuses_prefix_wide_cleanup(tmp_path):
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     (
+        ({"connection_uri": ""}, "non-empty"),
+        ({"name_prefix": ""}, "non-empty"),
         ({"define_only": True}, "define-only"),
         ({"connection_uri": "qemu+ssh://operator:credential@example/system"}, "credentials"),
         ({"connection_uri": "qemu+ssh://operator@example/system"}, "credentials"),
@@ -910,16 +1025,29 @@ def test_native_driver_derives_provider_name_from_address_not_display_name(tmp_p
     assert "unsafe name" not in connection.domain_xml[0]
 
 
-def test_busybox_initramfs_builder_writes_gzip_cpio(tmp_path):
-    domain = {
-        "name": "webapp",
-        "role": "enterprise",
-        "interfaces": [{"mac": "52:54:00:00:00:01", "ip": "192.0.2.10", "cidr_prefix": 24}],
-        "services": [{"name": "http", "port": 8080, "protocol": "tcp"}],
-    }
+def test_init_script_accepts_a_decimal_string_cidr_prefix():
+    script = _init_script(domain_with_interface(**{**VALID_INTERFACE, "cidr_prefix": "24"}))
 
-    target = BusyboxInitramfsBuilder().build(domain=domain, target=tmp_path / "webapp.cpio.gz")
+    assert QUOTED_ADDRESS_COMMAND in script
 
-    assert target.read_bytes().startswith(b"\x1f\x8b")
-    assert target.stat().st_size > 1000
-    assert b"httpd -p" not in gzip.decompress(target.read_bytes())
+
+def test_init_script_quotes_valid_interface_addressing():
+    script = _init_script(domain_with_interface(**VALID_INTERFACE))
+
+    assert QUOTED_MAC_ARM in script
+    assert QUOTED_ADDRESS_COMMAND in script
+
+
+@pytest.mark.parametrize(("interface", "match"), HOSTILE_INTERFACE_CASES)
+def test_init_script_rejects_hostile_interface_fields_before_scripting(interface, match):
+    domain = domain_with_interface(**interface)
+
+    with pytest.raises(ValueError, match=match):
+        _init_script(domain)
+
+
+def test_init_script_skips_a_malformed_interface_entry_and_renders_the_rest():
+    script = _init_script(domain_with_malformed_entry())
+
+    assert "not-a-mapping" not in script
+    assert QUOTED_MAC_ARM in script

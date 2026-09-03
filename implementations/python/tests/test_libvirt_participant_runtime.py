@@ -88,16 +88,18 @@ def test_ac1_manifest_default_is_provisioning_only():
 
 
 # ---------------------------------------------------------------------------
-# AC-2: participant runtime remains valid while realization certification fails closed
+# AC-2: participant runtime remains valid while envelope certification fails closed
 # ---------------------------------------------------------------------------
 
 
 def test_ac2_conformance_requires_constructive_envelope_with_participant_runtime_manifest():
-    # The participant capability surface remains valid, but the published open
-    # libvirt envelope cannot produce ASR-519 probes and must not fall back to a
-    # caller-selected hermetic target-adapter scenario.
+    # The participant and hermetic target surfaces remain valid, but the
+    # published libvirt envelope cannot produce native ASR-519 probes.
     target = _libvirt_target_with_participant_runtime(driver=RecordingLibvirtDriver())
-    report = run_target_conformance(target)
+    report = run_target_conformance(
+        target,
+        reference_scenario="name: conformance\nnodes:\n  vm: {type: compute}\n",
+    )
 
     assert report.passed is False
     assert report.unsupported_contract_gaps == ()
@@ -107,8 +109,8 @@ def test_ac2_conformance_requires_constructive_envelope_with_participant_runtime
     assert cases["target-manifest"].passed is True
     assert cases["realization-envelope-constructive"].passed is False
     assert cases["realization-envelope-constructive"].outcome == "unsupported"
-    assert "target-provisioning" not in cases
-    assert "target-snapshot" not in cases
+    assert cases["target-provisioning"].passed is True
+    assert cases["target-snapshot"].passed is True
 
 
 # ---------------------------------------------------------------------------

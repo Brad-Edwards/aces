@@ -32,6 +32,7 @@ from .schema_invariants import (
     _DEFS_KEY,
     _INSTANTIATED_SNAPSHOT_CONTRACT_ID,
     _INSTANTIATION_INVARIANT_CONTRACT_ID,
+    _SATISFIABILITY_EVIDENCE_CONTRACT_ID,
     _SCHEMA_MAP_KEYS,
     _SCHEMA_SUBSCHEMA_KEYS,
     _SDL_AUTHORING_CONTRACT_ID,
@@ -262,6 +263,7 @@ def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, An
     if contract_id not in {
         _INSTANTIATION_INVARIANT_CONTRACT_ID,
         _INSTANTIATED_SNAPSHOT_CONTRACT_ID,
+        _SATISFIABILITY_EVIDENCE_CONTRACT_ID,
     }:
         return
     _forbid_variable_tokens_in_strings(json_schema)

@@ -13,8 +13,16 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from raes_contracts.contracts import ContractModel, NonEmptyString, RealizationEnvelopeIdentityModel
+from raes_contracts.contracts.capabilities import (
+    OperatingSystemCompatibilityModel,
+    ProcessResourceLimitCapabilityModel,
+)
+from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
 from raes_contracts.realization_envelope import RealizationEnvelopeModel
 from raes_contracts.vocabulary import ObservationStrength
+
+_NODE_ARCHITECTURE_VOCABULARY = "provisioner-node-architectures"
+_COMPUTE_SUBSTRATE_VOCABULARY = "compute-substrates"
 
 DigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
 
@@ -41,6 +49,8 @@ class RealizationConcern(str, Enum):
     FEATURE_BINDING = "feature-binding"
     SERVICE = "service"
     ACL = "acl"
+    COMPUTE_SUBSTRATE = "compute-substrate"
+    OPERATING_SYSTEM = "operating-system"
 
 
 class TransformationKind(str, Enum):
@@ -76,9 +86,11 @@ class RealizerConfigurationModel(ContractModel):
     network_policy: NonEmptyString
     supported_node_types: list[NonEmptyString] = Field(min_length=1)
     supported_os_families: list[NonEmptyString] = Field(min_length=1)
+    operating_systems: list[OperatingSystemCompatibilityModel] = Field(default_factory=list)
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
     supported_domain_profiles: list[NonEmptyString] = Field(default_factory=list)
+    process_resource_limits: list[ProcessResourceLimitCapabilityModel] = Field(default_factory=list)
     supports_acls: bool = False
     memory_mib: IntegerBoundsModel
     vcpus: IntegerBoundsModel
@@ -95,6 +107,28 @@ class RealizerConfigurationModel(ContractModel):
             values = getattr(self, field_name)
             if len(values) != len(set(values)):
                 raise ValueError(f"{field_name} must not contain duplicates")
+        resources = [capability.resource for capability in self.process_resource_limits]
+        if len(resources) != len(set(resources)):
+            raise ValueError("process_resource_limits must not contain duplicate resource terms")
+        os_keys = [(entry.family, entry.distribution) for entry in self.operating_systems]
+        if len(os_keys) != len(set(os_keys)):
+            raise ValueError("operating_systems must not contain duplicate family/distribution rows")
+        undeclared_families = {
+            entry.family for entry in self.operating_systems if entry.family not in self.supported_os_families
+        }
+        if undeclared_families:
+            raise ValueError(
+                "operating_systems families must be present in supported_os_families: "
+                + ", ".join(sorted(undeclared_families))
+            )
+        # The configuration-bound realized target architecture is a governed
+        # canonical CPU-architecture term (issue #674), so a backend's declared
+        # realization architecture stays in the same portable vocabulary as the
+        # authored SDL requirement it must agree with.
+        try:
+            validate_controlled_vocabulary_value(_NODE_ARCHITECTURE_VOCABULARY, self.architecture)
+        except ValueError as exc:
+            raise ValueError(f"architecture must be a governed node CPU architecture term: {exc}") from exc
         return self
 
     @classmethod
@@ -113,7 +147,26 @@ class RealizerConfigurationModel(ContractModel):
             "supported_domain_profiles",
         ):
             properties[field_name]["uniqueItems"] = True
+        properties["process_resource_limits"]["uniqueItems"] = True
+        properties["operating_systems"]["uniqueItems"] = True
         return json_schema
+
+
+def _validate_transformation_coupling(model: RealizationConcernDisclosureModel) -> None:
+    if len(model.transformations) != len(set(model.transformations)):
+        raise ValueError("transformations must not contain duplicates")
+    if model.disposition is ConcernDisposition.TRANSFORMED and not model.transformations:
+        raise ValueError("transformed disposition requires transformations")
+    if model.disposition is not ConcernDisposition.TRANSFORMED and model.transformations:
+        raise ValueError("transformations require transformed disposition")
+
+
+def _validate_observation_coupling(model: RealizationConcernDisclosureModel) -> None:
+    if model.disposition is ConcernDisposition.UNSUPPORTED:
+        if model.observation_strength is not ObservationStrength.NONE or model.mechanism is not None:
+            raise ValueError("unsupported disposition cannot claim observation or mechanism")
+    elif model.observation_strength is ObservationStrength.NONE or model.mechanism is None:
+        raise ValueError("supported dispositions require observation and mechanism")
 
 
 class RealizationConcernDisclosureModel(ContractModel):
@@ -127,17 +180,13 @@ class RealizationConcernDisclosureModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_disposition(self) -> RealizationConcernDisclosureModel:
-        if len(self.transformations) != len(set(self.transformations)):
-            raise ValueError("transformations must not contain duplicates")
-        if self.disposition is ConcernDisposition.TRANSFORMED and not self.transformations:
-            raise ValueError("transformed disposition requires transformations")
-        if self.disposition is not ConcernDisposition.TRANSFORMED and self.transformations:
-            raise ValueError("transformations require transformed disposition")
-        if self.disposition is ConcernDisposition.UNSUPPORTED:
-            if self.observation_strength is not ObservationStrength.NONE or self.mechanism is not None:
-                raise ValueError("unsupported disposition cannot claim observation or mechanism")
-        elif self.observation_strength is ObservationStrength.NONE or self.mechanism is None:
-            raise ValueError("supported dispositions require observation and mechanism")
+        _validate_transformation_coupling(self)
+        _validate_observation_coupling(self)
+        if self.concern is RealizationConcern.COMPUTE_SUBSTRATE and self.mechanism is not None:
+            try:
+                validate_controlled_vocabulary_value(_COMPUTE_SUBSTRATE_VOCABULARY, self.mechanism)
+            except ValueError as exc:
+                raise ValueError(f"compute-substrate mechanism must be a governed term: {exc}") from exc
         return self
 
     @classmethod
@@ -175,10 +224,24 @@ class RealizationConcernDisclosureModel(ContractModel):
         return json_schema
 
 
+def _realizer_configuration_payload(
+    payload: Mapping[str, Any] | RealizerConfigurationModel,
+) -> dict[str, Any]:
+    model = (
+        payload
+        if isinstance(payload, RealizerConfigurationModel)
+        else RealizerConfigurationModel.model_validate(payload)
+    )
+    material = model.model_dump(mode="json")
+    if not material["process_resource_limits"]:
+        material.pop("process_resource_limits")
+    return material
+
+
 def realizer_configuration_digest(payload: Mapping[str, Any] | RealizerConfigurationModel) -> str:
     """Digest the closed, secret-free material configuration projection."""
 
-    material = payload.model_dump(mode="json") if isinstance(payload, RealizerConfigurationModel) else dict(payload)
+    material = _realizer_configuration_payload(payload)
     material.pop("configuration_digest", None)
     canonical = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     return "sha256:" + hashlib.sha256(canonical).hexdigest()
@@ -189,15 +252,14 @@ def realization_envelope_digest(payload: Mapping[str, Any] | ContractModel) -> s
 
     if isinstance(payload, BackendRealizationEnvelopeModel):
         material = payload.model_dump(mode="json")
+        material["configuration"] = _realizer_configuration_payload(payload.configuration)
     elif isinstance(payload, Mapping) and {"id", "expression", "configuration", "concerns"} <= payload.keys():
         material = {
             "schema_version": payload.get("schema_version", "realization-envelope/v1"),
             "contract_id": payload.get("contract_id", "realization-envelope-v1"),
             "id": payload["id"],
             "expression": RealizationEnvelopeModel.model_validate(payload["expression"]).model_dump(mode="json"),
-            "configuration": RealizerConfigurationModel.model_validate(payload["configuration"]).model_dump(
-                mode="json"
-            ),
+            "configuration": _realizer_configuration_payload(payload["configuration"]),
             "concerns": [
                 RealizationConcernDisclosureModel.model_validate(claim).model_dump(mode="json")
                 for claim in payload["concerns"]
@@ -230,6 +292,19 @@ class BackendRealizationEnvelopeModel(ContractModel):
         if missing_concerns:
             missing = ", ".join(sorted(concern.value for concern in missing_concerns))
             raise ValueError(f"concerns must disclose every governed concern; missing: {missing}")
+        operating_system_claim = next(
+            claim for claim in self.concerns if claim.concern is RealizationConcern.OPERATING_SYSTEM
+        )
+        if self.configuration.operating_systems:
+            if (
+                operating_system_claim.disposition is not ConcernDisposition.REALIZED
+                or operating_system_claim.observation_strength is not ObservationStrength.GUEST_OBSERVED
+            ):
+                raise ValueError(
+                    "operating_systems capability rows require a realized guest-observed operating-system concern"
+                )
+        elif operating_system_claim.disposition is not ConcernDisposition.UNSUPPORTED:
+            raise ValueError("operating-system concern support requires coupled operating_systems capability rows")
         if self.configuration.configuration_digest != realizer_configuration_digest(self.configuration):
             raise ValueError("realizer configuration digest does not match canonical content")
         expected = realization_envelope_digest(self)

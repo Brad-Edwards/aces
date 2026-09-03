@@ -13,7 +13,7 @@ from raes_contracts.canonical import canonical_json_digest
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier, QualifiedName, require_module_identifier
 from .explicitness import ExplicitnessClass, ExplicitnessProvenance
-from .realization_designation import RealizationDesignationRecord
+from .realization_designation import RealizationConstraintRecord, RealizationDesignationRecord
 
 _DIGEST_PATTERN = r"^sha256:[a-f0-9]{64}$"
 _JSON_POINTER_RE = re.compile(r"^(?:/(?:[^~/]|~[01])*)*$")
@@ -153,6 +153,26 @@ class ResolvedImportProvenance(FrozenPhaseModel):
         return self
 
 
+def _is_ordinary_constraint_pointer(parts: list[str]) -> bool:
+    return len(parts) == 4 and (parts[1], parts[3]) in {
+        ("nodes", "os"),
+        ("nodes", "os_distribution"),
+        ("nodes", "os_version"),
+        ("nodes", "architecture"),
+        ("infrastructure", "count"),
+    }
+
+
+def _is_process_limit_constraint_pointer(parts: list[str]) -> bool:
+    return (
+        len(parts) == 9
+        and parts[1] == "nodes"
+        and parts[3:7] == ["runtime", "operational_policy", "resource_limits", "process_limits"]
+        and parts[7].isdigit()
+        and parts[8] in {"soft", "hard"}
+    )
+
+
 class CapabilityConstraint(FrozenPhaseModel):
     """Pre-instantiation constraint retained for one concrete field."""
 
@@ -169,11 +189,12 @@ class CapabilityConstraint(FrozenPhaseModel):
         if not self.field_pointer.startswith("/") or _JSON_POINTER_RE.fullmatch(self.field_pointer) is None:
             raise ValueError("field_pointer must be a non-root RFC 6901 JSON Pointer")
         parts = self.field_pointer.split("/")
-        if len(parts) != 4 or (parts[1], parts[3]) not in {
-            ("nodes", "os"),
-            ("infrastructure", "count"),
-        }:
-            raise ValueError("field_pointer must address /nodes/<id>/os or /infrastructure/<id>/count")
+        if not _is_ordinary_constraint_pointer(parts) and not _is_process_limit_constraint_pointer(parts):
+            raise ValueError(
+                "field_pointer must address /nodes/<id>/(os|os_distribution|os_version|architecture), "
+                "/infrastructure/<id>/count, or "
+                "/nodes/<id>/runtime/operational_policy/resource_limits/process_limits/<index>/(soft|hard)"
+            )
         declaration = parts[2].replace("~1", "/").replace("~0", "~")
         QualifiedName.parse(declaration)
         for index, value in enumerate(self.allowed_values):
@@ -205,6 +226,7 @@ class ExpansionProvenance(FrozenPhaseModel):
     capability_constraints: tuple[CapabilityConstraint, ...] = ()
     explicitness: tuple[ExplicitnessProvenanceRecord, ...] = ()
     realization_designations: tuple[RealizationDesignationRecord, ...] = ()
+    realization_constraints: tuple[RealizationConstraintRecord, ...] = ()
 
     @model_validator(mode="after")
     def _validate_unique_identities(self) -> ExpansionProvenance:
@@ -213,6 +235,7 @@ class ExpansionProvenance(FrozenPhaseModel):
             constraints=self.capability_constraints,
             explicitness=self.explicitness,
             realization_designations=self.realization_designations,
+            realization_constraints=self.realization_constraints,
         )
         return self
 
@@ -227,6 +250,7 @@ class InstantiationProvenance(FrozenPhaseModel):
     capability_constraints: tuple[CapabilityConstraint, ...] = ()
     explicitness: tuple[ExplicitnessProvenanceRecord, ...] = ()
     realization_designations: tuple[RealizationDesignationRecord, ...] = ()
+    realization_constraints: tuple[RealizationConstraintRecord, ...] = ()
     trial: TrialInstantiationProvenance | None = Field(default=None, repr=False)
 
     @model_serializer(mode="wrap")
@@ -248,6 +272,7 @@ class InstantiationProvenance(FrozenPhaseModel):
             constraints=self.capability_constraints,
             explicitness=self.explicitness,
             realization_designations=self.realization_designations,
+            realization_constraints=self.realization_constraints,
             root_bindings=self.bindings,
         )
         return self
@@ -265,6 +290,7 @@ def _validate_derivation_collections(
     constraints: tuple[CapabilityConstraint, ...],
     explicitness: tuple[ExplicitnessProvenanceRecord, ...],
     realization_designations: tuple[RealizationDesignationRecord, ...],
+    realization_constraints: tuple[RealizationConstraintRecord, ...],
     root_bindings: tuple[ParameterBinding, ...] = (),
 ) -> None:
     _require_unique(
@@ -282,6 +308,10 @@ def _validate_derivation_collections(
     _require_unique(
         ((record.namespace, record.field_pointer) for record in realization_designations),
         "realization designation records must have unique scope identities",
+    )
+    _require_unique(
+        ((record.namespace, record.field_pointer, record.concern) for record in realization_constraints),
+        "realization constraint records must have unique concern identities",
     )
 
     binding_values = _binding_environment(imports, root_bindings)
@@ -383,5 +413,6 @@ __all__ = [
     "ParameterBinding",
     "ResolvedImportProvenance",
     "RealizationDesignationRecord",
+    "RealizationConstraintRecord",
     "SemanticDigest",
 ]

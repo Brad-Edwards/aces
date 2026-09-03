@@ -44,7 +44,7 @@ class TestObjectiveWindowAgreement:
 name: agreement
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -108,7 +108,7 @@ workflows:
 name: refresh-agreement
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -205,7 +205,7 @@ objectives:
 name: objective-dependency-agreement
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {ready: ops, gate: ops}

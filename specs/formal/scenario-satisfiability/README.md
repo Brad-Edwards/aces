@@ -69,10 +69,36 @@ silently dropped.
 ## Solver Semantics
 
 The v1 adapter SHALL use Z3 package `4.16.0.0`, engine `4.16.0`, `QF_LIA`, seed
-zero, timeout 5000 ms, one thread, automatic configuration disabled, and model
+zero, operation timeout 5000 ms, one thread, automatic configuration disabled, and model
 and unsat-core production enabled. Scalar domain members SHALL be encoded as
 integer indices. The published solver configuration SHALL contain every one of
 these choices and be digest-bound.
+
+Every solver check MUST complete with `sat` or `unsat` before it contributes to
+a completed outcome, witness-selection claim, or core-reduction claim. Empty
+membership clauses MUST be asserted as false explicitly. The adapter MUST
+defensively reject duplicate clause ids before tracked-assumption construction,
+even though the normalized model contract independently forbids them.
+
+One analysis MUST construct one expression graph and query it incrementally.
+The 5000 ms monotonic deadline covers expression construction, all repeated
+checks, and deterministic witness or core selection. Each native check receives
+at most the remaining operation time, and a result returned after the deadline
+is an operational failure.
+
+For symbols `S`, domains `D(s)`, and clauses `C`, one analysis has the derived
+check budget:
+
+```text
+B = 1 + max(|C|, sum(|D(s)| for s in S))
+```
+
+The initial decision consumes one check. Only witness selection or core
+reduction then runs, so the former consumes at most one check per domain member
+and the latter at most one per clause. Exhausting this derived budget is an
+operational failure. The reference implementation SHALL preserve phase, check
+count, check budget, 5000 ms operation timeout, and bounded solver reason on its
+operational-error boundary; it SHALL NOT emit partial evidence.
 
 For a satisfiable model, the witness SHALL select the first feasible value for
 each symbol in canonical symbol and domain order while preserving previous

@@ -8,8 +8,8 @@ module:
     content: [payload]
     variation_points: [payload-host]
 nodes:
-  primary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
-  secondary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
+  primary: {type: compute, resources: {ram: 1 GiB, cpu: 1}}
+  secondary: {type: compute, resources: {ram: 1 GiB, cpu: 1}}
 content:
   payload: {type: file, target: primary, path: /opt/payload}
 variation_points:

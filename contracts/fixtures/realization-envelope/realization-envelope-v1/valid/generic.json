@@ -12,12 +12,13 @@
   },
   "configuration": {
     "mode": "generic",
-    "configuration_digest": "sha256:227d7807516ed39ad04acd4eb9fac26d0f0d3d9c81eb42a3cbf25c9215888a8c",
+    "configuration_digest": "sha256:cf7e5b0d28c25293d254c463a23958f66f92776579872fce8abbeb1227347b4b",
     "architecture": "x86_64",
     "image_policy": "local-qcow2",
     "network_policy": "libvirt-managed",
-    "supported_node_types": ["switch", "vm"],
+    "supported_node_types": ["switch", "compute"],
     "supported_os_families": ["linux"],
+    "operating_systems": [],
     "supported_content_types": ["file"],
     "supported_account_features": ["auth_method", "disabled", "groups", "home", "shell"],
     "supported_domain_profiles": [],
@@ -26,6 +27,8 @@
     "vcpus": {"minimum": 1, "maximum": null}
   },
   "concerns": [
+    {"concern": "compute-substrate", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "virtual-machine", "transformations": []},
+    {"concern": "operating-system", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "topology", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-domain-network", "transformations": []},
     {"concern": "architecture", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "qemu-x86_64-domain", "transformations": []},
     {"concern": "image", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "qcow2-disk-attachment", "transformations": []},
@@ -37,5 +40,5 @@
     {"concern": "service", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "acl", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-nwfilter", "transformations": []}
   ],
-  "digest": "sha256:85136f73d2752c5fdaf8c4219aefc42de756486555c17fe2f4b71a7c042221f0"
+  "digest": "sha256:1c768fa96dda900757ca48a66ddd741c62dbd5bd86e1356e75e3cc559ece92e0"
 }

@@ -22,6 +22,7 @@ from ._constants import (
 
 if TYPE_CHECKING:
     from ..parser import SDLSourceDocument
+    from ._verified_sources import _VerifiedSourceBundle
 
 
 class RegistryTrustPolicy(SDLModel):
@@ -65,6 +66,7 @@ class ResolvedModule:
     content_digest: str = ""
     export_hash: str = ""
     signer_id: str = ""
+    verified_sources: _VerifiedSourceBundle | None = None
 
 
 def _scenario_module_descriptor(scenario: Scenario, *, source_id: str) -> ModuleDescriptor:

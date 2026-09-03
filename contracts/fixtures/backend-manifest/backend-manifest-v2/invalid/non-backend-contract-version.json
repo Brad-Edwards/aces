@@ -18,7 +18,7 @@
   "capabilities": {
     "provisioner": {
       "name": "stub-provisioner",
-      "supported_node_types": ["vm"],
+      "supported_node_types": ["compute"],
       "supported_os_families": ["linux"]
     }
   }

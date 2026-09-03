@@ -1,0 +1,1601 @@
+{
+  "$defs": {
+    "MixedControlTransitionKind": {
+      "description": "Control-owned facts kept distinct from admission and execution.",
+      "enum": [
+        "proposal",
+        "approval",
+        "denial",
+        "external-direction",
+        "intervention",
+        "handoff",
+        "override",
+        "cancellation"
+      ],
+      "title": "MixedControlTransitionKind",
+      "type": "string"
+    },
+    "ParticipantActionArgumentFlowBindingModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_admission_ref": {
+          "minLength": 1,
+          "title": "Action Admission Ref",
+          "type": "string"
+        },
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "crossing_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Crossing Refs",
+          "type": "array"
+        },
+        "kind": {
+          "const": "action-argument",
+          "title": "Kind",
+          "type": "string"
+        },
+        "memory_predecessor_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Memory Predecessor Refs",
+          "type": "array"
+        },
+        "normalized_argument_name": {
+          "minLength": 1,
+          "title": "Normalized Argument Name",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "proposal_ref": {
+          "minLength": 1,
+          "title": "Proposal Ref",
+          "type": "string"
+        },
+        "relation_target": {
+          "$ref": "#/$defs/ParticipantFlowRelationTargetReferenceModel"
+        },
+        "source_episode_id": {
+          "minLength": 1,
+          "title": "Source Episode Id",
+          "type": "string"
+        },
+        "source_participant_address": {
+          "minLength": 1,
+          "title": "Source Participant Address",
+          "type": "string"
+        },
+        "target_episode_id": {
+          "minLength": 1,
+          "title": "Target Episode Id",
+          "type": "string"
+        },
+        "target_participant_address": {
+          "minLength": 1,
+          "title": "Target Participant Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_id",
+        "profile",
+        "policy",
+        "relation_target",
+        "source_participant_address",
+        "source_episode_id",
+        "target_participant_address",
+        "target_episode_id",
+        "kind",
+        "action_contract_address",
+        "proposal_ref",
+        "normalized_argument_name",
+        "action_admission_ref"
+      ],
+      "title": "ParticipantActionArgumentFlowBindingModel",
+      "type": "object"
+    },
+    "ParticipantControlOccurrenceFlowBindingModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "control_policy_revision": {
+          "minLength": 1,
+          "title": "Control Policy Revision",
+          "type": "string"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "crossing_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Crossing Refs",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "participant-control",
+          "title": "Kind",
+          "type": "string"
+        },
+        "memory_predecessor_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Memory Predecessor Refs",
+          "type": "array"
+        },
+        "occurrence_identity_ref": {
+          "minLength": 1,
+          "title": "Occurrence Identity Ref",
+          "type": "string"
+        },
+        "occurrence_kind": {
+          "$ref": "#/$defs/MixedControlTransitionKind"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "related_occurrence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Related Occurrence Refs",
+          "type": "array"
+        },
+        "relation_target": {
+          "$ref": "#/$defs/ParticipantFlowRelationTargetReferenceModel"
+        },
+        "source_episode_id": {
+          "minLength": 1,
+          "title": "Source Episode Id",
+          "type": "string"
+        },
+        "source_participant_address": {
+          "minLength": 1,
+          "title": "Source Participant Address",
+          "type": "string"
+        },
+        "target_episode_id": {
+          "minLength": 1,
+          "title": "Target Episode Id",
+          "type": "string"
+        },
+        "target_participant_address": {
+          "minLength": 1,
+          "title": "Target Participant Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_id",
+        "profile",
+        "policy",
+        "relation_target",
+        "source_participant_address",
+        "source_episode_id",
+        "target_participant_address",
+        "target_episode_id",
+        "kind",
+        "event_id",
+        "occurrence_kind",
+        "occurrence_revision",
+        "participant_address",
+        "episode_id",
+        "controller_ref",
+        "authority_basis_refs",
+        "control_policy_revision",
+        "occurrence_identity_ref",
+        "related_occurrence_refs",
+        "predecessor_event_refs"
+      ],
+      "title": "ParticipantControlOccurrenceFlowBindingModel",
+      "type": "object"
+    },
+    "ParticipantCrossingOccurrenceFlowBindingModel": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "crossing_decision_cut_ref": {
+          "minLength": 1,
+          "title": "Crossing Decision Cut Ref",
+          "type": "string"
+        },
+        "crossing_policy_decision_ref": {
+          "minLength": 1,
+          "title": "Crossing Policy Decision Ref",
+          "type": "string"
+        },
+        "crossing_policy_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Crossing Policy Digest",
+          "type": "string"
+        },
+        "crossing_policy_id": {
+          "minLength": 1,
+          "title": "Crossing Policy Id",
+          "type": "string"
+        },
+        "crossing_policy_revision": {
+          "minLength": 1,
+          "title": "Crossing Policy Revision",
+          "type": "string"
+        },
+        "crossing_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Crossing Refs",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "participant-crossing",
+          "title": "Kind",
+          "type": "string"
+        },
+        "memory_predecessor_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Memory Predecessor Refs",
+          "type": "array"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "related_stage_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Related Stage Refs",
+          "type": "array"
+        },
+        "relation_target": {
+          "$ref": "#/$defs/ParticipantFlowRelationTargetReferenceModel"
+        },
+        "source_episode_id": {
+          "minLength": 1,
+          "title": "Source Episode Id",
+          "type": "string"
+        },
+        "source_participant_address": {
+          "minLength": 1,
+          "title": "Source Participant Address",
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "requested",
+            "decided",
+            "transformed",
+            "disclosed",
+            "delivery-attempted",
+            "delivered",
+            "observed",
+            "audited"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "stage_identity_ref": {
+          "minLength": 1,
+          "title": "Stage Identity Ref",
+          "type": "string"
+        },
+        "subject_contract_id": {
+          "minLength": 1,
+          "title": "Subject Contract Id",
+          "type": "string"
+        },
+        "subject_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Digest"
+        },
+        "subject_kind": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectKind"
+        },
+        "subject_ref": {
+          "minLength": 1,
+          "title": "Subject Ref",
+          "type": "string"
+        },
+        "subject_revision": {
+          "minLength": 1,
+          "title": "Subject Revision",
+          "type": "string"
+        },
+        "target_episode_id": {
+          "minLength": 1,
+          "title": "Target Episode Id",
+          "type": "string"
+        },
+        "target_participant_address": {
+          "minLength": 1,
+          "title": "Target Participant Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_id",
+        "profile",
+        "policy",
+        "relation_target",
+        "source_participant_address",
+        "source_episode_id",
+        "target_participant_address",
+        "target_episode_id",
+        "kind",
+        "event_id",
+        "stage",
+        "stage_identity_ref",
+        "related_stage_refs",
+        "participant_address",
+        "episode_id",
+        "subject_kind",
+        "subject_contract_id",
+        "subject_ref",
+        "subject_revision",
+        "crossing_policy_id",
+        "crossing_policy_revision",
+        "crossing_policy_digest",
+        "crossing_policy_decision_ref",
+        "crossing_decision_cut_ref",
+        "predecessor_event_refs"
+      ],
+      "title": "ParticipantCrossingOccurrenceFlowBindingModel",
+      "type": "object"
+    },
+    "ParticipantCrossingSubjectKind": {
+      "description": "Closed typed references to incumbent participant and evidence carriers.",
+      "enum": [
+        "participant-control-occurrence",
+        "participant-action-contract",
+        "participant-action-admission",
+        "participant-action-attempt",
+        "participant-action-result",
+        "participant-lifecycle-event",
+        "participant-observation",
+        "participant-decision-surface",
+        "participant-exposure",
+        "participant-inject-delivery",
+        "participant-context-view",
+        "participant-history-view",
+        "participant-status-view",
+        "experiment-evidence"
+      ],
+      "title": "ParticipantCrossingSubjectKind",
+      "type": "string"
+    },
+    "ParticipantEffectiveFlowLabelModel": {
+      "additionalProperties": false,
+      "properties": {
+        "confidentiality_obligation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Confidentiality Obligation Refs",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "influence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Influence Refs",
+          "type": "array"
+        },
+        "integrity_obligation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Integrity Obligation Refs",
+          "type": "array"
+        },
+        "label_id": {
+          "minLength": 1,
+          "title": "Label Id",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "resolution_status": {
+          "$ref": "#/$defs/ParticipantFlowLabelResolutionStatus"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "label_id",
+        "subject",
+        "profile",
+        "policy",
+        "resolution_status",
+        "confidentiality_obligation_refs",
+        "integrity_obligation_refs",
+        "provenance_refs",
+        "influence_refs",
+        "evidence_refs"
+      ],
+      "title": "ParticipantEffectiveFlowLabelModel",
+      "type": "object"
+    },
+    "ParticipantFlowCoordinateResult": {
+      "enum": [
+        "satisfied",
+        "deny",
+        "unsupported",
+        "stale",
+        "unresolved",
+        "unknown",
+        "ambiguous"
+      ],
+      "title": "ParticipantFlowCoordinateResult",
+      "type": "string"
+    },
+    "ParticipantFlowDeclassificationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_ref": {
+          "minLength": 1,
+          "title": "Authority Basis Ref",
+          "type": "string"
+        },
+        "authority_revision": {
+          "minLength": 1,
+          "title": "Authority Revision",
+          "type": "string"
+        },
+        "destination_ref": {
+          "minLength": 1,
+          "title": "Destination Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "kind": {
+          "const": "declassification",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "predecessor_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Predecessor Refs",
+          "type": "array"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "release_id": {
+          "minLength": 1,
+          "title": "Release Id",
+          "type": "string"
+        },
+        "removed_confidentiality_obligation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Removed Confidentiality Obligation Refs",
+          "type": "array"
+        },
+        "result_label_ref": {
+          "minLength": 1,
+          "title": "Result Label Ref",
+          "type": "string"
+        },
+        "result_subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        },
+        "sink_ref": {
+          "minLength": 1,
+          "title": "Sink Ref",
+          "type": "string"
+        },
+        "source_label_ref": {
+          "minLength": 1,
+          "title": "Source Label Ref",
+          "type": "string"
+        },
+        "source_subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "release_id",
+        "profile",
+        "policy",
+        "source_subject",
+        "source_label_ref",
+        "result_subject",
+        "result_label_ref",
+        "sink_ref",
+        "destination_ref",
+        "audience_scope_ref",
+        "authority_basis_ref",
+        "authority_revision",
+        "predecessor_refs",
+        "evidence_refs",
+        "limitation_refs",
+        "kind",
+        "removed_confidentiality_obligation_refs"
+      ],
+      "title": "ParticipantFlowDeclassificationModel",
+      "type": "object"
+    },
+    "ParticipantFlowDerivationInputModel": {
+      "additionalProperties": false,
+      "properties": {
+        "label_ref": {
+          "minLength": 1,
+          "title": "Label Ref",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "subject",
+        "label_ref"
+      ],
+      "title": "ParticipantFlowDerivationInputModel",
+      "type": "object"
+    },
+    "ParticipantFlowDerivationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "apparatus_ref": {
+          "minLength": 1,
+          "title": "Apparatus Ref",
+          "type": "string"
+        },
+        "apparatus_revision": {
+          "minLength": 1,
+          "title": "Apparatus Revision",
+          "type": "string"
+        },
+        "derivation_id": {
+          "minLength": 1,
+          "title": "Derivation Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "influence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Influence Refs",
+          "type": "array"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/ParticipantFlowDerivationInputModel"
+          },
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "non_influence_assertion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantFlowNonInfluenceAssertionModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "predecessor_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Predecessor Refs",
+          "type": "array"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "result_label_ref": {
+          "minLength": 1,
+          "title": "Result Label Ref",
+          "type": "string"
+        },
+        "result_subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        },
+        "rule_ref": {
+          "minLength": 1,
+          "title": "Rule Ref",
+          "type": "string"
+        },
+        "rule_revision": {
+          "minLength": 1,
+          "title": "Rule Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "derivation_id",
+        "profile",
+        "policy",
+        "inputs",
+        "result_subject",
+        "result_label_ref",
+        "rule_ref",
+        "rule_revision",
+        "apparatus_ref",
+        "apparatus_revision",
+        "predecessor_refs",
+        "provenance_refs",
+        "influence_refs",
+        "evidence_refs"
+      ],
+      "title": "ParticipantFlowDerivationModel",
+      "type": "object"
+    },
+    "ParticipantFlowEndorsementModel": {
+      "additionalProperties": false,
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_ref": {
+          "minLength": 1,
+          "title": "Authority Basis Ref",
+          "type": "string"
+        },
+        "authority_revision": {
+          "minLength": 1,
+          "title": "Authority Revision",
+          "type": "string"
+        },
+        "destination_ref": {
+          "minLength": 1,
+          "title": "Destination Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "integrity_obligation_replacements": {
+          "items": {
+            "$ref": "#/$defs/ParticipantFlowObligationReplacementModel"
+          },
+          "minItems": 1,
+          "title": "Integrity Obligation Replacements",
+          "type": "array"
+        },
+        "kind": {
+          "const": "endorsement",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "predecessor_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Predecessor Refs",
+          "type": "array"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "release_id": {
+          "minLength": 1,
+          "title": "Release Id",
+          "type": "string"
+        },
+        "result_label_ref": {
+          "minLength": 1,
+          "title": "Result Label Ref",
+          "type": "string"
+        },
+        "result_subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        },
+        "sink_ref": {
+          "minLength": 1,
+          "title": "Sink Ref",
+          "type": "string"
+        },
+        "source_label_ref": {
+          "minLength": 1,
+          "title": "Source Label Ref",
+          "type": "string"
+        },
+        "source_subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "release_id",
+        "profile",
+        "policy",
+        "source_subject",
+        "source_label_ref",
+        "result_subject",
+        "result_label_ref",
+        "sink_ref",
+        "destination_ref",
+        "audience_scope_ref",
+        "authority_basis_ref",
+        "authority_revision",
+        "predecessor_refs",
+        "evidence_refs",
+        "limitation_refs",
+        "kind",
+        "integrity_obligation_replacements"
+      ],
+      "title": "ParticipantFlowEndorsementModel",
+      "type": "object"
+    },
+    "ParticipantFlowFinalDisposition": {
+      "enum": [
+        "permit",
+        "deny",
+        "unsupported",
+        "stale",
+        "unresolved"
+      ],
+      "title": "ParticipantFlowFinalDisposition",
+      "type": "string"
+    },
+    "ParticipantFlowLabelResolutionStatus": {
+      "enum": [
+        "resolved",
+        "unresolved",
+        "unsupported"
+      ],
+      "title": "ParticipantFlowLabelResolutionStatus",
+      "type": "string"
+    },
+    "ParticipantFlowNonInfluenceAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_ref": {
+          "minLength": 1,
+          "title": "Basis Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "excluded_input_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Excluded Input Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "excluded_input_refs",
+        "basis_ref",
+        "evidence_refs"
+      ],
+      "title": "ParticipantFlowNonInfluenceAssertionModel",
+      "type": "object"
+    },
+    "ParticipantFlowObligationReplacementModel": {
+      "additionalProperties": false,
+      "properties": {
+        "result_obligation_ref": {
+          "minLength": 1,
+          "title": "Result Obligation Ref",
+          "type": "string"
+        },
+        "source_obligation_ref": {
+          "minLength": 1,
+          "title": "Source Obligation Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_obligation_ref",
+        "result_obligation_ref"
+      ],
+      "title": "ParticipantFlowObligationReplacementModel",
+      "type": "object"
+    },
+    "ParticipantFlowPolicyCutReferenceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "decision_cut_ref": {
+          "minLength": 1,
+          "title": "Decision Cut Ref",
+          "type": "string"
+        },
+        "decision_cut_revision": {
+          "minLength": 1,
+          "title": "Decision Cut Revision",
+          "type": "string"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "policy_decision_ref": {
+          "minLength": 1,
+          "title": "Policy Decision Ref",
+          "type": "string"
+        },
+        "policy_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "policy_id": {
+          "minLength": 1,
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_id",
+        "policy_revision",
+        "policy_digest",
+        "policy_decision_ref",
+        "decision_cut_ref",
+        "decision_cut_revision",
+        "effective_order"
+      ],
+      "title": "ParticipantFlowPolicyCutReferenceModel",
+      "type": "object"
+    },
+    "ParticipantFlowProfileReferenceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_revision": {
+          "const": "sem-233/rev1",
+          "title": "Authority Revision",
+          "type": "string"
+        },
+        "profile_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Profile Digest",
+          "type": "string"
+        },
+        "profile_id": {
+          "const": "participant-boundary-flow-policy-v1",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_revision": {
+          "const": "rev1",
+          "title": "Profile Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile_id",
+        "profile_revision",
+        "profile_digest",
+        "authority_revision"
+      ],
+      "title": "ParticipantFlowProfileReferenceModel",
+      "type": "object"
+    },
+    "ParticipantFlowRelationTargetKind": {
+      "enum": [
+        "label",
+        "derivation",
+        "release",
+        "sink-decision"
+      ],
+      "title": "ParticipantFlowRelationTargetKind",
+      "type": "string"
+    },
+    "ParticipantFlowRelationTargetReferenceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "target_kind": {
+          "$ref": "#/$defs/ParticipantFlowRelationTargetKind"
+        },
+        "target_ref": {
+          "minLength": 1,
+          "title": "Target Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_kind",
+        "target_ref"
+      ],
+      "title": "ParticipantFlowRelationTargetReferenceModel",
+      "type": "object"
+    },
+    "ParticipantFlowSinkDecisionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_admission_ref": {
+          "minLength": 1,
+          "title": "Action Admission Ref",
+          "type": "string"
+        },
+        "api_423_decision_ref": {
+          "minLength": 1,
+          "title": "Api 423 Decision Ref",
+          "type": "string"
+        },
+        "capability_resolution_ref": {
+          "minLength": 1,
+          "title": "Capability Resolution Ref",
+          "type": "string"
+        },
+        "confidentiality_result": {
+          "$ref": "#/$defs/ParticipantFlowCoordinateResult"
+        },
+        "decision_id": {
+          "minLength": 1,
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "expected_history_head_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Expected History Head Refs",
+          "type": "array"
+        },
+        "final_disposition": {
+          "$ref": "#/$defs/ParticipantFlowFinalDisposition"
+        },
+        "integrity_result": {
+          "$ref": "#/$defs/ParticipantFlowCoordinateResult"
+        },
+        "label_ref": {
+          "minLength": 1,
+          "title": "Label Ref",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "reason_code": {
+          "minLength": 1,
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "release_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Release Refs",
+          "type": "array"
+        },
+        "sink": {
+          "$ref": "#/$defs/ParticipantFlowSinkReferenceModel"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantFlowSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "decision_id",
+        "profile",
+        "policy",
+        "subject",
+        "label_ref",
+        "sink",
+        "confidentiality_result",
+        "integrity_result",
+        "release_refs",
+        "api_423_decision_ref",
+        "action_admission_ref",
+        "capability_resolution_ref",
+        "expected_history_head_refs",
+        "final_disposition",
+        "reason_code",
+        "evidence_refs",
+        "limitation_refs"
+      ],
+      "title": "ParticipantFlowSinkDecisionModel",
+      "type": "object"
+    },
+    "ParticipantFlowSinkKind": {
+      "enum": [
+        "runtime-fact-sink",
+        "action-argument",
+        "participant-crossing",
+        "participant-output",
+        "persistent-write",
+        "callback",
+        "error",
+        "stream-chunk"
+      ],
+      "title": "ParticipantFlowSinkKind",
+      "type": "string"
+    },
+    "ParticipantFlowSinkReferenceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "destination_ref": {
+          "minLength": 1,
+          "title": "Destination Ref",
+          "type": "string"
+        },
+        "sink_kind": {
+          "$ref": "#/$defs/ParticipantFlowSinkKind"
+        },
+        "sink_ref": {
+          "minLength": 1,
+          "title": "Sink Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sink_kind",
+        "sink_ref",
+        "destination_ref",
+        "audience_scope_ref"
+      ],
+      "title": "ParticipantFlowSinkReferenceModel",
+      "type": "object"
+    },
+    "ParticipantFlowSubjectKind": {
+      "enum": [
+        "runtime-fact-version",
+        "action-argument",
+        "participant-control-occurrence",
+        "participant-crossing-occurrence",
+        "derived-result"
+      ],
+      "title": "ParticipantFlowSubjectKind",
+      "type": "string"
+    },
+    "ParticipantFlowSubjectReferenceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "subject_kind": {
+          "$ref": "#/$defs/ParticipantFlowSubjectKind"
+        },
+        "subject_ref": {
+          "minLength": 1,
+          "title": "Subject Ref",
+          "type": "string"
+        },
+        "subject_revision": {
+          "minLength": 1,
+          "title": "Subject Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_kind",
+        "subject_ref",
+        "subject_revision",
+        "participant_address",
+        "episode_id"
+      ],
+      "title": "ParticipantFlowSubjectReferenceModel",
+      "type": "object"
+    },
+    "ParticipantRuntimeFactFlowBindingModel": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_event_ref": {
+          "minLength": 1,
+          "title": "Binding Event Ref",
+          "type": "string"
+        },
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "crossing_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Crossing Refs",
+          "type": "array"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "fact_version_ref": {
+          "minLength": 1,
+          "title": "Fact Version Ref",
+          "type": "string"
+        },
+        "kind": {
+          "const": "runtime-fact",
+          "title": "Kind",
+          "type": "string"
+        },
+        "memory_predecessor_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Memory Predecessor Refs",
+          "type": "array"
+        },
+        "plane_ref": {
+          "minLength": 1,
+          "title": "Plane Ref",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantFlowPolicyCutReferenceModel"
+        },
+        "profile": {
+          "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+        },
+        "relation_target": {
+          "$ref": "#/$defs/ParticipantFlowRelationTargetReferenceModel"
+        },
+        "sink_ref": {
+          "minLength": 1,
+          "title": "Sink Ref",
+          "type": "string"
+        },
+        "source_episode_id": {
+          "minLength": 1,
+          "title": "Source Episode Id",
+          "type": "string"
+        },
+        "source_participant_address": {
+          "minLength": 1,
+          "title": "Source Participant Address",
+          "type": "string"
+        },
+        "target_episode_id": {
+          "minLength": 1,
+          "title": "Target Episode Id",
+          "type": "string"
+        },
+        "target_participant_address": {
+          "minLength": 1,
+          "title": "Target Participant Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_id",
+        "profile",
+        "policy",
+        "relation_target",
+        "source_participant_address",
+        "source_episode_id",
+        "target_participant_address",
+        "target_episode_id",
+        "kind",
+        "plane_ref",
+        "declaration_ref",
+        "fact_version_ref",
+        "sink_ref",
+        "binding_event_ref"
+      ],
+      "title": "ParticipantRuntimeFactFlowBindingModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://openrae.github.io/rae/schemas/participant-flow-control-relation-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Aggregate portable SEM-233 label, release, sink, and carrier relation.",
+  "properties": {
+    "bindings": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "action-argument": "#/$defs/ParticipantActionArgumentFlowBindingModel",
+            "participant-control": "#/$defs/ParticipantControlOccurrenceFlowBindingModel",
+            "participant-crossing": "#/$defs/ParticipantCrossingOccurrenceFlowBindingModel",
+            "runtime-fact": "#/$defs/ParticipantRuntimeFactFlowBindingModel"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/ParticipantRuntimeFactFlowBindingModel"
+          },
+          {
+            "$ref": "#/$defs/ParticipantActionArgumentFlowBindingModel"
+          },
+          {
+            "$ref": "#/$defs/ParticipantControlOccurrenceFlowBindingModel"
+          },
+          {
+            "$ref": "#/$defs/ParticipantCrossingOccurrenceFlowBindingModel"
+          }
+        ]
+      },
+      "minItems": 1,
+      "title": "Bindings",
+      "type": "array"
+    },
+    "derivations": {
+      "items": {
+        "$ref": "#/$defs/ParticipantFlowDerivationModel"
+      },
+      "minItems": 1,
+      "title": "Derivations",
+      "type": "array"
+    },
+    "document_id": {
+      "minLength": 1,
+      "title": "Document Id",
+      "type": "string"
+    },
+    "document_revision": {
+      "minLength": 1,
+      "title": "Document Revision",
+      "type": "string"
+    },
+    "labels": {
+      "items": {
+        "$ref": "#/$defs/ParticipantEffectiveFlowLabelModel"
+      },
+      "minItems": 1,
+      "title": "Labels",
+      "type": "array"
+    },
+    "profile": {
+      "$ref": "#/$defs/ParticipantFlowProfileReferenceModel"
+    },
+    "releases": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "declassification": "#/$defs/ParticipantFlowDeclassificationModel",
+            "endorsement": "#/$defs/ParticipantFlowEndorsementModel"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/ParticipantFlowDeclassificationModel"
+          },
+          {
+            "$ref": "#/$defs/ParticipantFlowEndorsementModel"
+          }
+        ]
+      },
+      "minItems": 1,
+      "title": "Releases",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "participant-flow-control-relation/v1",
+      "default": "participant-flow-control-relation/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sink_decisions": {
+      "items": {
+        "$ref": "#/$defs/ParticipantFlowSinkDecisionModel"
+      },
+      "minItems": 1,
+      "title": "Sink Decisions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "document_id",
+    "document_revision",
+    "profile",
+    "labels",
+    "derivations",
+    "releases",
+    "sink_decisions",
+    "bindings"
+  ],
+  "title": "ParticipantFlowControlRelationModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "Every label, derivation, release, sink decision, and carrier binding must resolve an exact SEM-233 profile and exact incumbent runtime-fact, API-409, API-423, action-admission, capability, authority, and history decision state before it can be trusted.",
+      "id": "participant-flow-control-resolved-context",
+      "inputs": [
+        {
+          "contract_id": "participant-flow-control-relation-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "runtime-fact-binding-plane-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "participant-control-occurrence-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "participant-crossing-occurrence-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.validate_participant_flow_control_resolved_context"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-flow-control-relation-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

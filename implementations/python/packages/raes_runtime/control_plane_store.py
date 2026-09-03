@@ -10,7 +10,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
-from raes_contracts.contracts import RealizationEnvelopeIdentityModel, RealizationObservationDisclosureModel
+from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
 from raes_contracts.participant_autonomous_state import require_participant_autonomous_runtime_snapshot
 from raes_contracts.planning import RuntimeDomain
@@ -19,13 +19,18 @@ from raes_contracts.runtime_state import (
     ExplicitnessProvenance,
     OperationReceipt,
     OperationStatus,
-    RealizationObservationDisclosure,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
     SnapshotEntry,
 )
-from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
+
+from .control_plane_store_observations import realization_observation_from_payload
+from .control_plane_store_payloads import (
+    _entry_payloads,
+    _realization_observations_payload,
+    _realization_provenance_payload,
+)
 
 if TYPE_CHECKING:
     from .control_plane_store_local import LocalControlPlaneStore
@@ -171,20 +176,9 @@ def _require_expected_history_heads(
 
 def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
     require_participant_autonomous_runtime_snapshot(snapshot)
-    return {
+    payload = {
         "schema_version": RuntimeSnapshotEnvelope().schema_version,
-        "entries": {
-            address: {
-                "address": entry.address,
-                "domain": entry.domain.value,
-                "resource_type": entry.resource_type,
-                "payload": dict(entry.payload),
-                "ordering_dependencies": list(entry.ordering_dependencies),
-                "refresh_dependencies": list(entry.refresh_dependencies),
-                "status": entry.status,
-            }
-            for address, entry in snapshot.entries.items()
-        },
+        "entries": _entry_payloads(snapshot),
         "orchestration_results": dict(snapshot.orchestration_results),
         "orchestration_history": {address: list(events) for address, events in snapshot.orchestration_history.items()},
         "evaluation_results": dict(snapshot.evaluation_results),
@@ -225,39 +219,14 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         "time_model_state": (
             snapshot.time_model_state.model_dump(mode="json") if snapshot.time_model_state is not None else None
         ),
-        "realization_provenance": [
-            {
-                "address": entry.address,
-                "field_path": entry.field_path,
-                "domain": entry.domain,
-                "requirement_kind": entry.requirement_kind,
-                "explicitness": entry.explicitness.value,
-                "provenance": entry.provenance.value,
-                "governing_scope": entry.governing_scope,
-                "artifact_satisfaction": (
-                    entry.artifact_satisfaction.model_dump(mode="json")
-                    if entry.artifact_satisfaction is not None
-                    else None
-                ),
-            }
-            for entry in snapshot.realization_provenance
-        ],
-        "realization_observations": [
-            {
-                "address": entry.address,
-                "field_path": entry.field_path,
-                "domain": entry.domain,
-                "requirement_kind": entry.requirement_kind,
-                "verification_scope": entry.verification_scope.value,
-                "observation_strength": entry.observation_strength.value,
-            }
-            for entry in snapshot.realization_observations
-        ],
+        "realization_provenance": _realization_provenance_payload(snapshot),
+        "realization_observations": _realization_observations_payload(snapshot),
         "realization_envelope": (
             snapshot.realization_envelope.model_dump(mode="json") if snapshot.realization_envelope is not None else None
         ),
         "metadata": dict(snapshot.metadata),
     }
+    return payload
 
 
 def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
@@ -342,7 +311,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             if isinstance(item, dict)
         ),
         realization_observations=tuple(
-            _realization_observation_from_payload(item)
+            realization_observation_from_payload(item)
             for item in payload.get("realization_observations", [])
             if isinstance(item, dict)
         ),
@@ -355,18 +324,6 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
     )
     require_participant_autonomous_runtime_snapshot(snapshot)
     return snapshot
-
-
-def _realization_observation_from_payload(payload: dict[str, Any]) -> RealizationObservationDisclosure:
-    model = RealizationObservationDisclosureModel.model_validate(payload)
-    return RealizationObservationDisclosure(
-        address=model.address,
-        field_path=model.field_path,
-        domain=model.domain,
-        requirement_kind=model.requirement_kind,
-        verification_scope=RealizationVerificationScope(model.verification_scope),
-        observation_strength=ObservationStrength(model.observation_strength),
-    )
 
 
 class InMemoryControlPlaneStore:

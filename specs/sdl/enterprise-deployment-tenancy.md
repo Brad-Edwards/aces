@@ -15,7 +15,7 @@ join, or account facts. When forest authoring is present, every authored
 identity domain belongs to exactly one forest and the explicit root is one of
 that forest's members.
 
-`identity_facades` identifies an existing named VM service that exposes a
+`identity_facades` identifies an existing named compute service that exposes a
 closed protocol, initially `oidc`. The facade is authored intent and remains
 separate from observed `Node.runtime.identity_authorities`.
 
@@ -31,17 +31,17 @@ client configuration, or provider mapper documents.
 
 `Node.endpoint_persona` is a closed scenario-function classification:
 `workforce`, `engineering`, `privileged_admin`, `participant`, `service`, or
-`carrier`. It is valid only for VM nodes and is independent of node login
+`carrier`. It is valid only for compute nodes and is independent of node login
 `roles`, participant agents, accounts, authorization, and operating system.
 
 `deployment_tenants` declares portable tenant identity. `deployment_cells`
 binds one tenant to a non-empty set of nodes and the `default_deny`
-cross-tenant isolation posture. When cells are present, every VM belongs to
+cross-tenant isolation posture. When cells are present, every compute node belongs to
 exactly one cell. Cells do not carry cloud projects, regions, quotas,
 subnets, provider resource names, or capacity policy.
 
 The specialized `placed_on_carrier` relationship preserves both endpoint
-identities while declaring that one VM is realized on another VM with either a
+identities while declaring that one compute node is realized on another compute node with either a
 `shared_kernel` or `separate_kernel` boundary. A source has one carrier; the
 target has the `carrier` persona; placement is same-cell, non-self,
 non-nested, and acyclic. Placement does not imply sharing any network, PID,
@@ -50,7 +50,7 @@ mount, IPC, UTS, user, or cgroup namespace.
 ## Shared services
 
 The specialized `uses_shared_service` relationship connects one deployment
-tenant to an existing named VM service. Its `shared_service` detail keeps four
+tenant to an existing named compute service. Its `shared_service` detail keeps four
 axes independent:
 
 - tenant isolation: `none`, `stateless`, or `tenant_partitioned`;

@@ -103,14 +103,14 @@ nodes:
   lab-net:
     type: Switch
   webapp:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 2 gib, cpu: 1}
     features: [flask-app]
     services: [{port: 8080, name: http}]
     vulnerabilities: [sqli]
   database:
-    type: VM
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     features: [postgres]
@@ -154,6 +154,7 @@ accounts:
 - [Language-Service Tools](language-service.md) — Agent-facing completions, references, formatting, diagnostics, and structured edits
 - [Agent Guidance Profile](agent-guidance.md) — Machine-readable scope boundaries, invariants, review priorities, and safe-operating expectations
 - [Semantic Validation](validation.md) — Cross-reference checks and what the validator enforces
+- [Account Credential Bindings](../../../specs/sdl/account-credential-bindings.md) — Normative fixture/operator binding, redaction, and disclosure semantics
 - [Design Precedents](precedents.md) — Where each SDL element comes from
 - [Academic Lineage](lineage.md) — Primary-source lineage for SDL semantics
 - [Scenario/Delivery Drift Audit](scenario-delivery-drift-audit.md) — Audit and remediation record for classification drift after ADR-033

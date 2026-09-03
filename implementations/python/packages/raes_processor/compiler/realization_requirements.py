@@ -1,20 +1,30 @@
 """Realization-requirement compilation (SEM-218)."""
 
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from raes.identifiers import QualifiedName
+from collections.abc import Mapping
+
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance, ExplicitnessRecord
 from raes.nodes import NodeType
-from raes.realization_designation import resolve_realization_designation
+from raes.realization_designation import RealizationConstraintPosture
+from raes.runtime_resource_limits import (
+    RuntimeProcessResourceLimit,
+    process_resource_limit_identity_digest,
+)
 from raes.scenario import InstantiatedScenario
 from raes.semantics.domain_topology import (
     DomainTopologyAnalysis,
 )
+from raes_contracts.planning import RealizationAuthorityMode, RealizationResolutionSource
+from raes_contracts.vocabulary import ObservationStrength, ProcessResourceLimitScope, RealizationVerificationScope
 
 from ..semantics.realization import (
     REALIZATION_DOMAIN,
+    CompiledRealizationAuthority,
     CompiledRealizationRequirement,
+    ProcessResourceLimitDemand,
+    RealizationValueConstraint,
     registered_realization_concern_descriptors,
 )
-from ..semantics.realization_concerns import RegisteredRealizationConcern
+from ..semantics.realization_concerns import CONCERN_PAYLOAD_PATH, RegisteredRealizationConcern
 from .addresses import (
     _account_address,
     _condition_binding_address,
@@ -28,6 +38,8 @@ from .addresses import (
     _node_address,
     _persistent_volume_address,
 )
+from .realization_authority_posture import designated_registered_posture, explicit_registered_posture
+from .realization_value_domains import compiled_os_value_domain, nested_authored_value
 
 
 def _append_source_artifact_requirement(
@@ -59,8 +71,6 @@ def _append_source_artifact_requirements(
     requirements: list[CompiledRealizationRequirement],
     scenario: InstantiatedScenario,
 ) -> None:
-    """Lower every realized ``Source`` carrier into the existing demand graph."""
-
     _append_resource_source_artifact_requirements(requirements, scenario)
     _append_bound_source_artifact_requirements(requirements, scenario)
     _append_action_source_artifact_requirements(requirements, scenario)
@@ -170,15 +180,6 @@ def _realization_requirement_address(
     raise ValueError("realization concern must resolve to one compiled resource address")
 
 
-def _nested_authored_value(source: object, path: tuple[str, ...]) -> object:
-    current = source
-    for token in path:
-        if current is None:
-            return None
-        current = getattr(current, token, None)
-    return current
-
-
 def _append_domain_topology_requirements(
     requirements: list[CompiledRealizationRequirement],
     domain_analysis: DomainTopologyAnalysis,
@@ -273,83 +274,224 @@ def _append_service_materialization_requirements(
         )
 
 
-def _compiled_registered_requirement(
+def _compiled_registered_realization(
     scenario: InstantiatedScenario,
     registered: RegisteredRealizationConcern,
-) -> CompiledRealizationRequirement | None:
+    explicitness: Mapping[str, ExplicitnessRecord],
+) -> tuple[CompiledRealizationRequirement | None, CompiledRealizationAuthority | None]:
     descriptor = registered.descriptor
     section_name = descriptor.section
     declaration_name = registered.declaration_name
     encoded_name = declaration_name.replace("~", "~0").replace("/", "~1")
     field_pointer = f"/{section_name}/{encoded_name}/{'/'.join(descriptor.authored_path)}"
-    record = scenario.explicitness.get(registered.field_path)
+    record = explicitness.get(registered.field_path)
     declarations = getattr(scenario, section_name)
-    authored_value = _nested_authored_value(
+    authored_value = nested_authored_value(
         declarations[declaration_name],
         descriptor.authored_path,
     )
-    if record is not None and not descriptor.includes_authored_value(authored_value):
-        return None
-    if record is not None:
-        explicitness = record.classification
-        provenance = record.provenance
-        governing_scope = f"#{field_pointer}"
-        delegated = False
-    else:
-        resolution = resolve_realization_designation(
-            scenario.instantiation_provenance.realization_designations,
-            field_pointer=field_pointer,
-            owner_namespace=QualifiedName.parse(declaration_name).parts[:-1],
-        )
-        closed = resolution.closure is not None and resolution.closure.value == "closed-world"
-        if resolution.source == "legacy-default" or (closed and not resolution.delegated):
-            return None
-        explicitness = (
-            ExplicitnessClass.OPEN
-            if resolution.closure is not None and resolution.closure.value == "open-world"
-            else None
-        )
-        provenance = ExplicitnessProvenance.AUTHOR_DECLARED
-        governing_scope = resolution.governing_scope
-        delegated = resolution.delegated
-    return CompiledRealizationRequirement(
-        field_path=registered.field_path,
-        address=_realization_requirement_address(
+    value_constraints: tuple[RealizationValueConstraint, ...] = ()
+    process_resource_limits: tuple[ProcessResourceLimitDemand, ...] = ()
+    value_domain = None
+    constraint_provenance = None
+    if descriptor.concern_kind == "process-resource-limits":
+        value_constraints, process_resource_limits = _compiled_process_resource_limits(
             scenario,
-            section_name=section_name,
+            field_pointer=field_pointer,
+            authored_value=authored_value,
+        )
+    elif descriptor.concern_kind in {"os-family", "os-distribution", "os-version"}:
+        value_domain, constraint_provenance = compiled_os_value_domain(
+            scenario,
+            field_pointer=field_pointer,
+        )
+    if record is not None and not descriptor.includes_authored_value(authored_value):
+        return None, None
+    posture = (
+        explicit_registered_posture(record, field_pointer)
+        if record is not None
+        else designated_registered_posture(
+            scenario,
+            field_pointer=field_pointer,
             declaration_name=declaration_name,
-        ),
+        )
+    )
+    address = _realization_requirement_address(
+        scenario,
+        section_name=section_name,
+        declaration_name=declaration_name,
+    )
+    authority = CompiledRealizationAuthority(
+        field_path=registered.field_path,
+        address=address,
         domain=REALIZATION_DOMAIN,
         requirement_kind=descriptor.concern_kind,
-        explicitness=explicitness,
-        provenance=provenance,
-        governing_scope=governing_scope,
-        delegated=delegated,
+        payload_path=descriptor.payload_path,
+        mode=posture.mode,
+        source=posture.source,
+        provenance=posture.provenance,
+        governing_scope=posture.governing_scope,
+        delegated=posture.delegated,
         verification_scope=descriptor.required_verification_scope(authored_value),
+        required_observation_strength=descriptor.required_observation_strength(),
     )
+    if posture.explicitness is None and not posture.delegated:
+        return None, authority
+    requirement = CompiledRealizationRequirement(
+        field_path=registered.field_path,
+        address=address,
+        domain=REALIZATION_DOMAIN,
+        requirement_kind=descriptor.concern_kind,
+        explicitness=posture.explicitness,
+        provenance=posture.provenance,
+        governing_scope=posture.governing_scope,
+        delegated=posture.delegated,
+        verification_scope=descriptor.required_verification_scope(authored_value),
+        required_observation_strength=descriptor.required_observation_strength(),
+        value_domain=value_domain,
+        constraint_provenance=constraint_provenance,
+        value_constraints=value_constraints,
+        process_resource_limits=process_resource_limits,
+    )
+    return requirement, authority
+
+
+def _compiled_process_resource_limits(
+    scenario: InstantiatedScenario,
+    *,
+    field_pointer: str,
+    authored_value: object,
+) -> tuple[tuple[RealizationValueConstraint, ...], tuple[ProcessResourceLimitDemand, ...]]:
+    limits = tuple(authored_value) if isinstance(authored_value, list) else ()
+    typed_limits = tuple(
+        value if isinstance(value, RuntimeProcessResourceLimit) else RuntimeProcessResourceLimit.model_validate(value)
+        for value in limits
+    )
+    constraints: list[RealizationValueConstraint] = []
+    prefix = f"{field_pointer}/"
+    for constraint in scenario.instantiation_provenance.capability_constraints:
+        if not constraint.field_pointer.startswith(prefix):
+            continue
+        suffix = constraint.field_pointer.removeprefix(prefix).split("/")
+        if len(suffix) != 2 or not suffix[0].isdigit() or suffix[1] not in {"soft", "hard"}:
+            continue
+        index = int(suffix[0])
+        if index >= len(typed_limits):
+            continue
+        constraints.append(
+            RealizationValueConstraint(
+                identity_digest=process_resource_limit_identity_digest(typed_limits[index]),
+                leaf=suffix[1],
+                parameter=constraint.parameter,
+                allowed_values=constraint.allowed_values,
+            )
+        )
+    demands = tuple(
+        ProcessResourceLimitDemand(
+            identity_digest=process_resource_limit_identity_digest(value),
+            resource=value.resource,
+            scope=ProcessResourceLimitScope(value.scope.value),
+            soft=value.soft,
+            hard=value.hard,
+        )
+        for value in typed_limits
+    )
+    return tuple(constraints), demands
+
+
+def _compile_realization(
+    scenario: InstantiatedScenario,
+    domain_analysis: DomainTopologyAnalysis,
+) -> tuple[tuple[CompiledRealizationRequirement, ...], tuple[CompiledRealizationAuthority, ...]]:
+    """Lower explicit leaves before typed fallbacks; omitted stays closed and explicit root delegation stays typed."""
+
+    requirements: list[CompiledRealizationRequirement] = []
+    _append_compute_substrate_requirements(requirements, scenario)
+    authority: list[CompiledRealizationAuthority] = []
+    explicitness = scenario.explicitness
+    for registered in registered_realization_concern_descriptors(
+        declaration_names={"nodes": scenario.nodes, "content": scenario.content}
+    ):
+        requirement, authority_entry = _compiled_registered_realization(scenario, registered, explicitness)
+        if requirement is not None:
+            requirements.append(requirement)
+        if authority_entry is not None:
+            authority.append(authority_entry)
+    _append_domain_topology_requirements(requirements, domain_analysis)
+    _append_stateful_resource_requirements(requirements, scenario)
+    _append_service_materialization_requirements(requirements, scenario)
+    _append_source_artifact_requirements(requirements, scenario)
+    existing = {(entry.address, entry.field_path, entry.requirement_kind) for entry in authority}
+    authority.extend(
+        CompiledRealizationAuthority(
+            field_path=requirement.field_path,
+            address=requirement.address,
+            domain=requirement.domain,
+            requirement_kind=requirement.requirement_kind,
+            payload_path=CONCERN_PAYLOAD_PATH[requirement.requirement_kind],
+            mode=RealizationAuthorityMode.EXACT,
+            source=RealizationResolutionSource.PROCESSOR_DERIVED,
+            provenance=requirement.provenance,
+            governing_scope=requirement.governing_scope,
+            verification_scope=requirement.verification_scope,
+            required_observation_strength=requirement.required_observation_strength,
+        )
+        for requirement in requirements
+        if requirement.requirement_kind in CONCERN_PAYLOAD_PATH
+        if (requirement.address, requirement.field_path, requirement.requirement_kind) not in existing
+    )
+    return tuple(requirements), tuple(authority)
 
 
 def _compile_realization_requirements(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
 ) -> tuple[CompiledRealizationRequirement, ...]:
-    """SEM-218 typed compiler emission: lower each authored realization concern
-    into a compiled requirement carrying its classifier explicitness class.
+    """Compatibility view over the SEM-218 realization demand graph."""
 
-    Explicit leaves always win. Missing admitted concerns are lowered through
-    the typed lexical designation cascade; omitted designation preserves the
-    legacy closed fallback while explicit root delegation remains typed.
-    """
+    return _compile_realization(scenario, domain_analysis)[0]
 
-    requirements: list[CompiledRealizationRequirement] = []
-    for registered in registered_realization_concern_descriptors(
-        declaration_names={"nodes": scenario.nodes, "content": scenario.content}
-    ):
-        requirement = _compiled_registered_requirement(scenario, registered)
-        if requirement is not None:
-            requirements.append(requirement)
-    _append_domain_topology_requirements(requirements, domain_analysis)
-    _append_stateful_resource_requirements(requirements, scenario)
-    _append_service_materialization_requirements(requirements, scenario)
-    _append_source_artifact_requirements(requirements, scenario)
-    return tuple(requirements)
+
+def _append_compute_substrate_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
+    """Lower addressed substrate intent independently of structural node kind."""
+
+    explicitness_by_posture = {
+        RealizationConstraintPosture.EXACT: ExplicitnessClass.EXACT,
+        RealizationConstraintPosture.CONSTRAINED: ExplicitnessClass.CONSTRAINED,
+        RealizationConstraintPosture.OPEN: ExplicitnessClass.OPEN,
+    }
+    records_by_pointer = {
+        record.field_pointer: record
+        for record in scenario.instantiation_provenance.realization_constraints
+        if record.concern.value == "compute-substrate"
+    }
+    for node_name, node in scenario.nodes.items():
+        if node.type is NodeType.SWITCH:
+            continue
+        pointer_name = node_name.replace("~", "~0").replace("/", "~1")
+        field_pointer = f"/nodes/{pointer_name}"
+        record = records_by_pointer.get(field_pointer)
+        posture = record.posture if record is not None else RealizationConstraintPosture.OPEN
+        required_strength = (
+            ObservationStrength.DRIVER_REPORTED
+            if posture is RealizationConstraintPosture.OPEN
+            else ObservationStrength.DAEMON_OBSERVED
+        )
+        requirements.append(
+            CompiledRealizationRequirement(
+                field_path=f"nodes.{node_name}.realization.compute-substrate",
+                address=_node_address(node_name),
+                domain=REALIZATION_DOMAIN,
+                requirement_kind="compute-substrate",
+                explicitness=explicitness_by_posture[posture],
+                provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                governing_scope=record.governing_scope if record is not None else f"#{field_pointer}",
+                verification_scope=RealizationVerificationScope.PRESENCE,
+                required_observation_strength=required_strength,
+                value_domain=record.domain if record is not None else None,
+                constraint_provenance=record.provenance if record is not None else "author-declared",
+            )
+        )

@@ -39,7 +39,13 @@ from raes_conformance.conformance.semantics import _semantic_diagnostics
 from raes_conformance.conformance.validators import _validate_payload
 
 # Default reference scenario the target-conformance adapter probe drives when the
-# caller supplies none. Backend-neutral: a single generic linux vm node.
+# caller supplies none. Backend-neutral: a single generic compute node with no
+# authored OS identity — an authored ``os`` becomes an exact SEM-218
+# realization requirement demanding corroboration no hermetic in-process
+# backend declares, which is what regressed this probe when authored OS
+# identity started carrying through realization. Leaving it unset keeps the
+# probe admissible on every declared envelope, mirroring
+# ``examples/scenarios/cross-backend-minimal.sdl.yaml``.
 #
 # Issue #663 makes this a *default*, not a universal assumption. A fixed-topology
 # emulation or bounded simulation backend that cannot realize this generic
@@ -54,8 +60,7 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
     name: conformance
     nodes:
       vm:
-        type: vm
-        os: linux
+        type: compute
         resources: {ram: 1 gib, cpu: 1}
         conditions: {health: ops}
         roles: {ops: operator}
@@ -464,10 +469,13 @@ def _target_adapter_cases(
 
     scenario = _DEFAULT_CONFORMANCE_SCENARIO if reference_scenario is None else reference_scenario
     execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
+    # Legacy API-423-only conformance resolver: opt out of the SEM-233
+    # final-sink permit that this probe's resolver does not produce.
     control_plane = RuntimeControlPlane(
         target,
         initial_snapshot=_participant_execution_probe_snapshot(target),
         crossing_policy_resolver=_conformance_crossing_policy_resolver(target),
+        enforce_final_sink_flow_control=False,
     )
     cases.append(_provisioning_probe_case(control_plane, execution_plan.provisioning))
     if known != BackendCapabilityProfile.PROVISIONING_ONLY:

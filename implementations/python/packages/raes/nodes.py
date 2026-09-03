@@ -1,12 +1,14 @@
 """Node models — VMs and network switches.
 
-Ports the OCR SDL Node/VM/Switch/Resources/Role structs with
+Ports the OCR SDL Node/Compute/Switch/Resources/Role structs with
 backend-agnostic Source references.
 """
 
 from enum import Enum
 
 from pydantic import Field, field_validator, model_validator
+from pydantic.json_schema import GetJsonSchemaHandler, JsonSchemaValue
+from pydantic_core import CoreSchema
 
 from ._base import (
     SDLModel,
@@ -18,6 +20,11 @@ from ._base import (
 from ._identifiers import OptionalPortableIdentifier, PortableIdentifier
 from ._runtime_service_families import install_runtime_service_family_exports
 from ._source import Source
+from .architectures import (
+    AuthoredNodeArchitectureString,
+    NodeArchitecture,
+    normalize_architecture,
+)
 from .deployment_tenancy import EndpointPersona
 from .image_provenance import (
     ContainerImageBuildProvenance,
@@ -33,6 +40,13 @@ from .image_provenance import (
     ImageLayer,
     ImageSourceInput,
     ImageVerificationStatus,
+)
+from .operating_systems import (
+    AuthoredOSDistributionString,
+    AuthoredOSVersionString,
+    OSDistribution,
+    normalize_os_distribution,
+    normalize_os_version,
 )
 from .runtime_configuration import (
     RuntimeCapabilityOverrideScope,
@@ -69,6 +83,9 @@ from .runtime_configuration import (
     RuntimePackage,
     RuntimeProcessCapabilityOverride,
     RuntimeProcessIdentity,
+    RuntimeProcessLimitResource,
+    RuntimeProcessLimitScope,
+    RuntimeProcessResourceLimit,
     RuntimeProcessRole,
     RuntimePublishedPort,
     RuntimeResourceLimits,
@@ -103,6 +120,7 @@ __all__ = [
     "ImageVerificationStatus",
     "MAX_NODE_NAME_LENGTH",
     "Node",
+    "NodeArchitecture",
     "NodeType",
     "OSFamily",
     "Resources",
@@ -143,6 +161,9 @@ __all__ = [
     "RuntimePackage",
     "RuntimeProcessCapabilityOverride",
     "RuntimeProcessIdentity",
+    "RuntimeProcessLimitResource",
+    "RuntimeProcessLimitScope",
+    "RuntimeProcessResourceLimit",
     "RuntimeProcessRole",
     "RuntimePublishedPort",
     "RuntimeResourceLimits",
@@ -162,14 +183,14 @@ MAX_NODE_NAME_LENGTH = 35
 
 
 class NodeType(str, Enum):
-    """Whether a node is a virtual machine or network switch."""
+    """Structural resource kind, independent of its realization mechanism."""
 
-    VM = "vm"
+    COMPUTE = "compute"
     SWITCH = "switch"
 
 
 class Resources(SDLModel):
-    """Compute resources for a VM node."""
+    """Compute resources for a compute node."""
 
     ram: int | str = Field(description="RAM in bytes (parsed from human-readable)")
     cpu: int | str = Field(description="Number of CPU cores")
@@ -186,7 +207,7 @@ class Resources(SDLModel):
 
 
 class Role(SDLModel):
-    """A named role on a VM with optional entity assignments.
+    """A named role on a compute node with optional entity assignments.
 
     Shorthand: ``admin: "username"`` (just the username string).
     Longhand: ``admin: {username: "admin", entities: ["blue-team.bob"]}``.
@@ -262,10 +283,10 @@ class ServicePort(SDLModel):
 
 
 class Node(SDLModel):
-    """A scenario node — either a VM or a Switch.
+    """A scenario node — either a compute endpoint or a strict switch.
 
-    The ``type`` field determines which variant is active. VM fields
-    are only valid when type is VM; Switch nodes carry no extra data.
+    The ``type`` field determines which structural variant is active. Compute
+    fields are only valid for compute nodes; switches carry no extra data.
     """
 
     type: NodeType = Field(alias="type")
@@ -279,7 +300,9 @@ class Node(SDLModel):
 
     resources: Resources | None = None
     os: OSFamily | str | None = None
-    os_version: str = ""
+    os_distribution: OSDistribution | AuthoredOSDistributionString | None = None
+    os_version: AuthoredOSVersionString = ""
+    architecture: NodeArchitecture | AuthoredNodeArchitectureString | None = None
     features: dict[str, str] = Field(default_factory=dict)
     conditions: dict[str, str] = Field(default_factory=dict)
     injects: dict[str, str] = Field(default_factory=dict)
@@ -290,10 +313,60 @@ class Node(SDLModel):
     endpoint_persona: EndpointPersona | str | None = None
     runtime: RuntimeConfiguration | None = None
 
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        """Publish the same OS dependency chain enforced by semantic validation."""
+
+        json_schema = handler.resolve_ref_schema(handler(core_schema))
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "required": ["os_version"],
+                        "properties": {"os_version": {"type": "string", "minLength": 1}},
+                    },
+                    "then": {
+                        "required": ["os_distribution"],
+                        "properties": {"os_distribution": {"not": {"type": "null"}}},
+                    },
+                },
+                {
+                    "if": {
+                        "required": ["os_distribution"],
+                        "properties": {"os_distribution": {"not": {"type": "null"}}},
+                    },
+                    "then": {
+                        "required": ["os"],
+                        "properties": {"os": {"not": {"type": "null"}}},
+                    },
+                },
+            ]
+        )
+        return json_schema
+
     @field_validator("os", mode="before")
     @classmethod
     def normalize_os(cls, v):
         return parse_enum_or_var(v, OSFamily, field_name="os") if v is not None else v
+
+    @field_validator("os_distribution", mode="before")
+    @classmethod
+    def normalize_os_distribution_value(cls, v: object) -> object:
+        return normalize_os_distribution(v) if v is not None else v
+
+    @field_validator("os_version", mode="before")
+    @classmethod
+    def normalize_os_version_value(cls, v: object) -> object:
+        return normalize_os_version(v)
+
+    @field_validator("architecture", mode="before")
+    @classmethod
+    def normalize_architecture_value(cls, v: object) -> object:
+        return normalize_architecture(v)
 
     @field_validator("endpoint_persona", mode="before")
     @classmethod
@@ -302,21 +375,23 @@ class Node(SDLModel):
 
     @model_validator(mode="after")
     def validate_type_constraints(self) -> "Node":
-        """Switch nodes cannot carry VM-only fields."""
+        """Switch nodes cannot carry compute-only fields."""
         if self.type != NodeType.SWITCH:
             return self
 
-        disallowed_fields = self._populated_vm_only_fields()
+        disallowed_fields = self._populated_compute_only_fields()
         if disallowed_fields:
-            raise ValueError("Switch nodes cannot have VM-only fields: " + ", ".join(disallowed_fields))
+            raise ValueError("Switch nodes cannot have compute-only fields: " + ", ".join(disallowed_fields))
         return self
 
-    def _populated_vm_only_fields(self) -> list[str]:
+    def _populated_compute_only_fields(self) -> list[str]:
         fields = {
             "source": self.source is not None,
             "resources": self.resources is not None,
             "os": self.os is not None,
+            "os_distribution": self.os_distribution is not None,
             "os_version": bool(self.os_version),
+            "architecture": self.architecture is not None,
             "features": bool(self.features),
             "conditions": bool(self.conditions),
             "injects": bool(self.injects),
@@ -331,8 +406,8 @@ class Node(SDLModel):
 
     @model_validator(mode="after")
     def validate_unique_service_ports(self) -> "Node":
-        """Concrete VM service bindings must stay uniquely addressable."""
-        if self.type != NodeType.VM:
+        """Concrete compute service bindings must stay uniquely addressable."""
+        if self.type != NodeType.COMPUTE:
             return self
 
         seen: set[tuple[str, int]] = set()

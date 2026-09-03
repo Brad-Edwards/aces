@@ -6,6 +6,7 @@ import hashlib
 import json
 from dataclasses import asdict, replace
 
+from raes_contracts.contracts import ParticipantFlowSinkKind
 from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingDirection,
     ParticipantCrossingInteractionKind,
@@ -34,10 +35,15 @@ from .participant_crossing_mediation import (
     ParticipantCrossingEvidence,
     ParticipantCrossingIntent,
     PreparedParticipantCrossing,
-    commit_prepared_crossing,
     prepare_participant_crossing,
 )
 from .participant_crossing_records import _expected_history_heads
+from .participant_flow_sink import (
+    apply_flow_sink_details,
+    commit_flow_sink_denial,
+    early_crossing_receipt,
+    resolve_participant_flow_sink_decision,
+)
 
 _CONTROL_INTERACTIONS = {
     "proposal": ParticipantCrossingInteractionKind.ACTION_PROPOSAL,
@@ -119,10 +125,22 @@ class ParticipantCrossingControlIngressMixin:
                 idempotency_key=idempotency_key,
                 incumbent_carrier=intent,
             )
-            if crossing.existing_receipt is not None:
-                return crossing.existing_receipt
-            if not crossing.record.receipt.accepted:
-                return commit_prepared_crossing(self, crossing)
+            early = early_crossing_receipt(self, crossing)
+            if early is not None:
+                return early
+
+            sink_decision = resolve_participant_flow_sink_decision(
+                self,
+                crossing,
+                sink_kind=ParticipantFlowSinkKind.PARTICIPANT_CROSSING,
+            )
+            if sink_decision is not None and not sink_decision.permitted:
+                return commit_flow_sink_denial(
+                    self,
+                    crossing,
+                    sink_decision,
+                    action="record_participant_control",
+                )
 
             governed_intent = _governed_control_intent(self, crossing, intent)
             governed_bound = bind_participant_control_request(
@@ -160,6 +178,8 @@ class ParticipantCrossingControlIngressMixin:
                 action="record_participant_control",
                 allowed=record.receipt.accepted,
             )
+            if sink_decision is not None:
+                audit = apply_flow_sink_details(audit, sink_decision)
             self._store.commit_participant_transition(
                 expected_history_heads=crossing.expected_history_heads,
                 snapshot=next_snapshot,
@@ -198,10 +218,22 @@ def execute_action_ingress_crossing(
             idempotency_key=execution.idempotency_key,
             incumbent_carrier=request,
         )
-        if crossing.existing_receipt is not None:
-            return crossing.existing_receipt
-        if not crossing.record.receipt.accepted:
-            return commit_prepared_crossing(control_plane, crossing)
+        early = early_crossing_receipt(control_plane, crossing)
+        if early is not None:
+            return early
+
+        sink_decision = resolve_participant_flow_sink_decision(
+            control_plane,
+            crossing,
+            sink_kind=ParticipantFlowSinkKind.ACTION_ARGUMENT,
+        )
+        if sink_decision is not None and not sink_decision.permitted:
+            return commit_flow_sink_denial(
+                control_plane,
+                crossing,
+                sink_decision,
+                action="record_participant_crossing",
+            )
 
         governed_request = _governed_action_request(control_plane, crossing, request)
         _require_action_binding(participant_behavior, governed_request)
@@ -217,6 +249,8 @@ def execute_action_ingress_crossing(
             allowed=True,
             reason="authorized",
         )
+        if sink_decision is not None:
+            authorization_audit = apply_flow_sink_details(authorization_audit, sink_decision)
         control_plane._store.commit_participant_transition(
             expected_history_heads=crossing.expected_history_heads,
             snapshot=crossing.next_snapshot,
@@ -252,6 +286,8 @@ def execute_action_ingress_crossing(
             allowed=result.success,
             reason="accepted" if result.success else "backend-admission-failed",
         )
+        if sink_decision is not None:
+            audit = apply_flow_sink_details(audit, sink_decision)
         control_plane._store.commit_participant_transition(
             expected_history_heads=crossing.record.result_history_heads,
             snapshot=next_snapshot,

@@ -9,7 +9,13 @@ from .._base import VARIABLE_TOKEN_RE
 from .._stateful_resource_references import stateful_resource_reference_errors
 from ..entities import flatten_entities
 from ..explicitness import classify_scenario_explicitness
-from ..realization_designation import designation_records, resolve_json_pointer_surface
+from ..nodes import Node, NodeType
+from ..realization_designation import (
+    RealizationConstraintRecord,
+    RealizationDesignationRecord,
+    designation_records,
+    resolve_json_pointer_surface,
+)
 from ..scenario import ExpandedScenario, Scenario
 from ._support import _topological_sort
 
@@ -70,22 +76,64 @@ class _SectionsMixin:
             self._err(error)
 
     def _verify_realization_designations(self) -> None:
-        records = ()
+        records, constraints, known_namespaces = self._realization_designation_surfaces()
+        for record in records:
+            self._verify_realization_designation_record(record, known_namespaces)
+        for constraint in constraints:
+            self._verify_realization_constraint_record(constraint, known_namespaces)
+
+    def _realization_designation_surfaces(
+        self,
+    ) -> tuple[
+        tuple[RealizationDesignationRecord, ...],
+        tuple[RealizationConstraintRecord, ...],
+        set[tuple[str, ...]],
+    ]:
         known_namespaces: set[tuple[str, ...]] = {()}
         if isinstance(self._s, Scenario) and self._s.realization is not None:
             records = designation_records(self._s.realization)
+            constraints = self._s.realization.constraints
         elif isinstance(self._s, ExpandedScenario):
             records = self._s.expansion_provenance.realization_designations
+            constraints = self._s.expansion_provenance.realization_constraints
             known_namespaces.update(record.namespace for record in self._s.expansion_provenance.imports)
-        for record in records:
-            if record.namespace not in known_namespaces:
-                self._err("Realization designation references an unresolved module namespace")
-            found, _value = resolve_json_pointer_surface(self._s, record.field_pointer)
-            if not found:
-                self._err(
-                    "Realization designation field_pointer does not resolve to a typed SDL surface: "
-                    f"{record.field_pointer or '/'}"
-                )
+        else:
+            records = ()
+            constraints = ()
+        return tuple(records), tuple(constraints), known_namespaces
+
+    def _verify_realization_designation_record(
+        self,
+        record: RealizationDesignationRecord,
+        known_namespaces: set[tuple[str, ...]],
+    ) -> None:
+        if record.namespace not in known_namespaces:
+            self._err("Realization designation references an unresolved module namespace")
+        found, _value = resolve_json_pointer_surface(self._s, record.field_pointer)
+        if not found:
+            self._err(
+                "Realization designation field_pointer does not resolve to a typed SDL surface: "
+                f"{record.field_pointer or '/'}"
+            )
+
+    def _verify_realization_constraint_record(
+        self,
+        constraint: RealizationConstraintRecord,
+        known_namespaces: set[tuple[str, ...]],
+    ) -> None:
+        if constraint.namespace not in known_namespaces:
+            self._err("Realization constraint references an unresolved module namespace")
+            return
+        found, target = resolve_json_pointer_surface(self._s, constraint.field_pointer)
+        if not found or not isinstance(target, Node):
+            self._err(
+                f"Realization constraint field_pointer must resolve to a compute node: {constraint.field_pointer}"
+            )
+        elif target.type is NodeType.SWITCH:
+            self._err(
+                f"Realization concern '{constraint.concern.value}' cannot target strict switch "
+                f"'{constraint.field_pointer}'"
+            )
 
     def _all_named_elements(self) -> set[str]:
         """Collect all named element keys across all scenario sections."""

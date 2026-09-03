@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from raes_contracts.contracts import (
     EvaluationPlanModel,
@@ -16,7 +15,7 @@ from raes_contracts.contracts import (
 )
 
 from ..control_plane import RuntimeControlPlane
-from ..control_plane_api_guards import request_size_guard_response
+from ..control_plane_api_guards import RequestSizeLimitMiddleware
 from ..control_plane_api_models import (
     _evaluation_plan,
     _operation_status_model,
@@ -27,6 +26,7 @@ from ..control_plane_api_models import (
 )
 from ..control_plane_security import ControlPlaneSecurityConfig
 from ._auth import _MutatingIdentity, _ReadIdentity
+from ._offload import _control_plane_calls
 from ._responses import _CONFLICT_RESPONSES, _NOT_FOUND_RESPONSES, _receipt_response
 
 
@@ -35,23 +35,17 @@ def _install_request_guards(
     control_plane: RuntimeControlPlane,
     security: ControlPlaneSecurityConfig,
 ) -> None:
-    @app.middleware("http")
-    async def _limit_request_size(
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        guard_response = await request_size_guard_response(
-            control_plane,
-            request,
-            max_request_bytes=security.max_request_bytes,
-        )
-        if guard_response is not None:
-            return guard_response
-        return await call_next(request)
+    app.add_middleware(
+        RequestSizeLimitMiddleware,
+        control_plane=control_plane,
+        max_request_bytes=security.max_request_bytes,
+        max_pending_rejection_audits=security.max_pending_rejection_audits,
+    )
 
     @app.exception_handler(Exception)
     async def _redacted_errors(request: Request, exc: Exception) -> JSONResponse:
-        control_plane.record_audit(
+        await _control_plane_calls(request).run(
+            control_plane.record_audit,
             action=request.method,
             identity="anonymous",
             allowed=False,
@@ -59,6 +53,19 @@ def _install_request_guards(
             reason=f"internal-error:{type(exc).__name__}",
         )
         return JSONResponse(status_code=500, content={"detail": "internal server error"})
+
+    @app.exception_handler(RequestValidationError)
+    async def _redacted_request_validation_errors(request: Request, exc: RequestValidationError) -> JSONResponse:
+        del exc
+        await _control_plane_calls(request).run(
+            control_plane.record_audit,
+            action=request.method,
+            identity="anonymous",
+            allowed=False,
+            target=str(request.url.path),
+            reason="request-validation-failed",
+        )
+        return JSONResponse(status_code=422, content={"detail": "request validation failed"})
 
 
 def _register_operation_routes(
@@ -79,9 +86,26 @@ def _register_operation_submission_routes(
         plan: ProvisioningPlanModel,
         identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
+        submitted_plan = _provisioning_plan(plan)
+        calls = _control_plane_calls(request)
+        planner_authorized = await calls.run(
+            control_plane.is_planner_authorized_provisioning_plan,
+            submitted_plan,
+        )
+        if submitted_plan.operations and not planner_authorized:
+            await calls.run(
+                control_plane.record_audit,
+                action="submit_provisioning",
+                identity=identity.identity,
+                allowed=False,
+                target=str(request.url.path),
+                reason="planner-authorization-mismatch",
+            )
+            raise HTTPException(status_code=403, detail="provisioning plan is not planner-authorized")
         try:
-            receipt = control_plane.submit_provisioning(
-                _provisioning_plan(plan),
+            receipt = await calls.mutate(
+                control_plane.submit_provisioning,
+                submitted_plan,
                 idempotency_key=request.headers.get("idempotency-key", ""),
                 request_fingerprint=_request_fingerprint(
                     request,
@@ -90,7 +114,8 @@ def _register_operation_submission_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="submit_provisioning",
             identity=identity.identity,
             allowed=True,
@@ -105,8 +130,10 @@ def _register_operation_submission_routes(
         plan: OrchestrationPlanModel,
         identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.submit_orchestration(
+            receipt = await calls.mutate(
+                control_plane.submit_orchestration,
                 _orchestration_plan(plan),
                 idempotency_key=request.headers.get("idempotency-key", ""),
                 request_fingerprint=_request_fingerprint(
@@ -116,7 +143,8 @@ def _register_operation_submission_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="submit_orchestration",
             identity=identity.identity,
             allowed=True,
@@ -131,8 +159,10 @@ def _register_operation_submission_routes(
         plan: EvaluationPlanModel,
         identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
+        calls = _control_plane_calls(request)
         try:
-            receipt = control_plane.submit_evaluation(
+            receipt = await calls.mutate(
+                control_plane.submit_evaluation,
                 _evaluation_plan(plan),
                 idempotency_key=request.headers.get("idempotency-key", ""),
                 request_fingerprint=_request_fingerprint(
@@ -142,7 +172,8 @@ def _register_operation_submission_routes(
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="submit_evaluation",
             identity=identity.identity,
             allowed=True,
@@ -162,10 +193,12 @@ def _register_operation_read_routes(
         request: Request,
         identity: _ReadIdentity,
     ) -> OperationStatusModel:
-        status = control_plane.get_operation(operation_id)
+        calls = _control_plane_calls(request)
+        status = await calls.run(control_plane.get_operation, operation_id)
         if status is None:
             raise HTTPException(status_code=404, detail=f"Unknown operation: {operation_id}")
-        control_plane.record_audit(
+        await calls.run(
+            control_plane.record_audit,
             action="get_operation",
             identity=identity.identity,
             allowed=True,
@@ -179,23 +212,27 @@ def _register_operation_read_routes(
         request: Request,
         identity: _ReadIdentity,
     ) -> RuntimeSnapshotEnvelopeModel:
-        control_plane.record_audit(
+        calls = _control_plane_calls(request)
+        await calls.run(
+            control_plane.record_audit,
             action="get_snapshot",
             identity=identity.identity,
             allowed=True,
             target=str(request.url.path),
         )
-        return _snapshot_model(control_plane.get_snapshot())
+        return await calls.run(lambda: _snapshot_model(control_plane.get_snapshot()))
 
     @app.get("/apparatus/operational-summary")
     async def get_operational_apparatus_summary(
         request: Request,
         identity: _ReadIdentity,
     ) -> dict[str, object]:
-        control_plane.record_audit(
+        calls = _control_plane_calls(request)
+        await calls.run(
+            control_plane.record_audit,
             action="get_operational_apparatus_summary",
             identity=identity.identity,
             allowed=True,
             target=str(request.url.path),
         )
-        return control_plane.operational_apparatus_summary()
+        return await calls.run(control_plane.operational_apparatus_summary)

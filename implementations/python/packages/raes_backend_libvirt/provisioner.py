@@ -8,6 +8,13 @@ from raes_backend_protocols.capabilities import ProvisionerCapabilities
 from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.realization_observation import (
+    RealizationObservation,
+    RealizationObservationDisclosure,
+    bind_compute_substrate_observations,
+    compute_substrate_readback_addresses,
+    missing_compute_substrate_readbacks,
+)
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
 from ._payload import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE
@@ -22,6 +29,7 @@ _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
 UNCONFIRMED_DESTROY_CODE = "libvirt-backend.driver.unconfirmed-destroy"
 UNCONFIRMED_REALIZATION_CODE = "libvirt-backend.driver.unconfirmed-realization"
+UNCONFIRMED_OBSERVATION_CODE = "libvirt-backend.driver.compute-substrate-unobserved"
 MISSING_ENVELOPE_CODE = "libvirt-backend.realization-envelope.missing"
 MISMATCHED_ENVELOPE_CODE = "libvirt-backend.realization-envelope.mismatch"
 BASELINE_ENVELOPE_MISMATCH_CODE = "libvirt-backend.realization-envelope.baseline-mismatch"
@@ -107,21 +115,38 @@ class LibvirtProvisioner:
             return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
 
         reconciliation = _reconcile_snapshot(plan, snapshot)
-        driver_diagnostics = self._drive(
+        driver_diagnostics, observations = self._drive(
             plan,
             realization,
             reconciliation.delete_networks,
             reconciliation.delete_domains,
+            previous=snapshot.realization_observations,
         )
         diagnostics.extend(driver_diagnostics)
+        diagnostics.extend(
+            _driver_confirmation_diagnostic(address, code=UNCONFIRMED_OBSERVATION_CODE)
+            for address in missing_compute_substrate_readbacks(
+                plan=plan,
+                observations=observations,
+                envelope=self._backend_realization_envelope,
+                previous=snapshot.realization_observations,
+            )
+        )
 
         if _has_error(diagnostics):
             return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
 
+        observation_disclosures = bind_compute_substrate_observations(
+            plan=plan,
+            observations=observations,
+            envelope=self._backend_realization_envelope,
+            previous=snapshot.realization_observations,
+        )
         return ApplyResult(
             success=True,
             snapshot=snapshot.with_entries(
                 reconciliation.entries,
+                realization_observations=observation_disclosures,
                 realization_envelope=self._realization_envelope,
             ),
             diagnostics=diagnostics,
@@ -134,13 +159,30 @@ class LibvirtProvisioner:
         realization: Realization,
         delete_networks: list[str],
         delete_domains: list[str],
-    ) -> list[Diagnostic]:
+        *,
+        previous: tuple[RealizationObservationDisclosure, ...],
+    ) -> tuple[list[Diagnostic], tuple[RealizationObservation, ...]]:
         active = self._active_addresses(plan, realization)
         networks = tuple(spec for spec in realization.networks if spec.address in active)
         domains = tuple(spec for spec in realization.domains if spec.address in active)
-        diagnostics = self._realize_active(networks, domains)
+        diagnostics, observations = self._realize_active(networks, domains)
+        readback = (
+            set(
+                compute_substrate_readback_addresses(
+                    plan=plan,
+                    envelope=self._backend_realization_envelope,
+                    previous=previous,
+                )
+            )
+            - active
+        )
+        readback_domains = tuple(spec for spec in realization.domains if spec.address in readback)
+        if readback_domains:
+            result = self._driver.observe(domains=readback_domains)
+            diagnostics.extend(result.diagnostics)
+            observations = (*observations, *result.observations)
         diagnostics.extend(self._delete_targets(delete_networks, delete_domains))
-        return diagnostics
+        return diagnostics, observations
 
     @staticmethod
     def _active_addresses(plan: ProvisioningPlan, realization: Realization) -> set[str]:
@@ -156,9 +198,9 @@ class LibvirtProvisioner:
         self,
         networks: tuple[NetworkSpec, ...],
         domains: tuple[DomainSpec, ...],
-    ) -> list[Diagnostic]:
+    ) -> tuple[list[Diagnostic], tuple[RealizationObservation, ...]]:
         if not (networks or domains):
-            return []
+            return [], ()
         result = self._driver.realize(networks=networks, domains=domains)
         realization_diagnostics = [
             *result.diagnostics,
@@ -179,7 +221,7 @@ class LibvirtProvisioner:
             [*realization_diagnostics, *observation_diagnostics]
         ):
             diagnostics.extend(self._rollback_realization(networks, domains))
-        return diagnostics
+        return diagnostics, result.observations
 
     def _rollback_realization(
         self,
@@ -228,6 +270,8 @@ class LibvirtProvisioner:
         elif (
             snapshot.realization_envelope is not None and snapshot.realization_envelope != self._realization_envelope
         ) or (_snapshot_has_state(snapshot) and snapshot.realization_envelope is None):
+            if plan.realization_constraints:
+                return diagnostics
             diagnostics = [
                 _envelope_diagnostic(
                     BASELINE_ENVELOPE_MISMATCH_CODE,

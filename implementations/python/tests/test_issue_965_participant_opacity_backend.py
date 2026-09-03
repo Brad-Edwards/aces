@@ -98,7 +98,6 @@ def test_manifest_round_trip_declares_one_bounded_relation_feature() -> None:
     payload = backend_manifest_payload(target.manifest)
     model = BackendManifestV2Model.model_validate(payload)
     round_trip = model.model_dump(mode="json")
-    round_trip.pop("realization_envelope", None)
 
     assert round_trip == payload
     assert declaration.support_level is ParticipantFeatureSupportLevel.BOUNDED
@@ -176,7 +175,10 @@ def test_backend_native_cases_emit_three_independent_bound_claims() -> None:
     cases = _opacity_cases(report)
     native = next(case for case in cases if case.realization_owner == "backend-native")
     assert native.passed
-    assert report.passed
+    assert not report.passed
+    envelope_cases = tuple(case for case in report.cases if case.contract_name == "realization-envelope-v1")
+    assert envelope_cases
+    assert all(not case.passed for case in envelope_cases)
     assert {binding.assurance_axis for binding in native.claim_bindings} == {
         "backend-declaration",
         "backend-realization",

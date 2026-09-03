@@ -729,6 +729,42 @@
       "title": "ObservationStrength",
       "type": "string"
     },
+    "OperatingSystemCompatibilityModel": {
+      "additionalProperties": false,
+      "description": "One portable, coupled OS family/distribution/release capability row.",
+      "properties": {
+        "distribution": {
+          "minLength": 1,
+          "title": "Distribution",
+          "type": "string"
+        },
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "versions": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[!-~](?:[ -~]{0,126}[!-~])?$",
+            "type": "string"
+          },
+          "maxItems": 128,
+          "minItems": 1,
+          "title": "Versions",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "family",
+        "distribution",
+        "versions"
+      ],
+      "title": "OperatingSystemCompatibilityModel",
+      "type": "object"
+    },
     "OrchestratorCapabilitiesModel": {
       "additionalProperties": false,
       "allOf": [
@@ -982,12 +1018,17 @@
             "properties": {
               "feature": {
                 "enum": [
+                  "participant_boundary_flow_resolution",
                   "participant_declassification",
                   "participant_directed_inject_delivery",
                   "participant_egress_projection",
+                  "participant_final_sink_mediation",
                   "participant_ingress_admission",
                   "participant_intervention",
+                  "participant_monitor_topology",
                   "participant_predicate_opacity",
+                  "participant_processing_role_trust",
+                  "participant_quarantined_processing",
                   "participant_transformation"
                 ]
               },
@@ -1020,12 +1061,17 @@
             "properties": {
               "feature": {
                 "enum": [
+                  "participant_boundary_flow_resolution",
                   "participant_declassification",
                   "participant_directed_inject_delivery",
                   "participant_egress_projection",
+                  "participant_final_sink_mediation",
                   "participant_ingress_admission",
                   "participant_intervention",
+                  "participant_monitor_topology",
                   "participant_predicate_opacity",
+                  "participant_processing_role_trust",
+                  "participant_quarantined_processing",
                   "participant_transformation"
                 ]
               },
@@ -1054,12 +1100,17 @@
             "properties": {
               "feature": {
                 "enum": [
+                  "participant_boundary_flow_resolution",
                   "participant_declassification",
                   "participant_directed_inject_delivery",
                   "participant_egress_projection",
+                  "participant_final_sink_mediation",
                   "participant_ingress_admission",
                   "participant_intervention",
+                  "participant_monitor_topology",
                   "participant_predicate_opacity",
+                  "participant_processing_role_trust",
+                  "participant_quarantined_processing",
                   "participant_transformation"
                 ]
               },
@@ -1726,6 +1777,72 @@
       "title": "ParticipantRuntimeCapabilitiesModel",
       "type": "object"
     },
+    "ProcessResourceLimitCapabilityModel": {
+      "additionalProperties": false,
+      "description": "Published typed apparatus domain for portable process limits.",
+      "properties": {
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "resource": {
+          "$ref": "#/$defs/ProcessResourceLimitKind"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/ProcessResourceLimitScope"
+          },
+          "minItems": 1,
+          "title": "Scopes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_unlimited": {
+          "default": false,
+          "title": "Supports Unlimited",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "resource",
+        "scopes"
+      ],
+      "title": "ProcessResourceLimitCapabilityModel",
+      "type": "object"
+    },
+    "ProcessResourceLimitKind": {
+      "description": "Portable process-resource terms governed by the runtime contract.",
+      "enum": [
+        "open_file_descriptors",
+        "locked_memory_bytes"
+      ],
+      "title": "ProcessResourceLimitKind",
+      "type": "string"
+    },
+    "ProcessResourceLimitScope": {
+      "description": "Process inheritance scope for a portable resource limit.",
+      "enum": [
+        "process",
+        "subtree"
+      ],
+      "title": "ProcessResourceLimitScope",
+      "type": "string"
+    },
     "ProvisionerCapabilitiesModel": {
       "additionalProperties": false,
       "allOf": [
@@ -1844,6 +1961,14 @@
           "title": "Name",
           "type": "string"
         },
+        "operating_systems": {
+          "items": {
+            "$ref": "#/$defs/OperatingSystemCompatibilityModel"
+          },
+          "title": "Operating Systems",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_account_features": {
           "items": {
             "minLength": 1,
@@ -1875,6 +2000,14 @@
           "title": "Supported Generated Artifact Kinds",
           "type": "array",
           "uniqueItems": true
+        },
+        "supported_node_architectures": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Node Architectures",
+          "type": "array"
         },
         "supported_node_types": {
           "items": {
@@ -2083,6 +2216,13 @@
           },
           "title": "Observation Capabilities",
           "type": "object"
+        },
+        "process_resource_limits": {
+          "items": {
+            "$ref": "#/$defs/ProcessResourceLimitCapabilityModel"
+          },
+          "title": "Process Resource Limits",
+          "type": "array"
         },
         "support_mode": {
           "$ref": "#/$defs/RealizationSupportMode"
@@ -2524,6 +2664,7 @@
           "participant-resource-budget-event-v1",
           "participant-control-occurrence-v1",
           "participant-crossing-occurrence-v1",
+          "participant-flow-control-relation-v1",
           "participant-lifecycle-event-v1",
           "participant-observation-envelope-v1",
           "participant-shared-state-record-v1",

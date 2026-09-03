@@ -15,6 +15,7 @@ from typing import Any, ClassVar
 from pydantic import ConfigDict, Field, ValidationError
 
 from ._base import VARIABLE_TOKEN_RE, extract_variable_name
+from ._capability_constraints import capture_capability_constraints
 from ._errors import SDLInstantiationError, SDLValidationError
 from ._identifiers import QualifiedName
 from ._mapping_scopes import HASHMAP_SECTIONS
@@ -29,7 +30,12 @@ from .phase_contracts import (
     SemanticDigest,
     TrialInstantiationProvenance,
 )
-from .realization_designation import RealizationDesignationRecord, designation_records
+from .realization_designation import (
+    RealizationConstraintRecord,
+    RealizationDesignationRecord,
+    constraint_records,
+    designation_records,
+)
 from .scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
 from .validator import SemanticValidator
 from .variables import Variable, VariableType
@@ -55,6 +61,7 @@ class _BoundScenarioResult:
     capability_constraints: tuple[CapabilityConstraint, ...]
     explicitness: tuple[ExplicitnessProvenanceRecord, ...]
     realization_designations: tuple[RealizationDesignationRecord, ...]
+    realization_constraints: tuple[RealizationConstraintRecord, ...]
 
 
 def _matches_value_type(value: object, variable: Variable) -> bool:
@@ -185,52 +192,6 @@ def _substitute_value(
     return VARIABLE_TOKEN_RE.sub(replace_token, value)
 
 
-def _json_pointer_segment(value: str) -> str:
-    return value.replace("~", "~0").replace("/", "~1")
-
-
-def _finite_domain_constraint(
-    *,
-    field_pointer: str,
-    value: object,
-    variables: Mapping[str, Variable],
-) -> CapabilityConstraint | None:
-    variable_ref = extract_variable_name(value) if isinstance(value, str) else None
-    variable = variables.get(variable_ref) if variable_ref is not None else None
-    if variable is None or not variable.allowed_values:
-        return None
-    return CapabilityConstraint(
-        field_pointer=field_pointer,
-        parameter=(variable_ref,),
-        allowed_values=tuple(variable.allowed_values),
-    )
-
-
-def _capture_capability_constraints(
-    scenario: Scenario | ExpandedScenario,
-) -> tuple[CapabilityConstraint, ...]:
-    """Retain the finite domains needed by pre-realization capability checks."""
-
-    constraints: list[CapabilityConstraint] = []
-    for node_name, node in scenario.nodes.items():
-        constraint = _finite_domain_constraint(
-            field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/os",
-            value=node.os,
-            variables=scenario.variables,
-        )
-        if constraint is not None:
-            constraints.append(constraint)
-    for node_name, infrastructure in scenario.infrastructure.items():
-        constraint = _finite_domain_constraint(
-            field_pointer=f"/infrastructure/{_json_pointer_segment(node_name)}/count",
-            value=infrastructure.count,
-            variables=scenario.variables,
-        )
-        if constraint is not None:
-            constraints.append(constraint)
-    return tuple(constraints)
-
-
 def _portable_explicitness_record(record: ExplicitnessRecord) -> ExplicitnessProvenanceRecord:
     return ExplicitnessProvenanceRecord(
         model_path=record.path,
@@ -276,7 +237,11 @@ def _merge_expanded_provenance(
     scenario: ExpandedScenario,
     local_constraints: tuple[CapabilityConstraint, ...],
     explicitness_by_path: dict[str, ExplicitnessProvenanceRecord],
-) -> tuple[tuple[CapabilityConstraint, ...], tuple[RealizationDesignationRecord, ...]]:
+) -> tuple[
+    tuple[CapabilityConstraint, ...],
+    tuple[RealizationDesignationRecord, ...],
+    tuple[RealizationConstraintRecord, ...],
+]:
     constraints = (*scenario.expansion_provenance.capability_constraints, *local_constraints)
     imported_prefixes = _imported_declaration_prefixes(scenario)
     portable_paths = {record.model_path for record in scenario.expansion_provenance.explicitness}
@@ -288,7 +253,11 @@ def _merge_expanded_provenance(
     for model_path in stale_paths:
         del explicitness_by_path[model_path]
     explicitness_by_path.update({record.model_path: record for record in scenario.expansion_provenance.explicitness})
-    return constraints, scenario.expansion_provenance.realization_designations
+    return (
+        constraints,
+        scenario.expansion_provenance.realization_designations,
+        scenario.expansion_provenance.realization_constraints,
+    )
 
 
 def _bind_scenario_content(
@@ -318,7 +287,7 @@ def _bind_scenario_content(
 
     local_constraints = tuple(
         constraint
-        for constraint in _capture_capability_constraints(raw_scenario)
+        for constraint in capture_capability_constraints(raw_scenario)
         if not constraint.parameter or constraint.parameter[0] not in preserved
     )
     raw_payload = raw_scenario.model_dump(mode="python", by_alias=True)
@@ -360,8 +329,13 @@ def _bind_scenario_content(
         if isinstance(raw_scenario, Scenario) and raw_scenario.realization is not None
         else ()
     )
+    realization_constraints = (
+        constraint_records(raw_scenario.realization)
+        if isinstance(raw_scenario, Scenario) and raw_scenario.realization is not None
+        else ()
+    )
     if isinstance(raw_scenario, ExpandedScenario):
-        constraints, realization_designations = _merge_expanded_provenance(
+        constraints, realization_designations, realization_constraints = _merge_expanded_provenance(
             raw_scenario,
             local_constraints,
             explicitness_by_path,
@@ -380,6 +354,7 @@ def _bind_scenario_content(
         capability_constraints=constraints,
         explicitness=tuple(explicitness_by_path.values()),
         realization_designations=realization_designations,
+        realization_constraints=realization_constraints,
     )
 
 
@@ -447,6 +422,7 @@ def instantiate_scenario(
         capability_constraints=bound.capability_constraints,
         explicitness=bound.explicitness,
         realization_designations=bound.realization_designations,
+        realization_constraints=bound.realization_constraints,
         trial=trial_provenance,
     )
     payload = bound.content.model_dump(mode="python", by_alias=True)

@@ -148,7 +148,7 @@ def _facade_issues(
                 _issue(
                     "enterprise-identity.facade.service-unbound",
                     f"Identity facade '{facade_name}' service_ref '{service_ref}' does not resolve "
-                    "to a named VM service",
+                    "to a named compute service",
                 )
             )
     return issues

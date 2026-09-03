@@ -9,16 +9,38 @@ from raes_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_EVIDENCE_REQUIRED_FEATURES,
     BackendCapabilitySet,
     BackendManifest,
+    OperatingSystemCompatibility,
     ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
 )
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
+from raes_contracts.apparatus import (
+    ConceptBinding,
+    RealizationObservationCapability,
+    RealizationSupportDeclaration,
+)
+from raes_contracts.vocabulary import (
+    ParticipantFeatureSupportLevel,
+    RealizationSupportMode,
+    RealizationVerificationScope,
+)
 
 from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
 
 LIBVIRT_BACKEND_NAME = "libvirt-qemu"
+
+
+def realized_target_architecture(configuration: object) -> str:
+    """Canonical target architecture the configuration-bound realizer realizes.
+
+    The configuration-bound ``architecture`` claim is the sole target architecture
+    this backend configuration can realize; ``RealizerConfigurationModel`` validates
+    it as a governed canonical CPU-architecture term, so it is used directly rather
+    than hard-coded, and a configuration selecting a different host architecture is
+    honored without a code change.
+    """
+
+    return configuration.architecture
 
 
 def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilities:
@@ -27,6 +49,7 @@ def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilitie
     envelope = load_libvirt_realization_envelope(mode)
     configuration = envelope.configuration
     account_features = frozenset(configuration.supported_account_features)
+    realized_architecture = realized_target_architecture(configuration)
     return ProvisionerCapabilities(
         name=(
             "libvirt-techvault-appliance-provisioner"
@@ -35,6 +58,15 @@ def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilitie
         ),
         supported_node_types=frozenset(configuration.supported_node_types),
         supported_os_families=frozenset(configuration.supported_os_families),
+        operating_systems=tuple(
+            OperatingSystemCompatibility(
+                family=entry.family,
+                distribution=entry.distribution,
+                versions=frozenset(entry.versions),
+            )
+            for entry in configuration.operating_systems
+        ),
+        supported_node_architectures=frozenset({realized_architecture}),
         supported_content_types=frozenset(configuration.supported_content_types),
         supported_account_features=account_features,
         supported_domain_profiles=frozenset(configuration.supported_domain_profiles),
@@ -158,6 +190,9 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
     enable_participant_runtime = bool(config.get("participant_runtime", False))
     mode = LibvirtDriverMode(str(config.get("driver_mode", LibvirtDriverMode.GENERIC.value)))
     realization_envelope = load_libvirt_realization_envelope(mode)
+    substrate_claim = next(
+        claim for claim in realization_envelope.concerns if claim.concern.value == "compute-substrate"
+    )
     provisioner_capabilities = _provisioner_capabilities(mode)
 
     supported_contract_versions = (
@@ -176,6 +211,7 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
         concept_bindings=(
             ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+            ConceptBinding(scope="capabilities.provisioner.supported_node_architectures", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
             ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
             ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
@@ -188,7 +224,16 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
             RealizationSupportDeclaration(
                 domain="runtime-realization",
                 support_mode=RealizationSupportMode.CONSTRAINED,
-                supported_constraint_kinds=frozenset({"node-type", "os-family", "content-type", "account-feature"}),
+                supported_constraint_kinds=frozenset(
+                    {
+                        "node-type",
+                        "compute-substrate",
+                        "os-family",
+                        "node-architecture",
+                        "content-type",
+                        "account-feature",
+                    }
+                ),
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset(
                     {
@@ -197,6 +242,12 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
                         "runtime-snapshot-v1",
                     }
                 ),
+                observation_capabilities={
+                    "compute-substrate": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.PRESENCE,
+                        observation_strength=substrate_claim.observation_strength,
+                    )
+                },
             ),
         ),
         capabilities=BackendCapabilitySet(

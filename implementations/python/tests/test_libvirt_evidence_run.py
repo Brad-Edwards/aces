@@ -23,6 +23,7 @@ from raes_contracts.contracts import (
     EvaluationResultStateModel,
     ExperimentRealizedFormDisclosureModel,
 )
+from raes_operations._evidence_run_realization import _validate_guest_metadata
 from raes_operations.libvirt_evidence_run import (
     EVIDENCE_RUN_SCHEMA,
     LibvirtEvidenceRunConfig,
@@ -55,6 +56,22 @@ _REQUIRED_SECTIONS = (
     "redaction_provenance",
     "invariant_ledger_refs",
 )
+
+
+@pytest.mark.parametrize("invalid_tolerance", [True, -1, "16"])
+def test_guest_evidence_requires_explicit_nonnegative_integer_memory_tolerance(invalid_tolerance: object) -> None:
+    problems = _validate_guest_metadata(
+        {
+            "operation_ref": "sha256:" + "0" * 64,
+            "certifying": True,
+            "memory_tolerance_mib": invalid_tolerance,
+            "observed_at": "2026-08-12T00:00:00Z",
+            "probe_policy": "guest-probe/v1",
+            "challenge": "fresh-challenge",
+        }
+    )
+
+    assert problems == ["guest observation requires an explicit non-negative memory tolerance"]
 
 
 # --- fake native libvirt substrate (no daemon) ---------------------------------
@@ -153,8 +170,7 @@ nodes:
   lab:
     type: switch
   demo:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 128 MiB, cpu: 1}
     services: []
 infrastructure:

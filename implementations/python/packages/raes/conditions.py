@@ -12,7 +12,7 @@ from ._source import Source
 
 
 class Condition(SDLModel):
-    """A probe implementation deployed to a VM.
+    """A probe implementation deployed to a compute node.
 
     Either ``command`` + ``interval`` or ``source`` must be set, not both.
     """

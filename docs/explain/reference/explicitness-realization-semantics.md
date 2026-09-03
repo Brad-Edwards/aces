@@ -45,6 +45,20 @@ engineering risk is concept conflation: treating "not specified yet",
   requirements should surface through existing `SDLValidationError`,
   `SDLInstantiationError`, or `raes_processor.models.Diagnostic` paths,
   depending on the phase where support is known.
+- Carry one complete, resolved, value-free authority collection on every
+  backend-facing provisioning plan. It includes closed omissions and preserves
+  governing scope plus resolution source; it does not expose authoring
+  designation tables or duplicate exact operation values.
+- Treat the plan collection as the runtime authority for registered concerns.
+  Direct-manager and control-plane execution both recompute registry
+  completeness, bind the selected envelope identity, enforce capability as a
+  narrowing constraint, reject closed excess state, and derive safe persistence
+  plus provenance from that same collection.
+- Treat HTTP callers as relays, not planners. Register the exact
+  planner-produced provisioning plan through the in-process control-plane
+  boundary before HTTP submission; the adapter resolves its canonical digest
+  from that trusted registry, so a BACKEND or OPERATOR credential cannot widen
+  modes or bounds by rewriting the request body.
 
 ## Canonical Incumbents
 
@@ -70,7 +84,8 @@ Build on these existing surfaces before adding anything new:
 - authority helpers: `manifest_authority`, `controlled_vocabularies`,
   `semantic_profiles`, `reference_models`, and the concept-authority catalogs
 - runtime diagnostics and envelopes: `raes_processor.models.Diagnostic`,
-  runtime plan/result/snapshot models, and published control-plane contracts
+  `raes_contracts.planning.ResolvedRealizationAuthority`, runtime
+  plan/result/snapshot models, and published control-plane contracts
 - workflow gates: `.ground-control.yaml`, `.gc/plan-rules.md`,
   `tools/check_repo_policy.py`, `tools/check_requirement_governance.py`,
   `tools/check_json_artifacts.py`, `tools/check_generated_schemas.py`, and
@@ -99,13 +114,21 @@ The implementation must pass every layer it touches:
   controlled vocabulary terms must resolve through existing authority helpers.
 - planner/backend boundary gate: backend support checks must compare the
   compiled requirement against backend manifest `realization_support` instead
-  of local string conventions.
+  of local string conventions. Process-resource demands additionally compare
+  against the declaration's typed resource/scope/value domains.
+- provisioning-handoff gate: every applicable registered concern on a
+  non-delete operation must have exactly one canonical authority entry. Closed
+  concerns need no backend support but forbid added scenario state; non-closed
+  concerns require matching support and the selected envelope identity.
 - error-envelope gate: unsupported exact requirements and forbidden
   approximations must be reported with stable validation errors or structured
   diagnostics; do not leak raw backend exceptions or private payloads.
 - control-plane gate: any runtime-facing realization result must pass existing
   request-size, authentication, authorization, audit, idempotency, and published
-  response-model validation.
+  response-model validation. An operation-bearing provisioning request must
+  also match an exact planner-produced plan registered outside the HTTP relay
+  surface; request authentication and idempotency fingerprints are not planner
+  attestation.
 - persistence and observation gate: realized choices may be recorded only in
   portable snapshot/result/provenance envelopes. Do not persist secrets,
   bearer tokens, credentials, backend-native objects, or unredacted tracebacks.
@@ -131,6 +154,65 @@ Explicit root delegation reaches planning through the injected
 `apparatus_realization_default` resolver. Its current fallback is closed; a
 future typed apparatus-default contract can supply a different choice without
 changing SDL cascade rules or backend implementations.
+
+## Portable Process-Resource Limits
+
+The `process-resource-limits` concern applies SEM-218 to the complete
+`Node.runtime.operational_policy.resource_limits.process_limits` collection.
+Its semantic identity is `(resource, normalized subject, scope)`; descriptions
+and native backend spellings are excluded. Exact comparison is set-exact, so a
+missing, substituted, or excess record fails. A constrained soft/hard variable
+retains its finite `allowed-values` domain through instantiation and compilation
+and the realized leaf must belong to that domain.
+
+The normalized subject is also the inventory-matching contract: every active
+name, pid, parent, role, user, group, command, redaction, and working-directory
+selector must match one declared `runtime.processes` record. A redacted command
+is omitted and requires another stable projected selector; raw command content
+cannot be supplied and then erased from semantic identity.
+
+Support is declared through typed `process_resource_limits` entries on the
+existing `RealizationSupportDeclaration`, not through the free-form
+`constraints` map. Each entry bounds one portable resource by process/subtree
+scope, minimum/maximum finite values, and whether `unlimited` is supported.
+Exact and constrained planning checks every compiled demand against that
+domain. Open planning additionally requires authored open permission,
+`OPEN_REALIZATION`, and a non-empty typed apparatus domain. The selected
+realization-envelope configuration must repeat the exact typed domain from the
+compatible global declaration. Planning and runtime evaluation use only that
+intersection, preventing capability advertised for one backend mode from
+authorizing another mode.
+
+Every accepted result requires a `process-resource-limits` observation
+capability and a matching value-free runtime observation with configuration
+scope and `guest-observed` strength. This represents effective inside-workload
+readback. Desired-payload echo, runtime inspect output, VM allocation, cgroup
+capacity, or datastore `memory_locked` state is insufficient. Backends without
+both materialization and effective readback remain honestly unsupported.
+
+## Compute Kind And Realization Mechanism
+
+The canonical node kinds are `compute` and `switch`. `compute` describes what
+the scenario needs structurally; it does not select a virtual machine,
+container, physical device, or emulator. Mechanism intent is instead an
+addressed `compute-substrate` entry in `Scenario.realization.constraints`.
+Omitting that entry keeps the compute node portable. Exact and constrained
+entries retain their governed domain through instantiation, compilation, and a
+separate plan constraint; `supported_node_types` remains only the provisioner's
+resource-kind claim.
+
+Runtime selection is a separate observation. The backend must bind the observed
+governed mechanism to the operation, selected envelope, and configuration. A
+plan echo or provisioner handle is not evidence. OCI and libvirt modes use
+daemon readback; the in-process reference mode reports an extension term and is
+not presented as a second native isolation mechanism. The runtime gate rejects
+missing readback, weak evidence for bounded demand, envelope/domain mismatch,
+and unverified execution binding before snapshot persistence.
+
+Legacy `type: vm` is not treated as a generic compute alias. Strict authoring
+rejects it. Explicit migration preserves its historical exact meaning by
+emitting `type: compute`, an exact `virtual-machine` substrate constraint, and
+`legacy-node-type-vm` provenance; collisions are fatal.
 
 ## Scoped Default Cascade
 

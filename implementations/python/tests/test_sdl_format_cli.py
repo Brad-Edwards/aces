@@ -20,13 +20,16 @@ infrastructure:
 """
     )
 
-    assert result.content.startswith("name: migrate-me\nnodes:\n  web-app:\n    type: vm\n")
+    assert result.content.startswith("name: migrate-me\nnodes:\n  web-app:\n    type: compute\n")
     assert "username: operator" in result.content
     assert "count: 1" in result.content
+    assert "concern: compute-substrate" in result.content
+    assert "value: virtual-machine" in result.content
     assert [item.code for item in result.diagnostics] == [
         "sdl.noncanonical_field",
         "sdl.noncanonical_field",
         "sdl.noncanonical_field",
+        "sdl.legacy_node_type_vm",
     ]
 
 

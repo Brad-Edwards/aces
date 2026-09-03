@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "d4a810ad9cd6fabd884e7422e425b670cb5efa0e2652d34b9db1ebb8a3a8f74d",
+  "content_hash": "d8e5b7097a9d0c81b9154e1e6e54908a03e55664e7cbb6ad23d1160753c9493f",
   "last_change": {
-    "summary": "Added forwarding-agent ownership roles for issue #1043.",
-    "content_hash": "d4a810ad9cd6fabd884e7422e425b670cb5efa0e2652d34b9db1ebb8a3a8f74d"
+    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
+    "content_hash": "d8e5b7097a9d0c81b9154e1e6e54908a03e55664e7cbb6ad23d1160753c9493f"
   }
 }

@@ -59,7 +59,7 @@ these suites.
 Each scenario is tested for:
 1. Parse + validate success
 2. Infrastructure cross-reference integrity
-3. Non-trivial content (at least 1 VM)
+3. Non-trivial content (at least 1 compute node)
 
 ### Fuzz Tests (manual trigger only)
 

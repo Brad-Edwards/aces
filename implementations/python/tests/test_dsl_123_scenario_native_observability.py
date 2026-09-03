@@ -23,7 +23,7 @@ def _scenario(*, objective_target: str = OBSERVABILITY_REF, interaction_target: 
         name="dsl-123",
         nodes={
             "siem": {
-                "type": "vm",
+                "type": "compute",
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "services": [{"port": 80, "protocol": "tcp", "name": "http"}],
                 "runtime": {
