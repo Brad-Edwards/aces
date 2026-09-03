@@ -448,22 +448,21 @@ class LibvirtDeploymentDriver:
             return
         if native is None:
             self._filters.pop(address, None)
-            return
-        if _existing_uuid(native) != _filter_owner_uuid(address):
+        elif _existing_uuid(native) != _filter_owner_uuid(address):
             # A filter at this name we do not own must never be undefined.
             self._filters.pop(address, None)
-            return
-        # Best-effort cleanup of our own filter: a filter that cannot be undefined
-        # (in use, missing) must not fail the destroy.
-        try:
-            cast(_NativeResource, native).undefine()
-        except Exception as exc:
-            if _is_absence_error(exc):
-                self._filters.pop(address, None)
-            else:
-                _record_suppressed_failure("_undefine_nwfilter", exc)
         else:
-            self._filters.pop(address, None)
+            # Best-effort cleanup of our own filter: a filter that cannot be
+            # undefined (in use, missing) must not fail the destroy.
+            try:
+                cast(_NativeResource, native).undefine()
+            except Exception as exc:
+                if _is_absence_error(exc):
+                    self._filters.pop(address, None)
+                else:
+                    _record_suppressed_failure("_undefine_nwfilter", exc)
+            else:
+                self._filters.pop(address, None)
 
     def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
         removed = True

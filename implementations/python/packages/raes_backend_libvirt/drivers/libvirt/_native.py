@@ -65,16 +65,14 @@ def _error_code(exc: BaseException) -> int | None:
     int, yields None so callers treat it as an unclassified real failure.
     """
 
-    if not _is_libvirt_error(exc):
-        return None
-    try:
-        getter = getattr(exc, "get_error_code", None)
-        if not callable(getter):
-            return None
-        code = getter()
-    except Exception as classifier_error:
-        _record_suppressed_failure("_error_code", classifier_error)
-        return None
+    code: object | None = None
+    if _is_libvirt_error(exc):
+        try:
+            getter = getattr(exc, "get_error_code", None)
+            if callable(getter):
+                code = getter()
+        except Exception as classifier_error:
+            _record_suppressed_failure("_error_code", classifier_error)
     return code if isinstance(code, int) else None
 
 

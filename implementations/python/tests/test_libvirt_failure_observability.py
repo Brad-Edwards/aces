@@ -207,17 +207,21 @@ def test_find_native_does_not_misclassify_a_foreign_code_bearing_exception() -> 
     def foreign_absence(_name: str) -> object:
         raise _ForeignCodeError(42)
 
+    connection = SimpleNamespace(lookupByName=foreign_absence)
+
     with pytest.raises(_native._NativeLookupError):
-        _native._find_native(SimpleNamespace(lookupByName=foreign_absence), "lookupByName", "missing")
+        _native._find_native(connection, "lookupByName", "missing")
 
 
 def test_find_native_rejects_another_native_resource_type_absence() -> None:
     def network_absence_during_domain_lookup(_name: str) -> object:
         raise _NativeError(43)
 
+    connection = SimpleNamespace(lookupByName=network_absence_during_domain_lookup)
+
     with pytest.raises(_native._NativeLookupError):
         _native._find_native(
-            SimpleNamespace(lookupByName=network_absence_during_domain_lookup),
+            connection,
             "lookupByName",
             "missing",
         )
@@ -227,8 +231,10 @@ def test_stop_native_does_not_tolerate_a_foreign_operation_invalid_code() -> Non
     def foreign_inactive() -> None:
         raise _ForeignCodeError(55)
 
+    native = SimpleNamespace(destroy=foreign_inactive)
+
     with pytest.raises(_ForeignCodeError):
-        _native._stop_native(SimpleNamespace(destroy=foreign_inactive))
+        _native._stop_native(native)
 
 
 def test_resolve_by_name_records_non_absence_failure(caplog: pytest.LogCaptureFixture) -> None:
@@ -312,9 +318,11 @@ def test_name_availability_does_not_treat_a_foreign_code_bearing_exception_as_ab
     def foreign_absence(_name: str) -> object:
         raise _ForeignCodeError(42)
 
+    connection = SimpleNamespace(lookupByName=foreign_absence)
+
     with pytest.raises(_ForeignCodeError):
         _ensure_name_available(
-            SimpleNamespace(lookupByName=foreign_absence),
+            connection,
             "lookupByName",
             "raestest-web",
             "provision.node.web",
@@ -325,9 +333,11 @@ def test_name_availability_rejects_another_native_resource_type_absence() -> Non
     def domain_absence_during_network_lookup(_name: str) -> object:
         raise _NativeError(42)
 
+    connection = SimpleNamespace(networkLookupByName=domain_absence_during_network_lookup)
+
     with pytest.raises(_NativeError):
         _ensure_name_available(
-            SimpleNamespace(networkLookupByName=domain_absence_during_network_lookup),
+            connection,
             "networkLookupByName",
             "raestest-lan",
             "provision.network.lan",
