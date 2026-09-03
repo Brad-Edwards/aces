@@ -172,6 +172,7 @@ _EXISTING_CONCERNS_BY_FIELD: dict[str, tuple[str, ...]] = {
     "forwarding_agents": ("forwarding-agents",),
 }
 _DELEGATED_PATHS = {
+    "environment_files": ("generated-artifact-output",),
     "mounts": ("source_kind:volume", "source_kind:image"),
 }
 _OBSERVATION_ONLY_PATHS = {
@@ -214,6 +215,8 @@ def runtime_configuration_boundary_inventory() -> tuple[RuntimeFieldBoundary, ..
         concerns_by_field[field] = (*concerns_by_field.get(field, ()), profile.concern_kind)
     for field, kinds in _EXISTING_CONCERNS_BY_FIELD.items():
         concerns_by_field[field] = (*concerns_by_field.get(field, ()), *kinds)
+    for field in _DELEGATED_PATHS:
+        concerns_by_field.setdefault(field, ())
     expected = tuple(RuntimeConfiguration.model_fields)
     if set(concerns_by_field) != set(expected):
         raise RuntimeError("RuntimeConfiguration concern inventory is incomplete or contains excess fields")
@@ -223,17 +226,23 @@ def runtime_configuration_boundary_inventory() -> tuple[RuntimeFieldBoundary, ..
             concern_kinds=concerns_by_field[field],
             semantic_owner=(
                 "canonical-runtime-realization-concern+existing-resource-owner"
+                if concerns_by_field[field] and field in _DELEGATED_PATHS
+                else "existing-resource-owner"
                 if field in _DELEGATED_PATHS
                 else "canonical-runtime-realization-concern"
             ),
             enforcement_status=(
-                "registered-with-delegated-and-observation-only-paths"
-                if field in _DELEGATED_PATHS and field in _OBSERVATION_ONLY_PATHS
-                else "registered-with-delegated-paths"
-                if field in _DELEGATED_PATHS
-                else "registered-with-observation-only-paths"
-                if field in _OBSERVATION_ONLY_PATHS
-                else "registered-fail-closed"
+                "delegated-to-existing-owner"
+                if not concerns_by_field[field] and field in _DELEGATED_PATHS
+                else (
+                    "registered-with-delegated-and-observation-only-paths"
+                    if field in _DELEGATED_PATHS and field in _OBSERVATION_ONLY_PATHS
+                    else "registered-with-delegated-paths"
+                    if field in _DELEGATED_PATHS
+                    else "registered-with-observation-only-paths"
+                    if field in _OBSERVATION_ONLY_PATHS
+                    else "registered-fail-closed"
+                )
             ),
             delegated_paths=_DELEGATED_PATHS.get(field, ()),
             observation_only_paths=_OBSERVATION_ONLY_PATHS.get(field, ()),

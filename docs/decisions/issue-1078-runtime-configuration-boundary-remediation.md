@@ -7,7 +7,7 @@ capability-gated.
 
 ## Gap Claim
 
-`RuntimeConfiguration` exposes 31 top-level authoring dimensions, but the
+`RuntimeConfiguration` exposes 32 top-level authoring dimensions, but the
 canonical SEM-218 concern registry previously covered four roots and three
 partial roots. An author could therefore assign posture to a valid runtime
 field without that posture reaching compiled requirements, resolved plan
@@ -41,8 +41,11 @@ same support-declaration and envelope paths. A returned plan echo without a
 matching concern observation is rejected before snapshot persistence.
 
 The executable inventory records the canonical concern owner, delegated paths,
-observation-only paths, and enforcement status for all 31 fields. Volume and
-image mounts retain their stateful-resource/content owners. Native process,
+observation-only paths, and enforcement status for all 32 fields. Volume and
+image mounts retain their stateful-resource/content owners. The
+`environment_files` field synchronized from issue #1074 remains delegated to
+the generated-artifact concern and its exact environment-consumer delivery
+binding instead of duplicating that authority as a runtime concern. Native process,
 package, file, account, unit, dependency, and apparatus inventory remains
 outside a concern unless the backend selects the scenario-significant managed
 subset for that concern.
@@ -105,7 +108,7 @@ scope, and strength.
 
 ## Verification Contract
 
-Conformance tests assert the 31-field partition, unique paths and kinds,
+Conformance tests assert the 32-field partition, unique paths and kinds,
 exact/constrained/open capability behavior for every generic runtime concern,
 closed-authority excess rejection, observation-only explicitness isolation,
 closed observed shapes, stable collection ordering, sensitive-value

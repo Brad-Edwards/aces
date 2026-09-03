@@ -11,6 +11,7 @@ from pydantic_core import CoreSchema
 from ..artifact_requirements import ArtifactMechanismCapability
 from ..operating_systems import OS_VERSION_PATTERN, validate_operating_system_pair
 from ..vocabulary import (
+    GeneratedArtifactDeliveryMode,
     GeneratedArtifactKind,
     ObservationStrength,
     ProcessResourceLimitKind,
@@ -73,11 +74,14 @@ def _validate_operating_system_rows(model: ProvisionerCapabilitiesModel) -> None
         )
 
 
-def _validate_feature_coupling(model: ProvisionerCapabilitiesModel) -> None:
+def _validate_account_feature_coupling(model: ProvisionerCapabilitiesModel) -> None:
     if model.supports_accounts and not model.supported_account_features:
         raise ValueError("provisioners that support accounts must declare supported_account_features")
     if not model.supports_accounts and model.supported_account_features:
         raise ValueError("supported_account_features require supports_accounts=true")
+
+
+def _validate_generated_artifact_kind_coupling(model: ProvisionerCapabilitiesModel) -> None:
     if len(model.supported_generated_artifact_kinds) != len(set(model.supported_generated_artifact_kinds)):
         raise ValueError("supported_generated_artifact_kinds must not contain duplicates")
     if model.supports_generated_artifacts and not model.supported_generated_artifact_kinds:
@@ -86,6 +90,21 @@ def _validate_feature_coupling(model: ProvisionerCapabilitiesModel) -> None:
         )
     if not model.supports_generated_artifacts and model.supported_generated_artifact_kinds:
         raise ValueError("supported_generated_artifact_kinds require supports_generated_artifacts=true")
+
+
+def _validate_generated_artifact_delivery_coupling(model: ProvisionerCapabilitiesModel) -> None:
+    if len(model.supported_generated_artifact_delivery_modes) != len(
+        set(model.supported_generated_artifact_delivery_modes)
+    ):
+        raise ValueError("supported_generated_artifact_delivery_modes must not contain duplicates")
+    if not model.supports_generated_artifacts and model.supported_generated_artifact_delivery_modes:
+        raise ValueError("supported_generated_artifact_delivery_modes require supports_generated_artifacts=true")
+
+
+def _validate_feature_coupling(model: ProvisionerCapabilitiesModel) -> None:
+    _validate_account_feature_coupling(model)
+    _validate_generated_artifact_kind_coupling(model)
+    _validate_generated_artifact_delivery_coupling(model)
 
 
 class ProvisionerCapabilitiesModel(ContractModel):
@@ -103,6 +122,10 @@ class ProvisionerCapabilitiesModel(ContractModel):
     supports_accounts: bool = False
     supports_generated_artifacts: bool = False
     supported_generated_artifact_kinds: list[GeneratedArtifactKind] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_generated_artifact_delivery_modes: list[GeneratedArtifactDeliveryMode] = Field(
         default_factory=list,
         json_schema_extra={"uniqueItems": True},
     )

@@ -34,7 +34,7 @@ explicit and must not weaken the concern's explicitness classification.
 
 ## Complete `RuntimeConfiguration` Inventory
 
-The current model has 31 top-level fields. In the status column, **registered**
+The current model has 32 top-level fields. In the status column, **registered**
 means the canonical descriptor exists; it does not mean either in-repository
 backend materializes or independently verifies the concern. **Partial** means
 only the named child/source kinds are covered. **Absent** means author posture
@@ -47,6 +47,7 @@ does not currently reach a SEM-218 concern.
 | `local_control_interfaces` | Path-local API shell in ADR-051; ADR-056 owns path sensitivity. Orchestration authority owns what the holder may do. | **Absent.** | Direct presence/configuration concern keyed by `control_interface_id`. It must not absorb orchestration authority or native socket handles. |
 | `processes` | Supervised/load-bearing process identity; ADR-027 distinguishes container init, ADR-030/issue #1066 use it as a selector, ADR-035 distinguishes unit lifecycle. | **Absent.** | Direct concern for authored process identity/state, scoped to scenario-significant processes. Incidental daemons and raw process scans stay substrate/evidence. Ephemeral PID or inspection provenance must either be an explicit realizable steady-state fact or leave the authoring surface; it cannot be ignored. |
 | `environment` | Runtime environment contract; ADR-056/057 own value classification and secret boundaries. | **Registered:** `runtime-environment`. | Keep the existing concern and commitment projection. Add honest backend materialization/readback; protected values prove posture/presence, not raw-value equality. |
+| `environment_files` | Generated-artifact output delivery introduced by issue #1074; the generated artifact and its derived environment consumer own materialization. | **Delegated:** covered by the generated-artifact concern and provisioner delivery-mode admission. | Retain the node-side value-free binding, but do not create a second runtime concern for the same generated output. The generated-artifact owner pins artifact, output, target node, and environment-file identity. |
 | `linux_capabilities` | ADR-030 capability policy, including process-scoped overrides. | **Registered:** `linux-capabilities`. | Keep the existing family projection and process-selector semantics. It is not equivalent to `container.privileged`. Require effective guest/runtime readback for claims. |
 | `operational_policy` | Restart/capacity policy; issue #1066 separately owns process resource limits. | **Partial:** only `resource_limits.process_limits` is `process-resource-limits`. | Split along existing meanings: restart policy, node/container capacity (`memory`, `memory_swap`, `cpu`, `pids`), and process limits are separate concern families. Do not make one weakest-child aggregate or duplicate process-limit bounds. |
 | `container` | ADR-027 init/PID-1; ADR-028 seccomp/security options; ADR-023 keeps image defaults distinct. | **Absent.** | Split portable launch, namespace, filesystem/security, device, resolver, and engine-selection concerns where their admission/readback domains differ. Backend-native options use bounded typed capability/envelope admission. Do not register the entire object as one concern. |
@@ -295,7 +296,7 @@ duplicate rejection, exact missing/substitution/excess, typed constrained
 bounds, open envelope membership, and secret-bearing fixtures require explicit
 cases.
 
-An executable inventory assertion should keep the 31 top-level runtime fields
+An executable inventory assertion should keep the 32 top-level runtime fields
 partitioned exactly once among registered, delegated, and observation-only
 dispositions so a future `RuntimeConfiguration` field cannot silently bypass
 SEM-218.

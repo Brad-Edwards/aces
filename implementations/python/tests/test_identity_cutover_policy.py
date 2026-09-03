@@ -443,5 +443,5 @@ def test_repository_changelog_is_bound_as_generated_release_history() -> None:
 
 
 def test_identity_cutover_check_is_registered_in_canonical_policy_graph() -> None:
-    noxfile_source = (REPO_ROOT / "noxfile.py").read_text(encoding="utf-8")
-    assert '"tools/check_identity_cutover.py"' in noxfile_source
+    policy_lane_source = (REPO_ROOT / "tools" / "nox_support" / "policy_lanes.py").read_text(encoding="utf-8")
+    assert '"tools/check_identity_cutover.py"' in policy_lane_source

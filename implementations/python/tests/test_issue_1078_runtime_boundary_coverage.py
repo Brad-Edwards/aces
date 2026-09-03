@@ -38,13 +38,19 @@ def _runtime_descriptors():
     )
 
 
-def test_runtime_boundary_inventory_partitions_all_31_fields_once() -> None:
+def test_runtime_boundary_inventory_partitions_all_32_fields_once() -> None:
     inventory = runtime_configuration_boundary_inventory()
 
     assert tuple(item.field_name for item in inventory) == tuple(RuntimeConfiguration.model_fields)
-    assert len(inventory) == 31
+    assert len(inventory) == 32
     assert all(item.concern_kinds or item.delegated_paths or item.observation_only_paths for item in inventory)
-    assert all(item.semantic_owner and item.enforcement_status.startswith("registered") for item in inventory)
+    assert all(
+        item.semantic_owner
+        and (
+            item.enforcement_status.startswith("registered") or item.enforcement_status == "delegated-to-existing-owner"
+        )
+        for item in inventory
+    )
 
     descriptors = _runtime_descriptors()
     descriptor_kinds = {descriptor.concern_kind for descriptor in descriptors}
@@ -66,6 +72,8 @@ def test_mixed_runtime_dimensions_are_split_at_typed_semantic_boundaries() -> No
         "published-ports",
     )
     assert inventory["mounts"].delegated_paths == ("source_kind:volume", "source_kind:image")
+    assert inventory["environment_files"].concern_kinds == ()
+    assert inventory["environment_files"].delegated_paths == ("generated-artifact-output",)
     assert "run_state" in inventory["scheduled_jobs"].observation_only_paths
     assert "realized_children" in inventory["orchestration_authorities"].observation_only_paths
 
