@@ -95,15 +95,11 @@ def observation_posture_supported(
     requirement: CompiledRealizationRequirement,
     declaration: RealizationSupportDeclaration,
 ) -> bool:
-    if requirement.requirement_kind in (
-        {"compute-substrate"} | OPERATING_SYSTEM_REQUIREMENT_KINDS
-    ) and requirement.explicitness in {
+    if requirement.requirement_kind == "compute-substrate" and requirement.explicitness in {
         ExplicitnessClass.OPEN,
         ExplicitnessClass.CONSTRAINED,
     }:
         supported = requirement.requirement_kind in declaration.supported_constraint_kinds
-    elif requirement.requirement_kind != "process-resource-limits":
-        supported = DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
     elif requirement.explicitness is ExplicitnessClass.OPEN:
         supported = declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION
     elif requirement.explicitness is ExplicitnessClass.CONSTRAINED:

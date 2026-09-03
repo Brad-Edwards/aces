@@ -15,8 +15,13 @@ import pytest
 from jsonschema import Draft202012Validator
 from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
 from raes_backend_stubs.stubs import create_stub_manifest
+from raes_contracts.apparatus import RealizationObservationCapability
 from raes_contracts.contracts import schema_bundle
-from raes_contracts.vocabulary import GeneratedArtifactDeliveryMode
+from raes_contracts.vocabulary import (
+    GeneratedArtifactDeliveryMode,
+    ObservationStrength,
+    RealizationVerificationScope,
+)
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import plan
 from raes_processor.semantics.realization import project_realization_concern
@@ -61,6 +66,29 @@ _ENV_SCALAR = """
   value_classification: redacted
   provenance: runtime
 """
+
+
+def _environment_capable_manifest():
+    manifest = create_stub_manifest()
+    declaration = manifest.realization_support[0]
+    return replace(
+        manifest,
+        realization_support=(
+            replace(
+                declaration,
+                supported_exact_requirement_kinds=(
+                    declaration.supported_exact_requirement_kinds | {"runtime-environment"}
+                ),
+                observation_capabilities={
+                    **declaration.observation_capabilities,
+                    "runtime-environment": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.CONFIGURATION,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                },
+            ),
+        ),
+    )
 
 
 # --- model / parse layer -----------------------------------------------------
@@ -269,7 +297,7 @@ def test_composed_environment_consumer_admits_namespaced_node(tmp_path: Path):
         encoding="utf-8",
     )
 
-    execution = plan(compile_runtime_model(parse_sdl_file(root)), create_stub_manifest())
+    execution = plan(compile_runtime_model(parse_sdl_file(root)), _environment_capable_manifest())
 
     assert execution.is_valid, [diagnostic.message for diagnostic in execution.diagnostics]
     artifact = execution.model.generated_artifacts["provision.generated-artifact.shared.api-key"]
@@ -281,7 +309,7 @@ def test_composed_environment_consumer_admits_namespaced_node(tmp_path: Path):
 
 def test_backend_without_environment_delivery_mode_rejects_binding():
     scenario = parse_sdl(_scenario(environment=_ENV_SCALAR))
-    manifest = create_stub_manifest()
+    manifest = _environment_capable_manifest()
     mount_only = replace(
         manifest,
         capabilities=replace(
@@ -300,7 +328,7 @@ def test_backend_without_environment_delivery_mode_rejects_binding():
 
 def test_backend_with_environment_delivery_mode_admits_binding():
     scenario = parse_sdl(_scenario(environment=_ENV_SCALAR))
-    execution = plan(compile_runtime_model(scenario), create_stub_manifest())
+    execution = plan(compile_runtime_model(scenario), _environment_capable_manifest())
     assert execution.is_valid, [d.code for d in execution.diagnostics]
 
 

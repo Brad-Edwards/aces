@@ -58,6 +58,9 @@ def _manifest(scope: RealizationVerificationScope):
         realization_support=(
             replace(
                 declaration,
+                supported_exact_requirement_kinds=(
+                    declaration.supported_exact_requirement_kinds | {"forwarding-agents"}
+                ),
                 observation_capabilities={
                     "forwarding-agents": RealizationObservationCapability(
                         verification_scope=scope,

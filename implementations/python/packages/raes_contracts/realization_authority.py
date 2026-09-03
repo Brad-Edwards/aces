@@ -19,6 +19,9 @@ from .planning import (
 )
 
 _MISSING_REALIZATION_SELECTION = object()
+_CLOSED_NEUTRAL_VALUES_BY_REQUIREMENT_KIND = {
+    "runtime-restart-policy": frozenset({"unknown"}),
+}
 
 
 def _planned_pointer_value(value: object, pointer: str) -> object:
@@ -145,7 +148,13 @@ def _planned_selection_is_invalid(selected: object, authority: ResolvedRealizati
     invalid = False
     if selected is not _MISSING_REALIZATION_SELECTION:
         if authority.mode is RealizationAuthorityMode.CLOSED:
-            invalid = selected not in (None, "", [], {})
+            typed_neutral_values = _CLOSED_NEUTRAL_VALUES_BY_REQUIREMENT_KIND.get(
+                authority.requirement_kind,
+                frozenset(),
+            )
+            invalid = selected not in (None, "", [], {}) and not any(
+                selected == value for value in typed_neutral_values
+            )
         elif authority.mode is RealizationAuthorityMode.CONSTRAINED:
             invalid = any(
                 (value := _planned_bound_value(selected, authority, bound)) is _MISSING_REALIZATION_SELECTION
