@@ -219,14 +219,16 @@ def _enforcement_status(field: str, concern_kinds: tuple[str, ...]) -> str:
     delegated = field in _DELEGATED_PATHS
     observation_only = field in _OBSERVATION_ONLY_PATHS
     if delegated and not concern_kinds:
-        return "delegated-to-existing-owner"
-    if delegated and observation_only:
-        return "registered-with-delegated-and-observation-only-paths"
-    if delegated:
-        return "registered-with-delegated-paths"
-    if observation_only:
-        return "registered-with-observation-only-paths"
-    return "registered-fail-closed"
+        status = "delegated-to-existing-owner"
+    elif delegated and observation_only:
+        status = "registered-with-delegated-and-observation-only-paths"
+    elif delegated:
+        status = "registered-with-delegated-paths"
+    elif observation_only:
+        status = "registered-with-observation-only-paths"
+    else:
+        status = "registered-fail-closed"
+    return status
 
 
 def _runtime_field_boundary(
