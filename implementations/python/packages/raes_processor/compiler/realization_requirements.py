@@ -39,6 +39,8 @@ from .addresses import (
     _persistent_volume_address,
 )
 from .realization_authority_posture import designated_registered_posture, explicit_registered_posture
+from .realization_concern_binding import realization_requirement_address
+from .realization_concern_explicitness import semantic_explicitness_record
 from .realization_value_domains import compiled_os_value_domain, nested_authored_value
 
 
@@ -164,22 +166,6 @@ def _append_action_source_artifact_requirements(
                 )
 
 
-def _realization_requirement_address(
-    scenario: InstantiatedScenario,
-    *,
-    section_name: str,
-    declaration_name: str,
-) -> str:
-    """Resolve the compiled resource address for a realization-concern path."""
-
-    if section_name == "nodes" and declaration_name in scenario.nodes:
-        node = scenario.nodes[declaration_name]
-        return _network_address(declaration_name) if node.type == NodeType.SWITCH else _node_address(declaration_name)
-    if section_name == "content" and declaration_name in scenario.content:
-        return _content_address(declaration_name)
-    raise ValueError("realization concern must resolve to one compiled resource address")
-
-
 def _append_domain_topology_requirements(
     requirements: list[CompiledRealizationRequirement],
     domain_analysis: DomainTopologyAnalysis,
@@ -284,7 +270,11 @@ def _compiled_registered_realization(
     declaration_name = registered.declaration_name
     encoded_name = declaration_name.replace("~", "~0").replace("/", "~1")
     field_pointer = f"/{section_name}/{encoded_name}/{'/'.join(descriptor.authored_path)}"
-    record = explicitness.get(registered.field_path)
+    record = semantic_explicitness_record(
+        explicitness,
+        field_path=registered.field_path,
+        excluded_fields=descriptor.explicitness_excluded_fields,
+    )
     declarations = getattr(scenario, section_name)
     authored_value = nested_authored_value(
         declarations[declaration_name],
@@ -316,7 +306,7 @@ def _compiled_registered_realization(
             declaration_name=declaration_name,
         )
     )
-    address = _realization_requirement_address(
+    address = realization_requirement_address(
         scenario,
         section_name=section_name,
         declaration_name=declaration_name,

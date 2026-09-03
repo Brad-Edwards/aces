@@ -291,6 +291,28 @@ explicitness metadata is added to plan payloads or published contracts, it must
 go through the existing `ContractModel` / schema-generation path; otherwise keep
 it model-side like existing compiler provenance metadata.
 
+## Complete Runtime-Configuration Coverage
+
+Every top-level `RuntimeConfiguration` field has an executable ownership and
+enforcement disposition. The canonical concern registry splits mixed runtime
+objects at semantic boundaries, carries those paths through compiled and
+resolved authority, and validates returned values against the owning closed SDL
+type. Configuration concerns exclude readiness, run outcomes, live counters,
+loaded state, evidence references, and similar observations before posture is
+classified.
+
+Exact runtime support is concern-specific: a backend needs the generic exact
+capability, the exact concern-kind token, and a matching observation
+capability. Open and constrained concerns use the same manifest and envelope
+admission path. None of those declarations replaces independent readback, and
+a backend must remain unsupported when it can only echo submitted plan values.
+
+Closed collection authority applies to the scenario-significant managed
+projection, not the complete native operating-system inventory. Base-image
+packages, transitive dependencies, incidental daemons, native handles, and
+measurement apparatus remain on their existing substrate or evidence owners
+unless deliberately promoted into the corresponding runtime concern.
+
 ## Gotchas And Anti-Patterns
 
 Avoid:
