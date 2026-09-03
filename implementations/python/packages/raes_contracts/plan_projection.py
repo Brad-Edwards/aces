@@ -20,18 +20,28 @@ from __future__ import annotations
 
 from typing import Any
 
+from ._canonical import canonical_json_digest
 from .contracts import (
     EvaluationPlanModel,
     OrchestrationPlanModel,
     PlanOperationModel,
     ProvisioningPlanModel,
+    RealizationAuthorityBoundModel,
+    ResolvedRealizationAuthorityModel,
 )
 from .diagnostics import Diagnostic, diagnostic_payload
-from .planning import EvaluationPlan, OrchestrationPlan, PlanOperation, ProvisioningPlan
+from .planning import (
+    EvaluationPlan,
+    OrchestrationPlan,
+    PlanOperation,
+    ProvisioningPlan,
+    ResolvedRealizationAuthority,
+)
 
 __all__ = [
     "evaluation_plan_model",
     "orchestration_plan_model",
+    "provisioning_plan_digest",
     "provisioning_plan_model",
 ]
 
@@ -51,14 +61,60 @@ def _diagnostic_payloads(diagnostics: list[Diagnostic]) -> list[dict[str, Any]]:
     return [diagnostic_payload(diagnostic) for diagnostic in diagnostics]
 
 
+def _realization_authority_model(
+    authority: ResolvedRealizationAuthority,
+) -> ResolvedRealizationAuthorityModel:
+    return ResolvedRealizationAuthorityModel(
+        address=authority.address,
+        field_path=authority.field_path,
+        domain=authority.domain,
+        requirement_kind=authority.requirement_kind,
+        payload_pointer=authority.payload_pointer,
+        mode=authority.mode,
+        source=authority.source,
+        provenance=authority.provenance,
+        governing_scope=authority.governing_scope,
+        bounds=[
+            RealizationAuthorityBoundModel(
+                value_pointer=bound.value_pointer,
+                domain=bound.domain,
+                identity_digest=bound.identity_digest,
+            )
+            for bound in authority.bounds
+        ],
+        verification_scope=authority.verification_scope,
+        required_observation_strength=authority.required_observation_strength,
+    )
+
+
 def provisioning_plan_model(plan: ProvisioningPlan) -> ProvisioningPlanModel:
     """Project a provisioning plan into its published contract model."""
 
     return ProvisioningPlanModel(
         operations=[_plan_operation_model(operation) for operation in plan.operations],
         diagnostics=_diagnostic_payloads(plan.diagnostics),
+        realization_authority=[_realization_authority_model(entry) for entry in plan.realization_authority],
         realization_envelope=plan.realization_envelope,
+        realization_constraints=[
+            {
+                "address": item.address,
+                "field_path": item.field_path,
+                "concern": item.concern,
+                "posture": item.posture,
+                "value_domain": item.value_domain,
+                "governing_scope": item.governing_scope,
+                "provenance": item.provenance,
+            }
+            for item in plan.realization_constraints
+        ],
+        operation_id=plan.operation_id,
     )
+
+
+def provisioning_plan_digest(plan: ProvisioningPlan) -> str:
+    """Return the immutable digest used to resolve a trusted planner artifact."""
+
+    return canonical_json_digest(provisioning_plan_model(plan).model_dump(mode="json", exclude_none=True))
 
 
 def orchestration_plan_model(plan: OrchestrationPlan) -> OrchestrationPlanModel:

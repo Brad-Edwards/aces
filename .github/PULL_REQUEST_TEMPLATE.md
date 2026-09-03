@@ -1,20 +1,22 @@
-## Summary
+## Plain-language summary
 
-<!-- Brief description of changes -->
+- **Context:** <!-- What a reviewer needs to know before evaluating this change. -->
+- **Problem:** <!-- The concrete defect, gap, or unmet need. -->
+- **Fix:** <!-- What this pull request changes and why it solves the problem. -->
 
-## Related issues
+## Issue tracking
 
-<!-- Link to GitHub issues: Closes #XX -->
+<!-- Use one route. Keep the former heading "Issues closed" only on existing PRs.
+For tracked work, add one standalone line per open same-repository issue:
+Closes #N
+For a small docs fix, typo, or narrow test improvement without an issue, add:
+No issue: Briefly explain why separate issue tracking is unnecessary.
+-->
 
-## Changes
+## Verification
 
--
-
-## Test plan
-
-- [ ] Relevant tests pass
-- [ ] The canonical `nox -s verify` gate passes, or unchecked sessions are listed below
-- [ ] The docs gate passes when public documentation changed
+<!-- Record commands and outcomes, or a substantive reason a check was not run. -->
+- `command`: passed
 
 ## Checklist
 

@@ -320,12 +320,21 @@ class ParticipantInteractionDeclaration(SDLModel):
     rationale: str
     related_actions: list[str] = Field(default_factory=list)
     shared_state_refs: list[str] = Field(default_factory=list)
+    commutative: bool = False
+    merge_rule_ref: str | None = None
 
     @field_validator("target", "rationale")
     @classmethod
     def _require_non_empty(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("participant interaction fields must be non-empty")
+        return value
+
+    @field_validator("merge_rule_ref")
+    @classmethod
+    def _require_non_empty_merge_rule(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("participant interaction merge_rule_ref must be non-empty")
         return value
 
     @field_validator("related_actions", "shared_state_refs")
@@ -338,6 +347,8 @@ class ParticipantInteractionDeclaration(SDLModel):
 
     @model_validator(mode="after")
     def _validate_sem209_class_payload(self) -> "ParticipantInteractionDeclaration":
+        if self.commutative and self.merge_rule_ref is not None:
+            raise ValueError("participant interaction must declare commutativity or a merge rule, not both")
         if (
             self.interaction_class
             in {

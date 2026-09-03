@@ -33,7 +33,7 @@ def test_cli_emits_published_evidence_and_is_deterministic(tmp_path: Path) -> No
 variables:
   platform: {type: string, allowed_values: [windows, linux], required: true}
 nodes:
-  target: {type: vm, os: "${platform}"}
+  target: {type: compute, os: "${platform}"}
 """,
         encoding="utf-8",
     )
@@ -55,7 +55,7 @@ def test_cli_evidence_is_stable_across_python_hash_seeds(tmp_path: Path) -> None
 variables:
   platform: {type: string, allowed_values: [windows, linux], required: true}
 nodes:
-  target: {type: vm, os: "${platform}"}
+  target: {type: compute, os: "${platform}"}
 """,
         encoding="utf-8",
     )
@@ -91,7 +91,7 @@ variables:
   count: {type: integer, allowed_values: [1, 2], required: true}
 nodes:
   target:
-    type: vm
+    type: compute
     resources: {ram: 1 gib, cpu: "${count}"}
 """,
         encoding="utf-8",

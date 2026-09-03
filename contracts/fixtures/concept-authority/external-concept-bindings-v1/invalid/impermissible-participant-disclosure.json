@@ -10,7 +10,7 @@
         "owning_contract_id": "sdl-authoring-input-v1",
         "lifecycle_phase": "normalized-authoring",
         "canonical_ref": "nodes.web",
-        "artifact_digest": "sha256:afa997b3314b5f2a69c31b494ba9f39a207213ba1c65c51786fe84040c605455"
+        "artifact_digest": "sha256:0127e45974ffb188d44e2601d9cce62fe29303c68a159be8c5010e892039e47b"
       },
       "scheme": {
         "scheme_id": "nist-csf-defensive-categories",

@@ -9,10 +9,10 @@ from uuid import uuid4
 
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
-from raes_contracts.planning import RuntimeDomain
+from raes_contracts.planning import ProvisioningPlan, RuntimeDomain
 from raes_contracts.runtime_state import ApplyResult, OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
 
-from .backend_calls import _call_backend_apply
+from .backend_calls import _call_backend_apply, _RealizationApplyContext
 from .control_plane_store import ControlPlaneOperationRecord
 
 
@@ -239,6 +239,15 @@ def execute_operation(
         snapshot,
         address=request.address,
         snapshot=snapshot,
+        operation_id=operation_id,
+        realization=(
+            _RealizationApplyContext(
+                plan=request.plan,
+                manifest=control_plane._target.manifest,
+            )
+            if isinstance(request.plan, ProvisioningPlan)
+            else None
+        ),
         information_state_context_resolver=getattr(
             control_plane,
             "_information_state_context_resolver",

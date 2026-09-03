@@ -1,0 +1,28 @@
+"""Public contract exports for source-neutral candidate synthesis."""
+
+CANDIDATE_SYNTHESIS_EXPORTS = [
+    "SDL_CANDIDATE_SYNTHESIS_INPUT_SCHEMA_VERSION",
+    "SDL_CANDIDATE_SYNTHESIS_PROFILE_SCHEMA_VERSION",
+    "SDL_CANDIDATE_SYNTHESIS_RECORD_SCHEMA_VERSION",
+    "CandidateSynthesisAssumptionModel",
+    "CandidateSynthesisChoiceModel",
+    "CandidateSynthesisConstructTraceModel",
+    "CandidateSynthesisContributionModel",
+    "CandidateSynthesisDecisionModel",
+    "CandidateSynthesisDisposition",
+    "CandidateSynthesisInputModel",
+    "CandidateSynthesisProfileCoordinateModel",
+    "CandidateSynthesisProfileDefinitionModel",
+    "CandidateSynthesisReason",
+    "CandidateSynthesisRecordModel",
+    "CandidateSynthesisSourceModel",
+    "CandidateSynthesisTargetModel",
+    "ConceptSourceAssertionModel",
+    "ExampleSourceAssertionModel",
+    "OrderingSourceAssertionModel",
+    "ParameterizationSourceAssertionModel",
+    "PreconditionSourceAssertionModel",
+    "RelationshipSourceAssertionModel",
+    "SourceAssertion",
+    "SynthesisContributionKind",
+]

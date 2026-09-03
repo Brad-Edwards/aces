@@ -3,9 +3,7 @@
 from collections.abc import Iterable
 from enum import Enum
 
-from pydantic import Field, GetJsonSchemaHandler, ValidationInfo, field_validator, model_validator
-from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import CoreSchema
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from . import runtime_app_authorization as _runtime_app_authorization
 from . import runtime_application as _runtime_application
@@ -46,6 +44,13 @@ from .runtime_container import (
     RuntimeNamespaceConfiguration,
     RuntimeNetworkNamespace,
 )
+from .runtime_environment import (
+    GeneratedArtifactValueSource,
+    RuntimeEnvironmentFile,
+    RuntimeEnvironmentValueClassification,
+    RuntimeEnvironmentVariable,
+    RuntimeEnvironmentVariableProvenance,
+)
 from .runtime_filesystem import (
     RuntimeFilesystemEntry,
     RuntimeFilesystemEntryType,
@@ -53,11 +58,6 @@ from .runtime_filesystem import (
     RuntimeFilesystemStability,
     RuntimeMountPropagation,
     RuntimeSensitivityClassification,
-)
-from .runtime_generated_value import (
-    GeneratedArtifactValueSource,
-    RuntimeEnvironmentFile,
-    value_from_schema_exclusions,
 )
 from .runtime_identity import (
     RuntimeIdentityProvenance,
@@ -81,6 +81,12 @@ from .runtime_network import (
     RuntimeNetworkRealization,
     RuntimePublishedPort,
 )
+from .runtime_resource_limits import (
+    RuntimeProcessLimitResource,
+    RuntimeProcessLimitScope,
+    RuntimeProcessResourceLimit,
+    reject_duplicate_process_resource_limits,
+)
 from .runtime_service_units import (
     ServiceManagerKind,
     ServiceManagerUnit,
@@ -99,7 +105,7 @@ from .runtime_software import (
     RuntimeSoftwareComponentType,
 )
 from .runtime_values import absolute_path_or_var as _abs_path_or_var
-from .runtime_values import enforce_observed_value_redaction, parse_ram
+from .runtime_values import parse_ram
 from .runtime_values import parse_runtime_enum_or_var as _parse_runtime_enum_or_var
 
 _RUNTIME_SERVICE_FAMILY_EXPORTS = install_runtime_service_family_exports(globals())
@@ -142,6 +148,9 @@ __all__ = [
     "RuntimePackage",
     "RuntimeProcessCapabilityOverride",
     "RuntimeProcessIdentity",
+    "RuntimeProcessLimitResource",
+    "RuntimeProcessLimitScope",
+    "RuntimeProcessResourceLimit",
     "RuntimeProcessRole",
     "RuntimePublishedPort",
     "RuntimeResourceLimits",
@@ -166,35 +175,6 @@ __all__ = [
 ]
 
 
-class RuntimeEnvironmentValueClassification(str, Enum):
-    """Sensitivity classification for a required runtime environment value."""
-
-    PLAIN = "plain"
-    REDACTED = "redacted"
-    SECRET_FIXTURE = "secret_fixture"  # noqa: S105
-    OPERATOR_SECRET = "operator_secret"  # noqa: S105
-    UNKNOWN = "unknown"
-    OTHER = "other"
-
-
-_ENV_REDACTED_CLASSIFICATIONS = (
-    RuntimeEnvironmentValueClassification.REDACTED,
-    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
-)
-
-
-class RuntimeEnvironmentVariableProvenance(str, Enum):
-    """Required origin class for a runtime environment variable."""
-
-    COMPOSE = "compose"
-    IMAGE = "image"
-    OPERATOR = "operator"
-    CONTAINER = "container"
-    RUNTIME = "runtime"
-    OTHER = "other"
-    UNKNOWN = "unknown"
-
-
 class RuntimeRestartPolicy(str, Enum):
     """Portable restart policy required by the scenario."""
 
@@ -206,97 +186,14 @@ class RuntimeRestartPolicy(str, Enum):
     OTHER = "other"
 
 
-class RuntimeEnvironmentVariable(SDLModel):
-    """Required runtime environment variable with provenance and sensitivity."""
-
-    name: str
-    value: str = ""
-    value_from: GeneratedArtifactValueSource | None = Field(default=None, exclude_if=lambda v: v is None)
-    value_classification: RuntimeEnvironmentValueClassification | str = RuntimeEnvironmentValueClassification.UNKNOWN
-    provenance: RuntimeEnvironmentVariableProvenance | str = RuntimeEnvironmentVariableProvenance.UNKNOWN
-    source: str = ""
-    description: str = ""
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        if not isinstance(v, str) or not v.strip():
-            raise ValueError("environment variable name must be a non-empty string")
-        if "=" in v:
-            raise ValueError("environment variable name must not contain '='")
-        return v
-
-    @model_validator(mode="after")
-    def validate_value_from_exclusivity(self) -> "RuntimeEnvironmentVariable":
-        if self.value_from is not None:
-            if self.value:
-                raise ValueError(
-                    "runtime environment variable must not set both a literal value and value_from; "
-                    "a generated-artifact value is realized from the referenced output"
-                )
-            # `operator_secret` is reserved for out-of-SDL operator-controlled
-            # material; a generated-artifact value is realized in-band and must
-            # not claim that classification.
-            if self.value_classification is RuntimeEnvironmentValueClassification.OPERATOR_SECRET:
-                raise ValueError(
-                    "runtime environment variable with value_from must not be classified operator_secret; "
-                    "a generated-artifact value is not out-of-SDL operator material"
-                )
-        return self
-
-    @field_validator("value_classification", mode="before")
-    @classmethod
-    def normalize_value_classification(
-        cls,
-        v: RuntimeEnvironmentValueClassification | str,
-    ) -> RuntimeEnvironmentValueClassification | str:
-        return _parse_runtime_enum_or_var(
-            v,
-            RuntimeEnvironmentValueClassification,
-            field_name="value_classification",
-        )
-
-    @field_validator("provenance", mode="before")
-    @classmethod
-    def normalize_provenance(
-        cls,
-        v: RuntimeEnvironmentVariableProvenance | str,
-    ) -> RuntimeEnvironmentVariableProvenance | str:
-        return _parse_runtime_enum_or_var(v, RuntimeEnvironmentVariableProvenance, field_name="provenance")
-
-    @model_validator(mode="after")
-    def validate_redacted_value(self) -> "RuntimeEnvironmentVariable":
-        enforce_observed_value_redaction(
-            owner_label=f"runtime environment variable '{self.name}'",
-            value=self.value,
-            classification=self.value_classification,
-            redacted_classifications=_ENV_REDACTED_CLASSIFICATIONS,
-            raw_value_label="value",
-        )
-        return self
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        # Publish the model's value_from cross-field exclusions so schema-only
-        # consumers reject the same payloads the Python model rejects (issue #1074).
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        json_schema.setdefault("allOf", []).extend(value_from_schema_exclusions())
-        return json_schema
-
-
 class RuntimeResourceLimits(SDLModel):
-    """Required runtime/cgroup resource limits for a node."""
+    """Required capacity and process-resource policy for a runtime node."""
 
     memory: int | str | None = None
     memory_swap: int | str | None = None
     cpu: float | str | None = None
     pids: int | str | None = None
-    open_files: int | str | None = None
+    process_limits: list[RuntimeProcessResourceLimit] = Field(default_factory=list)
     description: str = ""
 
     @field_validator("memory", "memory_swap", mode="before")
@@ -309,10 +206,15 @@ class RuntimeResourceLimits(SDLModel):
     def parse_cpu_limit(cls, v: float | str | None) -> float | str | None:
         return parse_float_or_var(v, minimum=0, field_name="cpu") if v is not None else v
 
-    @field_validator("pids", "open_files", mode="before")
+    @field_validator("pids", mode="before")
     @classmethod
     def parse_count_limit(cls, v: int | str | None, info: ValidationInfo) -> int | str | None:
         return parse_int_or_var(v, minimum=1, field_name=info.field_name) if v is not None else v
+
+    @model_validator(mode="after")
+    def validate_process_limits(self) -> "RuntimeResourceLimits":
+        reject_duplicate_process_resource_limits(self.process_limits)
+        return self
 
 
 class RuntimeOperationalPolicy(SDLModel):
@@ -383,7 +285,7 @@ def _reject_duplicate_keys(items: Iterable[object], *, attr: str, label: str) ->
 
 
 class RuntimeConfiguration(SDLModel):
-    """Declarative runtime state required by a VM node.
+    """Declarative runtime state required by a compute node.
 
     Captured observations remain in evidence records unless an author
     deliberately promotes the fact to one of these contract fields.

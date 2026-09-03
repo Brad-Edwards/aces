@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from ..artifact_requirements import ArtifactMechanismCapability
+from ..operating_systems import OS_VERSION_PATTERN, validate_operating_system_pair
 from ..vocabulary import (
     GeneratedArtifactDeliveryMode,
     GeneratedArtifactKind,
     ObservationStrength,
+    ProcessResourceLimitKind,
+    ProcessResourceLimitScope,
     RealizationSupportMode,
     RealizationVerificationScope,
     WorkflowFeature,
@@ -19,11 +24,82 @@ from ..vocabulary import (
 from .base import ContractModel, NonEmptyString
 from .validators import _validate_controlled_vocabulary_terms
 
+OSReleaseString = Annotated[str, Field(min_length=1, max_length=128, pattern=OS_VERSION_PATTERN)]
+
+
+class OperatingSystemCompatibilityModel(ContractModel):
+    """One portable, coupled OS family/distribution/release capability row."""
+
+    family: NonEmptyString
+    distribution: NonEmptyString
+    versions: list[OSReleaseString] = Field(min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def _validate_terms(self) -> OperatingSystemCompatibilityModel:
+        _validate_controlled_vocabulary_terms(
+            "capabilities.provisioner.supported_os_families",
+            [self.family],
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.provisioner.operating_systems.distribution",
+            [self.distribution],
+        )
+        validate_operating_system_pair(self.family, self.distribution)
+        if len(self.versions) != len(set(self.versions)):
+            raise ValueError("versions must not contain duplicates")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler.resolve_ref_schema(handler(core_schema))
+        json_schema["properties"]["versions"]["uniqueItems"] = True
+        return json_schema
+
+
+def _validate_operating_system_rows(model: ProvisionerCapabilitiesModel) -> None:
+    os_keys = [(entry.family, entry.distribution) for entry in model.operating_systems]
+    if len(os_keys) != len(set(os_keys)):
+        raise ValueError("operating_systems must not contain duplicate family/distribution rows")
+    undeclared_families = {
+        entry.family for entry in model.operating_systems if entry.family not in model.supported_os_families
+    }
+    if undeclared_families:
+        raise ValueError(
+            "operating_systems families must be present in supported_os_families: "
+            + ", ".join(sorted(undeclared_families))
+        )
+
+
+def _validate_feature_coupling(model: ProvisionerCapabilitiesModel) -> None:
+    if model.supports_accounts and not model.supported_account_features:
+        raise ValueError("provisioners that support accounts must declare supported_account_features")
+    if not model.supports_accounts and model.supported_account_features:
+        raise ValueError("supported_account_features require supports_accounts=true")
+    if len(model.supported_generated_artifact_kinds) != len(set(model.supported_generated_artifact_kinds)):
+        raise ValueError("supported_generated_artifact_kinds must not contain duplicates")
+    if model.supports_generated_artifacts and not model.supported_generated_artifact_kinds:
+        raise ValueError(
+            "provisioners that support generated artifacts must declare supported_generated_artifact_kinds"
+        )
+    if not model.supports_generated_artifacts and model.supported_generated_artifact_kinds:
+        raise ValueError("supported_generated_artifact_kinds require supports_generated_artifacts=true")
+    if len(model.supported_generated_artifact_delivery_modes) != len(
+        set(model.supported_generated_artifact_delivery_modes)
+    ):
+        raise ValueError("supported_generated_artifact_delivery_modes must not contain duplicates")
+    if not model.supports_generated_artifacts and model.supported_generated_artifact_delivery_modes:
+        raise ValueError("supported_generated_artifact_delivery_modes require supports_generated_artifacts=true")
+
 
 class ProvisionerCapabilitiesModel(ContractModel):
     name: NonEmptyString
     supported_node_types: list[NonEmptyString] = Field(min_length=1)
     supported_os_families: list[NonEmptyString] = Field(min_length=1)
+    operating_systems: list[OperatingSystemCompatibilityModel] = Field(default_factory=list)
     supported_node_architectures: list[NonEmptyString] = Field(default_factory=list)
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
@@ -54,6 +130,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
             "capabilities.provisioner.supported_os_families",
             self.supported_os_families,
         )
+        _validate_operating_system_rows(self)
         _validate_controlled_vocabulary_terms(
             "capabilities.provisioner.supported_node_architectures",
             self.supported_node_architectures,
@@ -74,24 +151,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
             "capabilities.provisioner.supported_service_materialization_profiles",
             self.supported_service_materialization_profiles,
         )
-        if self.supports_accounts and not self.supported_account_features:
-            raise ValueError("provisioners that support accounts must declare supported_account_features")
-        if not self.supports_accounts and self.supported_account_features:
-            raise ValueError("supported_account_features require supports_accounts=true")
-        if len(self.supported_generated_artifact_kinds) != len(set(self.supported_generated_artifact_kinds)):
-            raise ValueError("supported_generated_artifact_kinds must not contain duplicates")
-        if self.supports_generated_artifacts and not self.supported_generated_artifact_kinds:
-            raise ValueError(
-                "provisioners that support generated artifacts must declare supported_generated_artifact_kinds"
-            )
-        if not self.supports_generated_artifacts and self.supported_generated_artifact_kinds:
-            raise ValueError("supported_generated_artifact_kinds require supports_generated_artifacts=true")
-        if len(self.supported_generated_artifact_delivery_modes) != len(
-            set(self.supported_generated_artifact_delivery_modes)
-        ):
-            raise ValueError("supported_generated_artifact_delivery_modes must not contain duplicates")
-        if not self.supports_generated_artifacts and self.supported_generated_artifact_delivery_modes:
-            raise ValueError("supported_generated_artifact_delivery_modes require supports_generated_artifacts=true")
+        _validate_feature_coupling(self)
         return self
 
     @classmethod
@@ -102,6 +162,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema["properties"]["operating_systems"]["uniqueItems"] = True
         json_schema.setdefault("allOf", []).extend(
             [
                 {
@@ -323,6 +384,24 @@ class RealizationObservationCapabilityModel(ContractModel):
         return self
 
 
+class ProcessResourceLimitCapabilityModel(ContractModel):
+    """Published typed apparatus domain for portable process limits."""
+
+    resource: ProcessResourceLimitKind
+    scopes: list[ProcessResourceLimitScope] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    minimum: int = Field(default=0, ge=0)
+    maximum: int | None = Field(default=None, ge=0)
+    supports_unlimited: bool = False
+
+    @model_validator(mode="after")
+    def _validate_domain(self) -> ProcessResourceLimitCapabilityModel:
+        if len(self.scopes) != len(set(self.scopes)):
+            raise ValueError("process resource limit capability scopes must not contain duplicates")
+        if self.maximum is not None and self.maximum < self.minimum:
+            raise ValueError("process resource limit capability maximum must not be less than minimum")
+        return self
+
+
 class RealizationSupportDeclarationModel(ContractModel):
     domain: NonEmptyString
     support_mode: RealizationSupportMode
@@ -330,6 +409,7 @@ class RealizationSupportDeclarationModel(ContractModel):
     supported_exact_requirement_kinds: list[NonEmptyString] = Field(default_factory=list)
     disclosure_kinds: list[NonEmptyString] = Field(min_length=1)
     observation_capabilities: dict[NonEmptyString, RealizationObservationCapabilityModel] = Field(default_factory=dict)
+    process_resource_limits: list[ProcessResourceLimitCapabilityModel] = Field(default_factory=list)
     artifact_mechanisms: list[ArtifactMechanismCapability] = Field(default_factory=list)
     constraints: dict[str, str] = Field(default_factory=dict)
 
@@ -342,6 +422,9 @@ class RealizationSupportDeclarationModel(ContractModel):
             )
         if self.support_mode == RealizationSupportMode.EXACT_ONLY and self.supported_constraint_kinds:
             raise ValueError("exact-only realization support must not declare supported_constraint_kinds")
+        resources = [capability.resource for capability in self.process_resource_limits]
+        if len(resources) != len(set(resources)):
+            raise ValueError("process_resource_limits must not contain duplicate resource terms")
         identities = [
             (
                 capability.mechanism.mechanism,

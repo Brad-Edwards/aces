@@ -1,0 +1,39 @@
+{
+  "all_or_none": true,
+  "canonicalization_profile": "raes-sdl-canonical/v1",
+  "default_ids": [],
+  "deterministic_order": "sorted-target-ref/v1",
+  "imports_allowed": false,
+  "limits": {
+    "max_assertions": 4096,
+    "max_assumptions": 1024,
+    "max_decisions": 1024,
+    "max_node_identifier_length": 35
+  },
+  "profile_digest": "sha256:6d5a5d8faa996e0a0783f4b9c32ad8217571cb18bc5ce8ca3e359c547e0d642b",
+  "profile_id": "concept-nodes/v1",
+  "profile_version": "1",
+  "refusal_reason_codes": [
+    "ambiguous-ordering",
+    "missing-native-semantics",
+    "stale-input",
+    "transformation-profile-unavailable",
+    "unresolved-parameterization",
+    "unsupported-relation"
+  ],
+  "rendering_profile": "sdl-yaml/v1",
+  "rule_ids": [
+    "concept-node-emission"
+  ],
+  "schema_version": "sdl-candidate-synthesis-profile/v1",
+  "semantic_validation_required": true,
+  "source_profile": "sdl-candidate-synthesis-input/v1",
+  "supported_assertion_kinds": [
+    "concept"
+  ],
+  "supported_node_types": [
+    "compute",
+    "switch"
+  ],
+  "target_profile": "sdl-authoring-input/v1"
+}

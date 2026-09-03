@@ -45,10 +45,9 @@ def _scenario(*, environment: str = "", environment_files: str = "", artifacts: 
     return (
         "name: env-consumer\n"
         "nodes:\n"
-        "  cortex: {type: vm, os: linux}\n"
+        "  cortex: {type: compute}\n"
         "  thehive:\n"
-        "    type: vm\n"
-        "    os: linux\n"
+        "    type: compute\n"
         + runtime_section
         + "generated_artifacts:\n"
         + _block(artifacts or _DEFAULT_ARTIFACTS, 2)
@@ -233,8 +232,7 @@ def test_composed_environment_consumer_admits_namespaced_node(tmp_path: Path):
                 generated_artifacts: [api-key]
             nodes:
               consumer:
-                type: vm
-                os: linux
+                type: compute
                 runtime:
                   environment:
                     - name: API_KEY

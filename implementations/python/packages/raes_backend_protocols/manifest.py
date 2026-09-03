@@ -45,6 +45,10 @@ from .participant_execution_manifest import (
     participant_execution_capability_kwargs,
     participant_execution_capability_payload,
 )
+from .process_resource_limits import (
+    process_resource_limit_capabilities,
+    process_resource_limit_models,
+)
 from .provisioner_manifest import provisioner_capability_payload, provisioner_from_model
 
 
@@ -104,6 +108,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     )
                     for concern_kind, capability in sorted(declaration.observation_capabilities.items())
                 },
+                process_resource_limits=process_resource_limit_models(declaration.process_resource_limits),
                 artifact_mechanisms=list(declaration.artifact_mechanisms),
                 constraints=dict(declaration.constraints),
             )
@@ -277,6 +282,7 @@ def _realization_support_from_model(model: RealizationSupportDeclarationModel) -
             )
             for concern_kind, capability in model.observation_capabilities.items()
         },
+        process_resource_limits=process_resource_limit_capabilities(model.process_resource_limits),
         artifact_mechanisms=tuple(model.artifact_mechanisms),
         constraints=dict(model.constraints),
     )

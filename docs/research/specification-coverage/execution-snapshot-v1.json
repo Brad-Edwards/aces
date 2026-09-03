@@ -35,7 +35,7 @@
       "artifact_id": "port-range-sdl",
       "kind": "sdl",
       "path": "examples/scenarios/port-authority-surge-response.sdl.yaml",
-      "sha256": "c7f9374d87490145425e9ee3916d799ffac1b6a30fb97f50f7241f7ff9b6f21a",
+      "sha256": "a27c7a64e0c5c618fadaccafdf1a4e71600170a8b77b983190822b5141f00dec",
       "validator": "aces_sdl parse, semantic, instantiation/admission, and compiler pipeline"
     },
     {

@@ -40,7 +40,7 @@ def _compile_inject_bindings(
 ) -> dict[str, InjectBinding]:
     inject_bindings: dict[str, InjectBinding] = {}
     for node_name, node in scenario.nodes.items():
-        if node.type != NodeType.VM:
+        if node.type != NodeType.COMPUTE:
             continue
         node_addr = _node_address(node_name)
         for inject_name, role_name in node.injects.items():

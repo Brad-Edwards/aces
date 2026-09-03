@@ -20,7 +20,7 @@ def _narrowed_capabilities(**overrides) -> ProvisionerCapabilities:
 
     base: dict = {
         "name": "narrowed-provisioner",
-        "supported_node_types": frozenset({"vm", "switch"}),
+        "supported_node_types": frozenset({"compute", "switch"}),
         "supported_os_families": frozenset({"linux"}),
         "supported_content_types": frozenset({"file"}),
         "supported_account_features": frozenset({"groups", "shell"}),
@@ -54,7 +54,7 @@ def _node_os(os_family: str) -> PlannedResource:
             "os_family": os_family,
             "spec": {
                 "node": {
-                    "type": "vm",
+                    "type": "compute",
                     "source": {"name": "/img/base.qcow2"},
                     "resources": {"ram": 2_147_483_648, "cpu": 4},
                 },
@@ -336,7 +336,7 @@ def test_node_acls_become_network_acls_on_the_domain():
             "node_name": "web",
             "os_family": "linux",
             "spec": {
-                "node": {"type": "vm"},
+                "node": {"type": "compute"},
                 "infrastructure": {
                     "networks": ["lan"],
                     "acls": [
@@ -389,7 +389,7 @@ def _node_with_acl(acl: dict) -> PlannedResource:
             "name": "web",
             "node_name": "web",
             "os_family": "linux",
-            "spec": {"node": {"type": "vm"}, "infrastructure": {"networks": ["lan"], "acls": [acl]}},
+            "spec": {"node": {"type": "compute"}, "infrastructure": {"networks": ["lan"], "acls": [acl]}},
         },
     )
 
@@ -483,7 +483,7 @@ def test_out_of_envelope_node_type_fails_closed():
         {
             "name": "gw",
             "node_name": "gw",
-            "node_type": "router",
+            "node_kind": "router",
             "os_family": "linux",
             "spec": {"node": {"type": "router"}, "infrastructure": {}},
         },
@@ -590,7 +590,7 @@ def test_account_feature_outside_narrowed_envelope_fails_closed():
 
 
 def test_switch_node_type_outside_narrowed_envelope_fails_closed():
-    caps = _narrowed_capabilities(supported_node_types=frozenset({"vm"}))
+    caps = _narrowed_capabilities(supported_node_types=frozenset({"compute"}))
     network = _resource(
         "network",
         "provision.network.lan",

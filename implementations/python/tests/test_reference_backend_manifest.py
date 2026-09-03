@@ -57,13 +57,12 @@ def test_manifest_accepts_and_ignores_extra_config_kwargs():
 
 
 def test_manifest_declares_only_evidence_backed_contract_ids():
-    # The reference backend mirrors the stub's evidence-backed contract set;
-    # it must not over-claim contracts it does not actually emit/validate.
+    # The reference backend mirrors the stub plus its configuration-bound
+    # realization envelope; it must not over-claim any other contract.
     from raes_backend_stubs.stubs import create_stub_manifest
 
     reference = create_reference_backend_manifest()
     stub = create_stub_manifest()
 
-    assert reference.supported_contract_versions == stub.supported_contract_versions
-    assert "realization-envelope-v1" not in reference.supported_contract_versions
-    assert reference.realization_envelope is None
+    assert reference.supported_contract_versions == stub.supported_contract_versions | {"realization-envelope-v1"}
+    assert reference.realization_envelope is not None

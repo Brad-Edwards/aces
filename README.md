@@ -16,7 +16,11 @@ backend.
 
 ## Validate your first scenario
 
-You need Python 3.11 or newer.
+You need standard CPython 3.11 through 3.14. Python 3.15 is not admitted until
+its post-final dependency and compatibility qualification is complete. OCI
+module extraction on Python 3.11 additionally requires Python 3.11.4 or newer.
+Earlier patch releases lack the mandatory safe tar extraction filter and fail
+closed instead of extracting without it.
 
 ```console
 python -m venv .venv
@@ -35,7 +39,7 @@ nodes:
   lab-network:
     type: Switch
   web:
-    type: VM
+    type: compute
     os: linux
     resources:
       ram: 2 GiB

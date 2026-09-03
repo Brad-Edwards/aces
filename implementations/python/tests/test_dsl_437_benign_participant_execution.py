@@ -87,6 +87,10 @@ def _advance_stepped_clock_to_tick(manager: RuntimeManager, target_tick: int) ->
 
 def _scenario_yaml(*, role: str = "green") -> str:
     payload = yaml.safe_load(EXAMPLE.read_text(encoding="utf-8"))
+    for node in payload["nodes"].values():
+        node.pop("os", None)
+        node.pop("os_distribution", None)
+        node.pop("os_version", None)
     payload["entities"]["enterprise-participant"]["role"] = role
     payload["objectives"] = {}
     payload["workflows"] = {}
@@ -589,13 +593,20 @@ def _compiled() -> tuple[object, object]:
     return runtime_model, specification.autonomous_execution
 
 
-def _autonomous_manifest(runtime_model: object) -> object:
+def _autonomous_manifest(
+    runtime_model: object,
+    *,
+    with_realization_envelope: bool = True,
+) -> object:
     policies = tuple(
         specification.autonomous_execution
         for specification in runtime_model.behavior_specifications.values()
         if specification.autonomous_execution is not None
     )
-    base_manifest = create_stub_manifest(with_time=True)
+    base_manifest = create_stub_manifest(
+        with_time=True,
+        with_realization_envelope=with_realization_envelope,
+    )
     assert base_manifest.participant_runtime is not None
     return replace(
         base_manifest,
@@ -694,6 +705,8 @@ def test_autonomous_execution_compiles_existing_participant_and_shared_time_refs
     action = runtime_model.action_contracts["participant.action-contract.probe-customer-portal-login"]
     assert action.interaction_classes == ("shared_state_change",)
     assert action.shared_state_refs == ("nodes.customer-portal.services.http",)
+    assert action.commutative_interaction_targets == ("nodes.customer-portal.services.http",)
+    assert action.merge_rule_refs == ()
 
 
 def test_activity_policy_v2_compiles_weighted_candidates_and_shared_time_windows() -> None:
@@ -830,7 +843,7 @@ def test_backend_admission_enforces_finite_autonomous_execution_limits() -> None
         for specification in runtime_model.behavior_specifications.values()
         if specification.autonomous_execution is not None
     )
-    manifest = _autonomous_manifest(runtime_model)
+    manifest = _autonomous_manifest(runtime_model, with_realization_envelope=False)
     assert participant_autonomous_execution_capability_gaps(manifest, policies) == ()
 
     assert manifest.participant_runtime is not None
@@ -874,7 +887,7 @@ def test_backend_admission_requires_exact_v2_activity_and_random_profile_support
         for specification in runtime_model.behavior_specifications.values()
         if specification.autonomous_execution is not None
     )
-    manifest = _autonomous_manifest(runtime_model)
+    manifest = _autonomous_manifest(runtime_model, with_realization_envelope=False)
 
     assert participant_autonomous_execution_capability_gaps(manifest, policies, runtime_model.time_model) == ()
     restored = backend_manifest_from_v2_model(backend_manifest_v2_model(manifest))
@@ -1633,7 +1646,7 @@ def test_scheduler_executes_native_actions_and_persists_shared_time_readback() -
     )
     assert (state.attempted_actions, state.succeeded_actions, state.next_tick) == (1, 1, 10)
     assert state.time_segment == 0
-    assert state.policy_digest == "sha256:e89d1e56a9c09893581257b39a595634599b4d3a8140cfb9ecba1a6df889f35b"
+    assert state.policy_digest == "sha256:2fb5d1cbbde0d3c7554fac379e1f58fd39f6b74c98b0267f28fcd7b9a4cca9d8"
     events = first.snapshot.participant_behavior_history[state.participant_address]
     assert [event["event_type"] for event in events] == [
         "action_attempted",
@@ -1993,6 +2006,8 @@ def test_wall_driver_cannot_advance_during_time_state_readback() -> None:
     reader.start()
     assert time_runtime.read_entered.wait(timeout=1.0)
     predecessor = manager.snapshot
+    assert predecessor.time_model_state is not None
+    predecessor_coordinate = predecessor.time_model_state.clocks[policy.clock_address].coordinate
     time.sleep(0.1)
 
     assert manager.snapshot == predecessor
@@ -2003,7 +2018,7 @@ def test_wall_driver_cannot_advance_during_time_state_readback() -> None:
     assert not isinstance(outcome[0], Exception)
     state = outcome[0]
     assert isinstance(state, TimeRuntimeStateModel)
-    assert state.clocks[policy.clock_address].coordinate.tick == 0
+    assert state.clocks[policy.clock_address].coordinate == predecessor_coordinate
     assert manager.destroy().success
 
 

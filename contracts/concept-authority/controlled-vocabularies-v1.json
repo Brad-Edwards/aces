@@ -695,13 +695,38 @@
       "extension_policy": "governed-extension",
       "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
       "terms": {
-        "vm": {
-          "title": "Virtual Machine",
-          "description": "Provisioner can realize virtual machine nodes."
+        "compute": {
+          "title": "Compute",
+          "description": "Provisioner can realize backend-neutral compute endpoint nodes."
         },
         "switch": {
           "title": "Switch",
           "description": "Provisioner can realize switch nodes."
+        }
+      }
+    },
+    "compute-substrates": {
+      "title": "Compute Substrates",
+      "description": "Portable execution or isolation substrate vocabulary for compute-node realization constraints and observations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "scenario.realization.constraints.compute-substrate",
+        "runtime.snapshot.realization_observations.compute-substrate"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "virtual-machine": {
+          "title": "Virtual Machine",
+          "description": "A compute endpoint realized as a hardware-virtualized machine."
+        },
+        "operating-system-container": {
+          "title": "Operating-System Container",
+          "description": "A compute endpoint realized through operating-system-level container isolation."
+        },
+        "physical-device": {
+          "title": "Physical Device",
+          "description": "A compute endpoint realized on a physical computer or special-purpose device without requiring a virtualization substrate."
         }
       }
     },
@@ -734,6 +759,48 @@
         "other": {
           "title": "Other",
           "description": "Portable catch-all when no standard family applies."
+        }
+      }
+    },
+    "os-distributions": {
+      "title": "Operating System Distributions and Product Lines",
+      "description": "Portable operating-system distribution or product-line identifiers shared by SDL and backend compatibility declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "nodes.os_distribution",
+        "capabilities.provisioner.operating_systems.distribution",
+        "runtime.snapshot.realization_observations.operating-system.distribution"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "ubuntu": {
+          "title": "Ubuntu",
+          "description": "Ubuntu Linux distribution."
+        },
+        "debian": {
+          "title": "Debian",
+          "description": "Debian GNU/Linux distribution."
+        },
+        "rocky-linux": {
+          "title": "Rocky Linux",
+          "description": "Rocky Linux distribution."
+        },
+        "red-hat-enterprise-linux": {
+          "title": "Red Hat Enterprise Linux",
+          "description": "Red Hat Enterprise Linux product line."
+        },
+        "windows-server": {
+          "title": "Windows Server",
+          "description": "Microsoft Windows Server product line."
+        },
+        "windows-client": {
+          "title": "Windows Client",
+          "description": "Microsoft Windows client product line."
+        },
+        "solaris": {
+          "title": "Solaris",
+          "description": "Oracle Solaris operating-system product line."
         }
       }
     },

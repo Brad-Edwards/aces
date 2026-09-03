@@ -483,7 +483,7 @@ def test_qualified_capability_reference_resolves_in_a_relationship() -> None:
         name="platform-capability-reference",
         nodes={
             "tip": {
-                "type": "vm",
+                "type": "compute",
                 "runtime": {
                     "platform_applications": [
                         {

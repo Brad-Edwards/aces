@@ -20,6 +20,7 @@ from ._errors import (
     SDLSourceRange,
     SDLValidationError,
 )
+from ._legacy_node_migration import migrate_legacy_vm_nodes
 from ._mapping_scopes import (
     HASHMAP_SECTIONS,
     NESTED_HASHMAP_FIELDS,
@@ -71,6 +72,17 @@ def read_sdl_source(
         raise FileNotFoundError(f"SDL file not found: {path}")
     with path.open("rb") as source:
         raw_bytes = source.read(limits.max_input_bytes + 1)
+    return _source_document_from_bytes(raw_bytes, path=path, limits=limits)
+
+
+def _source_document_from_bytes(
+    raw_bytes: bytes,
+    *,
+    path: Path,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+) -> SDLSourceDocument:
+    """Decode already-captured source bytes with the canonical diagnostics."""
+
     if len(raw_bytes) > limits.max_input_bytes:
         _raise_source_limit(
             f"SDL source exceeds the byte limit of {limits.max_input_bytes} bytes.",
@@ -317,8 +329,8 @@ def parse_sdl(
     source_format: str = SDL_SOURCE_FORMAT,
     migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
     limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
-) -> Scenario:
-    """Parse an SDL YAML string into a validated Scenario.
+) -> Scenario | ExpandedScenario:
+    """Parse SDL YAML into a normalized or expanded authoring object.
 
     Handles SDL documents with ``name`` at the top level. Runs
     structural validation (Pydantic) and semantic validation
@@ -335,7 +347,8 @@ def parse_sdl(
         limits: Source and alias-processing resource limits.
 
     Returns:
-        Validated Scenario object.
+        A ``Scenario``, or ``ExpandedScenario`` when file-backed module imports
+        are present. Unless explicitly skipped, semantic validation has run.
 
     Raises:
         SDLParseError: If YAML parsing fails or the data isn't a dict.
@@ -399,8 +412,8 @@ def parse_sdl(
     return scenario
 
 
-def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario:
-    """Parse an SDL YAML file into a validated Scenario.
+def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario | ExpandedScenario:
+    """Parse an SDL file into a normalized or expanded authoring object.
 
     Convenience wrapper around ``parse_sdl()`` that reads from a file.
     """
@@ -438,4 +451,12 @@ def _load_normalized_data(
     if any(not isinstance(key, str) for key in data):
         raise SDLParseError("SDL top-level mapping keys must be strings", path=path)
     _reject_variable_mapping_keys(data)
-    return _expand_shorthands(data)
+    data = _expand_shorthands(data)
+    migrate_legacy_vm_nodes(
+        data,
+        path=path,
+        migration_policy=migration_policy,
+        source_diagnostics=source_diagnostics,
+        source_ranges=source_ranges,
+    )
+    return data

@@ -655,7 +655,7 @@ def test_mapping_and_template_refs_are_targetable() -> None:
         name="datastore-refs",
         nodes={
             "indexer": {
-                "type": "vm",
+                "type": "compute",
                 "runtime": {"datastore_services": [_search_index_service()]},
             }
         },

@@ -112,7 +112,7 @@ def test_instantiation_serializes_binding_origin_without_live_variables() -> Non
             },
             "nodes": {
                 "host": {
-                    "type": "vm",
+                    "type": "compute",
                     "os": "${image}",
                     "resources": {"ram": "1 gib", "cpu": 1},
                 }
@@ -195,7 +195,7 @@ def test_snapshot_schema_is_published_as_a_distinct_contract() -> None:
             "name": "snapshot",
             "nodes": {
                 "shared.host": {
-                    "type": "vm",
+                    "type": "compute",
                     "os": "linux",
                     "resources": {"ram": "1 gib", "cpu": 1},
                 }
@@ -261,7 +261,7 @@ def test_json_round_trip_preserves_compiler_capability_and_explicitness_semantic
             },
             "nodes": {
                 "host": {
-                    "type": "vm",
+                    "type": "compute",
                     "os": "${image}",
                     "resources": {"ram": "1 gib", "cpu": 1},
                 }
@@ -342,7 +342,7 @@ def test_capability_provenance_must_match_the_concrete_field() -> None:
                 "name": "mismatched-evidence",
                 "nodes": {
                     "host": {
-                        "type": "vm",
+                        "type": "compute",
                         "os": "windows",
                         "resources": {"ram": "1 gib", "cpu": 1},
                     }
@@ -431,7 +431,7 @@ module:
 behavior_specifications: {{}}
 nodes:
   host:
-    type: vm
+    type: compute
     os: linux
     resources: {{ram: 1 gib, cpu: 1}}
 """,
@@ -487,7 +487,7 @@ variables:
     allowed_values: [linux, windows]
 nodes:
   host:
-    type: vm
+    type: compute
     os: '${image}'
     resources: {ram: 1 gib, cpu: 1}
 """,

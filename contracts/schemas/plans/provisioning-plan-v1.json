@@ -1,5 +1,205 @@
 {
   "$defs": {
+    "BooleanDomain": {
+      "additionalProperties": false,
+      "description": "Booleans: both ``true``/``false``, or an exact boolean when ``value`` set.",
+      "properties": {
+        "kind": {
+          "const": "boolean",
+          "default": "boolean",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "BooleanDomain",
+      "type": "object"
+    },
+    "EnumDomain": {
+      "additionalProperties": false,
+      "description": "A finite value set: values equal to one listed member.",
+      "properties": {
+        "kind": {
+          "const": "enum",
+          "default": "enum",
+          "title": "Kind",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "EnumDomain",
+      "type": "object"
+    },
+    "ExactDomain": {
+      "additionalProperties": false,
+      "description": "A singleton value set: values equal to ``value``.",
+      "properties": {
+        "kind": {
+          "const": "exact",
+          "default": "exact",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "ExactDomain",
+      "type": "object"
+    },
+    "ExplicitnessProvenance": {
+      "description": "Where the classified value came from in the SDL lifecycle.",
+      "enum": [
+        "author-declared",
+        "processor-derived",
+        "backend-realized"
+      ],
+      "title": "ExplicitnessProvenance",
+      "type": "string"
+    },
+    "GovernedReferenceDomain": {
+      "additionalProperties": false,
+      "description": "References in a finite governed set under a named authority.",
+      "properties": {
+        "allowed_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Refs",
+          "type": "array"
+        },
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "kind": {
+          "const": "governed-reference",
+          "default": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority",
+        "allowed_refs"
+      ],
+      "title": "GovernedReferenceDomain",
+      "type": "object"
+    },
+    "NumericIntervalDomain": {
+      "additionalProperties": false,
+      "description": "Numbers of ``numeric_type`` inside a bounded interval.\n\nBoth endpoints are required (the fragment admits only *bounded* intervals,\n``envelope-semantics.md`` R3). An integer interval requires integral\nendpoints. Empty intervals are rejected at construction.",
+      "properties": {
+        "kind": {
+          "const": "numeric-interval",
+          "default": "numeric-interval",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lower": {
+          "title": "Lower",
+          "type": "number"
+        },
+        "lower_closed": {
+          "default": true,
+          "title": "Lower Closed",
+          "type": "boolean"
+        },
+        "numeric_type": {
+          "$ref": "#/$defs/NumericType"
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number"
+        },
+        "upper_closed": {
+          "default": true,
+          "title": "Upper Closed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "numeric_type",
+        "lower",
+        "upper"
+      ],
+      "title": "NumericIntervalDomain",
+      "type": "object"
+    },
+    "NumericType": {
+      "description": "Declared numeric type for a numeric-interval domain.",
+      "enum": [
+        "integer",
+        "number"
+      ],
+      "title": "NumericType",
+      "type": "string"
+    },
+    "ObservationStrength": {
+      "description": "Strongest evidence a backend configuration emits for one concern.",
+      "enum": [
+        "none",
+        "driver-reported",
+        "daemon-observed",
+        "guest-observed"
+      ],
+      "title": "ObservationStrength",
+      "type": "string"
+    },
     "PlanOperationModel": {
       "additionalProperties": false,
       "properties": {
@@ -76,6 +276,181 @@
       "title": "PlanOperationModel",
       "type": "object"
     },
+    "PlannedRealizationConstraintModel": {
+      "additionalProperties": false,
+      "description": "Published author realization demand on a provisioning plan.",
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "concern": {
+          "const": "compute-substrate",
+          "title": "Concern",
+          "type": "string"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "governing_scope": {
+          "minLength": 1,
+          "title": "Governing Scope",
+          "type": "string"
+        },
+        "posture": {
+          "enum": [
+            "open",
+            "constrained",
+            "exact"
+          ],
+          "title": "Posture",
+          "type": "string"
+        },
+        "provenance": {
+          "enum": [
+            "author-declared",
+            "legacy-node-type-vm"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "value_domain": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "boolean": "#/$defs/BooleanDomain",
+                  "enum": "#/$defs/EnumDomain",
+                  "exact": "#/$defs/ExactDomain",
+                  "governed-reference": "#/$defs/GovernedReferenceDomain",
+                  "numeric-interval": "#/$defs/NumericIntervalDomain",
+                  "record": "#/$defs/RecordDomain"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ExactDomain"
+                },
+                {
+                  "$ref": "#/$defs/EnumDomain"
+                },
+                {
+                  "$ref": "#/$defs/BooleanDomain"
+                },
+                {
+                  "$ref": "#/$defs/NumericIntervalDomain"
+                },
+                {
+                  "$ref": "#/$defs/GovernedReferenceDomain"
+                },
+                {
+                  "$ref": "#/$defs/RecordDomain"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value Domain"
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "concern",
+        "posture",
+        "governing_scope",
+        "provenance"
+      ],
+      "title": "PlannedRealizationConstraintModel",
+      "type": "object"
+    },
+    "RealizationAuthorityBoundModel": {
+      "additionalProperties": false,
+      "description": "One safe typed domain over a resolved concern value or owned leaf.",
+      "properties": {
+        "domain": {
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanDomain",
+              "enum": "#/$defs/EnumDomain",
+              "exact": "#/$defs/ExactDomain",
+              "governed-reference": "#/$defs/GovernedReferenceDomain",
+              "numeric-interval": "#/$defs/NumericIntervalDomain",
+              "record": "#/$defs/RecordDomain"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExactDomain"
+            },
+            {
+              "$ref": "#/$defs/EnumDomain"
+            },
+            {
+              "$ref": "#/$defs/BooleanDomain"
+            },
+            {
+              "$ref": "#/$defs/NumericIntervalDomain"
+            },
+            {
+              "$ref": "#/$defs/GovernedReferenceDomain"
+            },
+            {
+              "$ref": "#/$defs/RecordDomain"
+            }
+          ],
+          "title": "Domain"
+        },
+        "identity_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identity Digest"
+        },
+        "value_pointer": {
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Value Pointer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value_pointer",
+        "domain"
+      ],
+      "title": "RealizationAuthorityBoundModel",
+      "type": "object"
+    },
+    "RealizationAuthorityMode": {
+      "description": "Resolved author permission for one portable realization concern.",
+      "enum": [
+        "closed",
+        "open",
+        "constrained",
+        "exact"
+      ],
+      "title": "RealizationAuthorityMode",
+      "type": "string"
+    },
     "RealizationEnvelopeIdentityModel": {
       "additionalProperties": false,
       "description": "Immutable realization-envelope identity carried across runtime contracts.",
@@ -115,6 +490,248 @@
       ],
       "title": "RealizationEnvelopeIdentityModel",
       "type": "object"
+    },
+    "RealizationResolutionSource": {
+      "description": "Canonical source that supplied a resolved realization decision.",
+      "enum": [
+        "authored-leaf",
+        "authored-scope",
+        "apparatus-default",
+        "legacy-default",
+        "processor-derived"
+      ],
+      "title": "RealizationResolutionSource",
+      "type": "string"
+    },
+    "RealizationVerificationScope": {
+      "description": "Closed scope at which an inventory realization was corroborated.",
+      "enum": [
+        "presence",
+        "configuration"
+      ],
+      "title": "RealizationVerificationScope",
+      "type": "string"
+    },
+    "RecordDomain": {
+      "additionalProperties": false,
+      "description": "Product structure: each declared field references another named domain.\n\n``extra`` controls undeclared fields: ``False`` (closed) rejects any field not\nnamed in ``fields``; ``True`` (open) admits them. Field values reference domain\nnames resolved against the envelope's ``domains`` map, keeping the structure\nacyclic and free of inline recursion.",
+      "properties": {
+        "extra": {
+          "default": false,
+          "title": "Extra",
+          "type": "boolean"
+        },
+        "fields": {
+          "additionalProperties": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Fields",
+          "type": "object"
+        },
+        "kind": {
+          "const": "record",
+          "default": "record",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "RecordDomain",
+      "type": "object"
+    },
+    "ResolvedRealizationAuthorityModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "constrained"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bounds": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "bounds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "closed",
+                  "open",
+                  "exact"
+                ]
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bounds": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "const": "legacy-default"
+              }
+            },
+            "required": [
+              "source"
+            ]
+          },
+          "then": {
+            "properties": {
+              "mode": {
+                "const": "closed"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "const": "apparatus-default"
+              }
+            },
+            "required": [
+              "source"
+            ]
+          },
+          "then": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "closed",
+                  "open"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "description": "Published value-free realization authority for one plan concern.",
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "bounds": {
+          "items": {
+            "$ref": "#/$defs/RealizationAuthorityBoundModel"
+          },
+          "title": "Bounds",
+          "type": "array"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "governing_scope": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Governing Scope"
+        },
+        "mode": {
+          "$ref": "#/$defs/RealizationAuthorityMode"
+        },
+        "payload_pointer": {
+          "pattern": "^/(?:[^~/]|~[01])*(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Payload Pointer",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ExplicitnessProvenance",
+          "default": "author-declared"
+        },
+        "required_observation_strength": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservationStrength"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "requirement_kind": {
+          "minLength": 1,
+          "title": "Requirement Kind",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/RealizationResolutionSource"
+        },
+        "verification_scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RealizationVerificationScope"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "domain",
+        "requirement_kind",
+        "payload_pointer",
+        "mode",
+        "source"
+      ],
+      "title": "ResolvedRealizationAuthorityModel",
+      "type": "object"
     }
   },
   "$id": "https://openrae.github.io/rae/schemas/provisioning-plan-v1.json",
@@ -129,11 +746,38 @@
       "title": "Diagnostics",
       "type": "array"
     },
+    "operation_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Operation Id"
+    },
     "operations": {
       "items": {
         "$ref": "#/$defs/PlanOperationModel"
       },
       "title": "Operations",
+      "type": "array"
+    },
+    "realization_authority": {
+      "items": {
+        "$ref": "#/$defs/ResolvedRealizationAuthorityModel"
+      },
+      "title": "Realization Authority",
+      "type": "array"
+    },
+    "realization_constraints": {
+      "items": {
+        "$ref": "#/$defs/PlannedRealizationConstraintModel"
+      },
+      "title": "Realization Constraints",
       "type": "array"
     },
     "realization_envelope": {
@@ -148,6 +792,9 @@
       "default": null
     }
   },
+  "required": [
+    "realization_authority"
+  ],
   "title": "ProvisioningPlanModel",
   "type": "object"
 }

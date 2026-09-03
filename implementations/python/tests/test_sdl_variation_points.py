@@ -36,13 +36,13 @@ def _family_payload() -> dict[str, object]:
         },
         "nodes": {
             "primary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "features": {"baseline": ""},
             },
             "secondary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
             },
@@ -145,7 +145,7 @@ module:
 variables:
   path: {type: string, required: true, allowed_values: [/opt/a, /opt/b]}
 nodes:
-  host: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  host: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 content:
   payload: {type: file, target: host, path: '${path}'}
 variation_points:
@@ -463,8 +463,8 @@ module:
     content: [payload]
     variation_points: [host-choice]
 nodes:
-  primary: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
-  secondary: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  primary: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
+  secondary: {type: compute, os: linux, resources: {ram: 1 gib, cpu: 1}}
 content:
   payload: {type: file, target: primary, path: /opt/payload}
 variation_points:
@@ -538,8 +538,8 @@ name: family
 variables:
   path: {type: string, default: /opt/a}
 nodes:
-  primary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
-  secondary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
+  primary: {type: compute, resources: {ram: 1 GiB, cpu: 1}}
+  secondary: {type: compute, resources: {ram: 1 GiB, cpu: 1}}
 content:
   payload: {type: file, target: primary, path: '${path}'}
 variation_points:

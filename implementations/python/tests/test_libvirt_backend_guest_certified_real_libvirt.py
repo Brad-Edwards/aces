@@ -3,20 +3,20 @@
 This is the native-proof gate: it boots the guest-observing appliance through the
 production apply path against an operator-selected real libvirt/QEMU daemon, reads
 concern facts back from inside the guest, and verifies teardown. It is skipped
-unless ``RAES_REAL_LIBVIRT_URI`` is set and the host has libvirt-python, cpio,
-BusyBox, and a readable kernel. Hermetic fake-driver tests cannot satisfy this
-gate.
+unless ``RAES_REAL_LIBVIRT_URI`` is set and the host has libvirt-python, a static
+x86_64 BusyBox on ``PATH``, and a readable kernel. Hermetic fake-driver tests
+cannot satisfy this gate.
 """
 
 from __future__ import annotations
 
 import importlib
 import os
-import shutil
 from pathlib import Path
 
 import pytest
 from paths import EXAMPLES_DIR
+from raes_backend_libvirt._initramfs import resolve_static_busybox
 from raes_operations.libvirt_evidence_run import (
     LibvirtEvidenceRunConfig,
     run_libvirt_evidence_run,
@@ -35,8 +35,8 @@ def test_guest_certified_real_libvirt_readback_and_cleanup(tmp_path):
         libvirt = importlib.import_module("libvirt")
     except ImportError:
         pytest.skip("libvirt-python is unavailable")
-    if shutil.which("cpio") is None or not Path("/usr/bin/busybox").is_file():
-        pytest.skip("cpio and BusyBox are required for guest-observing appliance certification")
+    if not resolve_static_busybox(None).ready:
+        pytest.skip("a static x86_64 BusyBox on PATH is required for guest appliance certification")
     if not tuple(Path("/boot").glob("vmlinuz-*")):
         pytest.skip("a readable host kernel is required for guest-observing appliance certification")
 

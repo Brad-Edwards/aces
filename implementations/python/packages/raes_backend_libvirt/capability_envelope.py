@@ -1,6 +1,6 @@
 """Typed capability-envelope diagnostics for the libvirt backend (issue #605).
 
-A provisioning plan may ask the backend to realize a node type, OS family,
+A provisioning plan may ask the backend to realize a resource kind, OS family,
 content type, or account feature outside the selected manifest's declared
 :class:`ProvisionerCapabilities` envelope (an ungoverned/extension term the
 backend does not realize). This module surfaces those as blocking, typed
@@ -27,20 +27,23 @@ from ._payload import (
     NETWORK_RESOURCE_TYPE,
     NODE_RESOURCE_TYPE,
     _architecture,
-    _node_type,
+    _node_kind,
+    _os_distribution,
     _os_family,
+    _os_version,
     _spec,
     _str,
 )
 
 _DOMAIN = "runtime"
 
-# A network resource is realized as a libvirt switch, so its node-type envelope
+# A network resource is realized as a libvirt switch, so its node-kind envelope
 # term is fixed.
 _SWITCH_NODE_TYPE = "switch"
 
 _CODE_UNSUPPORTED_NODE_TYPE = "libvirt-backend.realization.unsupported-node-type"
 _CODE_UNSUPPORTED_OS_FAMILY = "libvirt-backend.realization.unsupported-os-family"
+_CODE_UNSUPPORTED_OPERATING_SYSTEM = "libvirt-backend.realization.unsupported-operating-system"
 _CODE_UNSUPPORTED_NODE_ARCHITECTURE = "libvirt-backend.realization.unsupported-node-architecture"
 _CODE_UNSUPPORTED_CONTENT_TYPE = "libvirt-backend.realization.unsupported-content-type"
 _CODE_UNSUPPORTED_SERVICE_MATERIALIZATION_PROFILE = (
@@ -71,8 +74,8 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
     _EnvelopeDimension(
         resource_types=frozenset({NODE_RESOURCE_TYPE}),
         code=_CODE_UNSUPPORTED_NODE_TYPE,
-        noun="node type",
-        extract=lambda payload: (_node_type(payload),),
+        noun="node kind",
+        extract=lambda payload: (_node_kind(payload),),
         supported=lambda caps: caps.supported_node_types,
     ),
     _EnvelopeDimension(
@@ -92,7 +95,7 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
     _EnvelopeDimension(
         resource_types=frozenset({NETWORK_RESOURCE_TYPE}),
         code=_CODE_UNSUPPORTED_NODE_TYPE,
-        noun="node type",
+        noun="node kind",
         extract=lambda payload: (_SWITCH_NODE_TYPE,),
         supported=lambda caps: caps.supported_node_types,
     ),
@@ -182,6 +185,36 @@ def _out_of_envelope_terms(
         for term in dimension.extract(payload):
             if term and term not in supported:
                 yield (dimension.code, address, term), _envelope_diagnostic(dimension, address, term)
+    if resource_type == NODE_RESOURCE_TYPE:
+        yield from _out_of_envelope_operating_system(address, payload, capabilities)
+
+
+def _out_of_envelope_operating_system(
+    address: str,
+    payload: Mapping[str, object],
+    capabilities: ProvisionerCapabilities,
+) -> Iterator[tuple[tuple[str, str, str], Diagnostic]]:
+    """Yield the unsupported operating-system identity of a node payload, if any."""
+
+    family = _os_family(payload)
+    distribution = _os_distribution(payload)
+    version = _os_version(payload) or None
+    if distribution and not capabilities.supports_operating_system(
+        family=family,
+        distribution=distribution,
+        version=version,
+    ):
+        identity = "/".join((family, distribution, version or "<open-release>"))
+        yield (
+            (_CODE_UNSUPPORTED_OPERATING_SYSTEM, address, identity),
+            Diagnostic(
+                code=_CODE_UNSUPPORTED_OPERATING_SYSTEM,
+                domain=_DOMAIN,
+                address=address,
+                message=f"Libvirt backend does not realize operating-system identity '{identity}'.",
+                severity=Severity.ERROR,
+            ),
+        )
 
 
 def _materialized_payloads(plan: ProvisioningPlan) -> Iterator[tuple[str, str, Mapping[str, object]]]:

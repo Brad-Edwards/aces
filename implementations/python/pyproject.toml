@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "raes"
 description = "Contracts and reference tooling for reproducible agentic environments."
 dynamic = ["readme", "version"]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.15"
 # Trove classifiers are the only source PyPI and downstream badges read for
 # supported interpreter versions; `requires-python` alone leaves them blank.
 # Keep this list in step with `requires-python`.
@@ -14,19 +14,22 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "typer>=0.12.0",
+    "click>=8.3.3",
     "pydantic>=2.0.0",
     "rich>=13.0.0",
     "PyYAML>=6.0",
-    "cryptography>=46.0.7",
+    "cryptography>=50.0.0",
     "defusedxml>=0.7.1",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "sse-starlette>=2.0.0",
     "asyncssh>=2.23.0",
-    "mcp>=1.28.1",
+    "mcp>=1.28.1,<3",
     "packaging>=23.0",
     "rfc8785>=0.1.4,<0.2",
     "blake3>=1.0.8,<2",
@@ -59,7 +62,7 @@ docs = [
 ]
 
 [project.scripts]
-raes = "raes_cli.main:app"
+raes = "raes_cli.entrypoint:main"
 raes-mcp = "raes_mcp.server:main"
 
 # Version is sourced from the dedicated RAES package file below. Release Please
@@ -122,29 +125,19 @@ addopts = "-m 'not fuzz and not integration and not docker'"
 timeout = 120
 
 [tool.coverage.run]
-source = [
-    "raes_contracts",
-    "raes_backend_protocols",
-    "raes_backend_stubs",
-    "raes_backend_libvirt",
-    "raes_operations",
-    "raes_reference_backend",
-    "raes_cli",
-    "raes_conformance",
-    "raes_mcp",
-    "raes_processor",
-    "raes_runtime",
-    "raes",
-    # Repo CI tooling (issue #54): the `tools/` tree lives at the repo root and
-    # is imported as the top-level `tools` package via pytest's `pythonpath`
-    # (`../..`). Coverage matches source packages by module name, so its
-    # `tools.*` modules are measured even though pytest runs from
-    # `implementations/python/`.
-    "tools",
+branch = true
+relative_files = false
+source = ["../.."]
+omit = [
+    "*/.cache/*",
+    "*/docs/*",
+    "*/implementations/python/.venv/*",
+    "*/implementations/python/tests/*",
 ]
 
 [tool.coverage.report]
 show_missing = true
+include_namespace_packages = true
 exclude_also = [
     # The reference backend's OCI subprocess leaf (RUN-314): real container
     # IO, exercised only by the opt-in docker integration tests, never in the
@@ -181,10 +174,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "E402", "SIM105", "F841"]
+"tools/http_download.py" = ["S310"]  # validates absolute HTTPS before opening pinned release assets
 "packages/raes_contracts/contracts/__init__.py" = ["F403", "F405"]  # intentional package re-exports
 "packages/raes_cli/**" = ["B008"]      # typer requires function calls in defaults
 "packages/raes_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
 "packages/raes/module_registry/__init__.py" = ["S310", "S202", "F401"]  # S310/S202: explicit OCI URL fetch + tar extract; F401: intentional facade re-exports
+"tools/osv_scanner_tool.py" = ["S310"]  # Exact GitHub HTTPS prefix and pinned asset digest are enforced before download
 "packages/raes_runtime/control_plane_api/__init__.py" = ["F401"]  # intentional facade re-exports (_receipt_response)
 "packages/raes_mcp/tools/authoring/__init__.py" = ["F401"]  # intentional facade re-export (register)
 "packages/raes_mcp/tools/inspection/__init__.py" = ["F401"]  # intentional facade re-export (register)

@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "9dc5928c3db16b72d5d93dd6d162fc5a2a393bb98d429a6a131f0e49d2d78da6",
+  "content_hash": "2981c2cb86232160373a380a20fbb1ad7d69b09628095e6d05979e397f4446a7",
   "last_change": {
-    "summary": "Added generated-artifact output consumption as a node runtime environment value (RuntimeEnvironmentVariable.value_from / RuntimeEnvironmentFile) with a GeneratedArtifactValueSource reference, environment/env_file generated-artifact delivery-mode capability, published value_from cross-field exclusions, and a bounded env-file identity for issue #1074 and DSL-435.",
-    "content_hash": "9dc5928c3db16b72d5d93dd6d162fc5a2a393bb98d429a6a131f0e49d2d78da6"
+    "summary": "Added generated-artifact output environment consumption for issue #1074 and DSL-435 alongside participant-interaction commutativity and merge rules from issue #1101.",
+    "content_hash": "2981c2cb86232160373a380a20fbb1ad7d69b09628095e6d05979e397f4446a7"
   }
 }

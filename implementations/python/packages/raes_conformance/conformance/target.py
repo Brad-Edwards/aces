@@ -307,8 +307,6 @@ def _known_profile_report(
         profile,
         reference_scenario=options.reference_scenario,
     )
-    if target.manifest.realization_envelope is not None:
-        adapter_cases = adapter_cases[:1]
     participant_feature_cases = _participant_feature_cases(target, profile)
     policy_cases = participant_policy_cases(target, profile, options.participant_policy_harness)
     opacity_cases = participant_opacity_cases(target, options.participant_opacity_harness)

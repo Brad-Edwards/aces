@@ -1,6 +1,7 @@
 """Domain plan construction from reconciled resources and actions."""
 
 from raes_backend_protocols.capabilities import BackendManifest
+from raes_contracts.planning import ResolvedRealizationAuthority
 
 from ..models import (
     ChangeAction,
@@ -8,6 +9,7 @@ from ..models import (
     EvaluationPlan,
     OrchestrationOp,
     OrchestrationPlan,
+    PlannedRealizationConstraint,
     PlannedResource,
     ProvisioningPlan,
     ProvisionOp,
@@ -23,7 +25,7 @@ from .ordering import _delete_order, _entry_matches_resource, _topological_order
 def _build_operations(
     resources: dict[str, PlannedResource],
     snapshot: RuntimeSnapshot,
-    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
+    realization_requirements: tuple[CompiledRealizationRequirement, ...],
 ) -> tuple[dict[str, ChangeAction], dict[str, SnapshotEntry]]:
     semantic_actions, deleted_entries = reconcile_resource_actions(
         resources,
@@ -39,15 +41,10 @@ def _build_operations(
     return actions, deleted_entries
 
 
-def _build_provisioning_plan(
-    resources: dict[str, PlannedResource],
+def _ordered_apply_ops(
+    provisioning_resources: dict[str, PlannedResource],
     actions: dict[str, ChangeAction],
-    deleted_entries: dict[str, SnapshotEntry],
-    manifest: BackendManifest,
-) -> ProvisioningPlan:
-    provisioning_resources = {
-        address: resource for address, resource in resources.items() if resource.domain == RuntimeDomain.PROVISIONING
-    }
+) -> list[ProvisionOp]:
     ops: list[ProvisionOp] = []
     for address in _topological_order(provisioning_resources):
         resource = provisioning_resources[address]
@@ -61,6 +58,11 @@ def _build_provisioning_plan(
                 refresh_dependencies=resource.refresh_dependencies,
             )
         )
+    return ops
+
+
+def _ordered_delete_ops(deleted_entries: dict[str, SnapshotEntry]) -> list[ProvisionOp]:
+    ops: list[ProvisionOp] = []
     for address in _delete_order(
         {address: entry for address, entry in deleted_entries.items() if entry.domain == RuntimeDomain.PROVISIONING}
     ):
@@ -75,11 +77,43 @@ def _build_provisioning_plan(
                 refresh_dependencies=entry.refresh_dependencies,
             )
         )
+    return ops
+
+
+def _build_provisioning_plan(
+    resources: dict[str, PlannedResource],
+    actions: dict[str, ChangeAction],
+    deleted_entries: dict[str, SnapshotEntry],
+    manifest: BackendManifest,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...],
+    realization_authority: tuple[ResolvedRealizationAuthority, ...],
+) -> ProvisioningPlan:
+    provisioning_resources = {
+        address: resource for address, resource in resources.items() if resource.domain == RuntimeDomain.PROVISIONING
+    }
+    ops = _ordered_apply_ops(provisioning_resources, actions)
+    ops.extend(_ordered_delete_ops(deleted_entries))
     return ProvisioningPlan(
         resources=provisioning_resources,
         operations=ops,
+        realization_authority=tuple(
+            entry for entry in realization_authority if entry.address in provisioning_resources
+        ),
         realization_envelope=(
             manifest.realization_envelope.identity if manifest.realization_envelope is not None else None
+        ),
+        realization_constraints=tuple(
+            PlannedRealizationConstraint(
+                address=requirement.address,
+                field_path=requirement.field_path,
+                concern=requirement.requirement_kind,
+                posture=requirement.explicitness.value,
+                value_domain=requirement.value_domain,
+                governing_scope=requirement.governing_scope or "#/",
+                provenance=requirement.constraint_provenance or "author-declared",
+            )
+            for requirement in realization_requirements
+            if requirement.requirement_kind == "compute-substrate" and requirement.explicitness is not None
         ),
     )
 

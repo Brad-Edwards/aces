@@ -23,9 +23,12 @@ backends, and evidence requirements.
 | [`scenarios/enterprise-participant-evidence-loop.sdl.yaml`](scenarios/enterprise-participant-evidence-loop.sdl.yaml) | Reference scenario for a generic enterprise participant/evidence loop | Disk-backed example test; focused processor compile check for participant behaviors, action contracts, observation boundaries, Wazuh evidence, policy provenance, and boundary evidence surfaces | Does not prove a concrete coding-agent runner, APTL/libvirt realization, TechVault coverage, or broad benchmark capability |
 | [`scenarios/initial-service-state.sdl.yaml`](scenarios/initial-service-state.sdl.yaml) | Provider-neutral service-owned initial content | Disk-backed semantic validation of exact service binding, operation requirements, readback evidence, and participant projection | No current backend claims the `service-content-v1` materialization profile |
 | [`scenarios/techvault-bounded-native.sdl.yaml`](scenarios/techvault-bounded-native.sdl.yaml) | Bounded TechVault libvirt VM/network substrate with explicit resources and network policy | Native driver exactness/readback tests and opt-in real-libvirt cleanup certification | Deliberately excludes guest images, placements, services, ACLs, readiness, applications, and SOC claims |
+| [`scenarios/cross-backend-minimal.sdl.yaml`](scenarios/cross-backend-minimal.sdl.yaml) | Smallest scenario resolving inside more than one provisioning backend's realization envelope | Hermetic admission and apply on the reference in-process and recording-libvirt configurations, with resource correspondence and different bound substrate disclosures asserted | Does not exercise an OCI runtime or live libvirt/QEMU daemon and makes no infrastructure-equivalence or fidelity claim |
 
-The tests are in
-[`../implementations/python/tests/test_scenarios.py`](../implementations/python/tests/test_scenarios.py).
+The corpus tests are in
+[`../implementations/python/tests/test_scenarios.py`](../implementations/python/tests/test_scenarios.py),
+with the focused cross-backend checks in
+[`../implementations/python/tests/test_cross_backend_minimal_scenario.py`](../implementations/python/tests/test_cross_backend_minimal_scenario.py).
 
 ## Template And Pattern Library
 

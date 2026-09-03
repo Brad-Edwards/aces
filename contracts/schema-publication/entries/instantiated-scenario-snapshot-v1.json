@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "9d30cf2be6f7ffb355d9792a4f1fd937ef970aabeb8a6d586df4bf833bbb59cb",
+  "content_hash": "4339c86ad1ec1a43ee2c0bb027d2e26ff9e171a37215e38a17ba262e6efadc57",
   "last_change": {
-    "summary": "Added generated-artifact output consumption as a node runtime environment value (RuntimeEnvironmentVariable.value_from / RuntimeEnvironmentFile) with a GeneratedArtifactValueSource reference, environment/env_file generated-artifact delivery-mode capability, published value_from cross-field exclusions, and a bounded env-file identity for issue #1074 and DSL-435.",
-    "content_hash": "9d30cf2be6f7ffb355d9792a4f1fd937ef970aabeb8a6d586df4bf833bbb59cb"
+    "summary": "Added generated-artifact output environment consumption for issue #1074 and DSL-435 alongside participant-interaction commutativity and merge rules from issue #1101.",
+    "content_hash": "4339c86ad1ec1a43ee2c0bb027d2e26ff9e171a37215e38a17ba262e6efadc57"
   }
 }

@@ -258,7 +258,7 @@ def _build_diagram(scenario: Scenario) -> str:
         lines.extend(_switch_diagram_lines(scenario, sw_name, connected))
 
     if unlinked_vms:
-        lines.append("\n[unlinked VMs]")
+        lines.append("\n[unlinked compute nodes]")
         lines.extend(f"  └── {vm}" for vm in unlinked_vms)
 
     lines.extend(_dependency_lines(scenario))
@@ -270,7 +270,7 @@ def _group_vms_by_switch(scenario: Scenario) -> tuple[dict[str, list[str]], list
     from raes.nodes import NodeType
 
     switches = [name for name, node in scenario.nodes.items() if node.type == NodeType.SWITCH]
-    vms = [name for name, node in scenario.nodes.items() if node.type == NodeType.VM]
+    vms = [name for name, node in scenario.nodes.items() if node.type == NodeType.COMPUTE]
 
     switch_to_vms: dict[str, list[str]] = {sw: [] for sw in switches}
     unlinked_vms: list[str] = []
@@ -288,7 +288,7 @@ def _group_vms_by_switch(scenario: Scenario) -> tuple[dict[str, list[str]], list
 def _switch_diagram_lines(scenario: Scenario, sw_name: str, connected: list[str]) -> list[str]:
     lines = [f"\n[{sw_name}]{_switch_cidr(scenario, sw_name)}{_switch_desc(scenario, sw_name)}"]
     if not connected:
-        lines.append("  (no VMs connected)")
+        lines.append("  (no compute nodes connected)")
         return lines
     for i, vm in enumerate(connected):
         connector = "├── " if i < len(connected) - 1 else "└── "

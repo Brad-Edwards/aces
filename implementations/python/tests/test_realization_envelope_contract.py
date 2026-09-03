@@ -45,7 +45,7 @@ def _payload() -> dict[str, object]:
             "architecture": "x86_64",
             "image_policy": "local-qcow2",
             "network_policy": "libvirt-managed",
-            "supported_node_types": ["switch", "vm"],
+            "supported_node_types": ["switch", "compute"],
             "supported_os_families": ["linux"],
             "supported_content_types": ["file"],
             "supported_account_features": ["groups"],
@@ -69,6 +69,13 @@ def _payload() -> dict[str, object]:
                 "mechanism": "libvirt-domain-xml",
                 "transformations": ["bounded-normalization"],
             },
+            {
+                "concern": "compute-substrate",
+                "disposition": "realized",
+                "observation_strength": "daemon-observed",
+                "mechanism": "virtual-machine",
+                "transformations": [],
+            },
             *[
                 {
                     "concern": concern,
@@ -78,6 +85,7 @@ def _payload() -> dict[str, object]:
                     "transformations": [],
                 }
                 for concern in (
+                    "operating-system",
                     "architecture",
                     "image",
                     "network",
@@ -105,7 +113,7 @@ def test_backend_realization_envelope_validates_its_canonical_digest():
         architecture="x86_64",
         image_policy="local-qcow2",
         network_policy="libvirt-managed",
-        supported_node_types=["switch", "vm"],
+        supported_node_types=["switch", "compute"],
         supported_os_families=["linux"],
         supported_content_types=["file"],
         supported_account_features=["groups"],
@@ -131,6 +139,7 @@ def test_backend_realization_envelope_validates_its_canonical_digest():
 
 def test_realization_concern_taxonomy_accounts_for_declared_services():
     assert RealizationConcern.SERVICE.value == "service"
+    assert RealizationConcern.COMPUTE_SUBSTRATE.value == "compute-substrate"
 
 
 def test_backend_realization_envelope_rejects_content_tampering():
@@ -159,12 +168,40 @@ def test_backend_realization_envelope_rejects_missing_concern_disclosure():
         BackendRealizationEnvelopeModel.model_validate(payload)
 
 
+def test_operating_system_capability_rows_require_realized_guest_observed_claim():
+    payload = _payload()
+    payload["configuration"]["operating_systems"] = [  # type: ignore[index]
+        {"family": "linux", "distribution": "ubuntu", "versions": ["22.04"]}
+    ]
+    payload["configuration"]["configuration_digest"] = realizer_configuration_digest(  # type: ignore[index]
+        payload["configuration"]
+    )
+    payload["digest"] = realization_envelope_digest(payload)
+
+    with pytest.raises(ValidationError, match="capability rows require a realized guest-observed"):
+        BackendRealizationEnvelopeModel.model_validate(payload)
+
+
+def test_operating_system_claim_requires_coupled_capability_rows():
+    payload = _payload()
+    operating_system = next(claim for claim in payload["concerns"] if claim["concern"] == "operating-system")  # type: ignore[index]
+    operating_system.update(
+        disposition="realized",
+        observation_strength="guest-observed",
+        mechanism="guest-os-release",
+    )
+    payload["digest"] = realization_envelope_digest(payload)
+
+    with pytest.raises(ValidationError, match="support requires coupled operating_systems capability rows"):
+        BackendRealizationEnvelopeModel.model_validate(payload)
+
+
 def test_published_schema_enforces_expressible_realization_invariants():
     schema = BackendRealizationEnvelopeModel.model_json_schema()
     validator = Draft202012Validator(schema)
 
     duplicate_term = _payload()
-    duplicate_term["configuration"]["supported_node_types"] = ["vm", "vm"]  # type: ignore[index]
+    duplicate_term["configuration"]["supported_node_types"] = ["compute", "compute"]  # type: ignore[index]
     assert list(validator.iter_errors(duplicate_term))
 
     missing_concern = _payload()
@@ -241,14 +278,14 @@ def test_manifest_plan_and_snapshot_publish_the_same_typed_identity():
             "capabilities": {
                 "provisioner": {
                     "name": "test",
-                    "supported_node_types": ["vm"],
+                    "supported_node_types": ["compute"],
                     "supported_os_families": ["linux"],
                 }
             },
             "realization_envelope": identity,
         }
     )
-    plan = ProvisioningPlanModel(realization_envelope=identity)
+    plan = ProvisioningPlanModel(realization_authority=[], realization_envelope=identity)
     snapshot = RuntimeSnapshotEnvelopeModel(realization_envelope=identity)
 
     assert manifest.realization_envelope == plan.realization_envelope == snapshot.realization_envelope
@@ -300,7 +337,7 @@ def test_backend_manifest_requires_contract_declaration_for_envelope_identity():
         "capabilities": {
             "provisioner": {
                 "name": "test",
-                "supported_node_types": ["vm"],
+                "supported_node_types": ["compute"],
                 "supported_os_families": ["linux"],
             }
         },

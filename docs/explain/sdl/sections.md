@@ -29,9 +29,9 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 
 | Section | Type | Purpose |
 |---------|------|---------|
-| `nodes` | `dict[str, Node]` | VMs and network switches — the compute/network topology |
+| `nodes` | `dict[str, Node]` | Compute nodes and network switches — the compute/network topology |
 | `infrastructure` | `dict[str, InfraNode]` | Deployment topology: counts, links, dependencies, IP/CIDR, ACLs |
-| `features` | `dict[str, Feature]` | Software (Service/Configuration/Artifact) deployed to VMs |
+| `features` | `dict[str, Feature]` | Software (Service/Configuration/Artifact) deployed to compute nodes |
 | `conditions` | `dict[str, Condition]` | Declarative health/readiness checks (command+interval or library source) |
 | `vulnerabilities` | `dict[str, Vulnerability]` | CWE-classified vulnerabilities assigned to nodes/features |
 | `entities` | `dict[str, Entity]` | Teams, organizations, people (recursive, with exercise roles) |
@@ -66,6 +66,15 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 
 Nodes are the compute and network elements of the scenario.
 
+Operating-system identity is split into three independent fields: `os` is the
+family, `os_distribution` is the governed distribution or product line, and
+`os_version` is only the release token. A version requires a distribution, and
+a distribution requires a family. Backends admit distribution/version pairs as
+coupled compatibility rows; they must not infer support by cross-pairing values
+from different rows. Runtime proof for these fields is guest-observed evidence
+bound to the executing operation and selected realization envelope—not an image
+tag, boot success, or a copied plan/snapshot value.
+
 ```yaml
 nodes:
   corp-switch:
@@ -73,10 +82,11 @@ nodes:
     description: Corporate LAN
 
   web-server:
-    type: VM
+    type: compute
     os: linux                           # windows, linux, macos, freebsd, other
     architecture: x86_64                 # target-node CPU architecture: x86_64, aarch64
-    os_version: "Ubuntu 22.04"
+    os_distribution: ubuntu
+    os_version: "22.04"
     source: ubuntu-22.04                # provider-neutral image reference
     resources:
       ram: 4 GiB                        # human-readable: GiB, MiB, GB, MB
@@ -168,6 +178,20 @@ nodes:
           memory: 512 MiB
           cpu: 0.5
           pids: 128
+          process_limits:
+            - resource: open_file_descriptors
+              soft: 4096
+              hard: 8192
+              subject:
+                name: gunicorn
+                role: worker
+              scope: subtree
+            - resource: locked_memory_bytes
+              soft: 0
+              hard: unlimited
+              subject:
+                name: shufflebackend
+              scope: process
       container:
         entrypoint: [/entrypoint.sh]
         command: [gunicorn, app:app]
@@ -670,7 +694,7 @@ nodes:
           domain_name: TECHVAULT
           realm: TECHVAULT.LOCAL
           base_dn: DC=techvault,DC=local
-          services:
+    services:
             - service_id: ldap-endpoint
               service: ldap             # owning same-node Node.services[].name
               protocol: ldap
@@ -710,7 +734,30 @@ nodes:
 
 **Switch** nodes are pure connectivity objects. They may define `type` and an optional `description`, but `source`, `resources`, `os`, `architecture`, `os_version`, `features`, `conditions`, `injects`, `vulnerabilities`, `roles`, `services`, `asset_value`, and `runtime` are rejected.
 
-For **VM** nodes, `resources` remain optional at the SDL layer to preserve abstract specifications, but a VM without `resources` emits a non-fatal advisory because many deployment backends will need explicit sizing or well-defined defaults.
+**Compute** is a portable resource kind, not a synonym for virtual machine.
+Without another declaration a backend may realize a compute node with any
+admitted substrate. Authors constrain that choice at the scenario root:
+
+```yaml
+realization:
+  constraints:
+    - field_pointer: /nodes/web
+      concern: compute-substrate
+      posture: constrained
+      domain:
+        kind: enum
+        values: [operating-system-container, virtual-machine]
+```
+
+Use `posture: exact` with an exact domain to require one mechanism. The
+portable mechanisms are `virtual-machine`, `operating-system-container`, and
+`physical-device`; governed extension terms remain available for modes such as
+reference emulation. Planning preserves this constraint separately from the
+node kind, and runtime evidence records the mechanism actually selected.
+Historical `type: vm` is accepted only by explicit migration, where it becomes
+`type: compute` plus an exact `virtual-machine` constraint.
+
+For **compute** nodes, `resources` remain optional at the SDL layer to preserve abstract specifications, but a compute node without `resources` emits a non-fatal advisory because many deployment backends will need explicit sizing or well-defined defaults.
 
 **Target-node architecture:** `architecture` is the CPU architecture the target node or guest requires. Canonical values are `x86_64` and `aarch64`; case-insensitive aliases (`amd64`, `x64`, `x86-64`, `arm64`) normalize to them, and a custom architecture uses the governed `x-<owner>:<term>` extension form. It is distinct from a runtime package's artifact architecture and from a backend host's architecture. Absence means the scenario imposes no target-node architecture requirement; it never implies the host, runner, or image architecture. When a node declares `architecture`, every architecture-constrained runtime package on that node must resolve to the same canonical value, and a node without `architecture` may not carry an architecture-constrained package.
 
@@ -718,7 +765,7 @@ For **VM** nodes, `resources` remain optional at the SDL layer to preserve abstr
 
 When `features`, `conditions`, or `injects` use the `{name: role}` form, the role must be declared in the node's `roles` map.
 
-Concrete service bindings on a VM must be unique by `protocol` + `port`. Reusing `53/tcp` and `53/udp` is valid; declaring `443/tcp` twice on the same node is rejected. If a service binding also has a `name`, that `name` must be unique within the node and can be targeted directly as `nodes.<node>.services.<service_name>`.
+Concrete service bindings on a compute node must be unique by `protocol` + `port`. Reusing `53/tcp` and `53/udp` is valid; declaring `443/tcp` twice on the same node is rejected. If a service binding also has a `name`, that `name` must be unique within the node and can be targeted directly as `nodes.<node>.services.<service_name>`.
 
 A `services` entry identifies an authored node-local transport binding. It does
 not authorize any source to reach the port, prove a live listener, publish a
@@ -729,7 +776,7 @@ recorded in `runtime.service_listeners`, and host publication is recorded in
 an unmodeled field such as `role` is rejected rather than interpreted as policy
 or silently dropped.
 
-`runtime` is authored declarative contract state for VM/container nodes. Every
+`runtime` is authored declarative contract state for compute nodes across VM and container realizations. Every
 field present there requires exact state, constrains acceptable state, or marks
 an explicitly open realization point. A value does not become an SDL
 requirement merely because Docker, a scanner, or a participant-visible probe
@@ -761,8 +808,23 @@ execution identity; `environment` records observed runtime environment
 variables with provenance and value classification, where redacted and
 operator-secret values omit raw data and `secret_fixture` is the explicit
 exercise-fixture disclosure; `linux_capabilities` records container/Linux
-capability policy; `operational_policy` records restart policy and observed
-resource limits; `container` records observed host/container configuration and
+capability policy; `operational_policy` records restart policy and required
+resource policy. Its `memory`, `memory_swap`, `cpu`, and `pids` fields govern
+node/container capacity. Its `process_limits` collection separately governs
+portable soft/hard process limits: `open_file_descriptors` counts descriptors
+and `locked_memory_bytes` counts bytes; each value is a non-negative integer,
+`unlimited`, or a whole-field variable. Every record selects a declared
+`runtime.processes` identity and states whether the limit applies only to that
+process or to its subtree. All populated selector fields must match the same
+declared process. A redacted command must be omitted and paired with another
+stable selector such as name, role, user, or working directory; command content
+cannot be authored and then discarded from identity. Native names such as
+`nofile`/`memlock`, Docker
+`ulimits`, systemd directives, and raw `/proc` data are backend dialect or
+evidence, not SDL. An authored empty collection requires exact absence, while
+omission creates no closed requirement unless a `realization` designation
+explicitly opens or constrains the concern. `container` records observed
+host/container configuration and
 namespace/security facts, including `seccomp_profile` (the portable seccomp
 posture — `default`, `unconfined`, a named profile, or a profile path) and
 `security_opt` (the bounded list of backend-native engine security options
@@ -1319,7 +1381,7 @@ ACL rule `name` is optional, but when present it must be unique within that infr
 
 ## Features
 
-Software deployed onto VMs. Three types: Service, Configuration, Artifact.
+Software deployed onto compute nodes. Three types: Service, Configuration, Artifact.
 
 ```yaml
 features:
@@ -1528,10 +1590,10 @@ content:
     format: sql
 ```
 
-`target` is required for every content entry. Normally it references a VM node,
+`target` is required for every content entry. Normally it references a compute node,
 not a switch/network node. When ordinary node placement cannot establish
 required service-owned state, `service_materialization` binds that content to a
-named service on the same VM:
+named service on the same compute node:
 
 ```yaml
 content:
@@ -1631,7 +1693,7 @@ accounts:
           reference_id: operator-secret.web-bootstrap
 ```
 
-`username` and `node` are required. `node` must reference a VM node, not a switch/network node.
+`username` and `node` are required. `node` must reference a compute node, not a switch/network node.
 Directory users, groups, service principals, devices, IAM roles, IdP
 applications, and federation subjects belong in
 `nodes.<node>.runtime.identity_authorities` when they are observed
@@ -1686,7 +1748,7 @@ relationships:
       controller_refs: [dc]
 ```
 
-Every domain has a VM controller, joins list explicit same-domain controller
+Every domain has a compute node controller, joins list explicit same-domain controller
 candidates, the authority account lives on a controller, and domain-bound
 accounts live on participating nodes. SPNs require `domain_ref`; the domain is
 never inferred from the SPN or node operating system. See the
@@ -1794,9 +1856,9 @@ agents:
       - user-net
     interactive_access:                 # explicit access-carrier availability
       primary-shell:                    # stable participant-local declaration id
-        target_ref: user0               # VM ref; bare or nodes.user0
+        target_ref: user0               # compute-node ref; bare or nodes.user0
         channel: ssh                    # closed vocabulary: ssh or rdp
-        account_ref: phished-user       # optional; same VM + starting account
+        account_ref: phished-user       # optional; same compute node + starting account
 ```
 
 The CybORG-inherited `agents.reward_calculator` label was removed from the SDL by
@@ -1807,7 +1869,7 @@ not as an authored SDL agent field.
 
 `entity` is required and must resolve to the `entities` section; the
 participant's authored identity and role both come from this binding (per
-ADR-020). `initial_knowledge.hosts` references VM node names, `subnets`
+ADR-020). `initial_knowledge.hosts` references compute node names, `subnets`
 references switch-backed infrastructure names, `services` references service
 names declared in `nodes.*.services`, and `accounts` references entries in the
 `accounts` section. `allowed_subnets` follows the same switch-backed
@@ -1826,9 +1888,9 @@ generalises `allowed_subnets`, which remains restricted to switch-backed
 infrastructure.
 
 `interactive_access` is a keyed registry of authored access-carrier
-availability. Each value is closed: `target_ref` resolves to a VM, `channel` is
+availability. Each value is closed: `target_ref` resolves to a compute node, `channel` is
 exactly `ssh` or `rdp` (or a whole-field variable before instantiation), and an
-optional `account_ref` resolves to an account on that VM that is already in the
+optional `account_ref` resolves to an account on that compute node that is already in the
 participant's `starting_accounts`. The same concrete target/channel pair may
 appear only once per participant after bare/qualified reference normalization;
 different participants may declare it independently. Stable registry keys are

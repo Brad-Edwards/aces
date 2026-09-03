@@ -28,7 +28,7 @@ A controller role is a relationship with:
 
 ```yaml
 type: domain_controller_for
-source: <vm-node-ref>
+source: <compute-node-ref>
 target: <identity-domain-ref>
 domain_controller: {}
 ```
@@ -37,10 +37,10 @@ A member join is a relationship with:
 
 ```yaml
 type: joins_domain
-source: <vm-node-ref>
+source: <compute-node-ref>
 target: <identity-domain-ref>
 domain_join:
-  controller_refs: [<vm-node-ref>, ...]
+  controller_refs: [<compute-node-ref>, ...]
 ```
 
 `controller_refs` is ordered, non-empty, and duplicate-free. Every candidate
@@ -64,7 +64,7 @@ MUST resolve to an account placed on one of that domain's controller nodes.
 For the initial `active_directory` profile, semantic validation MUST reject:
 
 - a domain with no controller;
-- a controller or member edge whose source is not a VM;
+- a controller or member edge whose source is not a compute node;
 - duplicate controller or member facts;
 - a node that both controls and joins the same domain;
 - a node belonging to more than one Active Directory domain;

@@ -75,6 +75,20 @@ class RealizationSupportMode(str, Enum):
     OPEN_REALIZATION = "open-realization"
 
 
+class ProcessResourceLimitKind(str, Enum):
+    """Portable process-resource terms governed by the runtime contract."""
+
+    OPEN_FILE_DESCRIPTORS = "open_file_descriptors"
+    LOCKED_MEMORY_BYTES = "locked_memory_bytes"
+
+
+class ProcessResourceLimitScope(str, Enum):
+    """Process inheritance scope for a portable resource limit."""
+
+    PROCESS = "process"
+    SUBTREE = "subtree"
+
+
 class ObservationStrength(str, Enum):
     """Strongest evidence a backend configuration emits for one concern."""
 
@@ -82,6 +96,21 @@ class ObservationStrength(str, Enum):
     DRIVER_REPORTED = "driver-reported"
     DAEMON_OBSERVED = "daemon-observed"
     GUEST_OBSERVED = "guest-observed"
+
+
+def observation_strength_satisfies(
+    actual: ObservationStrength,
+    required: ObservationStrength,
+) -> bool:
+    """Return whether an observation is at least as strong as required."""
+
+    rank = {
+        ObservationStrength.NONE: 0,
+        ObservationStrength.DRIVER_REPORTED: 1,
+        ObservationStrength.DAEMON_OBSERVED: 2,
+        ObservationStrength.GUEST_OBSERVED: 3,
+    }
+    return rank[actual] >= rank[required]
 
 
 class RealizationVerificationScope(str, Enum):

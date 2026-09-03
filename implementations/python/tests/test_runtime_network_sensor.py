@@ -50,7 +50,7 @@ def _suricata_sensor(**overrides) -> dict:
 
 def _sensor_node(sensor: dict | None = None) -> dict:
     return {
-        "type": "vm",
+        "type": "compute",
         "resources": {"ram": "2 gib", "cpu": 2},
         "runtime": {
             "processes": [{"name": "suricata", "pid": 1, "command": ["suricata", "--pcap"]}],
@@ -94,7 +94,7 @@ def test_network_sensor_surface_is_node_scoped_not_top_level() -> None:
 
 
 def test_vm_runtime_network_sensor_inventory() -> None:
-    node = Node(type="vm", runtime={"network_sensors": [_suricata_sensor()]})
+    node = Node(type="compute", runtime={"network_sensors": [_suricata_sensor()]})
 
     sensor = node.runtime.network_sensors[0]
     assert sensor.network_sensor_id == "suricata"
@@ -113,7 +113,7 @@ def test_parser_accepts_canonical_runtime_network_sensors() -> None:
         nodes:
           dmz-net: {type: switch}
           suricata:
-            type: vm
+            type: compute
             resources: {ram: 2 gib, cpu: 2}
             runtime:
               network:
@@ -174,7 +174,7 @@ class TestRuntimeNetworkSensorSemanticValidation:
             name="network-sensor",
             nodes={
                 **_network_nodes(),
-                "webapp": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "webapp": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
                 "suricata": _sensor_node(sensor),
             },
             infrastructure={**_infrastructure(), "webapp": {"count": 1}},
@@ -213,7 +213,7 @@ class TestRuntimeNetworkSensorSemanticValidation:
             nodes={
                 **_network_nodes(),
                 "suricata": _sensor_node(),
-                "client": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "client": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             infrastructure={**_infrastructure(), "client": {"count": 1, "links": ["dmz-net"]}},
             relationships={

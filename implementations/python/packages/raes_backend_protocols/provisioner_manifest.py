@@ -6,7 +6,7 @@ from typing import Any
 
 from raes_contracts.contracts import ProvisionerCapabilitiesModel
 
-from .provisioner_capabilities import ProvisionerCapabilities
+from .provisioner_capabilities import OperatingSystemCompatibility, ProvisionerCapabilities
 
 
 def provisioner_capability_payload(provisioner: ProvisionerCapabilities) -> dict[str, Any]:
@@ -16,6 +16,17 @@ def provisioner_capability_payload(provisioner: ProvisionerCapabilities) -> dict
         "name": provisioner.name,
         "supported_node_types": sorted(provisioner.supported_node_types),
         "supported_os_families": sorted(provisioner.supported_os_families),
+        "operating_systems": [
+            {
+                "family": entry.family,
+                "distribution": entry.distribution,
+                "versions": sorted(entry.versions),
+            }
+            for entry in sorted(
+                provisioner.operating_systems,
+                key=lambda item: (item.family, item.distribution),
+            )
+        ],
         "supported_node_architectures": sorted(provisioner.supported_node_architectures),
         "supported_content_types": sorted(provisioner.supported_content_types),
         "supported_account_features": sorted(provisioner.supported_account_features),
@@ -43,6 +54,14 @@ def provisioner_from_model(model: ProvisionerCapabilitiesModel) -> ProvisionerCa
         name=model.name,
         supported_node_types=frozenset(model.supported_node_types),
         supported_os_families=frozenset(model.supported_os_families),
+        operating_systems=tuple(
+            OperatingSystemCompatibility(
+                family=entry.family,
+                distribution=entry.distribution,
+                versions=frozenset(entry.versions),
+            )
+            for entry in model.operating_systems
+        ),
         supported_node_architectures=frozenset(model.supported_node_architectures),
         supported_content_types=frozenset(model.supported_content_types),
         supported_account_features=frozenset(model.supported_account_features),

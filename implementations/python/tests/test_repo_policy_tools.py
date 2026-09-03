@@ -3,10 +3,12 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import json
+import os
 import shutil
 import subprocess
 import sys
 import threading
+import tomllib
 import types
 from contextlib import nullcontext
 from pathlib import Path
@@ -22,6 +24,8 @@ import tools.check_json_artifacts as check_json_artifacts
 import tools.osv_scanner_tool as osv_scanner_tool
 import tools.policy.conftest_tool as conftest_tool
 import yaml
+from packaging.requirements import Requirement
+from packaging.version import Version
 from tools.check_adr_immutability import (
     amendment_refs,
     canonical_content,
@@ -120,6 +124,7 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
     assert kwargs["env"] == {"COVERAGE_FILE": str(coverage_file)}
 
     session.commands.clear()
+    monkeypatch.setattr(noxfile, "_enforce_line_coverage", lambda _path: 90.0)
     noxfile._run_pytest(
         session,
         "-m",
@@ -139,8 +144,8 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["xml", "report"]
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert [command[4] for command, _options in coverage_commands] == ["xml", "json", "report"]
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
 
 
@@ -295,6 +300,7 @@ def test_parallel_coverage_is_combined_before_reporting(
             return nullcontext()
 
     session = FakeSession()
+    monkeypatch.setattr(noxfile, "_enforce_line_coverage", lambda _path: 90.0)
     noxfile._finalize_parallel_coverage(session, tmp_path)
 
     coverage_commands = [
@@ -302,12 +308,225 @@ def test_parallel_coverage_is_combined_before_reporting(
         for command, options in session.commands
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
-    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "report"]
+    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "json", "report"]
     assert coverage_commands[0][0][5:] == ("--keep", str(tmp_path))
-    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert coverage_commands[-1][0][-1:] == ("--format=total",)
     assert all(
         options["env"] == {"COVERAGE_FILE": str(tmp_path / ".coverage")} for _command, options in coverage_commands
     )
+
+
+def test_policy_session_split_routes_base_revision_to_both_policy_layers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+
+    repo_args, requirement_args, skip_requirement = noxfile._split_policy_session_args(
+        ["--base-rev", "origin/dev", "--requirement-uid", "API-404"]
+    )
+
+    assert repo_args == ["--base-rev", "origin/dev"]
+    assert requirement_args == ["--base-rev", "origin/dev", "--requirement-uid", "API-404"]
+    assert skip_requirement is False
+
+
+def _exercise_python_compatibility(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    build_artifacts: bool,
+) -> tuple[types.ModuleType, list[tuple[str, ...]], list[tuple[str, ...]], list[str]]:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    commands: list[tuple[str, ...]] = []
+    pytest_calls: list[tuple[str, ...]] = []
+    logs: list[str] = []
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.env: dict[str, str] = {}
+
+        def log(self, message: str) -> None:
+            logs.append(message)
+
+    def fake_run(session: FakeSession, *command: str, **_kwargs: object) -> None:
+        assert session.env["UV_PYTHON"] == "cpython-3.14"
+        commands.append(command)
+        if command[:2] != ("uv", "build"):
+            return
+        output_dir = Path(command[command.index("--out-dir") + 1])
+        output_dir.mkdir(parents=True)
+        if build_artifacts:
+            (output_dir / "raes-3.3.0-py3-none-any.whl").write_bytes(b"wheel")
+            (output_dir / "raes-3.3.0.tar.gz").write_bytes(b"sdist")
+
+    monkeypatch.setenv(noxfile.EXPECTED_PYTHON_ENV, "3.14")
+    monkeypatch.setenv("UV_PYTHON", "cpython-3.14")
+    monkeypatch.setenv(noxfile.EXPECT_FREE_THREADED_ENV, "1")
+    monkeypatch.setattr(noxfile, "_run", fake_run)
+    monkeypatch.setattr(
+        noxfile,
+        "_run_pytest",
+        lambda _session, *args, **_kwargs: pytest_calls.append(tuple(args)),
+    )
+    reporter = noxfile.SessionReporter(FakeSession(), "python-compatibility")
+    noxfile._run_python_compatibility(reporter.session, reporter)
+    return noxfile, commands, pytest_calls, [result.name for result in reporter.results]
+
+
+def test_python_compatibility_graph_builds_and_checks_clean_distribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile, commands, pytest_calls, stages = _exercise_python_compatibility(
+        monkeypatch,
+        build_artifacts=True,
+    )
+
+    assert stages == [
+        "python compatibility / frozen sync",
+        "python compatibility / exact runtime",
+        "python compatibility / hermetic tests",
+        "python compatibility / build distributions",
+        "python compatibility / create clean environment",
+        "python compatibility / install wheel",
+        "python compatibility / installed metadata and imports",
+        "python compatibility / installed CLI version",
+        "python compatibility / installed CLI help",
+    ]
+    assert pytest_calls == [("-q",)]
+    runtime_command = next(command for command in commands if command[:2] == ("uv", "run"))
+    assert runtime_command[-2:] == ("3.14", "1")
+    build_command = next(command for command in commands if command[:2] == ("uv", "build"))
+    assert build_command[build_command.index("--python") :][:2] == ("--python", "cpython-3.14")
+    installed_python = next(command for command in commands if command and command[0].endswith("/bin/python"))
+    assert installed_python[-1] == "3.14"
+    assert any(command and command[0].endswith("/bin/raes") and command[-1] == "--version" for command in commands)
+    assert noxfile.PROJECT_ROOT.as_posix() in build_command
+
+
+@pytest.mark.parametrize(
+    ("expected", "selector", "message"),
+    [
+        ("3.15", "cpython-3.15", "must select a supported feature release"),
+        ("3.14", "", "UV_PYTHON must select the interpreter under test"),
+    ],
+)
+def test_python_compatibility_rejects_unsupported_or_missing_interpreter_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    expected: str,
+    selector: str,
+    message: str,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    monkeypatch.setenv(noxfile.EXPECTED_PYTHON_ENV, expected)
+    monkeypatch.setenv("UV_PYTHON", selector)
+    reporter = noxfile.SessionReporter(types.SimpleNamespace(log=lambda _message: None), "python-compatibility")
+
+    with pytest.raises(RuntimeError, match=message):
+        noxfile._run_python_compatibility(reporter.session, reporter)
+
+
+def test_python_compatibility_rejects_incomplete_distribution_build(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with pytest.raises(RuntimeError, match="must produce exactly one wheel and one source distribution"):
+        _exercise_python_compatibility(monkeypatch, build_artifacts=False)
+
+
+def test_python_compatibility_and_osv_session_wrappers_always_summarize(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    calls: list[str] = []
+    logs: list[str] = []
+    session = types.SimpleNamespace(log=logs.append, posargs=[])
+    monkeypatch.setattr(
+        noxfile,
+        "_run_python_compatibility",
+        lambda _session, _reporter: calls.append("python"),
+    )
+    monkeypatch.setattr(noxfile, "_run_osv_scan", lambda _session, _reporter, **_kwargs: calls.append("osv"))
+
+    noxfile.python_compatibility(session)
+    noxfile.osv_scan(session)
+
+    assert calls == ["python", "osv"]
+    assert any("[python-compatibility] stage summary" in message for message in logs)
+    assert any("[osv_scan] stage summary" in message for message in logs)
+
+
+def test_coverage_configuration_measures_branches_and_repository_python() -> None:
+    config = tomllib.loads((REPO_ROOT / "implementations" / "python" / "pyproject.toml").read_text(encoding="utf-8"))
+    run = config["tool"]["coverage"]["run"]
+    report = config["tool"]["coverage"]["report"]
+
+    assert run["branch"] is True
+    assert run["source"] == ["../.."]
+    assert set(run["omit"]) == {
+        "*/.cache/*",
+        "*/docs/*",
+        "*/implementations/python/.venv/*",
+        "*/implementations/python/tests/*",
+    }
+    assert report["include_namespace_packages"] is True
+
+
+def test_line_coverage_threshold_is_fixed_at_ninety_percent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    report_path = tmp_path / "coverage.json"
+    report_path.write_text(
+        json.dumps({"totals": {"covered_lines": 90, "num_statements": 100}}),
+        encoding="utf-8",
+    )
+
+    assert noxfile._enforce_line_coverage(report_path) == 90.0
+
+    report_path.write_text(
+        json.dumps({"totals": {"covered_lines": 899, "num_statements": 1000}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="89.900% is below required 90.000%"):
+        noxfile._enforce_line_coverage(report_path)
+
+
+def test_make_policy_skips_only_requirement_governance_without_a_uid() -> None:
+    environment = os.environ.copy()
+    environment.pop("RAES_REQUIREMENT_UID", None)
+    requirement_free = subprocess.run(
+        ("make", "--dry-run", "policy"),
+        cwd=REPO_ROOT,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    environment["RAES_REQUIREMENT_UID"] = "ASR-505"
+    requirement_scoped = subprocess.run(
+        ("make", "--dry-run", "policy"),
+        cwd=REPO_ROOT,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+    assert requirement_free.rstrip().endswith("-- --skip-requirement")
+    assert "--skip-requirement" not in requirement_scoped
+
+
+def test_hook_policy_context_skips_only_requirement_free_branches(monkeypatch: pytest.MonkeyPatch) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    monkeypatch.delenv("RAES_REQUIREMENT_UID", raising=False)
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged", "--skip-requirement"]
+
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-ASR-505-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
+
+    monkeypatch.setenv("RAES_REQUIREMENT_UID", "ASR-505")
+    monkeypatch.setattr(noxfile, "_git_lines", lambda *_args: ["1104-minimal-coverage-policy"])
+    assert noxfile._requirement_aware_policy_args("--staged") == ["--staged"]
 
 
 def test_docs_graph_uses_curated_root_and_reader_style_gate(
@@ -503,6 +722,22 @@ def test_hygiene_parser_ignores_policy_only_verify_args(monkeypatch: pytest.Monk
         {"staged": False, "base_rev": "origin/dev"},
         {"staged": False, "base_rev": "origin/dev"},
     ]
+
+
+@pytest.mark.parametrize("option", ["--base-rev", "--requirement-uid"])
+@pytest.mark.parametrize("trailing", [[], [""], ["--skip-requirement"]])
+def test_policy_arg_parsers_reject_missing_option_values(
+    monkeypatch: pytest.MonkeyPatch,
+    option: str,
+    trailing: list[str],
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    args = [option, *trailing]
+
+    with pytest.raises(ValueError, match=rf"^{option} requires a value$"):
+        noxfile._split_policy_session_args(args)
+    with pytest.raises(ValueError, match=rf"^{option} requires a value$"):
+        noxfile._parse_hygiene_posargs(args, default_all_files=False)
 
 
 def test_structural_policy_runner_receives_policy_input(tmp_path: Path) -> None:
@@ -2296,8 +2531,7 @@ def test_osv_scanner_release_asset_names_match_platform_conventions(
     monkeypatch.setattr("platform.machine", lambda: machine)
 
     # OSV-Scanner ships plain per-platform binaries, not archives.
-    assert osv_scanner_tool._release_asset_name("2.4.0") == expected
-    assert osv_scanner_tool._checksums_asset_name("2.4.0") == "osv-scanner_SHA256SUMS"
+    assert osv_scanner_tool._release_asset_name() == expected
 
 
 @pytest.mark.parametrize("system", ["Windows", "Plan9"])
@@ -2308,7 +2542,7 @@ def test_osv_scanner_release_asset_name_rejects_unsupported_platform(
     monkeypatch.setattr("platform.machine", lambda: "x86_64")
 
     with pytest.raises(RuntimeError, match="unsupported osv-scanner platform"):
-        osv_scanner_tool._release_asset_name("2.4.0")
+        osv_scanner_tool._release_asset_name()
 
 
 def test_osv_scanner_binary_path_uses_repo_local_cache(tmp_path: Path) -> None:
@@ -2317,24 +2551,357 @@ def test_osv_scanner_binary_path_uses_repo_local_cache(tmp_path: Path) -> None:
     )
 
 
-def test_osv_scanner_expected_checksum_parses_sha256sums() -> None:
-    sha256sums = (
-        "aaaa1111  osv-scanner_linux_amd64\n"
-        "bbbb2222  osv-scanner_darwin_arm64\n"
-        "cccc3333  osv-scanner_windows_amd64.exe\n"
+def test_osv_scanner_checksums_are_repository_pinned_for_every_admitted_asset() -> None:
+    assert osv_scanner_tool.OSV_SCANNER_SHA256["2.4.0"] == {
+        "osv-scanner_darwin_amd64": "088119325156321c34c456ac3703d6013538fd71cbac82b891ab34db491e4d66",
+        "osv-scanner_darwin_arm64": "9ca3185ad63e9ab54f7cb90f46a7362be02d80e37f0123d095a54355ea202f5d",
+        "osv-scanner_linux_amd64": "15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0",
+        "osv-scanner_linux_arm64": "44e580752910f0ff36ec99aff59af20f65df1e859aa31e5605a8f0d055b496e9",
+    }
+
+
+def _pin_fake_osv_download(monkeypatch: pytest.MonkeyPatch, payload: bytes) -> None:
+    asset = "osv-scanner_darwin_arm64"
+    monkeypatch.setattr(osv_scanner_tool.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(osv_scanner_tool.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(
+        osv_scanner_tool,
+        "OSV_SCANNER_SHA256",
+        {"2.4.0": {asset: osv_scanner_tool.sha256(payload).hexdigest()}},
     )
 
-    assert osv_scanner_tool._expected_checksum(sha256sums, "osv-scanner_darwin_arm64") == "bbbb2222"
-    assert osv_scanner_tool._expected_checksum(sha256sums, "osv-scanner_missing") is None
+
+def test_osv_scanner_valid_cache_hit_rehashes_without_network(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    binary = osv_scanner_tool.osv_scanner_binary_path(tmp_path)
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(payload)
+    binary.chmod(0o755)
+    monkeypatch.setattr(
+        osv_scanner_tool,
+        "download_bytes",
+        lambda _url, **_kwargs: pytest.fail("network used for valid cache"),
+    )
+
+    assert osv_scanner_tool.ensure_osv_scanner(tmp_path) == binary
 
 
-def test_osv_scanner_advisory_exit_codes_are_clean_and_vulns_only() -> None:
-    # 0 (no vulns) and 1 (vulns found) are advisory-success; scanner/setup
-    # error codes (127 general error, 128 no packages found) are not.
-    assert 0 in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
-    assert 1 in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
-    assert 127 not in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
-    assert 128 not in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
+@pytest.mark.parametrize("cache_kind", ["tampered", "non-executable", "symlink"])
+def test_osv_scanner_invalid_file_cache_is_reacquired_atomically(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    cache_kind: str,
+) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    binary = osv_scanner_tool.osv_scanner_binary_path(tmp_path)
+    binary.parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"must-remain")
+    if cache_kind == "symlink":
+        binary.symlink_to(outside)
+    else:
+        binary.write_bytes(payload if cache_kind == "non-executable" else b"tampered")
+        binary.chmod(0o644 if cache_kind == "non-executable" else 0o755)
+    monkeypatch.setattr(osv_scanner_tool, "download_bytes", lambda _url, **_kwargs: payload)
+
+    installed = osv_scanner_tool.ensure_osv_scanner(tmp_path)
+
+    assert installed == binary
+    assert installed.read_bytes() == payload
+    assert installed.stat().st_mode & 0o100
+    assert outside.read_bytes() == b"must-remain"
+
+
+def test_osv_scanner_unsafe_cache_shapes_fail_closed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    binary = osv_scanner_tool.osv_scanner_binary_path(tmp_path)
+    binary.mkdir(parents=True)
+
+    with pytest.raises(RuntimeError, match="not a regular file"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path)
+
+    shutil.rmtree(tmp_path / ".cache")
+    outside = tmp_path / "outside-cache"
+    outside.mkdir()
+    (tmp_path / ".cache").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(RuntimeError, match="unsafe osv-scanner cache directory"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path)
+
+    with pytest.raises(RuntimeError, match="cache path escapes"):
+        osv_scanner_tool._safe_cache_parent(tmp_path, tmp_path.parent / "outside" / "osv-scanner")
+
+
+def test_osv_scanner_cache_read_error_is_sanitized(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    binary = tmp_path / "osv-scanner"
+    binary.write_bytes(b"scanner")
+    binary.chmod(0o755)
+    monkeypatch.setattr(osv_scanner_tool, "_sha256_path", lambda _path: (_ for _ in ()).throw(OSError("secret")))
+
+    with pytest.raises(RuntimeError, match="failed to validate cached osv-scanner") as raised:
+        osv_scanner_tool._validated_cache_hit(binary, "0" * 64)
+    assert "secret" not in str(raised.value)
+
+
+def test_osv_scanner_cache_final_identity_read_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"scanner"
+    binary = tmp_path / "osv-scanner"
+    binary.write_bytes(payload)
+    binary.chmod(0o755)
+    expected = osv_scanner_tool.sha256(payload).hexdigest()
+    monkeypatch.setattr(osv_scanner_tool, "_sha256_path", lambda _path: expected)
+    real_lstat = Path.lstat
+    calls = 0
+
+    def fail_second_lstat(path: Path) -> os.stat_result:
+        nonlocal calls
+        if path == binary:
+            calls += 1
+            if calls == 2:
+                raise OSError("changed")
+        return real_lstat(path)
+
+    monkeypatch.setattr(Path, "lstat", fail_second_lstat)
+
+    with pytest.raises(RuntimeError, match="failed to validate cached osv-scanner"):
+        osv_scanner_tool._validated_cache_hit(binary, expected)
+
+
+def test_osv_scanner_cache_hash_rejects_last_component_swap(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"reviewed-scanner"
+    binary = tmp_path / "osv-scanner"
+    outside = tmp_path / "outside-scanner"
+    binary.write_bytes(payload)
+    binary.chmod(0o755)
+    outside.write_bytes(payload)
+    real_open = osv_scanner_tool.os.open
+
+    def swap_before_open(path: object, flags: int, *args: object) -> int:
+        if Path(path) == binary:
+            binary.unlink()
+            binary.symlink_to(outside)
+        return real_open(path, flags, *args)
+
+    monkeypatch.setattr(osv_scanner_tool.os, "open", swap_before_open)
+    expected = osv_scanner_tool.sha256(payload).hexdigest()
+
+    with pytest.raises(RuntimeError, match="failed to validate cached osv-scanner"):
+        osv_scanner_tool._validated_cache_hit(binary, expected)
+    assert outside.read_bytes() == payload
+
+
+def test_osv_scanner_cache_hash_rejects_unbounded_or_changed_files(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    binary = tmp_path / "osv-scanner"
+    binary.write_bytes(b"abc")
+    monkeypatch.setattr(osv_scanner_tool, "_MAX_BINARY_BYTES", 2)
+    with pytest.raises(OSError, match="bounded regular file"):
+        osv_scanner_tool._sha256_path(binary)
+
+    monkeypatch.setattr(osv_scanner_tool, "_MAX_BINARY_BYTES", 3)
+    real_open = osv_scanner_tool.os.open
+
+    def grow_before_open(path: object, flags: int, *args: object) -> int:
+        if Path(path) == binary:
+            binary.write_bytes(b"abcd")
+        return real_open(path, flags, *args)
+
+    monkeypatch.setattr(osv_scanner_tool.os, "open", grow_before_open)
+    with pytest.raises(OSError, match="exceeds the size bound"):
+        osv_scanner_tool._sha256_path(binary)
+
+
+def test_osv_scanner_cache_hash_rejects_open_and_post_hash_identity_changes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    binary = tmp_path / "osv-scanner"
+    other = tmp_path / "other"
+    binary.write_bytes(b"scanner")
+    other.write_bytes(b"other")
+    real_fstat = osv_scanner_tool.os.fstat
+    monkeypatch.setattr(osv_scanner_tool.os, "fstat", lambda _descriptor: other.stat())
+    with pytest.raises(OSError, match="changed while it was opened"):
+        osv_scanner_tool._sha256_path(binary)
+
+    monkeypatch.setattr(osv_scanner_tool.os, "fstat", real_fstat)
+    real_samestat = osv_scanner_tool.os.path.samestat
+    calls = 0
+
+    def identity_changes(left: os.stat_result, right: os.stat_result) -> bool:
+        nonlocal calls
+        calls += 1
+        return real_samestat(left, right) if calls == 1 else False
+
+    monkeypatch.setattr(osv_scanner_tool.os.path, "samestat", identity_changes)
+    with pytest.raises(OSError, match="changed while it was hashed"):
+        osv_scanner_tool._sha256_path(binary)
+
+
+def test_osv_scanner_download_has_a_finite_timeout(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    observed: dict[str, object] = {}
+
+    def download(url: str, **kwargs: object) -> bytes:
+        observed.update(url=url, **kwargs)
+        return payload
+
+    monkeypatch.setattr(osv_scanner_tool, "download_bytes", download)
+
+    assert osv_scanner_tool.ensure_osv_scanner(tmp_path).read_bytes() == payload
+    assert observed == {
+        "url": "https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_darwin_arm64",
+        "description": "osv-scanner",
+        "timeout_seconds": 60,
+        "max_bytes": 256 * 1024 * 1024,
+    }
+
+
+def test_osv_scanner_download_rejects_an_untrusted_release_url(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    monkeypatch.setattr(osv_scanner_tool, "_release_base_url", lambda _version: "file:///tmp")
+    monkeypatch.setattr(
+        osv_scanner_tool,
+        "download_bytes",
+        lambda _url, **_kwargs: pytest.fail("unsafe URL reached the network client"),
+    )
+
+    with pytest.raises(RuntimeError, match="unsafe osv-scanner release URL"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path)
+
+
+def test_osv_scanner_download_timeout_fails_closed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+
+    def timeout(_url: str, **kwargs: object) -> bytes:
+        assert kwargs["timeout_seconds"] == 60
+        raise RuntimeError("failed to download osv-scanner after 5 attempts")
+
+    monkeypatch.setattr(osv_scanner_tool, "download_bytes", timeout)
+
+    with pytest.raises(RuntimeError, match="failed to download osv-scanner"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path)
+
+
+def test_osv_scanner_unpinned_version_and_download_mismatch_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    with pytest.raises(RuntimeError, match="no repository-pinned checksum"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path, version="9.9.9")
+
+    monkeypatch.setattr(osv_scanner_tool, "download_bytes", lambda _url, **_kwargs: b"different")
+    with pytest.raises(RuntimeError, match="checksum mismatch"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path)
+    assert not osv_scanner_tool.osv_scanner_binary_path(tmp_path).exists()
+
+
+def test_osv_scanner_oversized_download_is_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    payload = b"four"
+    _pin_fake_osv_download(monkeypatch, payload)
+    monkeypatch.setattr(osv_scanner_tool, "_MAX_BINARY_BYTES", 3)
+    monkeypatch.setattr(osv_scanner_tool, "download_bytes", lambda _url, **_kwargs: payload)
+
+    with pytest.raises(RuntimeError, match="exceeds the download limit"):
+        osv_scanner_tool.ensure_osv_scanner(tmp_path)
+
+
+def test_osv_scanner_concurrent_acquisition_publishes_only_complete_bytes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"reviewed-scanner"
+    _pin_fake_osv_download(monkeypatch, payload)
+    barrier = threading.Barrier(2, timeout=3)
+
+    def concurrent_download(_url: str, **_kwargs: object) -> bytes:
+        barrier.wait()
+        return payload
+
+    monkeypatch.setattr(osv_scanner_tool, "download_bytes", concurrent_download)
+    results: list[Path] = []
+    failures: list[BaseException] = []
+
+    def acquire() -> None:
+        try:
+            results.append(osv_scanner_tool.ensure_osv_scanner(tmp_path))
+        except BaseException as exc:  # noqa: BLE001 - preserve worker failure for the main assertion
+            failures.append(exc)
+
+    workers = [threading.Thread(target=acquire) for _ in range(2)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join(timeout=5)
+
+    assert failures == []
+    assert len(results) == 2
+    assert results[0] == results[1]
+    assert results[0].read_bytes() == payload
+    assert list(results[0].parent.glob(".*.download")) == []
+
+
+def test_osv_scanner_cache_parent_tolerates_directory_creation_race(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    binary = osv_scanner_tool.osv_scanner_binary_path(tmp_path)
+    real_mkdir = Path.mkdir
+    raced = False
+
+    def create_then_report_race(path: Path, *args: object, **kwargs: object) -> None:
+        nonlocal raced
+        if not raced and path == tmp_path / ".cache":
+            raced = True
+            real_mkdir(path, *args, **kwargs)
+            raise FileExistsError(path)
+        real_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", create_then_report_race)
+
+    parent = osv_scanner_tool._safe_cache_parent(tmp_path, binary)
+
+    assert raced is True
+    assert parent == binary.parent
+    assert parent.is_dir()
+
+
+@pytest.mark.parametrize(
+    ("exit_code", "expected"),
+    [
+        (0, osv_scanner_tool.OSVScanOutcome.CLEAN),
+        (1, osv_scanner_tool.OSVScanOutcome.FINDINGS),
+        (2, osv_scanner_tool.OSVScanOutcome.SCANNER_ERROR),
+        (127, osv_scanner_tool.OSVScanOutcome.SCANNER_ERROR),
+        (128, osv_scanner_tool.OSVScanOutcome.SCANNER_ERROR),
+        (-9, osv_scanner_tool.OSVScanOutcome.SCANNER_ERROR),
+    ],
+)
+def test_osv_scanner_exit_codes_distinguish_findings_from_scanner_errors(
+    exit_code: int, expected: osv_scanner_tool.OSVScanOutcome
+) -> None:
+    assert osv_scanner_tool.classify_osv_exit_code(exit_code) is expected
 
 
 def _fake_osv_binary(tmp_path: Path, *, exit_code: int, payload: str = '{"results": []}') -> Path:
@@ -2356,6 +2923,95 @@ def test_run_osv_scanner_captures_stdout_and_returns_exit_code(tmp_path: Path) -
 
     assert exit_code == 1
     assert report.read_text() == '{"results": [1]}'
+
+
+def _run_nox_osv_scan(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    *,
+    exit_code: int,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+
+    class FakeSession:
+        def log(self, _message: str) -> None:
+            pass
+
+    lockfile = tmp_path / "implementations" / "python" / "uv.lock"
+    lockfile.parent.mkdir(parents=True)
+    lockfile.write_text("", encoding="utf-8")
+    report = lockfile.with_name("osv-scanner-report.json")
+    scanner_binary = tmp_path / "osv-scanner"
+    monkeypatch.setattr(noxfile, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(noxfile, "OSV_LOCKFILE_PATH", lockfile)
+    monkeypatch.setattr(noxfile, "OSV_REPORT_PATH", report)
+    monkeypatch.setattr(noxfile, "ensure_osv_scanner", lambda _repo_root: scanner_binary)
+
+    def fake_run_osv_scanner(actual_lockfile: Path, actual_report: Path, *, binary: Path) -> int:
+        assert actual_lockfile == lockfile
+        assert actual_report == report
+        assert binary == scanner_binary
+        return exit_code
+
+    monkeypatch.setattr(noxfile, "run_osv_scanner", fake_run_osv_scanner)
+    noxfile.osv_scan(FakeSession())
+
+
+def test_nox_osv_scan_accepts_only_a_clean_result(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _run_nox_osv_scan(monkeypatch, tmp_path, exit_code=0)
+
+
+def test_nox_osv_scan_gates_vulnerability_findings(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(RuntimeError, match=r"reported vulnerabilities \(exit code 1\)"):
+        _run_nox_osv_scan(monkeypatch, tmp_path, exit_code=1)
+
+
+def test_nox_osv_scan_surfaces_scanner_errors_distinctly(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(RuntimeError, match="scanner/setup error exit code 127"):
+        _run_nox_osv_scan(monkeypatch, tmp_path, exit_code=127)
+
+
+def test_security_dependency_floors_and_frozen_lock_exclude_vulnerable_releases() -> None:
+    project = tomllib.loads((REPO_ROOT / "implementations/python/pyproject.toml").read_text(encoding="utf-8"))
+    direct_requirements: dict[str, Requirement] = {}
+    for value in project["project"]["dependencies"]:
+        requirement = Requirement(value)
+        direct_requirements[requirement.name.lower()] = requirement
+    locked = tomllib.loads((REPO_ROOT / "implementations/python/uv.lock").read_text(encoding="utf-8"))
+    locked_versions = {
+        package["name"].lower(): Version(package["version"]) for package in locked["package"] if "version" in package
+    }
+
+    for name, last_vulnerable, first_fixed in (
+        ("click", Version("8.3.2"), Version("8.3.3")),
+        ("cryptography", Version("49.0.0"), Version("50.0.0")),
+    ):
+        requirement = direct_requirements[name]
+        assert Version("0") not in requirement.specifier
+        assert last_vulnerable not in requirement.specifier
+        assert first_fixed in requirement.specifier
+        assert locked_versions[name] >= first_fixed
+
+
+def test_supply_chain_ci_scan_is_gating_and_preserves_failure_report() -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    job = workflow["jobs"]["supply-chain"]
+    assert "continue-on-error" not in job
+    assert all("continue-on-error" not in step for step in job["steps"])
+
+    scan_step = next(step for step in job["steps"] if step.get("name") == "Run OSV-scanner (gating)")
+    assert "nox -f noxfile.py -s osv_scan" in scan_step["run"]
+    upload_step = next(step for step in job["steps"] if step.get("name") == "Upload OSV-scanner report")
+    assert upload_step["if"] == "always()"
 
 
 def test_extra_published_schema_paths_detects_stale_generated_files(tmp_path: Path) -> None:

@@ -17,8 +17,7 @@ _SCENARIO = """
 name: ref-components
 nodes:
   vm:
-    type: vm
-    os: linux
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}

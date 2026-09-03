@@ -22,27 +22,27 @@ nodes:
     description: Evaluator and defensive telemetry network.
 
   red-workbench:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ssh, port: 22, protocol: tcp}
   customer-portal:
-    type: vm
+    type: compute
     os: linux
     source: {name: customer-portal-app, version: reference}
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: http, port: 8080, protocol: tcp}
   customer-db:
-    type: vm
+    type: compute
     os: linux
     source: {name: postgres, version: "16"}
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: postgres, port: 5432, protocol: tcp}
   wazuh-manager:
-    type: vm
+    type: compute
     os: linux
     source: {name: wazuh-manager, version: "4.x"}
     resources: {ram: 1 GiB, cpu: 1}
@@ -52,14 +52,14 @@ nodes:
       - {name: syslog, port: 514, protocol: udp}
     conditions: {wazuh-manager-health: ""}
   wazuh-indexer:
-    type: vm
+    type: compute
     os: linux
     source: {name: wazuh-indexer, version: "4.x"}
     resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: indexer-api, port: 9200, protocol: tcp}
   participant-policy-gate:
-    type: vm
+    type: compute
     os: linux
     source: {name: participant-policy-gate, version: reference}
     resources: {ram: 1 GiB, cpu: 1}
@@ -344,6 +344,7 @@ action_contracts:
           Portal probing changes participant-local knowledge about the DMZ
           service while preserving the authored enterprise topology.
         shared_state_refs: [nodes.customer-portal.services.http]
+        commutative: true
 
 observation_boundaries:
   participant-view:

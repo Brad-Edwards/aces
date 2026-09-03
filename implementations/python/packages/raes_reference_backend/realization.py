@@ -25,6 +25,7 @@ from raes_contracts.planning import (
     planned_resource_authored_name,
     planned_resource_payload,
 )
+from raes_contracts.realization_authority import planned_realization_selection_diagnostics
 
 from .driver import ContainerSpec, NetworkSpec, ServiceSpec
 
@@ -73,7 +74,7 @@ def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
     the rest of the address-keyed runtime model.
     """
 
-    diagnostics: list[Diagnostic] = []
+    diagnostics: list[Diagnostic] = list(planned_realization_selection_diagnostics(plan))
     network_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []

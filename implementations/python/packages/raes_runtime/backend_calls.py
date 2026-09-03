@@ -1,26 +1,36 @@
-"""Backend call adapters for runtime execution."""
-
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import dataclass, replace
 
-from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
-from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.contracts.time_model import validate_time_runtime_transition
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ProvisioningPlan
 from raes_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry, RuntimeSnapshot
 from raes_processor.models import CompiledRealizationRequirement
-from raes_processor.planner import realization_disclosure, sanitize_realization_snapshot
+from raes_processor.planner import (
+    realization_authority_disclosure,
+    realization_disclosure,
+    sanitize_plan_realization_snapshot,
+    sanitize_realization_snapshot,
+)
 
 from .backend_account_credentials import (
     plan_arguments_have_account_credentials,
     sanitize_account_credential_result,
     value_free_backend_diagnostics,
+)
+from .backend_call_contracts import (
+    _apply_result_contract_violation,
+    _diagnostics_iterable_violation,
+    _diagnostics_values_violation,
+)
+from .backend_realization_authority import (
+    _apply_authority_diagnostics,
+    _bind_submitted_plan,
+    _RealizationApplyContext,
 )
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
@@ -32,14 +42,6 @@ from .proposition_truth_contracts import proposition_truth_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
-
-
-@dataclass(frozen=True)
-class _RealizationApplyContext:
-    requirements: tuple[CompiledRealizationRequirement, ...] = ()
-    plan: ProvisioningPlan | None = None
-    manifest: BackendManifest | None = None
-    artifact_availability: ArtifactAvailabilityContext | None = None
 
 
 def _call_backend_diagnostics(
@@ -71,14 +73,40 @@ def _call_backend_apply(
     address: str,
     snapshot: RuntimeSnapshot,
     realization: _RealizationApplyContext | None = None,
+    operation_id: str | None = None,
     information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
 ) -> ApplyResult:
     realization_context = realization or _RealizationApplyContext()
-    if realization_context.plan is None:
-        submitted_plan = next((arg for arg in args if isinstance(arg, ProvisioningPlan)), None)
-        if submitted_plan is not None:
-            realization_context = replace(realization_context, plan=submitted_plan)
+    args, realization_context = _bind_submitted_plan(args, realization_context, operation_id)
     baseline_snapshot = deepcopy(snapshot)
+    authority_diagnostics = _apply_authority_diagnostics(realization_context, address)
+    if authority_diagnostics:
+        return ApplyResult(
+            success=False,
+            snapshot=baseline_snapshot,
+            diagnostics=authority_diagnostics,
+        )
+    return _invoke_backend_apply(
+        method,
+        args,
+        address=address,
+        snapshot=snapshot,
+        baseline_snapshot=baseline_snapshot,
+        realization=realization_context,
+        information_state_context_resolver=information_state_context_resolver,
+    )
+
+
+def _invoke_backend_apply(
+    method: Callable[..., object],
+    args: tuple[object, ...],
+    *,
+    address: str,
+    snapshot: RuntimeSnapshot,
+    baseline_snapshot: RuntimeSnapshot,
+    realization: _RealizationApplyContext,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
+) -> ApplyResult:
     backend_snapshot = deepcopy(snapshot)
     backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
     try:
@@ -94,7 +122,7 @@ def _call_backend_apply(
         result,
         address=address,
         baseline_snapshot=baseline_snapshot,
-        realization=realization_context,
+        realization=realization,
         information_state_context_resolver=information_state_context_resolver,
     )
 
@@ -123,21 +151,12 @@ def _finalize_backend_apply(
         )
     else:
         assert isinstance(result, ApplyResult)
-        contract_diagnostics = _backend_snapshot_contract_diagnostics(
+        contract_diagnostics, realization_provenance = _post_apply_contract_result(
             result,
             baseline_snapshot,
+            realization,
             information_state_context_resolver=information_state_context_resolver,
         )
-        realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
-        if not contract_diagnostics and realization.requirements and realization.plan is not None:
-            # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
-            contract_diagnostics, realization_provenance = realization_disclosure(
-                realization.requirements,
-                realization.plan,
-                result.snapshot,
-                manifest=realization.manifest,
-                artifact_availability=realization.artifact_availability,
-            )
         if contract_diagnostics:
             finalized = ApplyResult(
                 success=False,
@@ -155,6 +174,39 @@ def _finalize_backend_apply(
             if realization_provenance and finalized.success:
                 finalized = _with_realization_provenance(finalized, realization_provenance)
     return finalized
+
+
+def _post_apply_contract_result(
+    result: ApplyResult,
+    baseline_snapshot: RuntimeSnapshot,
+    realization: _RealizationApplyContext,
+    *,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None,
+) -> tuple[list[Diagnostic], tuple[RealizationProvenanceEntry, ...]]:
+    diagnostics = _backend_snapshot_contract_diagnostics(
+        result,
+        baseline_snapshot,
+        information_state_context_resolver=information_state_context_resolver,
+    )
+    provenance: tuple[RealizationProvenanceEntry, ...] = ()
+    if not diagnostics and realization.plan is not None:
+        diagnostics, provenance = realization_authority_disclosure(
+            realization.plan,
+            result.snapshot,
+            manifest=realization.manifest,
+        )
+        supplemental = _supplemental_realization_requirements(realization)
+        if not diagnostics and supplemental:
+            supplemental_diagnostics, supplemental_provenance = realization_disclosure(
+                supplemental,
+                realization.plan,
+                result.snapshot,
+                manifest=realization.manifest,
+                artifact_availability=realization.artifact_availability,
+            )
+            diagnostics.extend(supplemental_diagnostics)
+            provenance = (*provenance, *supplemental_provenance)
+    return diagnostics, provenance
 
 
 def _backend_snapshot_contract_diagnostics(
@@ -186,11 +238,12 @@ def _sanitize_backend_realization(
     realization_plan: ProvisioningPlan | None,
 ) -> ApplyResult:
     sanitized = result
-    if realization_requirements and realization_plan is not None:
+    if realization_plan is not None and (realization_plan.realization_authority or realization_requirements):
         try:
-            safe_snapshot = sanitize_realization_snapshot(
-                realization_requirements,
-                result.snapshot,
+            safe_snapshot = (
+                sanitize_plan_realization_snapshot(realization_plan, result.snapshot)
+                if realization_plan.realization_authority
+                else sanitize_realization_snapshot(realization_requirements, result.snapshot)
             )
         except (TypeError, ValueError):
             return _failed_apply_result(
@@ -213,6 +266,23 @@ def _sanitize_backend_realization(
                 ),
             )
     return sanitized
+
+
+def _supplemental_realization_requirements(
+    realization: _RealizationApplyContext,
+) -> tuple[CompiledRealizationRequirement, ...]:
+    """Keep non-registry contracts while the plan owns registry concerns."""
+
+    if realization.plan is None or not realization.plan.realization_authority:
+        return realization.requirements
+    plan_identities = {
+        (entry.address, entry.field_path, entry.requirement_kind) for entry in realization.plan.realization_authority
+    }
+    return tuple(
+        requirement
+        for requirement in realization.requirements
+        if (requirement.address, requirement.field_path, requirement.requirement_kind) not in plan_identities
+    )
 
 
 def _with_snapshot(
@@ -260,73 +330,6 @@ def _backend_contract_invalid(address: str, message: str) -> Diagnostic:
 
 def _failed_apply_result(snapshot: RuntimeSnapshot, diagnostic: Diagnostic) -> ApplyResult:
     return ApplyResult(success=False, snapshot=snapshot, diagnostics=[diagnostic])
-
-
-def _diagnostics_iterable_violation(result: object, address: str) -> str | None:
-    message = None
-    if not isinstance(result, Iterable) or isinstance(result, (str, bytes)):
-        message = f"Backend method '{address}' returned {type(result).__name__}; expected diagnostics iterable."
-    return message
-
-
-def _diagnostics_values_violation(diagnostics: list[object], address: str) -> str | None:
-    message = None
-    if any(not isinstance(diagnostic, Diagnostic) for diagnostic in diagnostics):
-        message = f"Backend method '{address}' returned a diagnostics iterable containing non-Diagnostic values."
-    return message
-
-
-def _apply_result_contract_violation(result: object, address: str) -> str | None:
-    message = _apply_result_shape_violation(result, address)
-    if message is None and isinstance(result, ApplyResult):
-        message = _apply_result_diagnostics_violation(result, address)
-    if message is None and isinstance(result, ApplyResult):
-        message = _apply_result_changed_addresses_violation(result, address)
-    if message is None and isinstance(result, ApplyResult):
-        message = _apply_result_details_violation(result, address)
-    return message
-
-
-def _apply_result_shape_violation(result: object, address: str) -> str | None:
-    message = None
-    if not isinstance(result, ApplyResult):
-        message = f"Backend method '{address}' returned {type(result).__name__}; expected ApplyResult."
-    elif not isinstance(result.snapshot, RuntimeSnapshot):
-        message = (
-            f"Backend method '{address}' returned ApplyResult.snapshot "
-            f"as {type(result.snapshot).__name__}; expected RuntimeSnapshot."
-        )
-    return message
-
-
-def _apply_result_diagnostics_violation(result: ApplyResult, address: str) -> str | None:
-    message = None
-    if not isinstance(result.diagnostics, Iterable) or isinstance(result.diagnostics, (str, bytes)):
-        message = (
-            f"Backend method '{address}' returned ApplyResult.diagnostics "
-            f"as {type(result.diagnostics).__name__}; expected iterable."
-        )
-    elif any(not isinstance(diagnostic, Diagnostic) for diagnostic in result.diagnostics):
-        message = f"Backend method '{address}' returned ApplyResult.diagnostics containing non-Diagnostic values."
-    return message
-
-
-def _apply_result_changed_addresses_violation(result: ApplyResult, address: str) -> str | None:
-    message = None
-    if not isinstance(result.changed_addresses, list):
-        message = (
-            f"Backend method '{address}' returned ApplyResult.changed_addresses "
-            f"as {type(result.changed_addresses).__name__}; expected list."
-        )
-    elif any(not isinstance(changed_address, str) for changed_address in result.changed_addresses):
-        message = f"Backend method '{address}' returned ApplyResult.changed_addresses containing non-string values."
-    return message
-
-
-def _apply_result_details_violation(result: ApplyResult, address: str) -> str | None:
-    if isinstance(result.details, dict):
-        return None
-    return f"Backend method '{address}' returned ApplyResult.details as {type(result.details).__name__}; expected dict."
 
 
 def _snapshot_contract_diagnostics(

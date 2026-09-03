@@ -34,7 +34,7 @@ class TestVerifyNodes:
         s = _make_scenario(
             nodes={
                 "vm-1": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "features": {"nonexistent": "admin"},
                     "roles": {"admin": {"username": "user"}},
@@ -48,7 +48,7 @@ class TestVerifyNodes:
         s = _make_scenario(
             nodes={
                 "vm-1": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "vulnerabilities": ["nonexistent"],
                 }
@@ -85,7 +85,7 @@ class TestVerifyNodes:
         s = _make_scenario(
             nodes={
                 "vm-1": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     field_name: {next(iter(section_value.keys())): "admin"},
                 }
@@ -106,7 +106,7 @@ class TestVerifyInfrastructure:
 
     def test_link_to_undefined_infra(self):
         s = _make_scenario(
-            nodes={"sw": {"type": "switch"}, "vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"sw": {"type": "switch"}, "vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             infrastructure={
                 "sw": {"count": 1},
                 "vm": {"count": 1, "links": ["nonexistent"]},
@@ -126,8 +126,8 @@ class TestVerifyInfrastructure:
     def test_links_must_reference_switch_entries(self):
         s = _make_scenario(
             nodes={
-                "vm-a": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
-                "vm-b": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm-a": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm-b": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             infrastructure={
                 "vm-a": {"count": 1, "links": ["vm-b"]},
@@ -141,7 +141,7 @@ class TestVerifyInfrastructure:
         s = _make_scenario(
             nodes={
                 "sw": {"type": "switch"},
-                "vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             infrastructure={
                 "sw": {
@@ -162,7 +162,7 @@ class TestVerifyInfrastructure:
         s = _make_scenario(
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "conditions": {"check": "admin"},
                     "roles": {"admin": {"username": "ops"}},
@@ -181,7 +181,7 @@ class TestVerifyRuntimeNetwork:
             nodes={
                 "sw": {"type": "switch"},
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {
                         "network": {"endpoints": [{"network": "sw", "ip_address": "10.0.0.5", "gateway": "10.0.0.1"}]}
@@ -199,7 +199,7 @@ class TestVerifyRuntimeNetwork:
         s = _make_scenario(
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {"network": {"endpoints": [{"network": "ghost-net"}]}},
                 },
@@ -211,9 +211,9 @@ class TestVerifyRuntimeNetwork:
     def test_endpoint_referencing_non_switch_is_rejected(self):
         s = _make_scenario(
             nodes={
-                "other-vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "other-vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {"network": {"endpoints": [{"network": "other-vm"}]}},
                 },
@@ -231,7 +231,7 @@ class TestVerifyRuntimeNetwork:
             nodes={
                 "sw": {"type": "switch"},
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {"network": {"endpoints": [{"network": "sw", "ip_address": "192.168.5.5"}]}},
                 },
@@ -249,7 +249,7 @@ class TestVerifyRuntimeNetwork:
             variables={"target_net": {"type": "string", "required": True}},
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {"network": {"endpoints": [{"network": "${target_net}"}]}},
                 },
@@ -263,7 +263,7 @@ class TestVerifyRuntimeCapabilityOverrides:
         s = _make_scenario(
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {
                         "processes": [
@@ -290,7 +290,7 @@ class TestVerifyRuntimeCapabilityOverrides:
         s = _make_scenario(
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {
                         "processes": [
@@ -317,7 +317,7 @@ class TestVerifyRuntimeCapabilityOverrides:
             variables={"shell_name": {"type": "string", "required": True}},
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {
                         "processes": [
@@ -342,7 +342,7 @@ class TestVerifyRuntimeCapabilityOverrides:
         s = _make_scenario(
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "runtime": {
                         "linux_capabilities": {
@@ -460,7 +460,7 @@ class TestErrorCollection:
 class TestVerifyContent:
     def test_content_targets_undefined_node(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             content={"data": {"type": "file", "target": "ghost-node", "path": "/tmp/x"}},
         )
         errors = _validate(s)
@@ -468,7 +468,7 @@ class TestVerifyContent:
 
     def test_valid_content_passes(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             content={"data": {"type": "file", "target": "vm", "path": "/tmp/flag"}},
         )
         errors = _validate(s)
@@ -480,13 +480,13 @@ class TestVerifyContent:
             content={"data": {"type": "file", "target": "sw", "path": "/tmp/flag"}},
         )
         errors = _validate(s)
-        assert any("must be a VM node" in e for e in errors)
+        assert any("must be a compute node" in e for e in errors)
 
 
 class TestVerifyAccounts:
     def test_account_references_undefined_node(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             accounts={"user": {"username": "admin", "node": "ghost-node"}},
         )
         errors = _validate(s)
@@ -494,7 +494,7 @@ class TestVerifyAccounts:
 
     def test_valid_account_passes(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             accounts={"user": {"username": "admin", "node": "vm"}},
         )
         errors = _validate(s)
@@ -506,7 +506,7 @@ class TestVerifyAccounts:
             accounts={"user": {"username": "admin", "node": "sw"}},
         )
         errors = _validate(s)
-        assert any("must be a VM node" in e for e in errors)
+        assert any("must be a compute node" in e for e in errors)
 
 
 class TestVerifyACLs:
@@ -588,7 +588,7 @@ class TestFeatureListShorthand:
 name: shorthand-test
 nodes:
   vm:
-    type: VM
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     features: [svc-a, svc-b]
 features:
@@ -602,7 +602,7 @@ features:
 class TestVerifyRelationships:
     def test_undefined_source(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             features={"svc": {"type": "service"}},
             relationships={"r1": {"type": "connects_to", "source": "ghost", "target": "svc"}},
         )
@@ -611,7 +611,7 @@ class TestVerifyRelationships:
 
     def test_undefined_target(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             features={"svc": {"type": "service"}},
             relationships={"r1": {"type": "connects_to", "source": "svc", "target": "ghost"}},
         )
@@ -633,7 +633,7 @@ class TestVerifyRelationships:
 
     def test_relationship_rejects_non_targetable_variable(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             variables={"env": {"type": "string", "default": "prod"}},
             relationships={"r1": {"type": "connects_to", "source": "vm", "target": "env"}},
         )
@@ -642,7 +642,7 @@ class TestVerifyRelationships:
 
     def test_relationship_can_target_other_relationship(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             relationships={
                 "r1": {"type": "connects_to", "source": "vm", "target": "vm"},
                 "r2": {"type": "depends_on", "source": "vm", "target": "r1"},
@@ -653,7 +653,7 @@ class TestVerifyRelationships:
 
     def test_relationship_can_target_content_item_name(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             content={
                 "dataset": {
                     "type": "dataset",
@@ -670,7 +670,7 @@ class TestVerifyRelationships:
 
     def test_relationship_rejects_ambiguous_bare_ref(self):
         s = _make_scenario(
-            nodes={"web": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"web": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             features={"web": {"type": "service", "source": {"name": "nginx"}}},
             relationships={"r1": {"type": "connects_to", "source": "web", "target": "web"}},
         )
@@ -680,7 +680,7 @@ class TestVerifyRelationships:
 
     def test_relationship_accepts_section_qualified_refs(self):
         s = _make_scenario(
-            nodes={"web": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"web": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             features={"web": {"type": "service", "source": {"name": "nginx"}}},
             relationships={
                 "r1": {
@@ -695,7 +695,7 @@ class TestVerifyRelationships:
 
     def test_relationship_accepts_qualified_content_item_ref(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             content={
                 "dataset-a": {
                     "type": "dataset",
@@ -723,7 +723,7 @@ class TestVerifyRelationships:
 class TestVerifyAgents:
     def test_undefined_entity(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             agents={"a1": {"entity": "ghost-team", "actions": ["scan"]}},
         )
         errors = _validate(s)
@@ -731,7 +731,7 @@ class TestVerifyAgents:
 
     def test_undefined_starting_account(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             entities={"red": {"role": "red"}},
             agents={"a1": {"entity": "red", "starting_accounts": ["ghost-acct"]}},
         )
@@ -740,7 +740,7 @@ class TestVerifyAgents:
 
     def test_undefined_allowed_subnet(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             entities={"red": {"role": "red"}},
             agents={"a1": {"entity": "red", "allowed_subnets": ["ghost-net"]}},
         )
@@ -749,7 +749,7 @@ class TestVerifyAgents:
 
     def test_undefined_initial_knowledge_host(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             entities={"red": {"role": "red"}},
             agents={
                 "a1": {
@@ -765,7 +765,7 @@ class TestVerifyAgents:
         s = _make_scenario(
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 22, "name": "ssh"}],
                 }
@@ -783,7 +783,7 @@ class TestVerifyAgents:
 
     def test_undefined_initial_knowledge_account(self):
         s = _make_scenario(
-            nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={"vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}}},
             entities={"red": {"role": "red"}},
             accounts={"known-user": {"username": "user", "node": "vm"}},
             agents={
@@ -800,7 +800,7 @@ class TestVerifyAgents:
         s = _make_scenario(
             nodes={
                 "net": {"type": "switch"},
-                "vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             infrastructure={
                 "net": {
@@ -819,7 +819,7 @@ class TestVerifyAgents:
         s = _make_scenario(
             nodes={
                 "net": {"type": "switch"},
-                "vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             infrastructure={
                 "net": {
@@ -847,13 +847,13 @@ class TestVerifyAgents:
             agents={"a1": {"entity": "red", "initial_knowledge": {"hosts": ["net"]}}},
         )
         errors = _validate(s)
-        assert any("initial_knowledge host 'net' must reference a VM node" in e for e in errors)
+        assert any("initial_knowledge host 'net' must reference a compute node" in e for e in errors)
 
     def test_valid_agent(self):
         s = _make_scenario(
             nodes={
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 22, "name": "ssh"}],
                 },
@@ -894,7 +894,7 @@ class TestAgentParticipantFraming:
     def _base_scenario_kwargs(self) -> dict:
         return {
             "nodes": {
-                "vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
                 "net": {"type": "switch"},
             },
             "infrastructure": {
@@ -1277,7 +1277,7 @@ class TestVerifyObjectives:
         return {
             "nodes": {
                 "net": {"type": "switch"},
-                "web": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "web": {"type": "compute", "resources": {"ram": "1 gib", "cpu": 1}},
             },
             "infrastructure": {
                 "net": {
@@ -2584,7 +2584,7 @@ class TestVerifyVariables:
             nodes={
                 "net": {"type": "switch"},
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "${ram_bytes}", "cpu": "${cpu_cores}"},
                     "roles": {"admin": {"username": "user", "entities": ["${entity_name}"]}},
                     "services": [{"port": "${service_port}", "name": "ssh"}],
@@ -2708,7 +2708,7 @@ class TestVerifyVariables:
 class TestAdvisories:
     def test_vm_without_resources_emits_advisory(self):
         scenario = _make_scenario(
-            nodes={"vm": {"type": "vm"}},
+            nodes={"vm": {"type": "compute"}},
         )
         validator = SemanticValidator(scenario)
         validator.validate()
@@ -2723,7 +2723,7 @@ class TestValidFullScenario:
             nodes={
                 "sw": {"type": "switch"},
                 "vm": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "2 gib", "cpu": 1},
                     "features": {"svc": "admin"},
                     "conditions": {"check": "admin"},
@@ -2747,7 +2747,7 @@ class TestValidFullScenario:
 class TestVerifyRuntimeApplication:
     def _node_with_application(self, application: dict, **node_extra) -> dict:
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "runtime": {"applications": [application]},
         }
@@ -2789,7 +2789,7 @@ class TestVerifyRuntimeApplication:
         s = _make_scenario(
             nodes={
                 "other": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 8081, "name": "http"}],
                 },
@@ -2855,7 +2855,7 @@ class TestVerifyRuntimeApplication:
 
     def test_route_template_ref_resolves_to_filesystem_inventory(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "runtime": {
                 "filesystem_inventory": [{"path": "/app/templates/index.html", "entry_type": "file"}],
@@ -2879,7 +2879,7 @@ class TestVerifyRuntimeApplication:
 
     def test_route_template_ref_not_in_inventory_is_rejected(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "runtime": {
                 "filesystem_inventory": [{"path": "/app/templates/index.html", "entry_type": "file"}],
@@ -2904,7 +2904,7 @@ class TestVerifyRuntimeApplication:
 
     def test_route_static_asset_ref_resolves_to_filesystem_inventory(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "runtime": {
                 "filesystem_inventory": [{"path": "/app/static/style.css", "entry_type": "file"}],
@@ -2928,7 +2928,7 @@ class TestVerifyRuntimeApplication:
 
     def test_route_static_asset_ref_not_in_inventory_is_rejected(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "runtime": {
                 "filesystem_inventory": [{"path": "/app/static/style.css", "entry_type": "file"}],
@@ -2968,7 +2968,7 @@ class TestVerifyRuntimeFileService:
 
     def _node(self, service: dict, **node_extra) -> dict:
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 445, "name": "smb"}],
             "runtime": {"file_services": [service]},
@@ -3092,7 +3092,7 @@ class TestVerifyRuntimeFileService:
 
     def _ad_node(self) -> dict:
         return {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 389, "name": "ldap"}],
             "runtime": {
@@ -3228,7 +3228,7 @@ class TestVerifyRuntimeDatabaseServices:
         }
         dbsvc.update(dbsvc_overrides)
         return {
-            "type": "vm",
+            "type": "compute",
             "services": [{"port": 5432, "name": "pg"}],
             "runtime": {"database_services": [dbsvc]},
         }
@@ -3246,7 +3246,7 @@ class TestVerifyRuntimeDatabaseServices:
         s = _make_scenario(
             nodes={
                 "db": node,
-                "other": {"type": "vm", "services": [{"port": 5432, "name": "pg"}]},
+                "other": {"type": "compute", "services": [{"port": 5432, "name": "pg"}]},
             }
         )
         errors = _validate(s)
@@ -3338,7 +3338,7 @@ class TestVerifyRuntimeDnsServices:
         }
         dns_service.update(dns_overrides)
         return {
-            "type": "vm",
+            "type": "compute",
             "services": [{"port": 53, "protocol": "udp", "name": "dns"}],
             "runtime": {
                 "filesystem_inventory": [
@@ -3362,7 +3362,7 @@ class TestVerifyRuntimeDnsServices:
         s = _make_scenario(
             nodes={
                 "dns": node,
-                "other": {"type": "vm", "services": [{"port": 53, "protocol": "udp", "name": "dns"}]},
+                "other": {"type": "compute", "services": [{"port": 53, "protocol": "udp", "name": "dns"}]},
             }
         )
         errors = _validate(s)
@@ -3383,7 +3383,7 @@ class TestVerifyRuntimeDnsServices:
         s = _make_scenario(
             nodes={
                 "dns": self._node_with_dns(),
-                "client": {"type": "vm", "services": [{"port": 443, "name": "https"}]},
+                "client": {"type": "compute", "services": [{"port": 443, "name": "https"}]},
             },
             relationships={
                 "client-uses-dns": {
@@ -3418,7 +3418,7 @@ class TestVerifyRelationshipDatabaseAccess:
         return _make_scenario(
             nodes={
                 "db": {
-                    "type": "vm",
+                    "type": "compute",
                     "services": [{"port": 5432, "name": "pg"}],
                     "runtime": {
                         "database_services": [
@@ -3434,7 +3434,7 @@ class TestVerifyRelationshipDatabaseAccess:
                     },
                 },
                 "web": {
-                    "type": "vm",
+                    "type": "compute",
                     "services": [{"port": 8080, "name": "http"}],
                     "runtime": {"applications": [{"application_id": "webapp", "service": "http"}]},
                 },
@@ -3494,7 +3494,7 @@ class TestVerifyRelationshipServiceIntegration:
         return _make_scenario(
             nodes={
                 "thehive": {
-                    "type": "vm",
+                    "type": "compute",
                     "services": [{"port": 9000, "name": "api"}],
                     "runtime": {
                         "platform_applications": [
@@ -3511,7 +3511,7 @@ class TestVerifyRelationshipServiceIntegration:
                     },
                 },
                 "cortex": {
-                    "type": "vm",
+                    "type": "compute",
                     "services": [{"port": 9001, "name": "api"}],
                     "runtime": {
                         "app_authorizations": [
@@ -3595,7 +3595,7 @@ class TestVerifyRelationshipProxyUpstream:
         return _make_scenario(
             nodes={
                 proxy_node_name: {
-                    "type": "vm",
+                    "type": "compute",
                     "services": [{"port": 443, "name": "https"}],
                     "runtime": {
                         "applications": [
@@ -3608,7 +3608,7 @@ class TestVerifyRelationshipProxyUpstream:
                     },
                 },
                 backend_node_name: {
-                    "type": "vm",
+                    "type": "compute",
                     "services": [{"port": 8080, "name": "app"}],
                 },
             },
@@ -3712,7 +3712,7 @@ class TestVerifyRelationshipProxyUpstream:
 class TestVerifyRuntimeSshServer:
     def _node_with_ssh_server(self, ssh_server: dict, **node_extra) -> dict:
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "runtime": {"ssh_servers": [ssh_server]},
         }
@@ -3756,7 +3756,7 @@ class TestVerifyRuntimeSshServer:
         s = _make_scenario(
             nodes={
                 "other": {
-                    "type": "vm",
+                    "type": "compute",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 2222, "name": "ssh"}],
                 },
@@ -3793,7 +3793,7 @@ class TestVerifyRuntimeSshServer:
 
     def test_local_user_criterion_present_in_inventory_passes(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 22, "name": "ssh"}],
             "runtime": {
@@ -3819,7 +3819,7 @@ class TestVerifyRuntimeSshServer:
 
     def test_local_user_criterion_absent_from_populated_inventory_rejected(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 22, "name": "ssh"}],
             "runtime": {
@@ -3846,7 +3846,7 @@ class TestVerifyRuntimeSshServer:
 
     def test_local_user_criterion_without_inventory_does_not_error(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 22, "name": "ssh"}],
             "runtime": {
@@ -3870,7 +3870,7 @@ class TestVerifyRuntimeSshServer:
     def test_user_pattern_criterion_not_checked_against_inventory(self):
         """USER (not LOCAL_USER) is a pattern, not an identity — not cross-checked."""
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 22, "name": "ssh"}],
             "runtime": {
@@ -3894,7 +3894,7 @@ class TestVerifyRuntimeSshServer:
 
     def test_local_user_wildcard_pattern_not_checked_against_inventory(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 22, "name": "ssh"}],
             "runtime": {
@@ -3918,7 +3918,7 @@ class TestVerifyRuntimeSshServer:
 
     def test_local_user_variable_ref_pattern_skipped(self):
         node = {
-            "type": "vm",
+            "type": "compute",
             "resources": {"ram": "1 gib", "cpu": 1},
             "services": [{"port": 22, "name": "ssh"}],
             "runtime": {

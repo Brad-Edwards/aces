@@ -7,6 +7,7 @@ import io
 import json
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.error import URLError
 
 import pytest
@@ -31,8 +32,12 @@ from tools.check_participant_opacity_proof import (
 )
 from tools.isabelle_tool import (
     ISABELLE_PROCESS_ADDRESS_SPACE_LIMIT_MIB,
+    ISABELLE_REQUIRED_FONTCONFIG_PATHS,
+    ISABELLE_SYSTEM_RUNTIME_PATHS,
+    _bubblewrap_setup_failed,
     _proof_process_limits,
     _proof_sandbox_command,
+    _require_fontconfig_runtime,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -121,6 +126,118 @@ def test_proof_sandbox_exposes_only_fixed_inputs_runtime_and_private_state() -> 
     assert "--unshare-net" in command
     assert "--unshare-pid" in command
     assert command[-2:] == ["-D", "/workspace/session"]
+
+
+def test_proof_sandbox_allowlists_fontconfig_symlink_targets() -> None:
+    assert Path("/etc/fonts") in ISABELLE_SYSTEM_RUNTIME_PATHS
+    assert Path("/usr/share/fontconfig") in ISABELLE_SYSTEM_RUNTIME_PATHS
+    assert Path("/usr/share/fonts") in ISABELLE_SYSTEM_RUNTIME_PATHS
+    assert set(ISABELLE_REQUIRED_FONTCONFIG_PATHS) <= set(ISABELLE_SYSTEM_RUNTIME_PATHS)
+    assert Path("/usr/share/fontconfig") not in ISABELLE_REQUIRED_FONTCONFIG_PATHS
+
+
+def test_proof_runtime_requires_complete_fontconfig_data(tmp_path: Path) -> None:
+    existing = tuple(tmp_path / name for name in ("etc-fonts", "share-fontconfig", "share-fonts"))
+    for path in existing:
+        path.mkdir()
+
+    _require_fontconfig_runtime(existing, font_query=lambda: True)
+
+    existing[-1].rmdir()
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig runtime is required"):
+        _require_fontconfig_runtime(existing, font_query=lambda: True)
+
+
+def test_proof_runtime_requires_a_discoverable_font(tmp_path: Path) -> None:
+    existing = tuple(tmp_path / name for name in ("etc-fonts", "share-fonts"))
+    for path in existing:
+        path.mkdir()
+
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig runtime is required"):
+        _require_fontconfig_runtime(existing, font_query=lambda: False)
+
+
+def test_fontconfig_query_requires_a_successful_nonempty_listing(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    font_list = tmp_path / "fc-list"
+    font_list.write_text("stub", encoding="ascii")
+    font_list.chmod(0o755)
+
+    monkeypatch.setattr(
+        isabelle_tool.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=b"/usr/share/fonts/example.ttf\n"),
+    )
+    assert isabelle_tool._fontconfig_has_fonts(font_list) is True
+
+    monkeypatch.setattr(
+        isabelle_tool.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=b""),
+    )
+    assert isabelle_tool._fontconfig_has_fonts(font_list) is False
+
+
+def test_proof_replay_checks_fontconfig_before_session_entry(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    original_is_file = Path.is_file
+
+    def reject_missing_fontconfig() -> None:
+        raise isabelle_tool.IsabelleToolError("fontconfig test sentinel")
+
+    monkeypatch.setattr(isabelle_tool, "require_isabelle", lambda _repo_root: tmp_path)
+    monkeypatch.setattr(
+        Path,
+        "is_file",
+        lambda path: path == Path("/usr/bin/bwrap") or original_is_file(path),
+    )
+    monkeypatch.setattr(
+        isabelle_tool,
+        "_require_fontconfig_runtime",
+        reject_missing_fontconfig,
+    )
+
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="fontconfig test sentinel"):
+        isabelle_tool.run_isabelle_build(tmp_path)
+
+
+def test_proof_replay_distinguishes_sandbox_setup_from_kernel_rejection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    session_root = tmp_path / isabelle_tool.ISABELLE_SESSION_RELATIVE_PATH
+    session_root.mkdir(parents=True)
+    original_is_file = Path.is_file
+
+    monkeypatch.setattr(isabelle_tool, "require_isabelle", lambda _repo_root: tmp_path / "isabelle")
+    monkeypatch.setattr(
+        Path,
+        "is_file",
+        lambda path: path == Path("/usr/bin/bwrap") or original_is_file(path),
+    )
+    monkeypatch.setattr(isabelle_tool, "_require_fontconfig_runtime", lambda: None)
+
+    def completed_with(output: bytes):
+        def fake_run(*_args: object, stdout: object, **_kwargs: object) -> SimpleNamespace:
+            stdout.write(output)
+            return SimpleNamespace(returncode=1)
+
+        return fake_run
+
+    assert _bubblewrap_setup_failed("  bwrap: loopback setup denied\n") is True
+    assert _bubblewrap_setup_failed("*** Isabelle theorem failure\n") is False
+
+    monkeypatch.setattr(isabelle_tool.subprocess, "run", completed_with(b"bwrap: network namespace denied\n"))
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="bubblewrap network isolation is unavailable"):
+        isabelle_tool.run_isabelle_build(tmp_path)
+
+    monkeypatch.setattr(isabelle_tool.subprocess, "run", completed_with(b"*** Isabelle theorem failure\n"))
+    with pytest.raises(isabelle_tool.IsabelleToolError, match="Isabelle kernel rejected"):
+        isabelle_tool.run_isabelle_build(tmp_path)
 
 
 def test_proof_process_limit_enforces_per_process_address_space(monkeypatch: pytest.MonkeyPatch) -> None:

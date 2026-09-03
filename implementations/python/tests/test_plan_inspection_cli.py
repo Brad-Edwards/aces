@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import yaml
 from paths import EXAMPLES_DIR
 from raes._errors import (
     SDLInstantiationError,
@@ -39,8 +40,19 @@ def _invoke(*args: str):
     return CliRunner().invoke(app, ["processor", "plan", *args])
 
 
-def test_plan_default_manifest_emits_contract_json() -> None:
-    result = _invoke(str(_SCENARIO), "--format", "json")
+def _scenario_without_os_identity(tmp_path: Path) -> Path:
+    payload = yaml.safe_load(_SCENARIO.read_text(encoding="utf-8"))
+    for node in payload["nodes"].values():
+        node.pop("os", None)
+        node.pop("os_distribution", None)
+        node.pop("os_version", None)
+    path = tmp_path / _SCENARIO.name
+    path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    return path
+
+
+def test_plan_default_manifest_emits_contract_json(tmp_path: Path) -> None:
+    result = _invoke(str(_scenario_without_os_identity(tmp_path)), "--format", "json")
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
@@ -59,9 +71,10 @@ def test_plan_default_manifest_emits_contract_json() -> None:
     assert any(op["payload"] for op in provisioning_ops)
 
 
-def test_plan_output_is_deterministic() -> None:
-    first = _invoke(str(_SCENARIO), "--format", "json")
-    second = _invoke(str(_SCENARIO), "--format", "json")
+def test_plan_output_is_deterministic(tmp_path: Path) -> None:
+    scenario = _scenario_without_os_identity(tmp_path)
+    first = _invoke(str(scenario), "--format", "json")
+    second = _invoke(str(scenario), "--format", "json")
 
     assert first.exit_code == 0
     assert first.stdout == second.stdout
@@ -71,7 +84,7 @@ def test_plan_accepts_supplied_backend_manifest(tmp_path: Path) -> None:
     manifest_file = tmp_path / "stub-manifest.json"
     manifest_file.write_text(json.dumps(backend_manifest_payload(create_stub_manifest())), encoding="utf-8")
 
-    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+    result = _invoke(str(_scenario_without_os_identity(tmp_path)), "--manifest", str(manifest_file), "--format", "json")
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
@@ -80,13 +93,13 @@ def test_plan_accepts_supplied_backend_manifest(tmp_path: Path) -> None:
 
 def test_plan_emits_full_json_and_nonzero_exit_on_error_diagnostics(tmp_path: Path) -> None:
     payload = backend_manifest_payload(create_stub_manifest())
-    # A manifest that cannot provision VMs turns the scenario's VM nodes into a
+    # A manifest that cannot provision compute resources turns its compute nodes into a
     # capability gap: the planner reports error diagnostics rather than raising.
     payload["capabilities"]["provisioner"]["supported_node_types"] = ["switch"]
     manifest_file = tmp_path / "no-vm-manifest.json"
     manifest_file.write_text(json.dumps(payload), encoding="utf-8")
 
-    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+    result = _invoke(str(_scenario_without_os_identity(tmp_path)), "--manifest", str(manifest_file), "--format", "json")
 
     assert result.exit_code == 1
     emitted = json.loads(result.stdout)  # the full plan is still emitted
@@ -143,7 +156,7 @@ def test_plan_invalid_manifest_does_not_leak_rejected_value(tmp_path: Path) -> N
     manifest_file = tmp_path / "leaky-manifest.json"
     manifest_file.write_text(json.dumps(payload), encoding="utf-8")
 
-    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+    result = _invoke(str(_scenario_without_os_identity(tmp_path)), "--manifest", str(manifest_file), "--format", "json")
 
     assert result.exit_code != 0
     assert result.stdout.strip() == ""
@@ -158,7 +171,7 @@ def test_plan_manifest_with_realization_envelope_fails_closed(tmp_path: Path) ->
     manifest_file = tmp_path / "envelope-manifest.json"
     manifest_file.write_text(json.dumps(payload), encoding="utf-8")
 
-    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+    result = _invoke(str(_scenario_without_os_identity(tmp_path)), "--manifest", str(manifest_file), "--format", "json")
 
     assert result.exit_code != 0
     assert result.stdout.strip() == ""
@@ -169,13 +182,13 @@ def test_plan_rejects_non_json_manifest(tmp_path: Path) -> None:
     manifest_file = tmp_path / "not-json.json"
     manifest_file.write_text("this is not json", encoding="utf-8")
 
-    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+    result = _invoke(str(_scenario_without_os_identity(tmp_path)), "--manifest", str(manifest_file), "--format", "json")
 
     assert result.exit_code != 0
     assert result.stdout.strip() == ""
 
 
-def test_plan_requires_explicit_format() -> None:
-    result = _invoke(str(_SCENARIO))
+def test_plan_requires_explicit_format(tmp_path: Path) -> None:
+    result = _invoke(str(_scenario_without_os_identity(tmp_path)))
 
     assert result.exit_code != 0

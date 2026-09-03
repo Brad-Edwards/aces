@@ -12,7 +12,7 @@ body:
   description: Participant behavior template with governed action and observation semantics.
   nodes:
     web:
-      type: VM
+      type: compute
       resources: {ram: 1 GiB, cpu: 1}
       services:
         - {port: 80, name: http}

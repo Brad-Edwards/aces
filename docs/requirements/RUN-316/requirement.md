@@ -25,3 +25,7 @@ Processors and backends require their own operational observability, but that co
 - TESTS → TEST `implementations/python/tests/test_backend_manifest.py` (Backend manifest tests cover observation contract vocabulary and experiment-run-v1 support)
 - TESTS → TEST `implementations/python/tests/test_runtime_control_plane_api.py` (Operational apparatus summary API tests)
 - IMPLEMENTS → GITHUB_ISSUE `338` (Operational Apparatus Observability (RUN-316))
+- IMPLEMENTS → GITHUB_ISSUE `1173` (Safe and complete libvirt failure observability)
+- IMPLEMENTS → PULL_REQUEST `1163` (Bounded libvirt backend failure observability)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_backend_libvirt/_observability.py` (Bounded operator-side failure classification)
+- TESTS → TEST `implementations/python/tests/test_libvirt_failure_observability.py` (Suppressed-failure coverage, redaction, and expected-absence tests)

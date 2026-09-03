@@ -92,7 +92,7 @@ def _family() -> ExpandedScenario:
         },
         "nodes": {
             "primary": {
-                "type": "vm",
+                "type": "compute",
                 "os": "linux",
                 "resources": {"ram": "1 gib", "cpu": 1},
             }
@@ -341,6 +341,13 @@ def _request(*, run_count: int = 2, sample: bool = False) -> TrialCompilationReq
     manifest_payload["identity"] = {"name": "backend-a", "version": "1"}
     manifest_payload["supported_contract_versions"].append("realization-envelope-v1")
     manifest_payload["realization_envelope"] = envelope.identity.model_dump(mode="json")
+    manifest_payload["capabilities"]["provisioner"]["operating_systems"] = [
+        {"family": "linux", "distribution": "ubuntu", "versions": ["22.04"]}
+    ]
+    manifest_payload["realization_support"][0]["observation_capabilities"]["operating-system"] = {
+        "verification_scope": "presence",
+        "observation_strength": "guest-observed",
+    }
     manifest = BackendManifestV2Model.model_validate(manifest_payload)
     manifest_ref = ExperimentManifestReferenceModel(
         ref_kind="manifest",
@@ -857,7 +864,8 @@ def test_selected_scenario_must_be_a_member_of_exact_envelope() -> None:
 def test_realization_envelope_content_digest_changes_sealed_plan_identity() -> None:
     request = _request()
     changed_payload = json.loads(_ENVELOPE_FIXTURE.read_text(encoding="utf-8"))
-    changed_payload["concerns"][0]["mechanism"] = "alternate-trusted-topology-mechanism"
+    topology = next(claim for claim in changed_payload["concerns"] if claim["concern"] == "topology")
+    topology["mechanism"] = "alternate-trusted-topology-mechanism"
     changed_payload["digest"] = realization_envelope_digest(changed_payload)
     changed = _with_envelope(
         request,

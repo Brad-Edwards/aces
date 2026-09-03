@@ -57,6 +57,8 @@ a session with explicit substages, run sequentially through a
 - `contracts` — generated-schema drift, JSON-artifact validation
 - `tests` — pytest with coverage
 - `fuzz` — pytest with `-m fuzz`
+- `python-compatibility` — exact-interpreter tests plus clean distribution
+  build, installation, import, and CLI checks for one supported CPython release
 - `docs` — sphinx-build (added by AUT-805)
 - `verify` — composes hygiene + policy + lint + contracts + tests + docs
 - `hook-pre-commit` — staged-file hygiene + policy + scoped lint +
@@ -65,10 +67,12 @@ a session with explicit substages, run sequentially through a
 - `hook-pre-push` — full hygiene + policy + lint + contracts + tests +
   fuzz
 
-`verify` is the canonical "passed locally" state. CI invokes
+`verify` is the canonical single-interpreter "passed locally" state. CI invokes
 `nox -s verify`; the pre-push hook invokes `nox -s hook-pre-push`; the
-pre-commit hook invokes `nox -s hook-pre-commit`. All three resolve
-their work through the same per-gate helpers (`_run_hygiene`,
+pre-commit hook invokes `nox -s hook-pre-commit`. CI additionally invokes
+`python-compatibility` once for every supported CPython feature release because
+a single local interpreter cannot establish the distribution's cross-version
+support claim. All invocations resolve through the same per-gate helpers (`_run_hygiene`,
 `_run_policy`, `_run_lint`, `_run_contracts`, `_run_tests`,
 `_run_fuzz`, `_run_docs`).
 
@@ -91,10 +95,14 @@ when pre-commit and CI maintained their own command lists.
 ### 3. CI consumes the same graph
 
 `.github/workflows/ci.yml` runs `uv tool run --from 'nox[uv]==…' nox
--s verify` for the blocking gate, plus `nox -s fuzz` as a separate job
-(fuzz is excluded from `verify` because it is property-based and slow,
-not because it is optional). SonarCloud consumes the coverage XML that
-the `tests` substage produces; it is not a parallel test-runner.
+-s verify` for the canonical single-interpreter gate, plus `nox -s fuzz` as a
+separate job (fuzz is excluded from `verify` because it is property-based and
+slow, not because it is optional). It also runs `nox -s python-compatibility`
+as a required-check matrix over every standard CPython feature release named
+by package metadata. Those jobs assert the selected runtime, use the frozen
+dependency graph, run the hermetic suite, and verify a clean installed
+distribution. SonarCloud consumes the coverage XML that the `tests` substage
+produces; it is not a parallel test-runner.
 
 The `.ground-control.yaml` workflow block declares each command nox
 exposes:
@@ -216,3 +224,4 @@ local hooks, CI, and ground-control automation.
 | Date | Commit/PR | Summary |
 |---|---|---|
 | 2026-07-31 | #963 | Replaced the serial `verify` composition with six isolated, CPU-budgeted concurrent nox lanes, primed shared policy tooling before cold-cache lanes, batched JSON artifacts by shared schema with bounded concurrency, combined unit and integration coverage deterministically, scoped pre-commit to staged changes and directly changed tests without duplicating the mandatory full pre-push/completion regression, and separated network-dependent external-link validation into dedicated docs CI. Ground Control's completion half omits policy because its mechanically enforced policy half runs immediately afterward; direct `verify` and CI retain policy. |
+| 2026-08-14 | #1134 | Added a required CI matrix that runs the canonical `python-compatibility` session for each supported CPython feature release while retaining `verify` as the reproducible single-interpreter local gate. |

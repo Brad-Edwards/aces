@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import ValidationError
 from raes.runtime_generated_value import GeneratedArtifactValueSource
+from raes.runtime_resource_limits import project_process_resource_limit
 from raes_contracts.canonical import canonical_json_digest
 
 from .realization_concern_observations import validate_value_commitment
@@ -254,6 +255,17 @@ def project_capability_policy(value: object, observed: bool = False) -> object:
     }
 
 
+def project_process_resource_limits(value: object, observed: bool = False) -> object:
+    """Project process limits by semantic identity, without native evidence."""
+
+    _require_observation_mode(observed)
+    projected = [
+        project_process_resource_limit(_mapping(item, label="process resource limit"))
+        for item in _sequence(value, label="process resource limits")
+    ]
+    return sorted(projected, key=canonical_json_digest)
+
+
 def project_published_ports(value: object, observed: bool = False) -> object:
     _require_observation_mode(observed)
     projected = []
@@ -373,6 +385,7 @@ __all__ = [
     "project_forwarding_agents",
     "project_mounts",
     "project_published_ports",
+    "project_process_resource_limits",
     "project_service_listeners",
     "sanitize_mount_observation",
 ]

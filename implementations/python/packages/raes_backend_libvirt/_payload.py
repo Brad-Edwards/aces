@@ -2,7 +2,7 @@
 
 The low-level, package-internal layer both :mod:`realization` (interpretation)
 and :mod:`capability_envelope` (capability-envelope diagnostics) build on, so the
-two never duplicate — or diverge on — how a plan payload's node type, OS family,
+two never duplicate — or diverge on — how a plan payload's node kind, OS family,
 content type, or spec is read.
 """
 
@@ -45,6 +45,24 @@ def _os_family(payload: Mapping[str, object]) -> str:
     return node_os if isinstance(node_os, str) else ""
 
 
+def _os_distribution(payload: Mapping[str, object]) -> str:
+    distribution = payload.get("os_distribution")
+    if isinstance(distribution, str) and distribution:
+        return distribution
+    node = _spec(payload).get("node")
+    nested = node.get("os_distribution") if isinstance(node, Mapping) else None
+    return nested if isinstance(nested, str) else ""
+
+
+def _os_version(payload: Mapping[str, object]) -> str:
+    version = payload.get("os_version")
+    if isinstance(version, str) and version:
+        return version
+    node = _spec(payload).get("node")
+    nested = node.get("os_version") if isinstance(node, Mapping) else None
+    return nested if isinstance(nested, str) else ""
+
+
 def _architecture(payload: Mapping[str, object]) -> str:
     architecture = payload.get("architecture")
     if isinstance(architecture, str) and architecture:
@@ -54,10 +72,10 @@ def _architecture(payload: Mapping[str, object]) -> str:
     return node_architecture if isinstance(node_architecture, str) else ""
 
 
-def _node_type(payload: Mapping[str, object]) -> str:
-    node_type = payload.get("node_type")
-    if isinstance(node_type, str) and node_type:
-        return node_type
+def _node_kind(payload: Mapping[str, object]) -> str:
+    node_kind = payload.get("node_kind")
+    if isinstance(node_kind, str) and node_kind:
+        return node_kind
     node = _spec(payload).get("node")
     nested = node.get("type") if isinstance(node, Mapping) else None
     return nested if isinstance(nested, str) else ""

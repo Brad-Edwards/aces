@@ -203,12 +203,12 @@ def _topology_relationship(
                 f"{label} domain topology source '{source_ref}' does not resolve to a node",
             )
         )
-    elif getattr(nodes[node_name], "type", None) != NodeType.VM:
+    elif getattr(nodes[node_name], "type", None) != NodeType.COMPUTE:
         role = "controller" if type_value == RelationshipType.DOMAIN_CONTROLLER_FOR.value else "join"
         issues.append(
             _issue(
                 "domain.relationship.source-not-vm",
-                f"{label} {role} source '{source_ref}' must be a VM node",
+                f"{label} {role} source '{source_ref}' must be a compute node",
             )
         )
     if domain_name is None:

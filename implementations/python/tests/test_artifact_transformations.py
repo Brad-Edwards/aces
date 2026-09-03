@@ -110,7 +110,7 @@ def _referenced_scenario():
             """
             name: rename-reference-case
             nodes:
-              web: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
+              web: {type: compute, resources: {ram: 1 GiB, cpu: 1}}
             content:
               payload: {type: file, target: web, path: /opt/payload}
             relationships:
@@ -427,9 +427,9 @@ def test_rename_property_is_repeatable_across_mapping_order(
     reverse_order: bool,
 ) -> None:
     node_lines = (
-        "  peer: {type: switch}\n  web: {type: vm, resources: {ram: 1 GiB, cpu: 1}}"
+        "  peer: {type: switch}\n  web: {type: compute, resources: {ram: 1 GiB, cpu: 1}}"
         if reverse_order
-        else "  web: {type: vm, resources: {ram: 1 GiB, cpu: 1}}\n  peer: {type: switch}"
+        else "  web: {type: compute, resources: {ram: 1 GiB, cpu: 1}}\n  peer: {type: switch}"
     )
     scenario = parse_sdl(
         "name: property-case\nnodes:\n"

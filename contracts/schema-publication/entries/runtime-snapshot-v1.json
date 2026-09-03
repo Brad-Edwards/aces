@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "0dc5926aa421eac52576a6ad7235b2fc99a62466a023ac1e4524aacab5a84417",
+  "content_hash": "4388410c8e7536fef3f1251b7649b7d2cefef3764bf9da31d221430c92935879",
   "last_change": {
-    "summary": "Added value-free realization observation disclosures for issue #1043.",
-    "content_hash": "0dc5926aa421eac52576a6ad7235b2fc99a62466a023ac1e4524aacab5a84417"
+    "summary": "Added typed guest-observed operating-system identity bound to operation, envelope, configuration, observer, and sequence for issue #1077.",
+    "content_hash": "4388410c8e7536fef3f1251b7649b7d2cefef3764bf9da31d221430c92935879"
   }
 }

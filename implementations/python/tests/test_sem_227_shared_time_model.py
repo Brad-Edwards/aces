@@ -21,7 +21,7 @@ def _scenario_yaml() -> str:
         name: shared-time
         nodes:
           workstation:
-            type: VM
+            type: compute
             resources: {ram: 1 GiB, cpu: 1}
         time_domains:
           scenario:
@@ -182,7 +182,7 @@ module:
     temporal_constraints: [workstation-window]
 nodes:
   workstation:
-    type: VM
+    type: compute
     resources: {ram: 1 GiB, cpu: 1}
 time_domains:
   scenario:

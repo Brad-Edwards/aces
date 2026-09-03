@@ -214,6 +214,7 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
     {
         "capabilities.provisioner.supported_node_types",
         "capabilities.provisioner.supported_os_families",
+        "capabilities.provisioner.operating_systems.distribution",
         "capabilities.provisioner.supported_node_architectures",
         "capabilities.provisioner.supported_content_types",
         "capabilities.provisioner.supported_account_features",
@@ -298,6 +299,10 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
         "external_concept_bindings.bindings.*.approximation.posture",
         "external_concept_bindings.bindings.*.review.status",
         "external_concept_bindings.bindings.*.perspective.participant_availability.kind",
+        "scenario.realization.constraints.compute-substrate",
+        "nodes.os_distribution",
+        "runtime.snapshot.realization_observations.operating-system.distribution",
+        "runtime.snapshot.realization_observations.compute-substrate",
         *_BACKEND_CONCEPT_BINDING_SCOPES,
         *_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
     }

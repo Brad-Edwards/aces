@@ -12,7 +12,7 @@ body:
   description: Run-oriented SDL wrapper with a timed story, script, event, objective, and workflow.
   nodes:
     service:
-      type: VM
+      type: compute
       resources: {ram: 1 GiB, cpu: 1}
       services:
         - {port: 443, name: https}

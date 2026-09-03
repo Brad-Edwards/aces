@@ -31,7 +31,7 @@ from .control_plane_execution import (
     persist_succeeded_operation,
 )
 from .control_plane_store import ControlPlaneOperationRecord
-from .control_plane_timeouts import workflow_timeout_update
+from .control_plane_timeouts import _reconciliation_clock, workflow_timeout_update
 from .control_plane_workflows import maybe_apply_compensation
 
 _TERMINAL_WORKFLOW_STATUSES = {
@@ -209,6 +209,7 @@ class WorkflowControlMixin:
         if existing is not None:
             return existing
         submitted_at = now or _utc_now()
+        reconciliation_clock = _reconciliation_clock(submitted_at)
         changed: list[str] = []
         orchestration_results = dict(self._snapshot.orchestration_results)
         orchestration_history = {
@@ -222,6 +223,7 @@ class WorkflowControlMixin:
                 orchestration_results,
                 orchestration_history,
                 submitted_at,
+                reconciliation_clock=reconciliation_clock,
             )
             if timed_out is None:
                 continue

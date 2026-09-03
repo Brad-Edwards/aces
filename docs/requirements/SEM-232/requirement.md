@@ -21,13 +21,13 @@ SEM-230 defines participant information-flow labels and projection, API-423 and 
 
 ## Traceability
 
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#971` (Implement independent participant-crossing proof models)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#972` (Map the reference runtime to the participant-crossing proof model)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#973` (Build the participant-crossing bisimulation counterexample corpus)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#974` (Machine-check finite participant-crossing bisimulation)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#975` (Independently reproduce participant-crossing bisimulation)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#976` (Publish reproduced participant-crossing bisimulation documentation)
-- DOCUMENTS → GITHUB_ISSUE `RAESystem/rae#811` (Design a proof-bearing participant-control bisimulation result)
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#971` (Implement independent participant-crossing proof models)
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#972` (Map the reference runtime to the participant-crossing proof model)
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#973` (Build the participant-crossing bisimulation counterexample corpus)
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#974` (Machine-check finite participant-crossing bisimulation)
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#975` (Independently reproduce participant-crossing bisimulation)
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#976` (Publish reproduced participant-crossing bisimulation documentation)
+- DOCUMENTS → GITHUB_ISSUE `OpenRAE/rae#811` (Design a proof-bearing participant-control bisimulation result)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-100-participant-crossing-bisimulation.md` (ADR-100: Proof-Bearing Participant-Crossing Bisimulation)
 - DOCUMENTS → SPEC `specs/formal/participant-semantics/participant-crossing-bisimulation.md` (Participant-Crossing Bisimulation)
 - DOCUMENTS → DOCUMENTATION `docs/research/participant-bisimulation/implementation-program.md` (Participant-Crossing Bisimulation Implementation Program)

@@ -101,7 +101,7 @@ Status vocabulary:
 **Surface:** `docs/explain/sdl/sections.md`
 
 **Citation:** The pre-fix `docs/explain/sdl/sections.md` runtime summary
-started with "observed VM/runtime facts that are not authored deployable
+started with "observed compute/runtime facts that are not authored deployable
 features or exposed network services"; the same section then correctly documents
 `runtime.network.published_ports`, `runtime.applications`,
 `runtime.database_services`, `runtime.identity_authorities`, and SSH/runtime
@@ -119,7 +119,7 @@ participant-observable daemon policy. The drift is therefore wording risk, not
 schema or implementation drift.
 
 **Disposition:** fixed-drift. `docs/explain/sdl/sections.md` now states that
-`runtime` covers observed facts about realized VM/container nodes, including
+`runtime` covers observed facts about realized compute nodes across VM and container realizations, including
 participant-observable and analysis-relevant runtime state, and explicitly says
 host-published bindings, application routes, daemon policy, databases, identity
 authorities, and other participant-interactable state are not excluded merely

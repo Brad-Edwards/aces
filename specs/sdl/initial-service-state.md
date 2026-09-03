@@ -75,8 +75,8 @@ declared field fails reconciliation. Vendor literals, raw mappings, analyzers,
 native index names, endpoints, queries, credentials, and arbitrary options are
 not valid SDL.
 
-`content.target` remains the owning VM node. `target_service_ref` MUST resolve
-to an exact `nodes.<node>.services.<service>` declaration on that same VM.
+`content.target` remains the owning compute node. `target_service_ref` MUST resolve
+to an exact `nodes.<node>.services.<service>` declaration on that same compute node.
 Every ordering reference MUST resolve to another content declaration;
 self-dependency is invalid. Local deployment tenancy is derived from the
 owning node and MUST NOT be redundantly authored in this binding.

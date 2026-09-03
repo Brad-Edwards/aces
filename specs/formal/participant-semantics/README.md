@@ -1412,7 +1412,7 @@ behavior history, and observation/evidence records.
 For participant `p`, let `IA(p)` be a finite map from portable local
 declaration ids to records `(target_ref, channel, account_ref?)`. Let
 `resolve_N` and `resolve_A` be the fail-closed node and account resolvers after
-composition, and let `VM` be the set of declared VM nodes.
+composition, and let `COMPUTE` be the set of declared compute nodes.
 
 The authored interactive-access specialization satisfies:
 
@@ -1421,7 +1421,7 @@ The authored interactive-access specialization satisfies:
 - **IA2 — stable identity:** every map key is a portable local identifier,
   cannot be a variable, and is preserved through composition and compilation.
 - **IA3 — closed target/channel:** every concrete `target_ref` resolves to one
-  member of `VM`, and every concrete channel is exactly `ssh` or `rdp`.
+  member of `COMPUTE`, and every concrete channel is exactly `ssh` or `rdp`.
 - **IA4 — account authority:** when `account_ref` is present, it resolves to an
   account on `resolve_N(target_ref)` and that account occurs in `p`'s concrete
   `starting_accounts` set.

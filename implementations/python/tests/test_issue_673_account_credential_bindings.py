@@ -74,7 +74,7 @@ def _scenario_with_account(account: dict[str, object]) -> Scenario:
             "name": "credential-bindings",
             "nodes": {
                 "web": {
-                    "type": "vm",
+                    "type": "compute",
                     "os": "linux",
                     "resources": {"ram": "1 gib", "cpu": 1},
                 }
@@ -229,7 +229,7 @@ def test_instantiation_revalidates_bound_purpose_method_and_material() -> None:
               secret_ref: {type: string, default: operator-secret.web-bootstrap}
             nodes:
               web:
-                type: vm
+                type: compute
                 os: linux
                 resources: {ram: 1 gib, cpu: 1}
             accounts:
@@ -271,7 +271,7 @@ def test_composition_keeps_bindings_nested_under_the_qualified_account(tmp_path:
                 nodes: [web]
                 accounts: [admin]
             nodes:
-              web: {{type: vm, os: linux, resources: {{ram: 1 gib, cpu: 1}}}}
+              web: {{type: compute, os: linux, resources: {{ram: 1 gib, cpu: 1}}}}
             accounts:
               admin:
                 username: admin

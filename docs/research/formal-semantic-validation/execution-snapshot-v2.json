@@ -120,11 +120,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover and the issue #674 target-node CPU architecture field addition; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, and issue #1077 separation of OS distribution and release identity; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "accepted",
         "diagnostic_kind": null,
-        "result_digest": "ba0ecbfcb3090ffd6b660cb51324fafcd47ca8dedbbb985e98b6e7f64f8cc25b"
+        "result_digest": "8291a196859dbb09e9b2ef586ce179f1138139f469b92f03f16afb35877461a1"
       }
     },
     {
@@ -158,11 +158,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover and the issue #674 target-node CPU architecture field addition; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, issue #1067 publication of resolved realization authority, and issue #1077 separation of OS distribution and release identity; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "stable",
         "diagnostic_kind": null,
-        "result_digest": "111478766ed79ae88f3ea3b5e60dba113f1af03996f092e66bb1eec9044a2675"
+        "result_digest": "4bb77034a8f2b1a577700ad03772a80acc0f4515a6831c8a35ac1bf50482d760"
       }
     },
     {
@@ -177,11 +177,11 @@
         "result_digest"
       ],
       "disposition": "accepted",
-      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover and the issue #674 target-node CPU architecture field addition; the governed outcome and diagnostic remain unchanged.",
+      "rationale": "Canonical result bytes and their digest changed across the RAES identity cutover, the issue #674 target-node CPU architecture field addition, issue #1066 registration of the portable process-resource-limit realization concern, issue #1067 publication of resolved realization authority, and issue #1077 separation of OS distribution and release identity; the governed outcome and diagnostic remain unchanged.",
       "retest": {
         "actual_outcome": "distinguishable",
         "diagnostic_kind": null,
-        "result_digest": "bb4c3fb88962baecd0b29e70c922a6b11f5062834280f1ad820a5a7f398ed297"
+        "result_digest": "6cdc44529a87fb9addaf4040795c7f9ae702c5f6ae30e29a5086ee60072ded73"
       }
     }
   ],
@@ -251,7 +251,7 @@
         "This is a positive control for one objective-reference slice."
       ],
       "replayable": true,
-      "result_digest": "ba0ecbfcb3090ffd6b660cb51324fafcd47ca8dedbbb985e98b6e7f64f8cc25b",
+      "result_digest": "8291a196859dbb09e9b2ef586ce179f1138139f469b92f03f16afb35877461a1",
       "source_digest": null
     },
     {
@@ -476,7 +476,7 @@
         "The witness ends at compiled output."
       ],
       "replayable": true,
-      "result_digest": "111478766ed79ae88f3ea3b5e60dba113f1af03996f092e66bb1eec9044a2675",
+      "result_digest": "4bb77034a8f2b1a577700ad03772a80acc0f4515a6831c8a35ac1bf50482d760",
       "source_digest": null
     },
     {
@@ -499,7 +499,7 @@
         "Distinct digests are a non-vacuity control, not semantic non-equivalence proof."
       ],
       "replayable": true,
-      "result_digest": "bb4c3fb88962baecd0b29e70c922a6b11f5062834280f1ad820a5a7f398ed297",
+      "result_digest": "6cdc44529a87fb9addaf4040795c7f9ae702c5f6ae30e29a5086ee60072ded73",
       "source_digest": null
     },
     {

@@ -29,8 +29,12 @@ from raes_contracts.planning import (
     OrchestrationPlan,
     ProvisioningPlan,
     ProvisionOp,
+    RealizationAuthorityBound,
+    ResolvedRealizationAuthority,
 )
 from raes_contracts.runtime_state import OperationStatus, RuntimeSnapshotEnvelope
+
+from raes_runtime.control_plane_store_payloads import _realization_observations_payload
 
 
 class _ParticipantInitializeBody(BaseModel):
@@ -74,6 +78,8 @@ def _diagnostic_from_mapping(payload: dict[str, Any]) -> Diagnostic:
 
 
 def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
+    from raes_contracts.planning import PlannedRealizationConstraint
+
     return ProvisioningPlan(
         operations=[
             ProvisionOp(
@@ -87,7 +93,44 @@ def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
             for op in model.operations
         ],
         diagnostics=[_diagnostic_from_mapping(payload) for payload in model.diagnostics],
+        realization_authority=tuple(
+            ResolvedRealizationAuthority(
+                address=entry.address,
+                field_path=entry.field_path,
+                domain=entry.domain,
+                requirement_kind=entry.requirement_kind,
+                payload_pointer=entry.payload_pointer,
+                mode=entry.mode,
+                source=entry.source,
+                provenance=entry.provenance,
+                governing_scope=entry.governing_scope,
+                bounds=tuple(
+                    RealizationAuthorityBound(
+                        value_pointer=bound.value_pointer,
+                        domain=bound.domain,
+                        identity_digest=bound.identity_digest,
+                    )
+                    for bound in entry.bounds
+                ),
+                verification_scope=entry.verification_scope,
+                required_observation_strength=entry.required_observation_strength,
+            )
+            for entry in model.realization_authority
+        ),
         realization_envelope=model.realization_envelope,
+        realization_constraints=tuple(
+            PlannedRealizationConstraint(
+                address=item.address,
+                field_path=item.field_path,
+                concern=item.concern,
+                posture=item.posture,
+                value_domain=item.value_domain,
+                governing_scope=item.governing_scope,
+                provenance=item.provenance,
+            )
+            for item in model.realization_constraints
+        ),
+        operation_id=model.operation_id,
     )
 
 
@@ -198,17 +241,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             }
             for entry in snapshot.realization_provenance
         ],
-        "realization_observations": [
-            {
-                "address": entry.address,
-                "field_path": entry.field_path,
-                "domain": entry.domain,
-                "requirement_kind": entry.requirement_kind,
-                "verification_scope": entry.verification_scope.value,
-                "observation_strength": entry.observation_strength.value,
-            }
-            for entry in snapshot.realization_observations
-        ],
+        "realization_observations": _realization_observations_payload(snapshot),
         "realization_envelope": (
             snapshot.realization_envelope.model_dump(mode="json") if snapshot.realization_envelope is not None else None
         ),

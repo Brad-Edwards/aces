@@ -6,8 +6,11 @@ import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from raes_contracts.bounded_domains import DomainDescriptor
+from raes_contracts.compute_substrate import validate_compute_substrate_constraint
 from raes_contracts.vocabulary import Closure
 
 from ._base import SDLModel
@@ -23,6 +26,42 @@ class AuthorRealizationPosture(str, Enum):
     CLOSED = "closed"
     OPEN = "open"
     UNSPECIFIED = "unspecified"
+
+
+class ComputeRealizationConcern(str, Enum):
+    """Portable compute concerns whose mechanisms remain backend-selected."""
+
+    COMPUTE_SUBSTRATE = "compute-substrate"
+
+
+class RealizationConstraintPosture(str, Enum):
+    """Exact, finite-constrained, or delegated author mechanism intent."""
+
+    OPEN = "open"
+    CONSTRAINED = "constrained"
+    EXACT = "exact"
+
+
+class RealizationConstraintDesignation(SDLModel):
+    """One addressed author constraint over a governed realization concern."""
+
+    namespace: tuple[PortableIdentifier, ...] = Field(default=(), max_length=31)
+    field_pointer: str = Field(min_length=1, max_length=4096, pattern=_JSON_POINTER_PATTERN)
+    concern: ComputeRealizationConcern
+    posture: RealizationConstraintPosture
+    domain: DomainDescriptor | None = None
+    provenance: Literal["author-declared", "legacy-node-type-vm"] = Field(
+        default="author-declared",
+        exclude=True,
+        json_schema_extra={"x-raes-internal-provenance": True},
+    )
+
+    @model_validator(mode="after")
+    def _validate_constraint(self) -> RealizationConstraintDesignation:
+        if _JSON_POINTER_RE.fullmatch(self.field_pointer) is None:
+            raise ValueError("field_pointer must be a canonical RFC 6901 JSON Pointer")
+        validate_compute_substrate_constraint(self.posture, self.domain)
+        return self
 
 
 class RealizationScopeDesignation(SDLModel):
@@ -44,12 +83,18 @@ class RealizationDesignation(SDLModel):
 
     default: AuthorRealizationPosture = AuthorRealizationPosture.UNSPECIFIED
     scopes: tuple[RealizationScopeDesignation, ...] = ()
+    constraints: tuple[RealizationConstraintDesignation, ...] = ()
 
     @model_validator(mode="after")
     def _validate_unique_scopes(self) -> RealizationDesignation:
         identities = [(entry.namespace, entry.field_pointer) for entry in self.scopes]
         if len(identities) != len(set(identities)):
             raise ValueError("realization scopes must have unique namespace and field_pointer identities")
+        constraint_identities = [(entry.namespace, entry.field_pointer, entry.concern) for entry in self.constraints]
+        if len(constraint_identities) != len(set(constraint_identities)):
+            raise ValueError(
+                "realization constraints must have unique namespace, field_pointer, and concern identities"
+            )
         return self
 
 
@@ -73,6 +118,29 @@ class RealizationDesignationRecord(SDLModel):
         namespace = ".".join(self.namespace)
         pointer = self.field_pointer or "/"
         return f"{namespace}#{pointer}"
+
+
+class RealizationConstraintRecord(SDLModel):
+    """Portable addressed author constraint carried across SDL phases."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
+
+    namespace: tuple[PortableIdentifier, ...] = Field(default=(), max_length=31)
+    field_pointer: str = Field(min_length=1, max_length=4096, pattern=_JSON_POINTER_PATTERN)
+    concern: ComputeRealizationConcern
+    posture: RealizationConstraintPosture
+    domain: DomainDescriptor | None = None
+    provenance: Literal["author-declared", "legacy-node-type-vm"] = "author-declared"
+
+    @model_validator(mode="after")
+    def _validate_constraint(self) -> RealizationConstraintRecord:
+        validate_compute_substrate_constraint(self.posture, self.domain)
+        return self
+
+    @property
+    def governing_scope(self) -> str:
+        namespace = ".".join(self.namespace)
+        return f"{namespace}#{self.field_pointer}"
 
 
 @dataclass(frozen=True)
@@ -111,6 +179,26 @@ def designation_records(
         for entry in designation.scopes
     )
     return tuple(records)
+
+
+def constraint_records(
+    designation: RealizationDesignation,
+    *,
+    namespace: tuple[str, ...] = (),
+) -> tuple[RealizationConstraintRecord, ...]:
+    """Lower author constraints into portable phase-provenance records."""
+
+    return tuple(
+        RealizationConstraintRecord(
+            namespace=(*namespace, *entry.namespace),
+            field_pointer=entry.field_pointer,
+            concern=entry.concern,
+            posture=entry.posture,
+            domain=entry.domain,
+            provenance=entry.provenance,
+        )
+        for entry in designation.constraints
+    )
 
 
 def resolve_realization_designation(
@@ -201,11 +289,16 @@ def _specificity(record: RealizationDesignationRecord) -> tuple[int, int, str, s
 __all__ = [
     "ApparatusDefaultResolver",
     "AuthorRealizationPosture",
+    "ComputeRealizationConcern",
     "RealizationDesignation",
     "RealizationDesignationRecord",
+    "RealizationConstraintDesignation",
+    "RealizationConstraintPosture",
+    "RealizationConstraintRecord",
     "RealizationResolution",
     "RealizationScopeDesignation",
     "designation_records",
+    "constraint_records",
     "resolve_json_pointer_surface",
     "resolve_realization_designation",
 ]

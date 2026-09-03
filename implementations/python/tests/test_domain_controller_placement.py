@@ -65,14 +65,14 @@ def _scenario_payload(domain_count: int = 1, controllers_per_domain: int = 1) ->
         ]
         member_name = f"member-{domain_index}"
         for controller_name in controller_names:
-            nodes[controller_name] = {"type": "vm", "os": "windows"}
+            nodes[controller_name] = {"type": "compute", "os": "windows"}
             relationships[f"{controller_name}-role"] = {
                 "type": "domain_controller_for",
                 "source": controller_name,
                 "target": domain_name,
                 "domain_controller": {},
             }
-        nodes[member_name] = {"type": "vm", "os": "windows"}
+        nodes[member_name] = {"type": "compute", "os": "windows"}
         relationships[f"{member_name}-join"] = {
             "type": "joins_domain",
             "source": member_name,

@@ -315,6 +315,42 @@
       "title": "ObservationStrength",
       "type": "string"
     },
+    "OperatingSystemCompatibilityModel": {
+      "additionalProperties": false,
+      "description": "One portable, coupled OS family/distribution/release capability row.",
+      "properties": {
+        "distribution": {
+          "minLength": 1,
+          "title": "Distribution",
+          "type": "string"
+        },
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "versions": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[!-~](?:[ -~]{0,126}[!-~])?$",
+            "type": "string"
+          },
+          "maxItems": 128,
+          "minItems": 1,
+          "title": "Versions",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "family",
+        "distribution",
+        "versions"
+      ],
+      "title": "OperatingSystemCompatibilityModel",
+      "type": "object"
+    },
     "Posture": {
       "description": "Author/backend intent for a bound value or child scope.",
       "enum": [
@@ -323,6 +359,72 @@
         "exact"
       ],
       "title": "Posture",
+      "type": "string"
+    },
+    "ProcessResourceLimitCapabilityModel": {
+      "additionalProperties": false,
+      "description": "Published typed apparatus domain for portable process limits.",
+      "properties": {
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "resource": {
+          "$ref": "#/$defs/ProcessResourceLimitKind"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/ProcessResourceLimitScope"
+          },
+          "minItems": 1,
+          "title": "Scopes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_unlimited": {
+          "default": false,
+          "title": "Supports Unlimited",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "resource",
+        "scopes"
+      ],
+      "title": "ProcessResourceLimitCapabilityModel",
+      "type": "object"
+    },
+    "ProcessResourceLimitKind": {
+      "description": "Portable process-resource terms governed by the runtime contract.",
+      "enum": [
+        "open_file_descriptors",
+        "locked_memory_bytes"
+      ],
+      "title": "ProcessResourceLimitKind",
+      "type": "string"
+    },
+    "ProcessResourceLimitScope": {
+      "description": "Process inheritance scope for a portable resource limit.",
+      "enum": [
+        "process",
+        "subtree"
+      ],
+      "title": "ProcessResourceLimitScope",
       "type": "string"
     },
     "RealizationConcern": {
@@ -337,7 +439,9 @@
         "account-placement",
         "feature-binding",
         "service",
-        "acl"
+        "acl",
+        "compute-substrate",
+        "operating-system"
       ],
       "title": "RealizationConcern",
       "type": "string"
@@ -600,6 +704,22 @@
           "minLength": 1,
           "title": "Network Policy",
           "type": "string"
+        },
+        "operating_systems": {
+          "items": {
+            "$ref": "#/$defs/OperatingSystemCompatibilityModel"
+          },
+          "title": "Operating Systems",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "process_resource_limits": {
+          "items": {
+            "$ref": "#/$defs/ProcessResourceLimitCapabilityModel"
+          },
+          "title": "Process Resource Limits",
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_account_features": {
           "items": {
@@ -917,13 +1037,43 @@
           },
           "maxContains": 1,
           "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "compute-substrate"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "operating-system"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
         }
       ],
       "items": {
         "$ref": "#/$defs/RealizationConcernDisclosureModel"
       },
-      "maxItems": 10,
-      "minItems": 10,
+      "maxItems": 12,
+      "minItems": 12,
       "title": "Concerns",
       "type": "array"
     },

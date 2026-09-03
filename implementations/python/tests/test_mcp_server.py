@@ -31,7 +31,7 @@ def _text(result) -> str:
 
 def _call(server, tool: str, args: dict | None = None) -> str:
     """Synchronously call a tool and return its text."""
-    return asyncio.get_event_loop().run_until_complete(_async_call(server, tool, args or {}))
+    return asyncio.run(_async_call(server, tool, args or {}))
 
 
 async def _async_call(server, tool: str, args: dict) -> str:
@@ -52,7 +52,7 @@ MINIMAL_SDL = """\
 name: test-scenario
 nodes:
   net: {type: Switch}
-  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}}
+  web: {type: compute, resources: {ram: 2 GiB, cpu: 1}}
 infrastructure:
   net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
   web: {count: 1, links: [net]}
@@ -69,8 +69,8 @@ variables:
 
 nodes:
   corp-net: {type: Switch}
-  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}, conditions: {alive: admin}}
-  db:  {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}, features: {pg: dba}, roles: {dba: postgres}, services: [{port: 5432, name: pg-port}]}
+  web: {type: compute, resources: {ram: 2 GiB, cpu: 1}, features: {app: admin}, roles: {admin: www}, conditions: {alive: admin}}
+  db:  {type: compute, resources: {ram: 1 GiB, cpu: 1}, features: {pg: dba}, roles: {dba: postgres}, services: [{port: 5432, name: pg-port}]}
 
 infrastructure:
   corp-net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
@@ -193,7 +193,7 @@ INVALID_SDL = """\
 name: broken
 nodes:
   web:
-    type: VM
+    type: compute
     os: linux
     features: {ghost-feature: admin}
 """
@@ -234,7 +234,7 @@ class TestReferenceTools:
         text = _call(server, "sdl_section_reference", {"section": "nodes"})
         assert "Nodes" in text
         assert "Switch" in text
-        assert "VM" in text
+        assert "compute" in text.lower()
 
     def test_sdl_section_reference_invalid(self, server):
         text = _call(server, "sdl_section_reference", {"section": "nonexistent"})
@@ -324,7 +324,7 @@ class TestAuthoringTools:
             "sdl_validate_section",
             {
                 "section": "nodes",
-                "section_yaml": "myvm:\n  type: VM\n  os: linux\n  resources: {ram: 2 GiB, cpu: 1}",
+                "section_yaml": "myvm:\n  type: compute\n  os: linux\n  resources: {ram: 2 GiB, cpu: 1}",
             },
         )
         assert text.startswith("VALID")
@@ -503,7 +503,7 @@ name: append-edit
 nodes:
   net: {type: Switch}
   net2: {type: Switch}
-  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}}
+  web: {type: compute, os: linux, resources: {ram: 2 GiB, cpu: 1}}
 infrastructure:
   net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
   net2: {count: 1, properties: {cidr: 10.0.1.0/24, gateway: 10.0.1.1}}
@@ -550,7 +550,7 @@ class TestInspectionTools:
     def test_summarize(self, server):
         text = _call(server, "sdl_summarize", {"sdl_content": FULL_SDL})
         assert "mcp-test" in text
-        assert "VMs:" in text
+        assert "Compute nodes:" in text
         assert "Switches:" in text
         assert "${speed}" in text
 
@@ -591,7 +591,7 @@ class TestInspectionTools:
             {"sdl_content": FULL_SDL, "element_name": "nodes.web"},
         )
         assert "nodes.web" in text
-        assert "vm" in text.lower()
+        assert "compute" in text.lower()
 
     def test_get_element_unique_bare(self, server):
         text = _call(
@@ -655,8 +655,8 @@ class TestInspectionTools:
 name: dep-test
 nodes:
   sw: {type: Switch}
-  a: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
-  b: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+  a: {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+  b: {type: compute, os: linux, resources: {ram: 1 GiB, cpu: 1}}
 infrastructure:
   sw: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
   a: {count: 1, links: [sw]}
@@ -877,7 +877,7 @@ class TestExampleScenarios:
         sdl = path.read_text()
         text = _call(server, "sdl_summarize", {"sdl_content": sdl})
         assert "Scenario:" in text
-        assert "VMs:" in text
+        assert "Compute nodes:" in text
         # Pin the scenario identity so a cached/boilerplate response or a
         # wrong-file regression is not silently accepted. Each example's
         # `name:` field matches the basename of its .sdl.yaml file.
@@ -897,7 +897,7 @@ class TestServerConstruction:
         # Using the real registration surface (rather than a hand-copied
         # literal) means a drift between what the server exposes and what
         # raes_tool_surface advertises cannot pass silently.
-        registered = asyncio.get_event_loop().run_until_complete(server.list_tools())
+        registered = asyncio.run(server.list_tools())
         registered_names = {tool.name for tool in registered}
         assert registered_names, "server registered no tools"
 

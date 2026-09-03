@@ -71,6 +71,9 @@ class _NativeObject:
     def UUIDString(self):  # noqa: N802 - mirrors libvirt API
         return self.uuid
 
+    def isActive(self):  # noqa: N802 - mirrors libvirt API
+        return int(self.created and not self.destroyed)
+
 
 class _FakeConnection:
     def __init__(self, *, fail_define: bool = False, fail_create: bool = False) -> None:
@@ -620,6 +623,33 @@ def test_libvirt_driver_teardown_of_absent_network_is_idempotent_success():
 
     assert not result.diagnostics
     assert [handle.realized for handle in result.networks] == [False]
+
+
+def test_libvirt_driver_observes_owned_domain_without_redefining_it():
+    connection = _FakeConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
+    domain = DomainSpec(address="provision.node.web", name="web", image_ref=None)
+    assert not driver.realize(networks=(), domains=(domain,)).diagnostics
+    definitions_before = tuple(connection.domain_xml)
+
+    result = driver.observe(domains=(domain,))
+
+    assert not result.diagnostics
+    assert [item.address for item in result.observations] == [domain.address]
+    assert tuple(connection.domain_xml) == definitions_before
+
+
+def test_libvirt_driver_observe_rejects_inactive_domain():
+    connection = _FakeConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
+    domain = DomainSpec(address="provision.node.web", name="web", image_ref=None)
+    assert not driver.realize(networks=(), domains=(domain,)).diagnostics
+    connection.domains[_runtime_name(domain.address)].destroy()
+
+    result = driver.observe(domains=(domain,))
+
+    assert [item.code for item in result.diagnostics] == ["libvirt-backend.driver.operation-failed"]
+    assert result.observations == ()
 
 
 def test_libvirt_driver_teardown_is_idempotent_across_repeated_realize_and_destroy():

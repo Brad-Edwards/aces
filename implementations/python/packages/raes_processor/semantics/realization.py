@@ -6,41 +6,46 @@ strings remain opaque; matching is exact membership plus support compatibility.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass, replace
-
-from raes.artifact_requirements import ArtifactRequirement
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.explicitness import ExplicitnessClass
 from raes.realization_envelope import effective_constraints, subsumes, tokenize_path
 from raes_backend_protocols.capabilities import BackendManifest
-from raes_contracts.addressing import require_compiled_address
 from raes_contracts.apparatus import (
     DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
     RUNTIME_REALIZATION_DOMAIN,
     RealizationSupportDeclaration,
 )
 from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
+from raes_contracts.bounded_domains import scalar_in_domain
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ProvisioningPlan
 from raes_contracts.realization_envelope import (
+    BackendRealizationEnvelopeModel,
     ClosureOverlay,
     EnvelopeBinding,
     EnvelopeScope,
     Posture,
+    RealizationConcernDisclosureModel,
     RealizationEnvelopeModel,
 )
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from raes_contracts.vocabulary import (
     Closure,
     RealizationSupportMode,
-    RealizationVerificationScope,
-    verification_scope_satisfies,
+    observation_strength_satisfies,
 )
 
 from .artifact_realization import (
     artifact_requirement_diagnostics,
     evaluate_artifact_realization,
 )
+from .realization_apparatus_defaults import (
+    ApparatusRealizationDecisions,
+    ApparatusRealizationDefaultResolver,
+    effective_realization_explicitness,
+    materialize_realization_requirements,
+    resolve_apparatus_realization_defaults,
+)
+from .realization_authority_contract import CompiledRealizationAuthority
 from .realization_concerns import (
     CONCERN_PAYLOAD_PATH,
     project_realization_concern,
@@ -48,6 +53,13 @@ from .realization_concerns import (
     registered_realization_concerns,
     resolve_realization_concern,
 )
+from .realization_observation_admission import has_required_observation_support
+from .realization_process_limits import (
+    ProcessResourceLimitDemand,
+    RealizationValueConstraint,
+    process_resource_limit_support_diagnostic,
+)
+from .realization_requirement import CompiledRealizationRequirement
 from .realization_runtime_evaluation import evaluate_registered_realization
 from .realization_snapshot_sanitization import (
     sanitize_realization_snapshot,
@@ -58,13 +70,18 @@ __all__ = [
     "EXACT_REQUIREMENT_KIND",
     "REALIZATION_DOMAIN",
     "ApparatusRealizationDefaultResolver",
+    "ApparatusRealizationDecisions",
     "CompiledRealizationRequirement",
+    "CompiledRealizationAuthority",
+    "ProcessResourceLimitDemand",
+    "RealizationValueConstraint",
     "artifact_requirement_diagnostics",
     "materialize_realization_requirements",
     "project_realization_concern",
     "realization_disclosure",
     "realization_envelope_diagnostics",
     "realization_support_diagnostics",
+    "resolve_apparatus_realization_defaults",
     "registered_realization_concern_descriptors",
     "registered_realization_concerns",
     "resolve_realization_concern",
@@ -82,90 +99,6 @@ REALIZATION_DOMAIN = RUNTIME_REALIZATION_DOMAIN
 # A backend that honors exact declarations lists this in
 # ``supported_exact_requirement_kinds``; one that cannot must reject (I2).
 EXACT_REQUIREMENT_KIND = DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND
-
-
-@dataclass(frozen=True)
-class CompiledRealizationRequirement:
-    """A compiled realization concern carrying its SEM-218 explicitness class.
-
-    Owned by ``RuntimeModel`` as model-side metadata; like compiled capability
-    constraints, it never enters the backend-facing
-    ``resource_payload()`` envelope — and consumed directly by the planner gate.
-    """
-
-    field_path: str
-    address: str
-    domain: str
-    requirement_kind: str
-    explicitness: ExplicitnessClass | None
-    provenance: ExplicitnessProvenance
-    governing_scope: str | None = None
-    delegated: bool = False
-    artifact_requirement: ArtifactRequirement | None = None
-    verification_scope: RealizationVerificationScope | None = None
-
-    def __post_init__(self) -> None:
-        require_compiled_address(self.address)
-        if self.delegated != (self.explicitness is None):
-            raise ValueError("delegated realization requirements must carry unresolved explicitness")
-        if self.verification_scope is not None and not isinstance(
-            self.verification_scope,
-            RealizationVerificationScope,
-        ):
-            raise TypeError("verification_scope must be RealizationVerificationScope")
-        if self.artifact_requirement is not None:
-            if self.requirement_kind != "source-artifact":
-                raise ValueError("artifact_requirement requires requirement_kind='source-artifact'")
-            if self.explicitness is not self.artifact_requirement.explicitness:
-                raise ValueError("compiled artifact requirement explicitness must match its source contract")
-
-
-ApparatusRealizationDefaultResolver = Callable[
-    [CompiledRealizationRequirement, BackendManifest],
-    Closure,
-]
-
-
-def _closed_apparatus_default(
-    _requirement: CompiledRealizationRequirement,
-    _manifest: BackendManifest,
-) -> Closure:
-    return Closure.CLOSED_WORLD
-
-
-def _effective_explicitness(
-    requirement: CompiledRealizationRequirement,
-    manifest: BackendManifest,
-    apparatus_default: ApparatusRealizationDefaultResolver | None,
-) -> ExplicitnessClass | None:
-    if not requirement.delegated:
-        return requirement.explicitness
-    resolver = apparatus_default or _closed_apparatus_default
-    closure = resolver(requirement, manifest)
-    return ExplicitnessClass.OPEN if closure is Closure.OPEN_WORLD else None
-
-
-def materialize_realization_requirements(
-    requirements: tuple[CompiledRealizationRequirement, ...],
-    manifest: BackendManifest,
-    *,
-    apparatus_default: ApparatusRealizationDefaultResolver | None = None,
-) -> tuple[CompiledRealizationRequirement, ...]:
-    """Resolve selected-apparatus delegation into the execution carrier."""
-
-    materialized: list[CompiledRealizationRequirement] = []
-    for requirement in requirements:
-        if requirement.delegated:
-            if _effective_explicitness(requirement, manifest, apparatus_default) is not ExplicitnessClass.OPEN:
-                # A closed default carries no realizable demand into execution.
-                continue
-            requirement = replace(
-                requirement,
-                explicitness=ExplicitnessClass.OPEN,
-                delegated=False,
-            )
-        materialized.append(requirement)
-    return tuple(materialized)
 
 
 def realization_support_diagnostics(
@@ -208,11 +141,18 @@ def _realization_support_diagnostic(
     manifest: BackendManifest,
     apparatus_default: ApparatusRealizationDefaultResolver | None,
 ) -> Diagnostic | None:
-    explicitness = _effective_explicitness(requirement, manifest, apparatus_default)
+    explicitness = effective_realization_explicitness(requirement, manifest, apparatus_default)
     declarations = [
         declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
     ]
-    if explicitness is ExplicitnessClass.OPEN:
+    if requirement.requirement_kind == "process-resource-limits":
+        diagnostic = process_resource_limit_support_diagnostic(
+            requirement,
+            declarations,
+            explicitness,
+            manifest.realization_envelope,
+        )
+    elif explicitness is ExplicitnessClass.OPEN:
         diagnostic = _open_support_diagnostic(requirement, declarations)
     elif explicitness is ExplicitnessClass.EXACT:
         diagnostic = _exact_support_diagnostic(requirement, declarations)
@@ -227,6 +167,11 @@ def _open_support_diagnostic(
     requirement: CompiledRealizationRequirement,
     declarations: list[RealizationSupportDeclaration],
 ) -> Diagnostic | None:
+    # Mechanism-neutral compute is a portability baseline, not a request for
+    # the generic SEM-218 open-SDL-field capability.  Older manifests can plan
+    # it; execution still requires a selected envelope and observed substrate.
+    if requirement.requirement_kind == "compute-substrate":
+        return None
     if any(declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION for declaration in declarations):
         return None
     return Diagnostic(
@@ -263,10 +208,15 @@ def _exact_support_diagnostic(
             ),
             severity=Severity.ERROR,
         )
-    if requirement.verification_scope is None or any(
-        (capability := declaration.observation_capabilities.get(requirement.requirement_kind)) is not None
-        and verification_scope_satisfies(capability.verification_scope, requirement.verification_scope)
-        for declaration in exact_declarations
+    observation_kind = (
+        "operating-system"
+        if requirement.requirement_kind in {"os-family", "os-distribution", "os-version"}
+        else requirement.requirement_kind
+    )
+    if requirement.verification_scope is None or has_required_observation_support(
+        requirement,
+        exact_declarations,
+        observation_kind=observation_kind,
     ):
         return None
     return Diagnostic(
@@ -286,18 +236,47 @@ def _constraint_support_diagnostic(
     requirement: CompiledRealizationRequirement,
     declarations: list[RealizationSupportDeclaration],
 ) -> Diagnostic | None:
-    if any(requirement.requirement_kind in declaration.supported_constraint_kinds for declaration in declarations):
-        return None
-    return Diagnostic(
-        code="realization.unsupported-constraint-requirement",
-        domain=requirement.domain,
-        address=requirement.address,
-        message=(
-            "Backend declares no constraint realization support "
-            f"for constraint kind '{requirement.requirement_kind}' at "
-            f"'{requirement.field_path}' in domain '{requirement.domain}'."
-        ),
-        severity=Severity.ERROR,
+    supporting = [
+        declaration
+        for declaration in declarations
+        if requirement.requirement_kind in declaration.supported_constraint_kinds
+    ]
+    diagnostic = None
+    if not supporting:
+        diagnostic = Diagnostic(
+            code="realization.unsupported-constraint-requirement",
+            domain=requirement.domain,
+            address=requirement.address,
+            message=(
+                "Backend declares no constraint realization support "
+                f"for constraint kind '{requirement.requirement_kind}' at "
+                f"'{requirement.field_path}' in domain '{requirement.domain}'."
+            ),
+            severity=Severity.ERROR,
+        )
+    elif _constrained_os_observation_missing(requirement, supporting):
+        diagnostic = Diagnostic(
+            code="realization.under-observed-constraint-requirement",
+            domain=requirement.domain,
+            address=requirement.address,
+            message=(
+                "Backend declares no guest-observed operating-system corroboration "
+                f"for constrained '{requirement.requirement_kind}' at '{requirement.field_path}' "
+                f"in domain '{requirement.domain}'."
+            ),
+            severity=Severity.ERROR,
+        )
+    return diagnostic
+
+
+def _constrained_os_observation_missing(
+    requirement: CompiledRealizationRequirement,
+    supporting: list[RealizationSupportDeclaration],
+) -> bool:
+    return requirement.requirement_kind in {"os-distribution", "os-version"} and not has_required_observation_support(
+        requirement,
+        supporting,
+        observation_kind="operating-system",
     )
 
 
@@ -311,17 +290,76 @@ def realization_envelope_diagnostics(
 
     carrier = manifest.realization_envelope
     if carrier is None:
-        return []
+        return [
+            Diagnostic(
+                code="realization.compute-substrate-envelope-required",
+                domain=requirement.domain,
+                address=requirement.address,
+                message=(
+                    "Selected apparatus provides no realization envelope for the bounded "
+                    f"compute-substrate demand at '{requirement.field_path}'."
+                ),
+                severity=Severity.ERROR,
+            )
+            for requirement in requirements
+            if requirement.requirement_kind == "compute-substrate"
+            and effective_realization_explicitness(requirement, manifest, apparatus_default)
+            in {ExplicitnessClass.EXACT, ExplicitnessClass.CONSTRAINED}
+        ]
+    diagnostics = _compute_substrate_envelope_diagnostics(requirements, carrier)
     open_paths = tuple(
         requirement.field_path
         for requirement in requirements
-        if _effective_explicitness(requirement, manifest, apparatus_default) is ExplicitnessClass.OPEN
+        if requirement.requirement_kind != "compute-substrate"
+        and effective_realization_explicitness(requirement, manifest, apparatus_default) is ExplicitnessClass.OPEN
     )
     if not open_paths:
-        return []
+        return diagnostics
     requested = _open_request_envelope(open_paths)
     offered = _offered_open_projection(carrier.expression, open_paths)
-    return list(subsumes(offered, requested).diagnostics)
+    return [*diagnostics, *subsumes(offered, requested).diagnostics]
+
+
+def _compute_substrate_envelope_diagnostics(
+    requirements: tuple[CompiledRealizationRequirement, ...],
+    carrier: BackendRealizationEnvelopeModel,
+) -> list[Diagnostic]:
+    claim = next(
+        (item for item in carrier.concerns if item.concern.value == "compute-substrate"),
+        None,
+    )
+    diagnostics: list[Diagnostic] = []
+    for requirement in requirements:
+        if requirement.requirement_kind != "compute-substrate":
+            continue
+        if not _compute_substrate_claim_admits(requirement, claim):
+            diagnostics.append(
+                Diagnostic(
+                    code="realization.compute-substrate-not-admitted",
+                    domain=requirement.domain,
+                    address=requirement.address,
+                    message=(
+                        "Selected realization envelope cannot satisfy the governed compute-substrate "
+                        f"demand at '{requirement.field_path}'."
+                    ),
+                    severity=Severity.ERROR,
+                )
+            )
+    return diagnostics
+
+
+def _compute_substrate_claim_admits(
+    requirement: CompiledRealizationRequirement,
+    claim: RealizationConcernDisclosureModel | None,
+) -> bool:
+    if claim is None or claim.disposition.value == "unsupported" or claim.mechanism is None:
+        return False
+    domain_admitted = requirement.value_domain is None or scalar_in_domain(claim.mechanism, requirement.value_domain)
+    strength_admitted = requirement.required_observation_strength is None or observation_strength_satisfies(
+        claim.observation_strength,
+        requirement.required_observation_strength,
+    )
+    return domain_admitted and strength_admitted
 
 
 def _open_request_envelope(paths: tuple[str, ...]) -> RealizationEnvelopeModel:
@@ -442,7 +480,7 @@ def realization_disclosure(
         else:
             diagnostic, entry = evaluate_registered_realization(
                 requirement,
-                declared_ops,
+                declared_plan,
                 returned_snapshot,
                 manifest=manifest,
             )

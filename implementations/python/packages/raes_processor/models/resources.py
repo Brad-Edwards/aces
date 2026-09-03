@@ -54,11 +54,13 @@ class NetworkRuntime(ResolvedResource):
 
 @dataclass(frozen=True)
 class NodeRuntime(ResolvedResource):
-    """Compiled VM deployment."""
+    """Compiled backend-neutral compute deployment."""
 
     node_name: str = ""
-    node_type: str = ""
+    node_kind: str = ""
     os_family: str = ""
+    os_distribution: str = ""
+    os_version: str = ""
     architecture: str = ""
     count: int | str | None = None
     network_namespace_target: str = ""
@@ -82,8 +84,12 @@ class PropositionRuntime(ResolvedResource):
 
     subject_addresses: tuple[str, ...] = ()
     predicate_kind: str = ""
+    quantifier: str = ""
     evaluation_basis: str = ""
     evidence_requirement_refs: tuple[str, ...] = ()
+    evidence_channels: tuple[str, ...] = ()
+    unresolved_evidence_channel_refs: tuple[str, ...] = ()
+    required_time_domain: str = ""
 
 
 @dataclass(frozen=True)
@@ -256,6 +262,8 @@ class ParticipantActionContractRuntime(ResolvedResource):
     backend_failure_mappings: tuple[dict[str, str], ...] = ()
     interaction_classes: tuple[str, ...] = ()
     shared_state_refs: tuple[str, ...] = ()
+    commutative_interaction_targets: tuple[str, ...] = ()
+    merge_rule_refs: tuple[str, ...] = ()
     temporal_contract_ids: tuple[str, ...] = ()
     temporal_kinds: tuple[str, ...] = ()
     time_domains: tuple[str, ...] = ()

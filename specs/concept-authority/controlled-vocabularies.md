@@ -95,7 +95,7 @@ It defines:
   categories
 - governed-extension vocabularies for backend capability surfaces where stable
   portable terms exist but controlled local extension space is still needed:
-  provisioner node types, operating-system families, node CPU architectures,
+  provisioner node types, compute substrates, operating-system families, node CPU architectures,
   content types, account features, orchestrator supported sections, and
   evaluator supported sections
 - a governed-extension vocabulary for

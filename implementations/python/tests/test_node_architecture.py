@@ -77,24 +77,24 @@ class TestNodeArchitectureVocabulary:
 
 class TestNodeArchitectureField:
     def test_vm_node_accepts_canonical(self):
-        n = Node(type="vm", architecture="x86_64", resources={"ram": "1 gib", "cpu": 1})
+        n = Node(type="compute", architecture="x86_64", resources={"ram": "1 gib", "cpu": 1})
         assert n.architecture is NodeArchitecture.X86_64
 
     def test_vm_node_accepts_alias(self):
-        n = Node(type="vm", architecture="arm64", resources={"ram": "1 gib", "cpu": 1})
+        n = Node(type="compute", architecture="arm64", resources={"ram": "1 gib", "cpu": 1})
         assert n.architecture is NodeArchitecture.AARCH64
 
     def test_absent_architecture_is_none(self):
-        n = Node(type="vm", resources={"ram": "1 gib", "cpu": 1})
+        n = Node(type="compute", resources={"ram": "1 gib", "cpu": 1})
         assert n.architecture is None
 
     def test_variable_placeholder(self):
-        n = Node(type="vm", architecture="${arch}", resources={"ram": "1 gib", "cpu": 1})
+        n = Node(type="compute", architecture="${arch}", resources={"ram": "1 gib", "cpu": 1})
         assert n.architecture == "${arch}"
 
     def test_unknown_architecture_rejected(self):
         with pytest.raises(ValidationError, match="architecture"):
-            Node(type="vm", architecture="sparc", resources={"ram": "1 gib", "cpu": 1})
+            Node(type="compute", architecture="sparc", resources={"ram": "1 gib", "cpu": 1})
 
     def test_switch_node_rejects_architecture(self):
         with pytest.raises(ValidationError, match="architecture"):
@@ -120,7 +120,7 @@ class TestRuntimePackageArchitecture:
 
 
 def _scenario(node_arch: str | None, package_arch: str | None) -> str:
-    lines = ["name: arch-compat", "nodes:", "  worker:", "    type: vm"]
+    lines = ["name: arch-compat", "nodes:", "  worker:", "    type: compute"]
     if node_arch is not None:
         lines.append(f"    architecture: {node_arch}")
     lines.append("    resources: {ram: 1 gib, cpu: 1}")
@@ -179,7 +179,7 @@ class TestNodeArchitectureCompatibility:
             "  arch: {type: string, default: aarch64, allowed_values: [aarch64]}\n"
             "nodes:\n"
             "  worker:\n"
-            "    type: vm\n"
+            "    type: compute\n"
             "    architecture: '${arch}'\n"
             "    resources: {ram: 1 gib, cpu: 1}\n"
             "    runtime:\n"
@@ -188,9 +188,7 @@ class TestNodeArchitectureCompatibility:
         )
 
 
-_ARCH_NODE_SCENARIO = (
-    "name: arch-compile\nnodes:\n  web:\n    type: vm\n    architecture: x86_64\n    resources: {ram: 1 gib, cpu: 1}\n"
-)
+_ARCH_NODE_SCENARIO = "name: arch-compile\nnodes:\n  web:\n    type: compute\n    architecture: x86_64\n    resources: {ram: 1 gib, cpu: 1}\n"
 
 
 class TestNodeArchitectureCompilation:
@@ -216,7 +214,7 @@ class TestNodeArchitectureCompilation:
         from raes_processor.compiler import compile_runtime_model
 
         model = compile_runtime_model(
-            parse_sdl("name: no-arch\nnodes:\n  web:\n    type: vm\n    resources: {ram: 1 gib, cpu: 1}\n")
+            parse_sdl("name: no-arch\nnodes:\n  web:\n    type: compute\n    resources: {ram: 1 gib, cpu: 1}\n")
         )
         fields = {req.field_path for req in model.realization_requirements}
         assert "nodes.web.architecture" not in fields
@@ -244,7 +242,7 @@ def _architecture_manifest(supported_node_architectures: frozenset[str]):
         concept_bindings=(ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),),
         provisioner=ProvisionerCapabilities(
             name="arch-limited-provisioner",
-            supported_node_types=frozenset({"vm"}),
+            supported_node_types=frozenset({"compute"}),
             supported_os_families=frozenset({"linux"}),
             supported_node_architectures=supported_node_architectures,
         ),
@@ -295,7 +293,9 @@ class TestNodeArchitectureSemanticDiff:
         arch_line = f"    architecture: {node_arch}\n" if node_arch is not None else ""
         return canonical_sdl_digest(
             parse_sdl(
-                "name: arch-diff\nnodes:\n  web:\n    type: vm\n" + arch_line + "    resources: {ram: 1 gib, cpu: 1}\n"
+                "name: arch-diff\nnodes:\n  web:\n    type: compute\n"
+                + arch_line
+                + "    resources: {ram: 1 gib, cpu: 1}\n"
             )
         )
 
@@ -349,7 +349,7 @@ _ARCH_VAR_SCENARIO = (
     "variables:\n"
     "  arch: {type: string, default: x86_64, allowed_values: [x86_64, aarch64]}\n"
     "nodes:\n"
-    "  web: {type: vm, architecture: '${arch}', resources: {ram: 1 gib, cpu: 1}}\n"
+    "  web: {type: compute, architecture: '${arch}', resources: {ram: 1 gib, cpu: 1}}\n"
 )
 
 
@@ -491,7 +491,7 @@ class TestRealizerConfigurationArchitecture:
             architecture=architecture,
             image_policy="pinned",
             network_policy="isolated",
-            supported_node_types=["vm"],
+            supported_node_types=["compute"],
             supported_os_families=["linux"],
             memory_mib={"minimum": 1024},
             vcpus={"minimum": 1},
@@ -515,7 +515,7 @@ class TestProvisionerCapabilitiesArchitecture:
 
         caps = ProvisionerCapabilities(
             name="p",
-            supported_node_types=frozenset({"vm"}),
+            supported_node_types=frozenset({"compute"}),
             supported_os_families=frozenset({"linux"}),
             supported_node_architectures=frozenset({"x86_64", "aarch64"}),
         )
@@ -524,10 +524,10 @@ class TestProvisionerCapabilitiesArchitecture:
     def test_ungoverned_value_rejected(self):
         from raes_backend_protocols.capabilities import ProvisionerCapabilities
 
-        node_types = frozenset({"vm"})
+        node_types = frozenset({"compute"})
         os_families = frozenset({"linux"})
         architectures = frozenset({"sparc"})
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="architecture"):
             ProvisionerCapabilities(
                 name="p",
                 supported_node_types=node_types,

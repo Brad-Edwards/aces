@@ -24,10 +24,10 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass
 
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.realization_observation import RealizationObservation
 
 from raes_reference_backend.driver import (
     ContainerHandle,
@@ -36,6 +36,8 @@ from raes_reference_backend.driver import (
     NetworkHandle,
     NetworkSpec,
 )
+from raes_reference_backend.drivers.oci_image_trust import ImageTrustPolicy
+from raes_reference_backend.drivers.oci_observation import ownership_fields_match, substrate_observations
 
 _DOMAIN = "runtime"
 _ALLOWED_RUNTIMES = frozenset({"docker", "podman"})
@@ -67,41 +69,13 @@ def _default_runner(argv: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(argv, **kwargs)
 
 
-@dataclass(frozen=True)
-class ImageTrustPolicy:
-    """Operator policy deciding which container images may be realized.
-
-    A plan author controls ``spec.image_ref`` (via ``node.source``) and ``run``
-    pulls+executes it; fixed argv stops shell injection but is not an image
-    trust boundary. Only the operator ``default_image``, an explicit
-    ``allowed_images`` entry, or a digest-pinned ref (``...@sha256:...``) is
-    permitted, so plan submission cannot become arbitrary-image code execution.
-    """
-
-    default_image: str | None = None
-    allowed_images: tuple[str, ...] = ()
-    allow_digest_pinned: bool = True
-
-    def image_for(self, image_ref: str) -> str:
-        # A configured default overrides the synthesized ``raes-reference/*``
-        # placeholder so an image-less plan can still realize against a registry.
-        if self.default_image and image_ref.startswith("raes-reference/"):
-            return self.default_image
-        return image_ref
-
-    def permits(self, image: str) -> bool:
-        if self.default_image is not None and image == self.default_image:
-            return True
-        if image in self.allowed_images:
-            return True
-        return self.allow_digest_pinned and "@sha256:" in image
-
-
 _DEFAULT_IMAGE_POLICY = ImageTrustPolicy()
 
 
 class OciDeploymentDriver:
     """Realize portable specs against a real container runtime."""
+
+    driver_mode = "oci-container"
 
     def __init__(
         self,
@@ -157,7 +131,11 @@ class OciDeploymentDriver:
             )
         except subprocess.TimeoutExpired:
             return False, "timeout", ""
-        except FileNotFoundError:
+        except OSError:
+            # A missing runtime binary (FileNotFoundError), a socket/binary the
+            # process may not access (PermissionError), and any other OS-level
+            # spawn failure all collapse to one portable "runtime unavailable"
+            # kind; the native errno/strerror never crosses the boundary.
             return False, "runtime-missing", ""
         kind = None if completed.returncode == 0 else "command-failed"
         stdout = completed.stdout if isinstance(completed.stdout, str) else ""
@@ -185,10 +163,12 @@ class OciDeploymentDriver:
             return DriverResult(diagnostics=tuple(diagnostics))
         network_handles = self._realize_networks(networks, diagnostics)
         container_handles = self._realize_containers(containers, diagnostics)
+        observations = self._substrate_observations(container_handles, diagnostics) if not diagnostics else ()
         result = DriverResult(
             networks=tuple(network_handles),
             containers=tuple(container_handles),
             diagnostics=tuple(diagnostics),
+            observations=observations,
         )
         # Transactional boundary: if any resource failed, roll back the ones
         # that succeeded so a partial realize never leaves an orphan runtime
@@ -197,6 +177,34 @@ class OciDeploymentDriver:
             self._rollback(network_handles, container_handles)
             return DriverResult(diagnostics=result.diagnostics)
         return result
+
+    def _substrate_observations(
+        self,
+        handles: list[ContainerHandle],
+        diagnostics: list[Diagnostic],
+        *,
+        allow_rehydrate: bool = False,
+    ) -> tuple[RealizationObservation, ...]:
+        ownership_readback = self._readback_owned_container if allow_rehydrate else self._is_current_owned_container
+        observations, observation_diagnostics = substrate_observations(
+            handles,
+            runtime=self._runtime,
+            ownership_readback=ownership_readback,
+        )
+        diagnostics.extend(observation_diagnostics)
+        return observations
+
+    def observe(self, *, containers: tuple[ContainerSpec, ...]) -> DriverResult:
+        """Inspect existing owned containers without invoking create or update."""
+
+        diagnostics: list[Diagnostic] = []
+        handles = [ContainerHandle(address=spec.address, realized=True) for spec in containers]
+        observations = self._substrate_observations(handles, diagnostics, allow_rehydrate=True)
+        return DriverResult(
+            containers=tuple(handle for handle in handles if handle.address in self._realized),
+            diagnostics=tuple(diagnostics),
+            observations=observations,
+        )
 
     def _realize_networks(
         self,
@@ -312,29 +320,43 @@ class OciDeploymentDriver:
         return diagnostics
 
     def _is_current_owned_container(self, address: str) -> bool:
+        return self._owned_container_readback(address, require_known_native_id=True)
+
+    def _readback_owned_container(self, address: str) -> bool:
+        return self._owned_container_readback(address, require_known_native_id=False)
+
+    def _owned_container_readback(self, address: str, *, require_known_native_id: bool) -> bool:
         expected_native_id = self._native_ids.get(address)
-        expected_name = self._names.get(address)
-        current_and_owned = False
-        if expected_native_id and expected_name:
-            ok, _kind, stdout = self._invoke(
-                [
-                    self._runtime,
-                    "inspect",
-                    "--format",
-                    _OWNERSHIP_INSPECT_FORMAT,
-                    expected_name,
-                ]
-            )
-            fields = stdout.rstrip("\n").split("\n")
-            if ok and len(fields) == 4:
-                native_id, workspace, owned_address, native_name = fields
-                current_and_owned = (
-                    native_id == expected_native_id
-                    and workspace == self._workspace
-                    and owned_address == address
-                    and native_name.removeprefix("/") == expected_name
-                )
-        return current_and_owned
+        expected_name = self._name_for(address)
+        if not expected_name or (expected_native_id is None and require_known_native_id):
+            return False
+        fields = self._inspect_container_ownership(expected_name)
+        if fields is None or not ownership_fields_match(
+            fields,
+            address=address,
+            expected_name=expected_name,
+            expected_native_id=expected_native_id,
+            workspace=self._workspace,
+        ):
+            return False
+        native_id = fields[0]
+        self._native_ids[address] = native_id
+        self._names[address] = expected_name
+        self._realized.add(address)
+        return True
+
+    def _inspect_container_ownership(self, expected_name: str) -> list[str] | None:
+        ok, _kind, stdout = self._invoke(
+            [
+                self._runtime,
+                "inspect",
+                "--format",
+                _OWNERSHIP_INSPECT_FORMAT,
+                expected_name,
+            ]
+        )
+        fields = stdout.rstrip("\n").split("\n")
+        return fields if ok and len(fields) == 4 else None
 
     @staticmethod
     def _ordered_containers(containers: tuple[ContainerSpec, ...]) -> tuple[ContainerSpec, ...]:

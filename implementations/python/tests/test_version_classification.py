@@ -43,23 +43,30 @@ def test_cli_help_uses_raes_project_identity() -> None:
     assert "RAES" in result.stdout
 
 
+def test_cli_version_callback_is_noop_when_not_requested() -> None:
+    from raes_cli.main import _version_callback
+
+    assert _version_callback(False) is None
+
+
 def test_console_scripts_hard_cut_to_raes_names() -> None:
     scripts = {
         entry_point.name
         for entry_point in entry_points(group="console_scripts")
-        if entry_point.value in {"raes_cli.main:app", "raes_mcp.server:main"}
+        if entry_point.value in {"raes_cli.entrypoint:main", "raes_mcp.server:main"}
     }
 
     assert {"raes", "raes-mcp"} <= scripts
 
 
 def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
+    import raes_cli.entrypoint as cli_entrypoint
     import raes_cli.main as cli_main
 
     def _raise(_distribution: str) -> str:
         raise PackageNotFoundError
 
-    monkeypatch.setattr(cli_main, "version", _raise)
+    monkeypatch.setattr(cli_entrypoint, "version", _raise)
     result = CliRunner().invoke(cli_main.app, ["--version"])
 
     assert result.exit_code == 0

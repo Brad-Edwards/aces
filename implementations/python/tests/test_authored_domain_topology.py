@@ -47,8 +47,8 @@ def _valid_payload() -> dict[str, object]:
     return {
         "name": "domain-lab",
         "nodes": {
-            "dc": {"type": "vm", "os": "windows"},
-            "workstation": {"type": "vm", "os": "windows"},
+            "dc": {"type": "compute", "os": "windows"},
+            "workstation": {"type": "compute", "os": "windows"},
         },
         "accounts": {
             "domain-admin": {"username": "Administrator", "node": "dc"},
@@ -126,10 +126,10 @@ def test_authored_active_directory_topology_has_typed_shape() -> None:
         name: domain-lab
         nodes:
           dc:
-            type: vm
+            type: compute
             os: windows
           workstation:
-            type: vm
+            type: compute
             os: windows
         accounts:
           domain-admin:
@@ -259,7 +259,7 @@ def test_domain_authority_account_must_be_placed_on_its_controller() -> None:
 
 def test_join_controller_candidate_must_control_the_same_domain() -> None:
     payload = _valid_payload()
-    payload["nodes"]["other-dc"] = {"type": "vm", "os": "windows"}
+    payload["nodes"]["other-dc"] = {"type": "compute", "os": "windows"}
     payload["accounts"]["other-admin"] = {"username": "Administrator", "node": "other-dc"}
     payload["identity_domains"]["other"] = {
         "profile": "active_directory",
@@ -289,7 +289,7 @@ def test_spn_requires_an_explicit_domain_binding() -> None:
 
 def test_domain_bound_account_node_must_belong_to_the_domain() -> None:
     payload = _valid_payload()
-    payload["nodes"]["outsider"] = {"type": "vm", "os": "windows"}
+    payload["nodes"]["outsider"] = {"type": "compute", "os": "windows"}
     payload["accounts"]["web-service"]["node"] = "outsider"
 
     with pytest.raises(SDLValidationError, match="Account 'web-service'.*node 'outsider'.*domain 'corp'"):
@@ -308,7 +308,7 @@ def test_controller_role_rejects_switch_nodes() -> None:
     payload = _valid_payload()
     payload["nodes"]["dc"] = {"type": "switch"}
 
-    with pytest.raises(SDLValidationError, match="Relationship 'dc-role'.*controller source 'dc'.*VM"):
+    with pytest.raises(SDLValidationError, match="Relationship 'dc-role'.*controller source 'dc'.*compute"):
         _parse_payload(payload)
 
 
@@ -411,8 +411,8 @@ def test_domain_topology_variables_are_instantiated_before_compilation() -> None
           domain: {type: string, default: corp}
           controller: {type: string, default: dc}
         nodes:
-          dc: {type: vm, os: windows}
-          member: {type: vm, os: windows}
+          dc: {type: compute, os: windows}
+          member: {type: compute, os: windows}
         accounts:
           admin: {username: Administrator, node: dc}
           service: {username: svc, node: member, spn: HTTP/member.corp.example, domain_ref: '${domain}'}
@@ -461,8 +461,8 @@ def test_module_composition_namespaces_all_domain_topology_references(tmp_path: 
                 identity_domains: [corp]
                 relationships: [controller, join]
             nodes:
-              dc: {type: vm, os: windows}
-              member: {type: vm, os: windows}
+              dc: {type: compute, os: windows}
+              member: {type: compute, os: windows}
             accounts:
               admin: {username: Administrator, node: dc}
               service: {username: svc, node: member, spn: HTTP/member.corp.example, domain_ref: corp}
@@ -562,7 +562,7 @@ def test_libvirt_capability_envelope_ignores_resources_without_domain_topology()
         """
         name: ordinary-workstation
         nodes:
-          workstation: {type: vm, os: windows}
+          workstation: {type: compute, os: windows}
         accounts:
           local-user: {username: local, node: workstation}
         """
@@ -652,7 +652,7 @@ def test_shared_plan_analysis_rejects_member_without_controller_ordering() -> No
         else operation
         for operation in provisioning.operations
     ]
-    direct_plan = ProvisioningPlan(operations=operations)
+    direct_plan = replace(provisioning, operations=operations)
 
     diagnostics = domain_topology_plan_diagnostics(direct_plan)
 
@@ -674,7 +674,7 @@ def test_shared_plan_analysis_rejects_account_binding_that_disagrees_with_node()
         payload = deepcopy(operation.payload)
         payload["domain_topology"]["domain_id"] = "other"
         operations.append(replace(operation, payload=payload))
-    direct_plan = ProvisioningPlan(operations=operations)
+    direct_plan = replace(provisioning, operations=operations)
 
     diagnostics = domain_topology_plan_diagnostics(direct_plan)
 
@@ -686,7 +686,10 @@ def test_shared_plan_analysis_rejects_account_binding_that_disagrees_with_node()
 
 
 def test_control_plane_rejects_incoherent_domain_topology_before_backend_validation() -> None:
-    model = compile_runtime_model(_parse_payload(_valid_payload()))
+    payload = _valid_payload()
+    for node in payload["nodes"].values():
+        node.pop("os", None)
+    model = compile_runtime_model(_parse_payload(payload))
     provisioning = plan(model, _manifest_with_domain_profiles("active_directory")).provisioning
     operations = [
         replace(operation, ordering_dependencies=(), refresh_dependencies=())
@@ -694,7 +697,7 @@ def test_control_plane_rejects_incoherent_domain_topology_before_backend_validat
         else operation
         for operation in provisioning.operations
     ]
-    direct_plan = ProvisioningPlan(operations=operations)
+    direct_plan = replace(provisioning, operations=operations)
     control_plane = RuntimeControlPlane(create_stub_target())
 
     receipt = control_plane.submit_provisioning(direct_plan)
@@ -723,6 +726,10 @@ def test_domain_topology_is_an_exact_realization_requirement_for_every_carrier()
     }
     assert all(requirement.explicitness.value == "exact" for requirement in requirements)
     assert all(requirement.provenance.value == "processor-derived" for requirement in requirements)
+    provisioning = plan(model, _manifest_with_domain_profiles("active_directory")).provisioning
+    authority = [entry for entry in provisioning.realization_authority if entry.requirement_kind == "domain-topology"]
+    assert {entry.address for entry in authority} == {requirement.address for requirement in requirements}
+    assert all(entry.mode.value == "exact" and entry.payload_pointer == "/domain_topology" for entry in authority)
 
 
 def test_domain_topology_readback_rejects_silent_approximation() -> None:

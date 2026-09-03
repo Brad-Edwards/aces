@@ -2,8 +2,12 @@
 
 SCENARIO_INSTANTIATION_REQUEST_SCHEMA_VERSION = "scenario-instantiation/v1"
 ARTIFACT_TRANSFORMATION_REPORT_SCHEMA_VERSION = "artifact-transformation-report/v1"
+SDL_CANDIDATE_SYNTHESIS_INPUT_SCHEMA_VERSION = "sdl-candidate-synthesis-input/v1"
+SDL_CANDIDATE_SYNTHESIS_PROFILE_SCHEMA_VERSION = "sdl-candidate-synthesis-profile/v1"
+SDL_CANDIDATE_SYNTHESIS_RECORD_SCHEMA_VERSION = "sdl-candidate-synthesis-record/v1"
 SEMANTIC_COMPARISON_REQUEST_SCHEMA_VERSION = "semantic-comparison-request/v1"
 SEMANTIC_COMPARISON_RESULT_SCHEMA_VERSION = "semantic-comparison-result/v1"
+SEMANTIC_PROJECTION_REPORT_SCHEMA_VERSION = "semantic-projection-report/v1"
 ARTIFACT_REQUIREMENT_SCHEMA_VERSION = "artifact-requirement/v1"
 BACKEND_MANIFEST_V2_SCHEMA_VERSION = "backend-manifest/v2"
 REALIZATION_ENVELOPE_SCHEMA_VERSION = "realization-envelope/v1"

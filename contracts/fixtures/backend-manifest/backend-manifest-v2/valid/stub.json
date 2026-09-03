@@ -71,6 +71,7 @@
         "runtime-snapshot-v1"
       ],
       "observation_capabilities": {},
+      "process_resource_limits": [],
       "artifact_mechanisms": [],
       "constraints": {}
     }
@@ -142,8 +143,8 @@
     "provisioner": {
       "name": "stub-provisioner",
       "supported_node_types": [
-        "switch",
-        "vm"
+        "compute",
+        "switch"
       ],
       "supported_os_families": [
         "freebsd",
@@ -152,6 +153,7 @@
         "other",
         "windows"
       ],
+      "operating_systems": [],
       "supported_node_architectures": [
         "aarch64",
         "x86_64"

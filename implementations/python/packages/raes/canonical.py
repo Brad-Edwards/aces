@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 import rfc8785
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 
 from ._base import SDLModel
 from ._errors import SDLParseError
@@ -15,6 +17,7 @@ from ._source_profile import SDL_CANONICAL_PROFILE
 from .scenario import ExpandedScenario, InstantiatedScenario, Scenario
 
 INSTANTIATED_SNAPSHOT_PROFILE = "raes-sdl-instantiated-snapshot/v1"
+_LEGACY_SNAPSHOT_PROJECTION_REVISION = "instantiated-snapshot-v1/node-architecture-default"
 
 
 @dataclass(frozen=True)
@@ -78,6 +81,136 @@ class InstantiatedScenarioSnapshot(SDLModel):
 
     profile: Literal["raes-sdl-instantiated-snapshot/v1"]
     scenario: InstantiatedScenario
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_vm_snapshot(cls, value: object) -> object:
+        migrated, _changed = migrate_legacy_instantiated_snapshot_payload(value)
+        return migrated
+
+
+def migrate_legacy_instantiated_snapshot_payload(value: object) -> tuple[object, bool]:
+    """Upgrade a legacy v1 snapshot while preserving exact VM intent.
+
+    Authoring input remains strict by default.  This compatibility boundary is
+    limited to already-instantiated ``v1`` artifacts, whose historical ``vm``
+    resource kind meant both compute and an exact virtual-machine substrate.
+    """
+
+    legacy_names = _legacy_snapshot_vm_names(value)
+    if not legacy_names:
+        return value, False
+
+    if not isinstance(value, Mapping):
+        raise TypeError("legacy snapshot migration requires a mapping")
+    migrated: dict[str, Any] = deepcopy(dict(value))
+    nodes, existing = _legacy_snapshot_migration_surfaces(migrated)
+
+    for name in legacy_names:
+        _migrate_legacy_snapshot_vm(name, nodes, existing)
+    return migrated, True
+
+
+def _legacy_snapshot_vm_names(value: object) -> list[str]:
+    if not isinstance(value, Mapping) or value.get("profile") != INSTANTIATED_SNAPSHOT_PROFILE:
+        return []
+    scenario = value.get("scenario")
+    nodes = scenario.get("nodes") if isinstance(scenario, Mapping) else None
+    if not isinstance(nodes, Mapping):
+        return []
+    return sorted(str(name) for name, node in nodes.items() if isinstance(node, Mapping) and node.get("type") == "vm")
+
+
+def _legacy_snapshot_migration_surfaces(
+    migrated: dict[str, Any],
+) -> tuple[dict[str, Any], list[object]]:
+    scenario = migrated["scenario"]
+    nodes = scenario["nodes"]
+    provenance = scenario.get("instantiation_provenance")
+    if not isinstance(provenance, dict):
+        raise ValueError("legacy instantiated VM migration requires instantiation provenance")
+    existing = provenance.setdefault("realization_constraints", [])
+    if not isinstance(existing, list):
+        raise ValueError("legacy instantiated VM migration requires a realization constraint list")
+    return nodes, existing
+
+
+def _migrate_legacy_snapshot_vm(
+    name: str,
+    nodes: dict[str, Any],
+    existing: list[object],
+) -> None:
+    pointer = f"/nodes/{_pointer_token(name)}"
+    collision = any(
+        isinstance(record, Mapping)
+        and not record.get("namespace")
+        and record.get("field_pointer") == pointer
+        and record.get("concern") == "compute-substrate"
+        for record in existing
+    )
+    if collision:
+        raise ValueError("legacy instantiated VM migration collides with a compute-substrate constraint")
+    nodes[name]["type"] = "compute"
+    existing.append(
+        {
+            "namespace": [],
+            "field_pointer": pointer,
+            "concern": "compute-substrate",
+            "posture": "exact",
+            "domain": {"kind": "exact", "value": "virtual-machine"},
+            "provenance": "legacy-node-type-vm",
+        }
+    )
+
+
+def migrate_legacy_instantiated_snapshot_join(
+    value: object,
+    submitted_digest: object,
+) -> tuple[object, object, bool]:
+    """Authenticate a historical snapshot join before migrating its payload.
+
+    The historical v1 canonical projection materialized the then-new nullable
+    node ``architecture`` field before hashing. Reproduce that versioned
+    projection for every structurally valid legacy snapshot instead of pinning
+    compatibility to a single published artifact.
+    """
+
+    migrated, changed = migrate_legacy_instantiated_snapshot_payload(value)
+    if not changed:
+        return value, submitted_digest, False
+    try:
+        raw_digest = "sha256:" + hashlib.sha256(rfc8785.dumps(value)).hexdigest()
+    except rfc8785.CanonicalizationError as exc:
+        raise ValueError(f"legacy instantiated snapshot canonicalization failed: {exc}") from exc
+    if not isinstance(value, Mapping):
+        raise TypeError("legacy snapshot migration requires a mapping")
+    historical_digest = _legacy_instantiated_snapshot_projection_digest(value)
+    if submitted_digest not in {raw_digest, historical_digest}:
+        raise ValueError("legacy snapshot_digest must bind the submitted immutable snapshot")
+    snapshot = InstantiatedScenarioSnapshot.model_validate(migrated)
+    current_digest = canonical_instantiated_sdl_digest(snapshot.scenario).value
+    return migrated, current_digest, True
+
+
+def _legacy_instantiated_snapshot_projection_digest(value: Mapping[str, object]) -> str:
+    """Reproduce the named historical v1 projection without current models."""
+
+    projected: dict[str, Any] = deepcopy(dict(value))
+    scenario = projected.get("scenario")
+    nodes = scenario.get("nodes") if isinstance(scenario, dict) else None
+    if isinstance(nodes, dict):
+        for node in nodes.values():
+            if isinstance(node, dict):
+                node.setdefault("architecture", None)
+    try:
+        payload = rfc8785.dumps(projected)
+    except rfc8785.CanonicalizationError as exc:
+        raise ValueError(f"legacy snapshot projection {_LEGACY_SNAPSHOT_PROJECTION_REVISION} failed: {exc}") from exc
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _pointer_token(value: str) -> str:
+    return value.replace("~", "~0").replace("/", "~1")
 
 
 def canonical_instantiated_sdl_bytes(scenario: InstantiatedScenario) -> bytes:

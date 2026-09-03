@@ -33,7 +33,7 @@ class TestKeyNormalization:
 name: test
 nodes:
   vm-1:
-    type: vm
+    type: compute
     resources:
       ram: 1 gib
       cpu: 1
@@ -56,7 +56,7 @@ infrastructure:
 name: test
 nodes:
   vm:
-    type: vm
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     roles:
       1: admin
@@ -103,7 +103,7 @@ nodes:
 name: test
 nodes:
   vm:
-    type: vm
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     roles:
       ${role_name}: root
@@ -117,7 +117,7 @@ nodes:
   net:
     type: switch
   vm:
-    type: vm
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
 infrastructure:
   net:
@@ -237,7 +237,7 @@ workflows:
 name: test
 nodes:
   vm:
-    type: VM
+    type: compute
 """
         s = parse_sdl(sdl)
         assert any("without 'resources'" in advisory for advisory in s.advisories)
@@ -247,7 +247,7 @@ nodes:
 name: shuffle-runtime-inventory
 nodes:
   shuffle-backend:
-    type: vm
+    type: compute
     os: linux
     runtime:
       mounts:
@@ -482,7 +482,7 @@ nodes:
 name: techvault-identity-inventory
 nodes:
   techvault-webapp:
-    type: vm
+    type: compute
     os: linux
     runtime:
       local_identity:
@@ -547,7 +547,7 @@ variables:
     required: true
 nodes:
   techvault-webapp:
-    type: vm
+    type: compute
     os: linux
     runtime:
       local_identity:
@@ -572,7 +572,7 @@ nodes:
   aptl-dmz:
     type: switch
   techvault-webapp:
-    type: vm
+    type: compute
     os: linux
     runtime:
       network:
@@ -639,7 +639,7 @@ nodes:
   aptl-dmz:
     type: switch
   techvault-webapp:
-    type: vm
+    type: compute
     os: linux
     runtime:
       network:
@@ -663,7 +663,7 @@ infrastructure:
 name: techvault-build-provenance
 nodes:
   techvault-webapp:
-    type: vm
+    type: compute
     os: linux
     source:
       name: techvault-webapp
@@ -796,7 +796,7 @@ infrastructure:
 name: test
 nodes:
   vm:
-    type: vm
+    type: compute
     resources:
       ram: 1 gib
       cpu: 1
@@ -827,7 +827,7 @@ entities:
 name: test
 nodes:
   web:
-    type: vm
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
     roles: {admin: root}
     features:
@@ -898,7 +898,7 @@ nodes:
   net:
     type: switch
   vm:
-    type: vm
+    type: compute
     os: ${host_os}
     resources: {ram: 1 gib, cpu: 1}
 infrastructure:
@@ -1003,7 +1003,7 @@ nodes:
 name: test
 nodes:
   vm:
-    type: ${node_type}
+    type: ${node_kind}
 """,
             "features.svc.type": """
 name: test
@@ -1015,7 +1015,7 @@ features:
 name: test
 nodes:
   vm:
-    type: vm
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
 content:
   seed:
@@ -1026,7 +1026,7 @@ content:
 name: test
 nodes:
   vm:
-    type: vm
+    type: compute
     resources: {ram: 1 gib, cpu: 1}
 relationships:
   r1:
@@ -1152,7 +1152,7 @@ module:
     workflows: [response]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
@@ -1240,7 +1240,7 @@ module:
     agents: [blue-agent]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     services:
@@ -1349,7 +1349,7 @@ module:
     agents: [blue-agent]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     roles:
@@ -1463,7 +1463,7 @@ module:
     nodes: [vm]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 """,
@@ -1481,7 +1481,7 @@ module:
     nodes: [vm]
 nodes:
   vm:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
 """,
@@ -1524,7 +1524,7 @@ module:
     relationships: [webapp-to-db]
 nodes:
   db:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     services:
@@ -1540,7 +1540,7 @@ nodes:
           roles:
             - {role_id: app, name: techvault}
   web:
-    type: vm
+    type: compute
     os: linux
     resources: {ram: 1 gib, cpu: 1}
     services:
@@ -1607,7 +1607,7 @@ class TestRuntimeApplicationParsing:
 name: techvault-application-surface
 nodes:
   techvault-webapp:
-    type: vm
+    type: compute
     os: linux
     services:
       - port: 8080
@@ -1660,7 +1660,7 @@ variables:
     required: true
 nodes:
   techvault-webapp:
-    type: vm
+    type: compute
     os: linux
     runtime:
       applications:
@@ -1685,7 +1685,7 @@ class TestRuntimeSshServerParsing:
 name: techvault-ssh-surface
 nodes:
   techvault-kali:
-    type: vm
+    type: compute
     os: linux
     services:
       - port: 22
@@ -1739,7 +1739,7 @@ nodes:
 name: techvault-ssh-scalar
 nodes:
   techvault-kali:
-    type: vm
+    type: compute
     os: linux
     services:
       - port: 22
@@ -1763,7 +1763,7 @@ variables:
     required: true
 nodes:
   techvault-kali:
-    type: vm
+    type: compute
     os: linux
     services:
       - port: 22
@@ -1792,7 +1792,7 @@ variables:
     required: true
 nodes:
   techvault-kali:
-    type: vm
+    type: compute
     os: linux
     services:
       - port: 22
@@ -1814,7 +1814,7 @@ class TestRuntimeIdentityAuthorityParsing:
 name: techvault-directory-identity
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     services:
       - {port: 389, name: ldap}
@@ -1886,7 +1886,7 @@ variables:
     required: true
 nodes:
   idp:
-    type: vm
+    type: compute
     os: linux
     runtime:
       identity_authorities:
@@ -1907,7 +1907,7 @@ nodes:
 name: bad-directory-service-ref
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     services:
       - {port: 389, name: ldap}
@@ -1927,7 +1927,7 @@ nodes:
 name: bad-directory-relationship-ref
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     runtime:
       identity_authorities:
@@ -1948,7 +1948,7 @@ nodes:
 name: bad-policy-ref
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     runtime:
       identity_authorities:
@@ -1965,7 +1965,7 @@ nodes:
 name: directory-local-refs
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     services:
       - {port: 389, name: ldap}
@@ -2024,7 +2024,7 @@ nodes:
 name: ambiguous-directory-local-ref
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     runtime:
       identity_authorities:
@@ -2064,7 +2064,7 @@ module:
     relationships: [alice-admin, ldap-policy, membership-policy]
 nodes:
   ad:
-    type: vm
+    type: compute
     os: windows
     runtime:
       identity_authorities:
@@ -2129,7 +2129,7 @@ class TestRuntimeDnsParsing:
 name: techvault-dns
 nodes:
   dns-host:
-    type: vm
+    type: compute
     os: linux
     services:
       - {port: 53, protocol: udp, name: dns}
@@ -2183,7 +2183,7 @@ module:
     relationships: [dns-record]
 nodes:
   dns:
-    type: vm
+    type: compute
     os: linux
     services:
       - {port: 53, protocol: udp, name: dns}
@@ -2236,7 +2236,7 @@ class TestRuntimeDatabaseParsing:
 name: techvault-db
 nodes:
   db-host:
-    type: vm
+    type: compute
     os: linux
     services:
       - {port: 5432, name: pg}
@@ -2276,7 +2276,7 @@ variables:
     required: true
 nodes:
   db-host:
-    type: vm
+    type: compute
     os: linux
     services:
       - {port: 5432, name: pg}

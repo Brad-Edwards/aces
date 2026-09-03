@@ -165,7 +165,7 @@ def test_merge_keys_are_migration_only_and_conflicts_remain_fatal() -> None:
     assert scenario.nodes["inherited"].type.value == "switch"
     assert [item.code for item in scenario.source_diagnostics] == ["sdl.noncanonical_merge"]
 
-    conflicting = content.replace("<<: *template", "<<: *template\n    type: vm")
+    conflicting = content.replace("<<: *template", "<<: *template\n    type: compute")
     with pytest.raises(SDLParseError) as conflict_exc:
         parse_sdl(conflicting, migration_policy=SDLMigrationPolicy.ACCEPT)
     assert "sdl.mapping_key_conflict" in _diagnostic_codes(conflict_exc.value)
