@@ -40,6 +40,7 @@ from raes_contracts.realization_envelope import (
     realization_envelope_digest,
     realizer_configuration_digest,
 )
+from raes_contracts.realization_observation import RealizationObservationDisclosure
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 from raes_contracts.vocabulary import (
     ObservationStrength,
@@ -129,8 +130,6 @@ def _snapshot(
 ) -> RuntimeSnapshot:
     observations = ()
     if observation_strength is not None:
-        from raes_contracts.realization_observation import RealizationObservationDisclosure
-
         observations = (
             RealizationObservationDisclosure(
                 address=_ADDRESS,
@@ -210,12 +209,19 @@ def _supporting_manifest(
             replace(
                 declaration,
                 support_mode=mode,
+                supported_exact_requirement_kinds=(
+                    declaration.supported_exact_requirement_kinds | {"runtime-processes"}
+                ),
                 supported_constraint_kinds=(
                     declaration.supported_constraint_kinds | frozenset({"process-resource-limits"})
                 ),
                 observation_capabilities={
                     **declaration.observation_capabilities,
                     "process-resource-limits": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.CONFIGURATION,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                    "runtime-processes": RealizationObservationCapability(
                         verification_scope=RealizationVerificationScope.CONFIGURATION,
                         observation_strength=ObservationStrength.GUEST_OBSERVED,
                     ),
@@ -707,7 +713,17 @@ def test_backend_boundary_retains_baseline_on_malformed_limit_observation() -> N
                         payload=payload,
                     )
                 },
-                realization_observations=observation_snapshot.realization_observations,
+                realization_observations=(
+                    *observation_snapshot.realization_observations,
+                    RealizationObservationDisclosure(
+                        address=_ADDRESS,
+                        field_path="nodes.worker.runtime.processes",
+                        domain="runtime-realization",
+                        requirement_kind="runtime-processes",
+                        verification_scope=RealizationVerificationScope.CONFIGURATION,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                ),
             ),
             changed_addresses=[_ADDRESS],
         )

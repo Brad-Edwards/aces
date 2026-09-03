@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
+from pydantic import TypeAdapter
 from raes import parse_sdl
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_backend_stubs.stubs import create_stub_target
+from raes_contracts.apparatus import RealizationObservationCapability
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.realization_observation import RealizationObservationDisclosure
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import plan as build_plan
 from raes_processor.semantics.realization import (
@@ -19,6 +24,7 @@ from raes_processor.semantics.realization import (
     realization_disclosure,
 )
 from raes_processor.semantics.realization_concerns import realization_concern_descriptor
+from raes_processor.semantics.realization_typed_runtime_projection import project_typed_runtime_concern
 from raes_runtime.backend_calls import _call_backend_apply, _RealizationApplyContext
 
 _ADDRESS = "provision.node.worker"
@@ -55,6 +61,25 @@ def _plan(value: object) -> ProvisioningPlan:
 
 def _authoritative_environment_plan() -> tuple[ProvisioningPlan, BackendManifest]:
     target = create_stub_target()
+    declaration = target.manifest.realization_support[0]
+    manifest = replace(
+        target.manifest,
+        realization_support=(
+            replace(
+                declaration,
+                supported_exact_requirement_kinds=(
+                    declaration.supported_exact_requirement_kinds | {"runtime-environment"}
+                ),
+                observation_capabilities={
+                    **declaration.observation_capabilities,
+                    "runtime-environment": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.CONFIGURATION,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                },
+            ),
+        ),
+    )
     execution = build_plan(
         compile_runtime_model(
             parse_sdl(
@@ -74,9 +99,9 @@ nodes:
 """
             )
         ),
-        target.manifest,
+        manifest,
     )
-    return execution.provisioning, target.manifest
+    return execution.provisioning, manifest
 
 
 def _authoritative_snapshot(plan: ProvisioningPlan, value: object) -> RuntimeSnapshot:
@@ -91,7 +116,17 @@ def _authoritative_snapshot(plan: ProvisioningPlan, value: object) -> RuntimeSna
                 resource_type="node",
                 payload=payload,
             )
-        }
+        },
+        realization_observations=(
+            RealizationObservationDisclosure(
+                address=_ADDRESS,
+                field_path=_FIELD_PATH,
+                domain="runtime-realization",
+                requirement_kind="runtime-environment",
+                verification_scope=RealizationVerificationScope.CONFIGURATION,
+                observation_strength=ObservationStrength.GUEST_OBSERVED,
+            ),
+        ),
     )
 
 
@@ -195,6 +230,57 @@ def test_runtime_gate_rejects_a_malformed_commitment_wire_value() -> None:
 
     assert [diagnostic.code for diagnostic in diagnostics] == ["runtime.backend-contract-invalid"]
     assert provenance == ()
+
+
+@pytest.mark.parametrize("classification", ["redacted", "operator_secret"])
+def test_runtime_gate_rejects_raw_material_for_a_protected_observation(classification: str) -> None:
+    declared = [
+        {
+            "name": "TOKEN",
+            "value": "fixture-secret",
+            "value_classification": "secret_fixture",
+            "provenance": "operator",
+            "source": "fixture",
+        }
+    ]
+    protected_observation = [
+        {
+            "name": "TOKEN",
+            "value": "must-not-cross-the-boundary",
+            "value_classification": classification,
+            "provenance": "operator",
+            "source": "fixture",
+        }
+    ]
+
+    diagnostics, provenance = realization_disclosure(
+        (_requirement(ExplicitnessClass.EXACT),),
+        _plan(declared),
+        _snapshot(protected_observation),
+    )
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["runtime.backend-contract-invalid"]
+    assert provenance == ()
+
+
+@pytest.mark.parametrize("classification", ["redacted", "operator_secret"])
+def test_typed_runtime_projection_rejects_raw_material_for_a_protected_value(classification: str) -> None:
+    protected_value = [
+        {
+            "name": "TOKEN",
+            "value": "must-not-cross-the-boundary",
+            "value_classification": classification,
+        }
+    ]
+    adapter = TypeAdapter(list[dict[str, object]])
+
+    with pytest.raises(ValueError, match="protected realization values must not carry raw material"):
+        project_typed_runtime_concern(
+            protected_value,
+            observed=True,
+            adapter=adapter,
+            concern_kind="runtime-database-services",
+        )
 
 
 def test_mount_persistence_keeps_valid_stateful_records_outside_the_concern() -> None:

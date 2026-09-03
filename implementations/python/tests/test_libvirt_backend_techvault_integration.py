@@ -26,6 +26,13 @@ def _without_os_identity(source: str):
     return parse_sdl(re.sub(r"(?m)^\s+os(?:_distribution|_version)?:.*\n", "", source))
 
 
+def _without_unsupported_runtime_realization(source: str):
+    scenario = _without_os_identity(source)
+    return scenario.model_copy(
+        update={"nodes": {name: node.model_copy(update={"runtime": None}) for name, node in scenario.nodes.items()}}
+    )
+
+
 class _RecordingLibvirtDriver:
     driver_mode = "generic"
 
@@ -57,11 +64,30 @@ class _RecordingLibvirtDriver:
         return frozenset(self._realized)
 
 
-def test_techvault_scenario_plans_and_applies_through_libvirt_provisioning():
+def test_techvault_runtime_inventory_is_honestly_rejected_by_libvirt():
+    driver = _RecordingLibvirtDriver()
+    target = create_libvirt_target(driver=driver, name_prefix="techvault-unsupported")
+    manager = RuntimeManager(target)
+    scenario = _without_os_identity((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
+
+    execution_plan = manager.plan(scenario, parameters=_TECHVAULT_PARAMETERS)
+
+    assert not execution_plan.is_valid
+    assert any(
+        diagnostic.code == "realization.unsupported-constraint-requirement"
+        and "runtime-filesystem-inventory" in diagnostic.message
+        for diagnostic in execution_plan.diagnostics
+    )
+    assert not driver.realize_calls
+
+
+def test_techvault_scenario_plans_and_applies_supported_surface_through_libvirt_provisioning():
     driver = _RecordingLibvirtDriver()
     target = create_libvirt_target(driver=driver, name_prefix="techvault-test")
     manager = RuntimeManager(target)
-    scenario = _without_os_identity((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
+    scenario = _without_unsupported_runtime_realization(
+        (EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8")
+    )
 
     execution_plan = manager.plan(scenario, parameters=_TECHVAULT_PARAMETERS)
 
@@ -220,7 +246,9 @@ def _techvault_manager() -> tuple[RuntimeManager, _RecordingLibvirtDriver, objec
     driver = _RecordingLibvirtDriver()
     target = create_libvirt_target(driver=driver, name_prefix="techvault-recon")
     manager = RuntimeManager(target)
-    scenario = _without_os_identity((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
+    scenario = _without_unsupported_runtime_realization(
+        (EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8")
+    )
     return manager, driver, scenario
 
 

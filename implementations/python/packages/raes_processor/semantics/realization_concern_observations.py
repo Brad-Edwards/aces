@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from raes.runtime_capabilities import RuntimeCapabilityPolicy
 from raes.runtime_configuration import RuntimeEnvironmentVariable
 from raes.runtime_forwarding_agent import RuntimeForwardingAgent, RuntimeForwardingSetting
@@ -39,6 +39,83 @@ def validate_value_commitment(value: object) -> None:
 
     if not isinstance(value, str) or _COMMITMENT_RE.fullmatch(value) is None:
         raise ValueError("realization value commitment uses an unsupported format")
+
+
+def _restore_presence_marker(
+    value: Mapping[str, Any],
+    *,
+    key: str,
+    present: object,
+    restored: dict[str, object],
+) -> None:
+    raw_field = key.removesuffix("_present")
+    if raw_field not in {"value", "values", "bind_source"}:
+        raise ValueError("runtime concern observation uses an unknown presence marker")
+    if not isinstance(present, bool):
+        raise ValueError("runtime concern observation presence markers must be boolean")
+    commitment = value.get(f"{raw_field}_commitment")
+    if commitment is not None:
+        if present is not True:
+            raise ValueError("a realization value commitment requires a true presence marker")
+        validate_value_commitment(commitment)
+    restored[raw_field] = [] if raw_field == "values" else ""
+
+
+def _restore_committed_mapping(value: Mapping[str, Any]) -> dict[str, object]:
+    restored = {
+        key: _restore_committed_runtime_fields(item)
+        for key, item in value.items()
+        if not key.endswith(("_present", "_commitment"))
+    }
+    for key, present in value.items():
+        if key.endswith("_present"):
+            _restore_presence_marker(value, key=key, present=present, restored=restored)
+    for key in value:
+        if key.endswith("_commitment") and f"{key.removesuffix('_commitment')}_present" not in value:
+            raise ValueError("runtime concern commitment requires its presence marker")
+    return restored
+
+
+def _restore_committed_runtime_fields(value: object) -> object:
+    """Restore value-free projection markers for closed model validation."""
+
+    if isinstance(value, Mapping):
+        return _restore_committed_mapping(value)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_restore_committed_runtime_fields(item) for item in value]
+    return value
+
+
+def _overlay_committed_runtime_fields(normalized: object, original: object) -> object:
+    """Retain validated value-free markers after typed normalization."""
+
+    if isinstance(normalized, Mapping) and isinstance(original, Mapping):
+        overlaid = dict(normalized)
+        for key, item in original.items():
+            if key.endswith(("_present", "_commitment")):
+                overlaid[key] = item
+            elif key in overlaid:
+                overlaid[key] = _overlay_committed_runtime_fields(overlaid[key], item)
+        return overlaid
+    if (
+        isinstance(normalized, Sequence)
+        and not isinstance(normalized, (str, bytes, bytearray))
+        and isinstance(original, Sequence)
+        and not isinstance(original, (str, bytes, bytearray))
+    ):
+        return [
+            _overlay_committed_runtime_fields(normalized_item, original_item)
+            for normalized_item, original_item in zip(normalized, original, strict=True)
+        ]
+    return normalized
+
+
+def validate_typed_runtime_observation(value: object, *, adapter: TypeAdapter[object]) -> object:
+    """Validate and normalize a raw or value-free observation through its SDL type."""
+
+    validated = adapter.validate_python(_restore_committed_runtime_fields(value))
+    normalized = adapter.dump_python(validated, mode="json")
+    return _overlay_committed_runtime_fields(normalized, value)
 
 
 def _validate_safe_committed_record(
@@ -189,5 +266,6 @@ __all__ = [
     "validate_published_ports_observation",
     "validate_process_resource_limits_observation",
     "validate_service_listeners_observation",
+    "validate_typed_runtime_observation",
     "validate_value_commitment",
 ]

@@ -167,7 +167,7 @@ def test_planner_resolves_delegation_and_carries_complete_authority() -> None:
     assert version_authority.mode is RealizationAuthorityMode.OPEN
     assert version_authority.source is RealizationResolutionSource.APPARATUS_DEFAULT
     assert not hasattr(os_authority, "delegated")
-    assert len(execution.provisioning.realization_authority) == 12
+    assert len(execution.provisioning.realization_authority) == len(model.realization_authority)
     assert {entry.requirement_kind for entry in execution.provisioning.realization_authority} >= {
         "node-type",
         "os-family",
