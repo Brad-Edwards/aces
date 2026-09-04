@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [3.5.0](https://github.com/OpenRAE/rae/compare/v3.4.0...v3.5.0) (2026-09-04)
+
+
+### Features
+
+* complete runtime configuration boundary coverage ([#1178](https://github.com/OpenRAE/rae/issues/1178)) ([de9bbd6](https://github.com/OpenRAE/rae/commit/de9bbd629dec7b6b274444c90f452149c45092f9))
+* **sdl:** add typed package repository profiles ([#1194](https://github.com/OpenRAE/rae/issues/1194)) ([208f31f](https://github.com/OpenRAE/rae/commit/208f31fa401fd7bf9127a5fb11c8e2fa09e93b16))
+
+
+### Bug Fixes
+
+* allow draft release inspection ([#1192](https://github.com/OpenRAE/rae/issues/1192)) ([ce68fbc](https://github.com/OpenRAE/rae/commit/ce68fbc9a207a7b2e24c6d70466a1a53bdfa9816))
+* **libvirt:** harden failure observability ([#1191](https://github.com/OpenRAE/rae/issues/1191)) ([635825a](https://github.com/OpenRAE/rae/commit/635825a15a4dfe78a6aac4596097f2e7adf44dde))
+
+
+### Documentation
+
+* **runtime:** define control-plane architecture ([#1193](https://github.com/OpenRAE/rae/issues/1193)) ([9bca203](https://github.com/OpenRAE/rae/commit/9bca203f94475824a31ad2255765a4c57e953e95))
+
 ## [3.4.0](https://github.com/OpenRAE/rae/compare/v3.3.0...v3.4.0) (2026-09-03)
 
 
