@@ -48,6 +48,15 @@ verification graph to pass for the exact commit named by the release (GOV-928).
    byte-comparing both attached distributions and rechecking the id, tag, and
    commit SHA.
 
+GitHub exposes draft Releases only to push-capable identities. Consequently,
+the release-resolution job and the pre-PyPI revalidation job each need
+job-scoped `contents: write` even though their release operations are reads.
+The workflow default, canonical verifier, real-container gate, and build job
+remain `contents: read`; the GitHub finalization job already needs write access
+for attachment and publication. Checkouts in either write-scoped job must not
+persist the elevated credential, and the permission correction must not
+introduce a PAT or long-lived publication secret.
+
 Nothing is hand-run, and feature PRs never touch `CHANGELOG.md` (release-please
 owns it) — no fragment collisions.
 
@@ -117,6 +126,10 @@ checks, exact wheel and sdist installation/conformance smokes, and OIDC
 publication chain. PyPI upload and GitHub attachment are separate jobs, so use
 GitHub's **re-run failed jobs** operation if attachment or finalization fails
 after PyPI succeeds.
+For a draft created by an older run that failed before PyPI publication, invoke
+the current workflow from the default branch with that existing tag rather than
+re-running the stale workflow definition. This preserves the bound tag, commit,
+and numeric Release identity while applying the current publication gates.
 Manual dispatch is not a verification bypass and never builds from the current
 branch head.
 
@@ -142,9 +155,11 @@ token stored):
 > must match or only the PyPI publish step 403s.
 
 The `pypi` environment and `id-token: write` permission exist only on the PyPI
-upload job. Configure that environment's deployment branch policy for `main`.
-Resolution, canonical verification, distribution installation, GitHub
-attachment, and CLI execution cannot mint the PyPI publishing credential.
+upload job. That job also has job-scoped `contents: write` solely so its
+post-approval identity check can see the still-draft GitHub Release. Configure
+the environment's deployment branch policy for `main`. Resolution, canonical
+verification, distribution installation, GitHub attachment, and CLI execution
+cannot mint the PyPI publishing credential.
 
 ## Pinning from a downstream backend
 
