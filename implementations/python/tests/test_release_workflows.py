@@ -24,6 +24,7 @@ DOCKER_INTEGRATION_PATH = (
 
 LOCAL_CANONICAL_WORKFLOW = "./.github/workflows/canonical-verification.yml"
 FULL_SHA_USE = re.compile(r"^[^@]+@[0-9a-f]{40}$")
+DRAFT_RELEASE_STATE = re.compile(r"(?:\bisDraft\b|\.(?:isDraft|draft)\b|-F\s+draft=)")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -112,6 +113,8 @@ def _run_github_finalization(
     *,
     release_states: list[str],
     mismatched_download: bool = False,
+    moved_tag: bool = False,
+    finalization_json: str = '{"id":1234,"tag_name":"v3.4.5","draft":false}',
 ) -> subprocess.CompletedProcess[str]:
     if shutil.which("bash") is None or shutil.which("jq") is None:
         pytest.skip("the release finalization shell policy requires bash and jq")
@@ -164,7 +167,7 @@ case "${1-}:${2-}" in
     ;;
   api:*)
     printf '%s\n' patch >> "$CALL_LOG"
-    printf '%s\n' '{"id":1234,"tag_name":"v3.4.5","draft":false}'
+    printf '%s\n' "$FINALIZATION_JSON"
     ;;
   *)
     echo "unexpected gh request: $*" >&2
@@ -183,7 +186,7 @@ set -eu
 case "${1-}:${2-}" in
   fetch:*) exit 0 ;;
   rev-parse:HEAD) printf '%s\n' "$EXPECTED_SHA" ;;
-  rev-parse:--verify) printf '%s\n' "$EXPECTED_SHA" ;;
+  rev-parse:--verify) printf '%s\n' "$ACTUAL_TAG_SHA" ;;
   *) echo "unexpected git request: $*" >&2; exit 64 ;;
 esac
 """,
@@ -198,6 +201,7 @@ esac
         "GITHUB_REPOSITORY": "OpenRAE/rae",
         "RUNNER_TEMP": str(tmp_path),
         "EXPECTED_SHA": "a" * 40,
+        "ACTUAL_TAG_SHA": ("c" if moved_tag else "a") * 40,
         "EXPECTED_TAG": "v3.4.5",
         "EXPECTED_RELEASE_ID": "1234",
         "EXPECTED_DRAFT": "true",
@@ -206,6 +210,7 @@ esac
         "CALL_LOG": str(call_log),
         "TEST_DIST_SOURCE": str(dist),
         "MISMATCH_DOWNLOAD": "1" if mismatched_download else "0",
+        "FINALIZATION_JSON": finalization_json,
     }
     return subprocess.run(
         ["bash", "-c", script],
@@ -317,10 +322,13 @@ def test_release_resolves_and_verifies_one_immutable_release_commit() -> None:
     resolve = jobs["resolve-release"]
     assert resolve["needs"] == "release-please"
     assert "github.event_name == 'push'" in resolve["if"]
+    assert "github.event_name == 'workflow_dispatch'" in resolve["if"]
     assert "needs.release-please.result == 'success'" in resolve["if"]
     assert "needs.release-please.outputs.release_created == 'true'" in resolve["if"]
-    assert resolve["permissions"] == {"contents": "read"}
+    assert resolve["permissions"] == {"contents": "write"}
     resolution = _named_step(resolve, "Resolve and bind the immutable release commit")["run"]
+    assert 'if [ "${EVENT_NAME}" = "workflow_dispatch" ]' in resolution
+    assert 'tag="${INPUT_TAG}"' in resolution
     assert 'expected_sha="${RELEASE_PLEASE_SHA}"' in resolution
     assert 'tag_sha="$(git rev-parse --verify "${tag}^{commit}")"' in resolution
     assert '"${tag_sha}" != "${expected_sha}"' in resolution
@@ -335,6 +343,35 @@ def test_release_resolves_and_verifies_one_immutable_release_commit() -> None:
     assert verify["uses"] == LOCAL_CANONICAL_WORKFLOW
     assert verify["with"]["ref"] == "${{ needs.resolve-release.outputs.release_sha }}"
     assert verify["with"]["base-rev"] == "${{ needs.resolve-release.outputs.base_sha }}"
+
+
+def test_every_shell_draft_release_inspection_has_push_capable_token() -> None:
+    workflow = _load(RELEASE_PATH)
+    assert workflow["permissions"] == {"contents": "read"}
+
+    draft_inspection_jobs = {
+        name
+        for name, job in workflow["jobs"].items()
+        if any(DRAFT_RELEASE_STATE.search(step.get("run", "")) for step in job.get("steps", []))
+    }
+    assert draft_inspection_jobs
+    insufficient_permissions = {
+        name
+        for name in draft_inspection_jobs
+        if workflow["jobs"][name].get("permissions", {}).get("contents") != "write"
+    }
+    assert not insufficient_permissions, (
+        f"draft GitHub Releases require push-capable contents permission: {sorted(insufficient_permissions)}"
+    )
+
+    for name, job in workflow["jobs"].items():
+        if job.get("permissions", {}).get("contents") != "write":
+            continue
+        for step in job.get("steps", []):
+            if step.get("uses", "").startswith("actions/checkout@"):
+                assert step.get("with", {}).get("persist-credentials") is False, (
+                    f"{name} must not persist its write-scoped checkout credential"
+                )
 
 
 def test_release_builds_and_smokes_the_verified_sha_before_publish() -> None:
@@ -422,7 +459,7 @@ def test_publication_is_split_retry_safe_and_finalizes_the_same_release() -> Non
     assert "needs.integration-docker-release.result == 'success'" in publish_pypi["if"]
     assert "needs.build-release.result == 'success'" in publish_pypi["if"]
     assert publish_pypi["environment"] == "pypi"
-    assert publish_pypi["permissions"] == {"contents": "read", "id-token": "write"}
+    assert publish_pypi["permissions"] == {"contents": "write", "id-token": "write"}
 
     for name, job in jobs.items():
         if name == "publish-pypi":
@@ -528,6 +565,36 @@ def test_github_finalization_revalidates_release_object_after_attachment(tmp_pat
     assert result.returncode != 0
     assert "Release identity changed during attachment; refusing public finalization" in result.stderr
     assert (tmp_path / "gh-calls.log").read_text(encoding="utf-8").splitlines() == ["upload"]
+
+
+def test_github_finalization_rejects_moved_tag_before_attachment(tmp_path: Path) -> None:
+    result = _run_github_finalization(
+        tmp_path,
+        release_states=['{"databaseId":1234,"isDraft":true,"tagName":"v3.4.5"}'],
+        moved_tag=True,
+    )
+
+    assert result.returncode != 0
+    assert f"Release tag moved: expected {'a' * 40}, got {'c' * 40}" in result.stderr
+    assert not (tmp_path / "gh-calls.log").exists()
+
+
+def test_github_finalization_rejects_tampered_finalization_response(tmp_path: Path) -> None:
+    result = _run_github_finalization(
+        tmp_path,
+        release_states=[
+            '{"databaseId":1234,"isDraft":true,"tagName":"v3.4.5"}',
+            '{"databaseId":1234,"isDraft":true,"tagName":"v3.4.5"}',
+        ],
+        finalization_json='{"id":9999,"tag_name":"v3.4.5","draft":false}',
+    )
+
+    assert result.returncode != 0
+    assert "GitHub Release finalization response changed the verified identity" in result.stderr
+    assert (tmp_path / "gh-calls.log").read_text(encoding="utf-8").splitlines() == [
+        "upload",
+        "patch",
+    ]
 
 
 def test_github_finalization_uses_bound_id_and_accepts_verified_response(tmp_path: Path) -> None:

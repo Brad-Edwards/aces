@@ -10,6 +10,11 @@ publication. It is a focused remediation of the current Release Please path; it
 does not change package dependencies, Python support, version calculation,
 release-note ownership, contract semantics, or the release artifact format.
 
+Issue #1190 amends the permission boundary below: GitHub exposes a draft
+Release only to a push-capable identity. A `GITHUB_TOKEN` with
+`contents: read` therefore cannot perform the resolution or pre-PyPI draft
+revalidation required by this design, even though both operations are reads.
+
 ## Binding Contract And Lineage
 
 - GOV-928 requires short-lived, identity-bound package publication and forbids
@@ -82,8 +87,8 @@ into a passing required check.
 ### Resolve once, then carry the exact release SHA
 
 Release Please creates a draft GitHub Release and force-creates its tag so no
-public Release or generated source archives precede admission. Add a
-non-privileged release-resolution job before verification:
+public Release or generated source archives precede admission. Add a dedicated
+release-resolution job before verification:
 
 - For an automatic release, consume Release Please's documented `sha` output
   and require the emitted tag to resolve to that same commit.
@@ -139,14 +144,28 @@ that every specific distribution about to be uploaded satisfies the contract.
 
 ## Trust, Provenance, And Permission Boundaries
 
-- The resolution, verification, real-container, and build/smoke jobs receive only
-  `contents: read`. They do not receive `id-token: write`, the `pypi`
-  environment, or release-write authority. The tested distributions cross into
-  the publish job through a same-run immutable Actions artifact.
-- The `publish-pypi` job remains the sole holder of `id-token: write` and keeps
-  the `pypi` environment. PyPI Trusted Publishing exchanges the workflow
-  identity for short-lived credentials and requires this permission; no API
-  token or inherited secret is introduced:
+- Keep the workflow default at `contents: read`. The resolution job requires
+  job-scoped `contents: write` only because GitHub's draft-visibility rule uses
+  push capability as its authorization gate. It must receive no
+  `id-token: write`, `pypi` environment, pull-request authority, PAT, or other
+  secret. Any checkout in a `contents: write` job, including the existing
+  GitHub-publication checkout, must not persist the elevated credential for
+  subsequent Git commands; `gh` receives `github.token` through a step-local
+  `GH_TOKEN` environment binding.
+- Canonical verification, real-container verification, and build/smoke remain
+  `contents: read`. The tested distributions cross into publication through a
+  same-run SHA-named Actions artifact.
+- The `publish-pypi` job requires job-scoped `contents: write` as well as
+  `id-token: write` so it can re-read the still-draft Release after any protected
+  environment wait. GitHub Actions cannot reduce token permissions per step, so
+  this is an unavoidable aggregation at that boundary, not permission for a
+  second GitHub mutation path. Keep the job checkout-free, bind `GH_TOKEN` only
+  on the revalidation step, and keep the pinned PyPI action immediately after
+  successful identity validation.
+- `publish-pypi` remains the sole holder of `id-token: write` and keeps the
+  `pypi` environment. PyPI Trusted Publishing exchanges the workflow identity
+  for short-lived credentials and requires this permission; no API token or
+  inherited secret is introduced:
   <https://docs.pypi.org/trusted-publishers/using-a-publisher/>.
 - Publishing-critical third-party actions remain pinned to full commit SHAs,
   which GitHub identifies as the immutable action reference:
@@ -199,6 +218,12 @@ assert these structural invariants:
 - wheel and sdist archive checks and installed-artifact conformance smokes all
   precede the SHA-pinned PyPI action;
 - only `publish-pypi` has the `pypi` environment and `id-token: write`;
+- the workflow default remains `contents: read`, every job whose shell requests
+  or parses Release draft state explicitly has `contents: write`, and unrelated
+  verification/build jobs remain read-only. Discover those jobs from parsed
+  step bodies rather than enumerating only the two currently broken job names,
+  so a future lookup cannot evade the permission assertion, and require
+  non-persisted credentials on checkouts in write-scoped jobs;
 - GitHub attachment is a separate retryable job that revalidates the Release
   and tag, attaches artifacts, revalidates the object after upload, and only
   then removes draft state by numeric Release id. An already-public retry must

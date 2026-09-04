@@ -64,7 +64,7 @@ jobs:
       || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write       # draft Releases are visible only to push-capable tokens
     outputs:
       release_sha: ${{ steps.resolve.outputs.release_sha }}
       base_sha: ${{ steps.resolve.outputs.base_sha }}
@@ -75,6 +75,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Resolve and bind the immutable release commit
         id: resolve
@@ -434,7 +435,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      contents: read
+      contents: write   # revalidate the still-draft Release after environment approval
       id-token: write   # OIDC trusted publishing to PyPI (no stored token)
     steps:
       - name: Download the tested release distributions
@@ -558,6 +559,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.resolve-release.outputs.release_sha }}
+          persist-credentials: false
 
       - name: Download the tested release distributions
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
