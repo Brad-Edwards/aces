@@ -6,7 +6,7 @@ type: FUNCTIONAL
 priority: MUST
 wave: 2
 created_at: 2026-04-05T00:54:58.405111Z
-updated_at: 2026-05-18T02:32:39.252532Z
+updated_at: 2026-09-03T00:00:00Z
 ---
 
 # SEM-218 — Explicitness And Realization Semantics
@@ -97,3 +97,8 @@ Current state: identified gap. Honest portability requires normative semantics f
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/provisioning.py` (Process-limit constraint provenance compilation)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/semantics/realization_process_limits.py` (Typed process-limit admission and constraint semantics)
 - TESTS → TEST `implementations/python/tests/test_issue_1066_runtime_resource_limits.py` (Absent, exact, constrained, open, unsupported, substituted, excess, and evidence conformance)
+- IMPLEMENTS → GITHUB_ISSUE `1078` (Complete SEM-218 boundary coverage across RuntimeConfiguration)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1078-runtime-configuration-boundary-coverage-preflight.md` (Complete runtime-field ownership and architecture inventory)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1078-runtime-configuration-boundary-remediation.md` (Issue 1078 implementation and backend-boundary decision)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/semantics/realization_runtime_concern_profiles.py` (Executable RuntimeConfiguration ownership and enforcement inventory)
+- TESTS → TEST `implementations/python/tests/test_issue_1078_runtime_boundary_coverage.py` (Complete runtime concern, posture, closure, observation, and secret conformance)

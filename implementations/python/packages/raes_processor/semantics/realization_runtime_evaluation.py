@@ -220,12 +220,7 @@ def _corroboration_diagnostic(
     """Reject exact inventory equality that lacks its declared observation basis."""
 
     required_scope = requirement.verification_scope
-    requires_bound_evidence = requirement.requirement_kind in (
-        {"process-resource-limits"} | OPERATING_SYSTEM_REQUIREMENT_KINDS
-    )
-    if (requirement.explicitness is not ExplicitnessClass.EXACT and not requires_bound_evidence) or (
-        required_scope is None and requirement.required_observation_strength is None
-    ):
+    if required_scope is None and requirement.required_observation_strength is None:
         return None
     observation = matching_observation(requirement, returned_snapshot)
     if observation is not None and _observation_corroborates(requirement, observation, manifest):

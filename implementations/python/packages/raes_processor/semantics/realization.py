@@ -12,7 +12,6 @@ from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.apparatus import (
     DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
     RUNTIME_REALIZATION_DOMAIN,
-    RealizationSupportDeclaration,
 )
 from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.bounded_domains import scalar_in_domain
@@ -30,7 +29,6 @@ from raes_contracts.realization_envelope import (
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from raes_contracts.vocabulary import (
     Closure,
-    RealizationSupportMode,
     observation_strength_satisfies,
 )
 
@@ -53,17 +51,16 @@ from .realization_concerns import (
     registered_realization_concerns,
     resolve_realization_concern,
 )
-from .realization_observation_admission import has_required_observation_support
 from .realization_process_limits import (
     ProcessResourceLimitDemand,
     RealizationValueConstraint,
-    process_resource_limit_support_diagnostic,
 )
 from .realization_requirement import CompiledRealizationRequirement
 from .realization_runtime_evaluation import evaluate_registered_realization
 from .realization_snapshot_sanitization import (
     sanitize_realization_snapshot,
 )
+from .realization_support import realization_support_diagnostics
 
 __all__ = [
     "CONCERN_PAYLOAD_PATH",
@@ -99,185 +96,6 @@ REALIZATION_DOMAIN = RUNTIME_REALIZATION_DOMAIN
 # A backend that honors exact declarations lists this in
 # ``supported_exact_requirement_kinds``; one that cannot must reject (I2).
 EXACT_REQUIREMENT_KIND = DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND
-
-
-def realization_support_diagnostics(
-    requirements: tuple[CompiledRealizationRequirement, ...],
-    manifest: BackendManifest,
-    *,
-    apparatus_default: ApparatusRealizationDefaultResolver | None = None,
-) -> list[Diagnostic]:
-    """Match compiled requirements against the manifest's ``realization_support``.
-
-    Exact requirements need ``EXACT_REQUIREMENT_KIND`` in some matching-domain
-    declaration's ``supported_exact_requirement_kinds``; constrained
-    requirements need their concern kind in ``supported_constraint_kinds``.
-    Unsupported kinds become stable error diagnostics naming the resource
-    address, SDL field path, requirement kind, and missing capability. Open
-    requirements require an explicit ``open-realization`` apparatus claim;
-    unresolved delegation uses the agreed closed fallback.
-
-    Diagnostics deliberately name only the field path and kind strings, never
-    the exact author value, which may carry sensitive material (SEM-218
-    security / host-exposure gate).
-    """
-
-    return [
-        diagnostic
-        for requirement in requirements
-        if (
-            diagnostic := _realization_support_diagnostic(
-                requirement,
-                manifest,
-                apparatus_default,
-            )
-        )
-        is not None
-    ]
-
-
-def _realization_support_diagnostic(
-    requirement: CompiledRealizationRequirement,
-    manifest: BackendManifest,
-    apparatus_default: ApparatusRealizationDefaultResolver | None,
-) -> Diagnostic | None:
-    explicitness = effective_realization_explicitness(requirement, manifest, apparatus_default)
-    declarations = [
-        declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
-    ]
-    if requirement.requirement_kind == "process-resource-limits":
-        diagnostic = process_resource_limit_support_diagnostic(
-            requirement,
-            declarations,
-            explicitness,
-            manifest.realization_envelope,
-        )
-    elif explicitness is ExplicitnessClass.OPEN:
-        diagnostic = _open_support_diagnostic(requirement, declarations)
-    elif explicitness is ExplicitnessClass.EXACT:
-        diagnostic = _exact_support_diagnostic(requirement, declarations)
-    elif explicitness is ExplicitnessClass.CONSTRAINED:
-        diagnostic = _constraint_support_diagnostic(requirement, declarations)
-    else:
-        diagnostic = None
-    return diagnostic
-
-
-def _open_support_diagnostic(
-    requirement: CompiledRealizationRequirement,
-    declarations: list[RealizationSupportDeclaration],
-) -> Diagnostic | None:
-    # Mechanism-neutral compute is a portability baseline, not a request for
-    # the generic SEM-218 open-SDL-field capability.  Older manifests can plan
-    # it; execution still requires a selected envelope and observed substrate.
-    if requirement.requirement_kind == "compute-substrate":
-        return None
-    if any(declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION for declaration in declarations):
-        return None
-    return Diagnostic(
-        code="realization.unsupported-open-requirement",
-        domain=requirement.domain,
-        address=requirement.address,
-        message=(
-            "Backend declares no open realization support for "
-            f"'{requirement.requirement_kind}' requirement at "
-            f"'{requirement.field_path}' in domain '{requirement.domain}'."
-        ),
-        severity=Severity.ERROR,
-    )
-
-
-def _exact_support_diagnostic(
-    requirement: CompiledRealizationRequirement,
-    declarations: list[RealizationSupportDeclaration],
-) -> Diagnostic | None:
-    exact_declarations = [
-        declaration
-        for declaration in declarations
-        if EXACT_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
-    ]
-    if not exact_declarations:
-        return Diagnostic(
-            code="realization.unsupported-exact-requirement",
-            domain=requirement.domain,
-            address=requirement.address,
-            message=(
-                f"Backend declares no exact realization support ('{EXACT_REQUIREMENT_KIND}') for exact "
-                f"'{requirement.requirement_kind}' requirement at '{requirement.field_path}' in domain "
-                f"'{requirement.domain}'."
-            ),
-            severity=Severity.ERROR,
-        )
-    observation_kind = (
-        "operating-system"
-        if requirement.requirement_kind in {"os-family", "os-distribution", "os-version"}
-        else requirement.requirement_kind
-    )
-    if requirement.verification_scope is None or has_required_observation_support(
-        requirement,
-        exact_declarations,
-        observation_kind=observation_kind,
-    ):
-        return None
-    return Diagnostic(
-        code="realization.under-observed-exact-requirement",
-        domain=requirement.domain,
-        address=requirement.address,
-        message=(
-            f"Backend declares no '{requirement.verification_scope.value}' corroboration "
-            f"for exact '{requirement.requirement_kind}' requirement at "
-            f"'{requirement.field_path}' in domain '{requirement.domain}'."
-        ),
-        severity=Severity.ERROR,
-    )
-
-
-def _constraint_support_diagnostic(
-    requirement: CompiledRealizationRequirement,
-    declarations: list[RealizationSupportDeclaration],
-) -> Diagnostic | None:
-    supporting = [
-        declaration
-        for declaration in declarations
-        if requirement.requirement_kind in declaration.supported_constraint_kinds
-    ]
-    diagnostic = None
-    if not supporting:
-        diagnostic = Diagnostic(
-            code="realization.unsupported-constraint-requirement",
-            domain=requirement.domain,
-            address=requirement.address,
-            message=(
-                "Backend declares no constraint realization support "
-                f"for constraint kind '{requirement.requirement_kind}' at "
-                f"'{requirement.field_path}' in domain '{requirement.domain}'."
-            ),
-            severity=Severity.ERROR,
-        )
-    elif _constrained_os_observation_missing(requirement, supporting):
-        diagnostic = Diagnostic(
-            code="realization.under-observed-constraint-requirement",
-            domain=requirement.domain,
-            address=requirement.address,
-            message=(
-                "Backend declares no guest-observed operating-system corroboration "
-                f"for constrained '{requirement.requirement_kind}' at '{requirement.field_path}' "
-                f"in domain '{requirement.domain}'."
-            ),
-            severity=Severity.ERROR,
-        )
-    return diagnostic
-
-
-def _constrained_os_observation_missing(
-    requirement: CompiledRealizationRequirement,
-    supporting: list[RealizationSupportDeclaration],
-) -> bool:
-    return requirement.requirement_kind in {"os-distribution", "os-version"} and not has_required_observation_support(
-        requirement,
-        supporting,
-        observation_kind="operating-system",
-    )
 
 
 def realization_envelope_diagnostics(

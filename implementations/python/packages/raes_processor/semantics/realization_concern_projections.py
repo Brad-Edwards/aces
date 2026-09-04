@@ -11,10 +11,10 @@ from raes.runtime_resource_limits import project_process_resource_limit
 from raes_contracts.canonical import canonical_json_digest
 
 from .realization_concern_observations import validate_value_commitment
+from .realization_runtime_concern_profiles import RUNTIME_NON_REALIZATION_FIELDS
 
 _COMMITMENT_PREFIX = "raes-runtime-value-jcs-sha256-v1:"
 _PROTECTED = frozenset({"redacted", "operator_secret"})
-_ANNOTATIONS = frozenset({"description", "evidence_refs", "readiness"})
 
 
 def _mapping(value: object, *, label: str) -> Mapping[str, Any]:
@@ -291,7 +291,7 @@ def project_published_ports(value: object, observed: bool = False) -> object:
 
 
 def _without_annotations(record: Mapping[str, Any]) -> dict[str, object]:
-    return {key: value for key, value in record.items() if key not in _ANNOTATIONS}
+    return {key: value for key, value in record.items() if key not in RUNTIME_NON_REALIZATION_FIELDS}
 
 
 def _sorted_records(value: object, *, label: str, identity: str) -> list[dict[str, object]]:

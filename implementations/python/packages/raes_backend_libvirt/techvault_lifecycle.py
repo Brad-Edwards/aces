@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Set
 from dataclasses import dataclass
 
 from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
 
-from .drivers.libvirt import _error_code, _existing_uuid, _raes_uuid
+from .drivers.libvirt import (
+    _ABSENCE_ERROR_CODES,
+    _DEACTIVATE_TOLERATED_ERROR_CODES,
+    _error_code,
+    _existing_uuid,
+    _list_absence_error_codes,
+    _raes_uuid,
+)
 from .techvault_matrix import runtime_name
 
 
@@ -74,7 +81,7 @@ def _resolve_by_name(
         resolved = _resolve_verified_absence(connection, list_method, address)
     except Exception as exc:
         code = _error_code(exc)
-        if code in {42, 43}:
+        if code in _list_absence_error_codes(list_method):
             resolved = _resolve_verified_absence(connection, list_method, address)
         else:
             _record_suppressed_failure("_resolve_by_name", exc, native_code=code)
@@ -107,14 +114,14 @@ def verify_native_removed(
 
 
 def deactivate_and_undefine(native: object) -> bool:
-    return _invoke_native_action(native, "destroy", {42, 43, 55}) and _invoke_native_action(
+    return _invoke_native_action(native, "destroy", _DEACTIVATE_TOLERATED_ERROR_CODES) and _invoke_native_action(
         native,
         "undefine",
-        {42, 43},
+        _ABSENCE_ERROR_CODES,
     )
 
 
-def _invoke_native_action(native: object, method_name: str, tolerated_codes: set[int]) -> bool:
+def _invoke_native_action(native: object, method_name: str, tolerated_codes: Set[int]) -> bool:
     method = getattr(native, method_name, None)
     if not callable(method):
         return False

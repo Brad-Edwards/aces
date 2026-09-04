@@ -230,7 +230,7 @@
       "replayable": true,
       "actual_outcome": "stable",
       "diagnostic_kind": null,
-      "result_digest": "4bb77034a8f2b1a577700ad03772a80acc0f4515a6831c8a35ac1bf50482d760",
+      "result_digest": "1b359c40d500e39685fb7d393e98e9838eb2851d50e2f9bfead950702428da4d",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
         "implementations/python/tests/test_pipeline_determinism.py"
@@ -246,7 +246,7 @@
       "replayable": true,
       "actual_outcome": "distinguishable",
       "diagnostic_kind": null,
-      "result_digest": "6cdc44529a87fb9addaf4040795c7f9ae702c5f6ae30e29a5086ee60072ded73",
+      "result_digest": "7b665728b7cd242d92a848831327901f6835cac16ba032dc098038b2af698cf1",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
         "docs/research/formal-semantic-validation/corpus/determinism-b.sdl.yaml"
