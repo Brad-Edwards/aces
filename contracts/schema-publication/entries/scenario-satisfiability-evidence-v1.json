@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "2981c2cb86232160373a380a20fbb1ad7d69b09628095e6d05979e397f4446a7",
+  "content_hash": "d08e616869e52a2e533b49344827b161eb8d9d908f9c8c5ad61081f203bc4fe2",
   "last_change": {
-    "summary": "Added generated-artifact output environment consumption for issue #1074 and DSL-435 alongside participant-interaction commutativity and merge rules from issue #1101.",
-    "content_hash": "2981c2cb86232160373a380a20fbb1ad7d69b09628095e6d05979e397f4446a7"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "d08e616869e52a2e533b49344827b161eb8d9d908f9c8c5ad61081f203bc4fe2"
   }
 }

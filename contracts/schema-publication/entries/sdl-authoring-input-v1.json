@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "b8da44157c074c3790eb8651e9102b9a7ad067f5e4e4da4b04cb9ddc78029003",
+  "content_hash": "2a6f907c65d3b40051f3a38604607f0d57d0b6f277ea38c167eae6c2c7b750ac",
   "last_change": {
-    "summary": "Added generated-artifact output environment consumption for issue #1074 and DSL-435 alongside participant-interaction commutativity and merge rules from issue #1101.",
-    "content_hash": "b8da44157c074c3790eb8651e9102b9a7ad067f5e4e4da4b04cb9ddc78029003"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "2a6f907c65d3b40051f3a38604607f0d57d0b6f277ea38c167eae6c2c7b750ac"
   }
 }

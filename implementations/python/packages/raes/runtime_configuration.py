@@ -28,7 +28,6 @@ from ._base import (
     parse_int_or_var,
 )
 from ._runtime_service_families import install_runtime_service_family_exports
-from .architectures import PackageArchitectureString, normalize_architecture
 from .runtime_capabilities import (
     RuntimeCapabilityOverrideScope,
     RuntimeCapabilityPolicy,
@@ -80,6 +79,12 @@ from .runtime_network import (
     RuntimeNetworkEndpoint,
     RuntimeNetworkRealization,
     RuntimePublishedPort,
+)
+from .runtime_packages import (
+    RuntimeAptPackageRepository,
+    RuntimePackage,
+    RuntimePackageRepository,
+    RuntimePackageRepositorySigningKey,
 )
 from .runtime_resource_limits import (
     RuntimeProcessLimitResource,
@@ -145,7 +150,10 @@ __all__ = [
     "RuntimeNetworkEndpoint",
     "RuntimeNetworkRealization",
     "RuntimeOperationalPolicy",
+    "RuntimeAptPackageRepository",
     "RuntimePackage",
+    "RuntimePackageRepository",
+    "RuntimePackageRepositorySigningKey",
     "RuntimeProcessCapabilityOverride",
     "RuntimeProcessIdentity",
     "RuntimeProcessLimitResource",
@@ -232,31 +240,6 @@ class RuntimeOperationalPolicy(SDLModel):
         return _parse_runtime_enum_or_var(v, RuntimeRestartPolicy, field_name="restart")
 
 
-class RuntimePackage(SDLModel):
-    """A package required in a runtime image or node."""
-
-    manager: str
-    name: str
-    version: str
-    architecture: PackageArchitectureString = ""
-    source: str = ""
-    purl: str = ""
-
-    @field_validator("architecture", mode="before")
-    @classmethod
-    def normalize_package_architecture(cls, v: object) -> object:
-        """Normalize a populated package architecture to a canonical token.
-
-        Empty stays empty (the package is not architecture-constrained); a
-        populated value uses the same governed vocabulary as ``Node.architecture``
-        so target/package comparison is exact.
-        """
-        if v is None or v == "":
-            return v
-        normalized = normalize_architecture(v)
-        return normalized.value if hasattr(normalized, "value") else normalized
-
-
 class RuntimeDependencyManifest(SDLModel):
     """A dependency manifest required in the runtime artifact."""
 
@@ -282,6 +265,18 @@ def _reject_duplicate_keys(items: Iterable[object], *, attr: str, label: str) ->
         if key in seen:
             raise ValueError(f"Duplicate runtime {label} '{key}'")
         seen.add(key)
+
+
+def _reject_duplicate_package_identities(packages: Iterable[RuntimePackage]) -> None:
+    """Reject ambiguous package rows by their stable semantic identity."""
+
+    seen: set[tuple[str, str, str]] = set()
+    for package in packages:
+        identity = (package.manager, package.name, package.architecture)
+        if identity in seen:
+            rendered = ":".join(identity)
+            raise ValueError(f"Duplicate runtime package identity '{rendered}'")
+        seen.add(identity)
 
 
 class RuntimeConfiguration(SDLModel):
@@ -394,5 +389,6 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.identity_authorities, attr="identity_authority_id", label="identity authority")
         _reject_duplicate_keys(self.file_services, attr="file_service_id", label="file_service file_service_id")
         _reject_duplicate_keys(self.mail_services, attr="mail_service_id", label="mail_service mail_service_id")
+        _reject_duplicate_package_identities(self.packages)
         _reject_duplicate_keys(self.software_components, attr="component_id", label="software component")
         return self

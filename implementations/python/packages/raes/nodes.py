@@ -49,6 +49,7 @@ from .operating_systems import (
     normalize_os_version,
 )
 from .runtime_configuration import (
+    RuntimeAptPackageRepository,
     RuntimeCapabilityOverrideScope,
     RuntimeCapabilityPolicy,
     RuntimeConfiguration,
@@ -81,6 +82,8 @@ from .runtime_configuration import (
     RuntimeNetworkRealization,
     RuntimeOperationalPolicy,
     RuntimePackage,
+    RuntimePackageRepository,
+    RuntimePackageRepositorySigningKey,
     RuntimeProcessCapabilityOverride,
     RuntimeProcessIdentity,
     RuntimeProcessLimitResource,
@@ -158,7 +161,10 @@ __all__ = [
     "RuntimeNetworkEndpoint",
     "RuntimeNetworkRealization",
     "RuntimeOperationalPolicy",
+    "RuntimeAptPackageRepository",
     "RuntimePackage",
+    "RuntimePackageRepository",
+    "RuntimePackageRepositorySigningKey",
     "RuntimeProcessCapabilityOverride",
     "RuntimeProcessIdentity",
     "RuntimeProcessLimitResource",
