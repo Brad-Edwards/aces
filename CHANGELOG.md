@@ -8,6 +8,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [3.5.0](https://github.com/OpenRAE/rae/compare/v3.4.0...v3.5.0) (2026-09-04)
+
+
+### Features
+
+* complete runtime configuration boundary coverage ([#1178](https://github.com/OpenRAE/rae/issues/1178)) ([de9bbd6](https://github.com/OpenRAE/rae/commit/de9bbd629dec7b6b274444c90f452149c45092f9))
+* **sdl:** add typed package repository profiles ([#1194](https://github.com/OpenRAE/rae/issues/1194)) ([208f31f](https://github.com/OpenRAE/rae/commit/208f31fa401fd7bf9127a5fb11c8e2fa09e93b16))
+
+
+### Bug Fixes
+
+* allow draft release inspection ([#1192](https://github.com/OpenRAE/rae/issues/1192)) ([ce68fbc](https://github.com/OpenRAE/rae/commit/ce68fbc9a207a7b2e24c6d70466a1a53bdfa9816))
+* **libvirt:** harden failure observability ([#1191](https://github.com/OpenRAE/rae/issues/1191)) ([635825a](https://github.com/OpenRAE/rae/commit/635825a15a4dfe78a6aac4596097f2e7adf44dde))
+
+
+### Documentation
+
+* **runtime:** define control-plane architecture ([#1193](https://github.com/OpenRAE/rae/issues/1193)) ([9bca203](https://github.com/OpenRAE/rae/commit/9bca203f94475824a31ad2255765a4c57e953e95))
+
+## [3.4.0](https://github.com/OpenRAE/rae/compare/v3.3.0...v3.4.0) (2026-09-03)
+
+
+### Features
+
+* add semantic projection reports ([#1079](https://github.com/OpenRAE/rae/issues/1079)) ([8283fa5](https://github.com/OpenRAE/rae/commit/8283fa5670ca1f330f75f1f598aee5406c4f0fa1))
+* add source-neutral SDL candidate synthesis ([#1113](https://github.com/OpenRAE/rae/issues/1113)) ([48748ee](https://github.com/OpenRAE/rae/commit/48748eed31af1886b3c6a3d002c93e17adf37b5e))
+* add target-node CPU architecture semantics to SDL ([#1056](https://github.com/OpenRAE/rae/issues/1056)) ([2e4aabb](https://github.com/OpenRAE/rae/commit/2e4aabb0cdb5009873f8170cbd8bc2e5abfa63ca))
+* carry authored OS identity through realization ([#1141](https://github.com/OpenRAE/rae/issues/1141)) ([7b73821](https://github.com/OpenRAE/rae/commit/7b73821c470a9ff60c493b78c830f406c0aa776d))
+* carry resolved realization authority through plans ([#1081](https://github.com/OpenRAE/rae/issues/1081)) ([5c210d5](https://github.com/OpenRAE/rae/commit/5c210d520e884cca0c08ad201b033fae920ce0c2))
+* define account fixture credential semantics ([#1073](https://github.com/OpenRAE/rae/issues/1073)) ([0248946](https://github.com/OpenRAE/rae/commit/02489463a85d6af88ebcdf469b719f8645d40cbf))
+* enforce participant flow policy at final runtime sinks ([#1058](https://github.com/OpenRAE/rae/issues/1058)) ([6b47385](https://github.com/OpenRAE/rae/commit/6b47385f03d9bb682761f2b8c55c57ae411a80a2))
+* **examples:** add the canonical minimal cross-backend scenario ([#1149](https://github.com/OpenRAE/rae/issues/1149)) ([789e7b5](https://github.com/OpenRAE/rae/commit/789e7b5177711056425a8e09894b22c72b804dc8))
+* govern portable runtime process limits ([#1080](https://github.com/OpenRAE/rae/issues/1080)) ([0e30b38](https://github.com/OpenRAE/rae/commit/0e30b388486448dd5f1cff7a8b57231f0938bbf7))
+* publish adversarial participant flow-control contracts ([#1053](https://github.com/OpenRAE/rae/issues/1053)) ([7159012](https://github.com/OpenRAE/rae/commit/71590121d30d920be2714a82a035b8821a018413))
+* **runtime:** declare adversarial-control apparatus and backend capabilities (API-407) ([#1062](https://github.com/OpenRAE/rae/issues/1062)) ([021dc7a](https://github.com/OpenRAE/rae/commit/021dc7a28313dfc5d6e52f1c92754e8117119350))
+* **sdl:** define participant episode termination semantics and RL closure record (SEM-222) ([#1059](https://github.com/OpenRAE/rae/issues/1059)) ([1fdb85b](https://github.com/OpenRAE/rae/commit/1fdb85b73b2b811935e74ff73884c161559bb17d))
+* separate compute kind from realization substrate ([#1082](https://github.com/OpenRAE/rae/issues/1082)) ([3d6e369](https://github.com/OpenRAE/rae/commit/3d6e369b726607ff657a841c7f1dee0bec655b8f))
+
+
+### Bug Fixes
+
+* **conformance:** keep the default adapter probe envelope-neutral ([#1159](https://github.com/OpenRAE/rae/issues/1159)) ([e014281](https://github.com/OpenRAE/rae/commit/e0142812e09f68f4b4066d986210e888c3a0ac78))
+* **contracts:** admit expanded scenario snapshot parents ([#1040](https://github.com/OpenRAE/rae/issues/1040)) ([#1123](https://github.com/OpenRAE/rae/issues/1123)) ([14bfc7b](https://github.com/OpenRAE/rae/commit/14bfc7b28eb9817482a2439778ba699f9d4a47e4))
+* harden repo-policy governance check timeout, host, and status reporting ([#1060](https://github.com/OpenRAE/rae/issues/1060)) ([92e6e23](https://github.com/OpenRAE/rae/commit/92e6e23d19b73f5470769e7fc8013b715ed68e1c))
+* **libvirt:** bind reproducible guest operations to fresh evidence ([#1128](https://github.com/OpenRAE/rae/issues/1128)) ([1a38538](https://github.com/OpenRAE/rae/commit/1a38538c26abbbca0adf6ec4c56d004cc9ce743a))
+* **libvirt:** record suppressed native failures on the operator side ([#1163](https://github.com/OpenRAE/rae/issues/1163)) ([3b853a3](https://github.com/OpenRAE/rae/commit/3b853a3423f0b19a633d3977b4725c49aafec1f0))
+* **module-registry:** harden OCI publication and caching ([#1130](https://github.com/OpenRAE/rae/issues/1130)) ([15e6118](https://github.com/OpenRAE/rae/commit/15e61189f68fd257a85692376c8b99ee3504a30d))
+* **processor:** bound dependency-cycle detection ([#1103](https://github.com/OpenRAE/rae/issues/1103)) ([d4b4432](https://github.com/OpenRAE/rae/commit/d4b4432ee38ce13bd07cafe4e624c7d364ea9f8a))
+* **processor:** bound dependency-cycle detection ([#1126](https://github.com/OpenRAE/rae/issues/1126)) ([d4b4432](https://github.com/OpenRAE/rae/commit/d4b4432ee38ce13bd07cafe4e624c7d364ea9f8a))
+* **processor:** bound the complete solver operation ([#1108](https://github.com/OpenRAE/rae/issues/1108)) ([#1127](https://github.com/OpenRAE/rae/issues/1127)) ([e4612cf](https://github.com/OpenRAE/rae/commit/e4612cf3bc4a8ebc73f004bf6a2d5849966dc01d))
+* **processor:** enforce evaluator capability admission ([#1036](https://github.com/OpenRAE/rae/issues/1036)) ([#1119](https://github.com/OpenRAE/rae/issues/1119)) ([f005152](https://github.com/OpenRAE/rae/commit/f005152f7cae5328ddd15f4f1e0f09519a389ad3))
+* **processor:** enforce solver deadline boundaries ([#1142](https://github.com/OpenRAE/rae/issues/1142)) ([eacfc46](https://github.com/OpenRAE/rae/commit/eacfc46f5901eb72c6cd01808a16c3bef839efc8))
+* **proof:** make offline Isabelle replay portable on Ubuntu ([#1131](https://github.com/OpenRAE/rae/issues/1131)) ([990e8fb](https://github.com/OpenRAE/rae/commit/990e8fbc246769fd95f4100e225a2eb69e2812f3))
+* **reference-backend:** anchor the OCI digest-pinned image-trust check ([#1084](https://github.com/OpenRAE/rae/issues/1084)) ([83c3651](https://github.com/OpenRAE/rae/commit/83c36513f464c51e3451f83be4a722e595a8e841))
+* **release:** gate publication on the verified release SHA ([#1138](https://github.com/OpenRAE/rae/issues/1138)) ([701858d](https://github.com/OpenRAE/rae/commit/701858d190d7996d196dbfca79cfd1d9a715cebf))
+* **runtime:** harden HTTP API admission and offload ([#1133](https://github.com/OpenRAE/rae/issues/1133)) ([944b461](https://github.com/OpenRAE/rae/commit/944b4617ab96c544c2ce15ee46a93cf0431ff346))
+* **runtime:** reconcile workflow timeouts fail closed ([#1132](https://github.com/OpenRAE/rae/issues/1132)) ([96b20ae](https://github.com/OpenRAE/rae/commit/96b20ae8422fae9936bae928bbd8a1c14d2001da))
+* **runtime:** settle concurrent participant batches reliably ([#1135](https://github.com/OpenRAE/rae/issues/1135)) ([2d53aa3](https://github.com/OpenRAE/rae/commit/2d53aa34fbbc8faa4617320bd8d7f0d1042d5e24))
+* **runtime:** synchronize operational summary reads ([#1148](https://github.com/OpenRAE/rae/issues/1148)) ([915b0c0](https://github.com/OpenRAE/rae/commit/915b0c002b86e8f59a95f0409b412bd7be57695d))
+* **supply-chain:** gate vulnerable dependencies and scanner cache ([#1121](https://github.com/OpenRAE/rae/issues/1121)) ([0f296b9](https://github.com/OpenRAE/rae/commit/0f296b956e7656f48ce27cd25b4aa13bc1a4491a))
+
+
+### Performance Improvements
+
+* **cli:** bypass command imports for exact version ([#1111](https://github.com/OpenRAE/rae/issues/1111)) ([3cd0f49](https://github.com/OpenRAE/rae/commit/3cd0f49f85b0c2429ba8eda680d16b4dd2d37499))
+* **cli:** bypass command imports for exact version ([#1129](https://github.com/OpenRAE/rae/issues/1129)) ([3cd0f49](https://github.com/OpenRAE/rae/commit/3cd0f49f85b0c2429ba8eda680d16b4dd2d37499))
+* **processor:** materialize explicitness once per compile ([#1099](https://github.com/OpenRAE/rae/issues/1099)) ([6fb2820](https://github.com/OpenRAE/rae/commit/6fb28200cf0970e7af268edc5de27b101f3e545b))
+* **processor:** materialize explicitness once per compile ([#1120](https://github.com/OpenRAE/rae/issues/1120)) ([6fb2820](https://github.com/OpenRAE/rae/commit/6fb28200cf0970e7af268edc5de27b101f3e545b))
+
+
+### Documentation
+
+* add Ground Control requirement specs as repo-local files ([#1064](https://github.com/OpenRAE/rae/issues/1064)) ([771756f](https://github.com/OpenRAE/rae/commit/771756f675e2666328b6a926c64d5d77e6e90e9f))
+* joint design for participant episode + budget model (SEM-222/223, DSL-120/121, ACT-623/624) ([#1055](https://github.com/OpenRAE/rae/issues/1055)) ([645ef61](https://github.com/OpenRAE/rae/commit/645ef61f382cc7e69538b2fd4e643a96366bc98e))
+
 ## [3.3.0](https://github.com/OpenRAE/rae/compare/v3.2.0...v3.3.0) (2026-08-02)
 
 
