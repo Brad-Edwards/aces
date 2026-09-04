@@ -1403,6 +1403,10 @@ def test_service_settlement_failure_removes_state_absent_before_batch(
     assert _POLICY_ADDRESS not in run.result().snapshot.participant_execution_services
 
 
+# The completion lane runs this 800-participant stress case under coverage and
+# eight-worker CPU contention. Its assertions, rather than wall time, are the
+# deterministic complexity oracle for scans, snapshot copies, and validation.
+@pytest.mark.timeout(300)
 def test_many_participants_use_one_iterative_due_scan_and_real_settlement(monkeypatch: pytest.MonkeyPatch):
     participant_count = 800
     participants = tuple(f"participant.behavior.scale-{index:04d}" for index in range(participant_count))

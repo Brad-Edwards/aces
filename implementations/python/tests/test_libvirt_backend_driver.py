@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
+from types import ModuleType
 
+import pytest
 from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec
 from raes_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _raes_uuid
@@ -19,7 +22,7 @@ _VIR_ERR_INTERNAL_ERROR = 1
 _VIR_ERR_NO_DOMAIN = 42
 _VIR_ERR_NO_NETWORK = 43
 _VIR_ERR_OPERATION_INVALID = 55
-_VIR_ERR_NO_NWFILTER = 620
+_VIR_ERR_NO_NWFILTER = 62
 
 
 def _runtime_name(address: str) -> str:
@@ -39,6 +42,13 @@ class _FakeLibvirtError(Exception):
 
     def get_error_code(self) -> int:
         return self._code
+
+
+@pytest.fixture(autouse=True)
+def _install_fake_libvirt_error_type(monkeypatch: pytest.MonkeyPatch) -> None:
+    libvirt = ModuleType("libvirt")
+    libvirt.libvirtError = _FakeLibvirtError
+    monkeypatch.setitem(sys.modules, "libvirt", libvirt)
 
 
 def _xml_attr(xml: str, attr: str) -> str:
@@ -564,6 +574,60 @@ def test_libvirt_nwfilter_define_refuses_to_overwrite_a_foreign_filter():
     assert [d.code for d in result.diagnostics] == ["libvirt-backend.driver.ownership-conflict"]
     assert connection.nwfilter_xml == []  # the foreign filter was never redefined
     assert connection.nwfilters[filter_name] is foreign
+
+
+def test_libvirt_nwfilter_define_fails_closed_on_a_mismatched_absence_code():
+    class _MismatchedAbsenceConnection(_FakeConnection):
+        def nwfilterLookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
+            del name
+            raise _FakeLibvirtError(_VIR_ERR_NO_DOMAIN)
+
+    connection = _MismatchedAbsenceConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
+    acl = NetworkAcl(name="allow-all", action="accept", direction="inout", protocol="all")
+
+    result = driver.realize(
+        networks=(),
+        domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None, network_acls=(acl,)),),
+    )
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["libvirt-backend.driver.operation-failed"]
+    assert connection.nwfilter_xml == []
+    assert connection.domain_xml == []
+
+
+def test_libvirt_domain_convergence_fails_closed_on_a_mismatched_absence_code():
+    class _MismatchedAbsenceConnection(_FakeConnection):
+        def lookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
+            del name
+            raise _FakeLibvirtError(_VIR_ERR_NO_NETWORK)
+
+    connection = _MismatchedAbsenceConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
+
+    result = driver.realize(
+        networks=(),
+        domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),),
+    )
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["libvirt-backend.driver.operation-failed"]
+    assert connection.domain_xml == []
+
+
+def test_libvirt_nwfilter_cleanup_preserves_retry_state_on_a_mismatched_absence_code():
+    class _MismatchedAbsenceConnection(_FakeConnection):
+        def nwfilterLookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
+            del name
+            raise _FakeLibvirtError(_VIR_ERR_NO_DOMAIN)
+
+    address = "provision.node.web"
+    connection = _MismatchedAbsenceConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
+    driver._filters[address] = "raes-test-web-acl"
+
+    driver._undefine_nwfilter(connection, address)
+
+    assert driver._filters[address] == "raes-test-web-acl"
 
 
 def test_libvirt_destroy_refuses_to_remove_a_foreign_object():
