@@ -1,0 +1,200 @@
+{
+  "schema_version": "runtime-control-plane-program/v1",
+  "assessment_date": "2026-08-17",
+  "parent_issue": 1151,
+  "milestone": "Runtime Control-Plane",
+  "requirement": "API-404",
+  "deliverables": [
+    "docs/decisions/issue-1151-runtime-control-plane-architecture-preflight.md",
+    "docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md",
+    "docs/research/runtime-control-plane/index.md",
+    "docs/research/runtime-control-plane/current-state-assessment.md",
+    "docs/research/runtime-control-plane/composition-architecture.md",
+    "docs/research/runtime-control-plane/requirement-disposition.md",
+    "docs/research/runtime-control-plane/implementation-program.md",
+    "docs/research/runtime-control-plane/implementation-program.json",
+    "specs/formal/runtime-control-plane/README.md"
+  ],
+  "profiles": [
+    {
+      "id": "P0",
+      "name": "ephemeral",
+      "scope": "one target and one run per store",
+      "actor_boundary": "trusted embedder supplies immutable actor context",
+      "claims": ["in-process contract conformance"],
+      "nonclaims": ["durability", "multi-process ownership", "restart recovery", "multitenancy"]
+    },
+    {
+      "id": "P1",
+      "name": "local durable",
+      "scope": "one target and one run per store",
+      "actor_boundary": "trusted embedder supplies immutable actor context",
+      "claims": [
+        "single lease-admitted owner",
+        "crash-consistent authoritative state",
+        "atomic terminal commits",
+        "startup reconciliation with explicit indeterminacy"
+      ],
+      "nonclaims": ["multi-process ownership", "high availability", "multitenancy"]
+    },
+    {
+      "id": "P2",
+      "name": "served",
+      "scope": "one target and one run per store",
+      "actor_boundary": "HTTP authentication derives immutable actor context before core admission",
+      "claims": [
+        "P1 core behind the reference HTTP adapter",
+        "owner-serialized mutation",
+        "revision-carrying reads"
+      ],
+      "nonclaims": ["multi-owner writes", "high availability", "multitenancy"]
+    },
+    {
+      "id": "P3",
+      "name": "coordinated",
+      "claims": [],
+      "nonclaims": ["everything: seam only, requires a future ADR"]
+    }
+  ],
+  "work_packages": [
+    {
+      "id": "CP-1",
+      "issue": 1182,
+      "title": "Operation lifecycle contract",
+      "depends_on": [],
+      "surfaces": ["contracts/schemas/control-plane", "raes_runtime lifecycle states"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["closed lifecycle with immutable actor context", "strict portable carrier validation"],
+      "verification": ["legal and illegal transition tests", "schema publication checks"]
+    },
+    {
+      "id": "CP-2",
+      "issue": 1181,
+      "title": "Atomic terminal commit for every control-plane mutation",
+      "depends_on": ["CP-1"],
+      "surfaces": ["all raes_runtime control-plane mutation paths"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["one mutation authority", "atomic snapshot, terminal record, and actor-bound audit"],
+      "verification": ["kill-point tests", "cross-family concurrent mutation tests"]
+    },
+    {
+      "id": "CP-3",
+      "issue": 1179,
+      "title": "Startup reconciliation with effect classification",
+      "depends_on": ["CP-1", "CP-2"],
+      "surfaces": ["raes_runtime control-plane recovery", "RuntimeTarget observation capability"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["closed recovery classification", "immutable linked resolution operations", "no automatic replay"],
+      "verification": ["restart classification tests", "no-observation backend tests"]
+    },
+    {
+      "id": "CP-4",
+      "issue": 1180,
+      "title": "Snapshot revision compare-and-swap and derived-cache demotion",
+      "depends_on": ["CP-1"],
+      "surfaces": ["raes_runtime control_plane", "store protocol"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["expected-revision commits", "coherence-ruled derived caches"],
+      "verification": ["interleaved-writer tests", "cache rebuild tests"]
+    },
+    {
+      "id": "CP-5",
+      "issue": 1183,
+      "title": "Store lease admission",
+      "depends_on": [],
+      "surfaces": ["store protocol", "local lease implementation", "target/run store identity"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["lease before store access", "immutable target/run scope", "single P1/P2 owner"],
+      "verification": ["concurrent-process admission tests", "mismatched-scope and filesystem-race tests"]
+    },
+    {
+      "id": "CP-6",
+      "issue": 1092,
+      "title": "Transactional local store (re-lands PR #1136)",
+      "depends_on": ["CP-1", "CP-2", "CP-4", "CP-5"],
+      "surfaces": ["raes_runtime control_plane_store_local and sibling modules", "strict snapshot and operation codecs"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["transactional P1 provider", "lossless closed state codec", "durable migration and integrity checks"],
+      "verification": ["store conformance and crash tests", "codec round-trip and corruption tests"]
+    },
+    {
+      "id": "CP-7",
+      "issue": 1184,
+      "title": "Atomic idempotency claims and cache demotion",
+      "depends_on": ["CP-6"],
+      "surfaces": ["raes_runtime idempotent receipt path", "get_operation/get_snapshot caches"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["actor-, kind-, and store-scoped atomic claims", "authorization-bound receipt disclosure"],
+      "verification": ["concurrent and restart retry tests", "cross-actor and cross-scope adversarial tests"]
+    },
+    {
+      "id": "CP-8",
+      "issue": 1188,
+      "title": "Served-profile alignment of the reference HTTP adapter",
+      "depends_on": ["CP-4", "CP-7"],
+      "surfaces": ["raes_runtime control_plane_api", "typed core actor context", "redacted provider-error mapping"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["authenticated actor propagated into core", "core-owned terminal audit", "single-owner served profile"],
+      "verification": ["cross-principal HTTP tests", "audit atomicity and proxy-spoofing tests"]
+    },
+    {
+      "id": "CP-9",
+      "issue": 1187,
+      "title": "Crash and profile conformance suite",
+      "depends_on": ["CP-2", "CP-3", "CP-6", "CP-7", "CP-8"],
+      "surfaces": ["implementations/python/tests"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["profile guarantee and nonclaim coverage", "security, isolation, lifecycle, and codec fault coverage"],
+      "verification": ["kill-point matrix", "property, concurrency, recovery, and adversarial tests"]
+    },
+    {
+      "id": "CP-10",
+      "issue": 1189,
+      "title": "Profile declaration and capability discovery",
+      "depends_on": ["CP-1", "CP-2", "CP-3", "CP-4", "CP-5", "CP-6", "CP-7", "CP-8"],
+      "surfaces": ["raes_runtime profile surface", "docs/explain/sdl/runtime-architecture.md"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["one typed profile authority", "fail-closed capability discovery", "P3 remains unavailable"],
+      "verification": ["capability matrix tests", "profile construction failure tests"]
+    },
+    {
+      "id": "CP-11",
+      "issue": 1185,
+      "title": "API-404 requirement update and traceability",
+      "depends_on": ["CP-10"],
+      "surfaces": ["docs/requirements/API-404"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["profile-to-clause requirement matrix", "reconciled implementation and test traceability"],
+      "verification": ["requirement governance", "traceability reconciliation"]
+    },
+    {
+      "id": "CP-12",
+      "issue": 1186,
+      "title": "Recovery runbook and operator tooling",
+      "depends_on": ["CP-3", "CP-6"],
+      "surfaces": ["docs", "operator tooling", "bounded health and observability"],
+      "requirement": "API-404",
+      "adr": "ADR-104",
+      "acceptance_criteria": ["safe indeterminate-resolution runbook", "lease-ordered lifecycle", "value-free health and diagnostics"],
+      "verification": ["runbook smoke tests", "lifecycle-order and redaction tests"]
+    }
+  ],
+  "dispositions": {
+    "issue_1092": "re-scoped as CP-6; lifecycle, mutation, recovery, CAS, lease, and idempotency concerns are owned by CP-1 through CP-5 and CP-7",
+    "pr_1136": "split: store work re-lands as CP-6, recovery reworked under CP-3, tests absorbed into CP-9",
+    "runtime_control_plane": "retain and change under the profiled contract",
+    "local_json_store": "supersede; migration source only",
+    "http_adapter": "retain as the P2 reference; change under CP-8"
+  }
+}

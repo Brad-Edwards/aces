@@ -3,6 +3,7 @@
 from typing import Any
 
 from raes.scenario import InstantiatedScenario
+from raes_contracts.vocabulary import GeneratedArtifactDeliveryMode
 
 from ..models import GeneratedArtifactRuntime, PersistentVolumeRuntime
 from .addresses import (
@@ -13,13 +14,69 @@ from .addresses import (
 )
 from .support import _dump
 
+_GENERATED_ARTIFACTS_PREFIX = "generated_artifacts."
+
+
+def _generated_artifact_ref_matches(reference: str, artifact_name: str) -> bool:
+    resolved = (
+        reference.removeprefix(_GENERATED_ARTIFACTS_PREFIX)
+        if reference.startswith(_GENERATED_ARTIFACTS_PREFIX)
+        else reference
+    )
+    return resolved == artifact_name
+
+
+def _environment_consumer_projections(
+    scenario: InstantiatedScenario,
+    artifact_name: str,
+) -> list[dict[str, Any]]:
+    """Derive generated-artifact consumer projections from node env bindings.
+
+    Authors declare the binding once on ``nodes.<node>.runtime.environment[]`` /
+    ``environment_files[]``; the provisioning resource needs the matching
+    consumer projection so a backend can inject the referenced output. No raw
+    generated value is carried - only the output name and env target.
+    """
+
+    projections: list[dict[str, Any]] = []
+    for node_name, node in scenario.nodes.items():
+        runtime = node.runtime
+        if runtime is None:
+            continue
+        target_address = _node_address(node_name)
+        for variable in runtime.environment:
+            source = variable.value_from
+            if source is not None and _generated_artifact_ref_matches(source.generated_artifact, artifact_name):
+                projections.append(
+                    {
+                        "node": node_name,
+                        "target_address": target_address,
+                        "delivery_mode": GeneratedArtifactDeliveryMode.ENVIRONMENT.value,
+                        "output": source.output,
+                        "environment_variable": variable.name,
+                    }
+                )
+        for env_file in runtime.environment_files:
+            source = env_file.value_from
+            if _generated_artifact_ref_matches(source.generated_artifact, artifact_name):
+                projections.append(
+                    {
+                        "node": node_name,
+                        "target_address": target_address,
+                        "delivery_mode": GeneratedArtifactDeliveryMode.ENV_FILE.value,
+                        "output": source.output,
+                        "environment_file": env_file.name,
+                    }
+                )
+    return projections
+
 
 def _stateful_dependency_address(
     scenario: InstantiatedScenario,
     reference: str,
 ) -> str:
-    if reference.startswith("generated_artifacts."):
-        name = reference.removeprefix("generated_artifacts.")
+    if reference.startswith(_GENERATED_ARTIFACTS_PREFIX):
+        name = reference.removeprefix(_GENERATED_ARTIFACTS_PREFIX)
         if name in scenario.generated_artifacts:
             return _generated_artifact_address(name)
     if reference.startswith("persistent_volumes."):
@@ -59,10 +116,14 @@ def _compile_generated_artifacts(
     resources: dict[str, GeneratedArtifactRuntime] = {}
     for name, artifact in scenario.generated_artifacts.items():
         address = _generated_artifact_address(name)
+        spec = _stateful_spec(scenario, artifact)
+        for consumer in spec["consumers"]:
+            consumer["delivery_mode"] = GeneratedArtifactDeliveryMode.MOUNT.value
+        spec["environment_consumers"] = _environment_consumer_projections(scenario, name)
         resources[address] = GeneratedArtifactRuntime(
             address=address,
             name=name,
-            spec=_stateful_spec(scenario, artifact),
+            spec=spec,
             ordering_dependencies=tuple(
                 _stateful_dependency_address(scenario, ref) for ref in artifact.ordering_dependencies
             ),

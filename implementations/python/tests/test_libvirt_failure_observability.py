@@ -9,11 +9,13 @@ empty result), and bounded failure classification is recorded on the
 from __future__ import annotations
 
 import logging
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
 
 import pytest
-from raes_backend_libvirt import _initramfs
+from raes_backend_libvirt import _initramfs, _observability
 from raes_backend_libvirt._observability import record_suppressed_failure
+from raes_backend_libvirt._techvault_native_ops import _ensure_name_available
 from raes_backend_libvirt.driver import DomainSpec, NetworkSpec
 from raes_backend_libvirt.drivers.libvirt import _native
 from raes_backend_libvirt.drivers.libvirt import deployment as _deployment
@@ -49,6 +51,17 @@ class _NativeError(RuntimeError):
         return self._level
 
 
+class _ForeignCodeError(RuntimeError):
+    """A non-libvirt exception that happens to expose a libvirt-like method."""
+
+    def __init__(self, code: int) -> None:
+        super().__init__(_SENSITIVE_DETAIL)
+        self._code = code
+
+    def get_error_code(self) -> int:
+        return self._code
+
+
 def _raiser(*_args: object, **_kwargs: object) -> object:
     raise RuntimeError("forced native failure")
 
@@ -68,7 +81,10 @@ def _assert_recorded(caplog: pytest.LogCaptureFixture, operation: str) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _capture_debug(caplog: pytest.LogCaptureFixture):
+def _capture_debug(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch):
+    libvirt = ModuleType("libvirt")
+    libvirt.libvirtError = _NativeError
+    monkeypatch.setitem(sys.modules, "libvirt", libvirt)
     caplog.set_level(logging.DEBUG, logger=_OBSERVABILITY_LOGGER)
     return caplog
 
@@ -82,8 +98,41 @@ def test_failure_record_is_bounded_and_uses_only_safe_classification(caplog: pyt
     assert len(message) < 256
 
 
+def test_failure_record_bounds_every_caller_supplied_field(caplog: pytest.LogCaptureFixture) -> None:
+    huge_integer = 10**1000
+
+    record_suppressed_failure(
+        "unsafe/" + ("operation" * 100), OSError(huge_integer, _SENSITIVE_DETAIL), native_code=huge_integer
+    )
+
+    message = caplog.records[-1].getMessage()
+    assert len(message) < 256
+    assert _SENSITIVE_DETAIL not in message
+    assert str(huge_integer) not in message
+
+
+def test_failure_record_does_not_interfere_when_errno_access_raises(caplog: pytest.LogCaptureFixture) -> None:
+    class _HostileOSError(OSError):
+        @property
+        def errno(self) -> int:
+            raise RuntimeError(_SENSITIVE_DETAIL)
+
+    record_suppressed_failure("safe_operation", _HostileOSError())
+
+    _assert_recorded(caplog, "safe_operation")
+
+
+def test_failure_record_does_not_interfere_when_logger_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(_observability.LOGGER, "debug", _raiser)
+
+    record_suppressed_failure("safe_operation", RuntimeError(_SENSITIVE_DETAIL))
+
+
 def test_error_code_records_a_raising_classifier(caplog: pytest.LogCaptureFixture) -> None:
-    class _WeirdError(Exception):
+    class _WeirdError(_NativeError):
+        def __init__(self) -> None:
+            super().__init__(1)
+
         def get_error_code(self) -> int:
             raise RuntimeError("classifier exploded")
 
@@ -114,13 +163,121 @@ def test_lookup_keeps_expected_native_absence_silent(caplog: pytest.LogCaptureFi
     assert not [record for record in caplog.records if _SUPPRESSED in record.getMessage()]
 
 
+def test_lookup_keeps_expected_nwfilter_absence_silent(caplog: pytest.LogCaptureFixture) -> None:
+    def absent(_name: str) -> object:
+        raise _NativeError(62)
+
+    assert _native._lookup(SimpleNamespace(nwfilterLookupByName=absent), "nwfilterLookupByName", "missing") is None
+    assert not [record for record in caplog.records if _SUPPRESSED in record.getMessage()]
+
+
 def test_lookup_records_non_absence_failure(caplog: pytest.LogCaptureFixture) -> None:
     assert _native._lookup(SimpleNamespace(lookupByName=_raiser), "lookupByName", "missing") is None
     _assert_recorded(caplog, "_lookup")
 
 
+def test_lookup_does_not_misclassify_a_foreign_code_bearing_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def foreign_absence(_name: str) -> object:
+        raise _ForeignCodeError(42)
+
+    assert _native._lookup(SimpleNamespace(lookupByName=foreign_absence), "lookupByName", "missing") is None
+    _assert_recorded(caplog, "_lookup")
+
+
+def test_lookup_does_not_accept_another_native_resource_type_absence(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def network_absence_during_domain_lookup(_name: str) -> object:
+        raise _NativeError(43)
+
+    assert (
+        _native._lookup(
+            SimpleNamespace(lookupByName=network_absence_during_domain_lookup),
+            "lookupByName",
+            "missing",
+        )
+        is None
+    )
+    _assert_recorded(caplog, "_lookup")
+
+
+def test_find_native_does_not_misclassify_a_foreign_code_bearing_exception() -> None:
+    def foreign_absence(_name: str) -> object:
+        raise _ForeignCodeError(42)
+
+    connection = SimpleNamespace(lookupByName=foreign_absence)
+
+    with pytest.raises(_native._NativeLookupError):
+        _native._find_native(connection, "lookupByName", "missing")
+
+
+def test_find_native_rejects_another_native_resource_type_absence() -> None:
+    def network_absence_during_domain_lookup(_name: str) -> object:
+        raise _NativeError(43)
+
+    connection = SimpleNamespace(lookupByName=network_absence_during_domain_lookup)
+
+    with pytest.raises(_native._NativeLookupError):
+        _native._find_native(
+            connection,
+            "lookupByName",
+            "missing",
+        )
+
+
+def test_stop_native_does_not_tolerate_a_foreign_operation_invalid_code() -> None:
+    def foreign_inactive() -> None:
+        raise _ForeignCodeError(55)
+
+    native = SimpleNamespace(destroy=foreign_inactive)
+
+    with pytest.raises(_ForeignCodeError):
+        _native._stop_native(native)
+
+
 def test_resolve_by_name_records_non_absence_failure(caplog: pytest.LogCaptureFixture) -> None:
     assert _resolve_by_name(object(), _raiser, "listAllDomains", "provision.node.web", "web") is None
+    _assert_recorded(caplog, "_resolve_by_name")
+
+
+def test_resolve_by_name_does_not_verify_absence_for_a_foreign_code_bearing_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    list_calls: list[str] = []
+
+    def foreign_absence(_name: str) -> object:
+        raise _ForeignCodeError(42)
+
+    connection = SimpleNamespace(listAllDomains=lambda: list_calls.append("listed") or [])
+
+    assert _resolve_by_name(connection, foreign_absence, "listAllDomains", "provision.node.web", "web") is None
+    assert list_calls == []
+    _assert_recorded(caplog, "_resolve_by_name")
+
+
+def test_resolve_by_name_does_not_verify_another_native_resource_type_absence(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    list_calls: list[str] = []
+
+    def domain_absence_during_network_lookup(_name: str) -> object:
+        raise _NativeError(42)
+
+    connection = SimpleNamespace(listAllNetworks=lambda: list_calls.append("listed") or [])
+
+    assert (
+        _resolve_by_name(
+            connection,
+            domain_absence_during_network_lookup,
+            "listAllNetworks",
+            "provision.network.lan",
+            "lan",
+        )
+        is None
+    )
+    assert list_calls == []
     _assert_recorded(caplog, "_resolve_by_name")
 
 
@@ -135,6 +292,56 @@ def test_native_action_keeps_tolerated_failure_silent(caplog: pytest.LogCaptureF
 
     assert _invoke_native_action(SimpleNamespace(destroy=absent), "destroy", {42, 43})
     assert not [record for record in caplog.records if _SUPPRESSED in record.getMessage()]
+
+
+def test_native_action_does_not_tolerate_a_foreign_code_bearing_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def foreign_absence() -> None:
+        raise _ForeignCodeError(42)
+
+    assert not _invoke_native_action(SimpleNamespace(destroy=foreign_absence), "destroy", {42, 43})
+    _assert_recorded(caplog, "_invoke_native_action")
+
+
+def test_native_action_does_not_tolerate_an_unlisted_native_absence_code(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def network_absence() -> None:
+        raise _NativeError(43)
+
+    assert not _invoke_native_action(SimpleNamespace(destroy=network_absence), "destroy", {42})
+    _assert_recorded(caplog, "_invoke_native_action")
+
+
+def test_name_availability_does_not_treat_a_foreign_code_bearing_exception_as_absence() -> None:
+    def foreign_absence(_name: str) -> object:
+        raise _ForeignCodeError(42)
+
+    connection = SimpleNamespace(lookupByName=foreign_absence)
+
+    with pytest.raises(_ForeignCodeError):
+        _ensure_name_available(
+            connection,
+            "lookupByName",
+            "raestest-web",
+            "provision.node.web",
+        )
+
+
+def test_name_availability_rejects_another_native_resource_type_absence() -> None:
+    def domain_absence_during_network_lookup(_name: str) -> object:
+        raise _NativeError(42)
+
+    connection = SimpleNamespace(networkLookupByName=domain_absence_during_network_lookup)
+
+    with pytest.raises(_NativeError):
+        _ensure_name_available(
+            connection,
+            "networkLookupByName",
+            "raestest-lan",
+            "provision.network.lan",
+        )
 
 
 def _deployment_driver(**kwargs: object) -> LibvirtDeploymentDriver:
@@ -193,7 +400,7 @@ def test_deployment_nwfilter_cleanup_records_a_non_absence_failure(
     native = SimpleNamespace(undefine=_raiser)
     driver = _deployment_driver(connection=object())
     driver._filters["provision.node.web"] = "raestest-web-acl"
-    monkeypatch.setattr(_deployment, "_lookup", lambda *_args: native)
+    monkeypatch.setattr(_deployment, "_find_native", lambda *_args: native)
     monkeypatch.setattr(_deployment, "_existing_uuid", lambda _native: "owned")
     monkeypatch.setattr(_deployment, "_filter_owner_uuid", lambda _address: "owned")
 

@@ -7,7 +7,7 @@ from raes_contracts.controlled_vocabularies import (
     validate_controlled_vocabulary_value,
 )
 from raes_contracts.operating_systems import OS_VERSION_RE, validate_operating_system_pair
-from raes_contracts.vocabulary import GeneratedArtifactKind
+from raes_contracts.vocabulary import GeneratedArtifactDeliveryMode, GeneratedArtifactKind
 
 PROVISIONER_DOMAIN_PROFILE_SCOPE = "capabilities.provisioner.supported_domain_profiles"
 PROVISIONER_SERVICE_MATERIALIZATION_PROFILE_SCOPE = (
@@ -79,6 +79,27 @@ def _validated_artifact_kinds(capabilities: "ProvisionerCapabilities") -> frozen
     return normalized
 
 
+def _validated_artifact_delivery_modes(
+    capabilities: "ProvisionerCapabilities",
+) -> frozenset[GeneratedArtifactDeliveryMode]:
+    try:
+        normalized = frozenset(
+            GeneratedArtifactDeliveryMode(mode) for mode in capabilities.supported_generated_artifact_delivery_modes
+        )
+    except ValueError as exc:
+        raise ValueError("ProvisionerCapabilities contains an unknown generated artifact delivery mode") from exc
+    if not capabilities.supports_generated_artifacts and normalized:
+        raise ValueError(
+            "ProvisionerCapabilities supported_generated_artifact_delivery_modes require "
+            "supports_generated_artifacts=True"
+        )
+    # Capability manifests that predate delivery modes described mount-only
+    # support. Preserve that meaning without claiming value injection.
+    if capabilities.supports_generated_artifacts and not normalized:
+        normalized = frozenset({GeneratedArtifactDeliveryMode.MOUNT})
+    return normalized
+
+
 def _validate_account_support(capabilities: "ProvisionerCapabilities") -> None:
     if capabilities.supports_accounts and not capabilities.supported_account_features:
         raise ValueError("ProvisionerCapabilities that support accounts must declare supported_account_features")
@@ -102,6 +123,7 @@ class ProvisionerCapabilities:
     supports_accounts: bool = False
     supports_generated_artifacts: bool = False
     supported_generated_artifact_kinds: frozenset[GeneratedArtifactKind] = frozenset()
+    supported_generated_artifact_delivery_modes: frozenset[GeneratedArtifactDeliveryMode] = frozenset()
     supports_persistent_volumes: bool = False
     constraints: dict[str, str] = field(default_factory=dict)
 
@@ -151,6 +173,11 @@ class ProvisionerCapabilities:
             raise ValueError("ProvisionerCapabilities.max_total_nodes must be positive when provided")
         _validate_account_support(self)
         object.__setattr__(self, "supported_generated_artifact_kinds", _validated_artifact_kinds(self))
+        object.__setattr__(
+            self,
+            "supported_generated_artifact_delivery_modes",
+            _validated_artifact_delivery_modes(self),
+        )
 
     def supports_operating_system(
         self,

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "8136627d5cddf9220703786b90b90ad748cc8e484a2bace65e0eebf2d40050d3",
+  "content_hash": "2a6f907c65d3b40051f3a38604607f0d57d0b6f277ea38c167eae6c2c7b750ac",
   "last_change": {
-    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
-    "content_hash": "8136627d5cddf9220703786b90b90ad748cc8e484a2bace65e0eebf2d40050d3"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "2a6f907c65d3b40051f3a38604607f0d57d0b6f277ea38c167eae6c2c7b750ac"
   }
 }

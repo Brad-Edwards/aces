@@ -831,7 +831,43 @@ posture — `default`, `unconfined`, a named profile, or a profile path) and
 such as `seccomp:unconfined` or `no-new-privileges`); a seccomp posture is a
 distinct security control from `privileged`, so it is recorded separately (see
 [ADR-028](../../decisions/adrs/adr-028-container-seccomp-security-options-surface.md));
-`packages` records package-manager rows; `software_components` records
+`packages` records package-manager rows. A package without `repository` is
+obtained from the target's ordinary configured sources. The optional
+`repository` child declares required final repository state through a closed,
+versioned profile. Profile `apt` version `1` is the initial portable form:
+
+```yaml
+packages:
+  - manager: apt
+    name: wazuh-agent
+    version: 4.12.0-1
+    repository:
+      repository_profile: apt
+      profile_version: "1"
+      uri: https://packages.wazuh.com/4.x/apt/
+      suite: stable
+      components: [main]
+      signing_key:
+        uri: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+        format: openpgp-ascii-armored
+        digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+```
+
+Repository and signing-key URIs are credential-free HTTPS locations. The key
+digest pins the exact public OpenPGP bytes, and `format` states whether those
+bytes are `openpgp-ascii-armored` or `openpgp-binary`; a backend must not infer
+the format from content. `suite` and the non-empty, duplicate-free
+`components` collection are structured APT values, not fragments of a `deb`
+line. The package manager must be exactly `apt`, matching the profile. Backend
+implementations own dedicated keyring/source-list paths and safe fetching,
+digest verification, rendering, locking, installation, and independent
+readback. The SDL cannot supply a `signed-by` path, an options map, a command,
+credentials, or private key material. `source` remains an opaque provenance
+label and `purl` remains package identity metadata; neither is parsed as a
+repository or executable value. Future package managers use their own closed
+profile and version rather than adding manager-specific options to this one.
+
+`software_components` records
 node-local software identity at component granularity with stable RAES ids,
 component type, version, purl/CPE/hash identifiers, package or manifest
 lineage, and runtime paths when required; and `dependency_manifests` records

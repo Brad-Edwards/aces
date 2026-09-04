@@ -1,0 +1,20 @@
+name: unpinned-third-party-repository-key
+nodes:
+  manager:
+    type: compute
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    runtime:
+      packages:
+        - manager: apt
+          name: wazuh-agent
+          version: 4.12.0-1
+          repository:
+            repository_profile: apt
+            profile_version: "1"
+            uri: https://packages.wazuh.com/4.x/apt/
+            suite: stable
+            components: [main]
+            signing_key:
+              uri: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+              format: openpgp-ascii-armored

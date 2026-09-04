@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "d8e5b7097a9d0c81b9154e1e6e54908a03e55664e7cbb6ad23d1160753c9493f",
+  "content_hash": "ad443145c32851ee2dadba948a552c8bf99f2dfc6a72545aea4b2b7577a972f9",
   "last_change": {
-    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
-    "content_hash": "d8e5b7097a9d0c81b9154e1e6e54908a03e55664e7cbb6ad23d1160753c9493f"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "ad443145c32851ee2dadba948a552c8bf99f2dfc6a72545aea4b2b7577a972f9"
   }
 }

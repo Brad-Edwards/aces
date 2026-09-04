@@ -61,24 +61,6 @@ from tools.nox_support.test_lanes import (
     _run_tests,
 )
 
-# Test facade: the repo-policy test suite drives these helpers through the
-# noxfile module; keep them importable here even though only the sessions
-# below use a subset directly.
-from tools.nox_support.config import (  # noqa: F401
-    EXPECT_FREE_THREADED_ENV,
-    EXPECTED_PYTHON_ENV,
-    PROJECT_ROOT,
-)
-from tools.nox_support.graph import (  # noqa: F401
-    _verification_lane_workers,
-    _verification_lanes,
-)
-from tools.nox_support.test_lanes import _finalize_parallel_coverage  # noqa: F401
-from tools.nox_support.runner import (  # noqa: F401
-    _enforce_line_coverage,
-    _parse_hygiene_posargs,
-    _split_policy_session_args,
-)
 from tools.verification_plan import (
     select_changed_python_tests,
 )

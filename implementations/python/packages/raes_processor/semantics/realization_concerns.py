@@ -26,6 +26,14 @@ from .realization_concern_projections import (
     project_service_listeners,
     sanitize_mount_observation,
 )
+from .realization_runtime_concern_profiles import (
+    RUNTIME_CONCERN_PROFILES,
+    RUNTIME_NON_REALIZATION_FIELDS,
+    RuntimeFieldBoundary,
+    runtime_configuration_boundary_inventory,
+    runtime_path_annotation,
+)
+from .realization_typed_runtime_projection import typed_runtime_projector
 
 
 @dataclass(frozen=True)
@@ -42,6 +50,7 @@ class RealizationConcernDescriptor:
     verification_scope: Callable[[object], RealizationVerificationScope | None] | None = None
     observation_strength: ObservationStrength | None = None
     non_stateful_mounts_only: bool = False
+    explicitness_excluded_fields: frozenset[str] = RUNTIME_NON_REALIZATION_FIELDS
 
     @property
     def authored_suffix(self) -> str:
@@ -163,6 +172,8 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("spec", "node", "runtime", "environment"),
         projector=project_environment,
         observed_validator=validate_environment_observation,
+        verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
     ),
     RealizationConcernDescriptor(
         section="nodes",
@@ -172,6 +183,8 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         projector=project_mounts,
         sanitizer=sanitize_mount_observation,
         observed_validator=validate_mounts_observation,
+        verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
         non_stateful_mounts_only=True,
     ),
     RealizationConcernDescriptor(
@@ -181,6 +194,8 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("spec", "node", "runtime", "linux_capabilities"),
         projector=project_capability_policy,
         observed_validator=validate_capability_policy_observation,
+        verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
     ),
     RealizationConcernDescriptor(
         section="nodes",
@@ -206,6 +221,8 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("spec", "node", "runtime", "network", "published_ports"),
         projector=project_published_ports,
         observed_validator=validate_published_ports_observation,
+        verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
     ),
     RealizationConcernDescriptor(
         section="nodes",
@@ -215,6 +232,8 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         projector=project_forwarding_agents,
         observed_validator=validate_forwarding_agents_observation,
         verification_scope=_forwarding_agent_verification_scope,
+        observation_strength=ObservationStrength.DAEMON_OBSERVED,
+        explicitness_excluded_fields=RUNTIME_NON_REALIZATION_FIELDS | {"ownership_role"},
     ),
     RealizationConcernDescriptor(
         section="nodes",
@@ -223,6 +242,26 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
         payload_path=("spec", "node", "runtime", "service_listeners"),
         projector=project_service_listeners,
         observed_validator=validate_service_listeners_observation,
+        verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    ),
+    *(
+        RealizationConcernDescriptor(
+            section="nodes",
+            authored_path=("runtime", *profile.authored_path),
+            concern_kind=profile.concern_kind,
+            payload_path=profile.payload_path,
+            projector=typed_runtime_projector(
+                runtime_path_annotation(profile.authored_path),
+                concern_kind=profile.concern_kind,
+                excluded_fields=profile.excluded_fields,
+                sort_scalar_sequence=profile.sort_scalar_sequence,
+            ),
+            verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
+            observation_strength=ObservationStrength.GUEST_OBSERVED,
+            explicitness_excluded_fields=RUNTIME_NON_REALIZATION_FIELDS | profile.excluded_fields,
+        )
+        for profile in RUNTIME_CONCERN_PROFILES
     ),
 )
 
@@ -344,6 +383,7 @@ __all__ = [
     "CONCERN_PAYLOAD_PATH",
     "RealizationConcernDescriptor",
     "RegisteredRealizationConcern",
+    "RuntimeFieldBoundary",
     "project_realization_concern",
     "processor_derived_provisioning_concern_kinds",
     "realization_concern_descriptor",
@@ -351,4 +391,5 @@ __all__ = [
     "registered_realization_concern_descriptors",
     "registered_realization_concerns",
     "resolve_realization_concern",
+    "runtime_configuration_boundary_inventory",
 ]

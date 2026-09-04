@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d",
+  "content_hash": "d08e616869e52a2e533b49344827b161eb8d9d908f9c8c5ad61081f203bc4fe2",
   "last_change": {
-    "summary": "Added explicit participant-interaction commutativity and merge-rule declarations for issue #1101.",
-    "content_hash": "dd0738cc414629d7aea0dbf9e2fdb8044bf6cca80e322da83ab5143c89532d2d"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "d08e616869e52a2e533b49344827b161eb8d9d908f9c8c5ad61081f203bc4fe2"
   }
 }
