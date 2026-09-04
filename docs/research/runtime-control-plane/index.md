@@ -15,10 +15,11 @@ exposed, and it disposes of those surfaces explicitly.
 - [Requirement and surface disposition](requirement-disposition.md)
 - [Implementation program](implementation-program.md)
 - [Machine-readable program](implementation-program.json)
+- [FM3 abstract operation model](../../../specs/formal/runtime-control-plane/README.md)
 
 The requirement authority is `API-404` (ACTIVE). The implementation program
-is owned by the **Runtime Control-Plane** milestone; its work packages are
-filed as issues once this design is accepted.
+is owned by the **Runtime Control-Plane** milestone; every work package is
+filed as a concrete issue and linked from the program.
 
 Issue #1151 does not implement or select a storage engine by code change,
 publish new portable schemas, change runtime execution behavior, or claim a

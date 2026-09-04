@@ -18,7 +18,9 @@ sits between an embedding application and those boundaries: it accepts
 operation submissions against a target, records their lifecycle, holds the
 authoritative runtime snapshot, mediates participant transitions, and emits
 audit evidence. It owns bookkeeping and admission — never backend effect
-semantics, plan compilation, or SDL meaning.
+semantics, plan compilation, or SDL meaning. Direct `RuntimeManager.apply()`
+and direct backend calls bypass this boundary and carry none of the profile's
+durability, idempotency, audit, or recovery guarantees.
 
 ## 2. The contract and its implementations
 
@@ -43,6 +45,15 @@ with the adapter in front; P0 is the in-memory store under the same
 contract; P3 exists only as the lease, revision, and coordination seams the
 lower profiles already exercise.
 
+Every P0--P2 composition is one `RuntimeControlPlane`, one `RuntimeTarget`, and
+one isolated target/run store scope. The target owns backend identity and
+capabilities; the control plane owns operations and live participant state;
+the embedder owns the mapping from scenario/run/caller context to that
+composition. "Many clients" at P2 is not target, run, or service-tenant
+multiplexing. ADR-087 deployment tenants remain authored scenario topology and
+are not API tenants. A durable store pins the target and embedder-supplied run
+scope at creation and refuses a mismatched reopen.
+
 ## 4. State authority
 
 - **Authoritative**: runtime snapshots, operation records, idempotency
@@ -55,7 +66,9 @@ lower profiles already exercise.
   answers admission or receipt queries on its own authority.
 - **Evidentiary**: append-only audit events with provenance. Never
   rewritten; terminal audit events commit in the same transaction as the
-  state they describe.
+  state they describe. They are operational audit under ADR-066, not
+  participant observations, captured evidence, or the ADR-065 archival
+  `experiment-run-v1` record. Append-only is not a tamper-evidence claim.
 - **External**: backend effects. The control plane records intent and
   observed outcome; where neither is observable it records indeterminacy.
   No control-plane read infers an external effect.
@@ -63,17 +76,20 @@ lower profiles already exercise.
 ## 5. Operation lifecycle and control flow
 
 1. **Admission**: the submission is validated against the target and an
-   idempotency claim is taken — a unique insert in the authoritative store.
-   A duplicate claim returns the recorded receipt; it never re-invokes the
-   backend.
+   idempotency claim is taken — a unique insert in the authoritative store,
+   scoped by store, authenticated actor, and operation kind. A duplicate claim
+   returns the recorded receipt only after the same authorization checks; it
+   never re-invokes the backend.
 2. **Write-ahead claim**: the operation record becomes durably `RUNNING`
    before the backend is invoked.
 3. **Invocation**: the backend call executes outside any store transaction;
    the store never holds locks across external effects.
 4. **Terminal commit**: exactly one transaction writes the resulting
    snapshot (revision-checked), the terminal operation record, and the
-   audit event. Participant transitions already follow this shape; the
-   generic path adopts it (CP-2).
+   actor-bound audit event. This discipline covers generic execution, workflow
+   cancellation and timeout reconciliation, rejection records, participant
+   actions, and participant crossings; an operation family may not keep a
+   separate save-snapshot/save-record workflow.
 5. **Receipt**: idempotent reads return the committed terminal state from
    the store or a coherence-ruled cache (CP-7).
 
@@ -96,10 +112,20 @@ Nothing replays automatically. Host loss and network partition reduce to
 process loss at P0–P2 because ownership is single-process; the partition
 cases that require distributed reasoning are exactly the P3 nonclaim.
 
+Request cancellation does not cancel a worker thread or prove that a backend
+effect stopped. A client-side timeout or broken connection leaves the durable
+operation authoritative; the caller retries with the same scoped idempotency
+key. Restoring a backup can make control-plane state older than external
+effects, so readiness stays closed until the same recovery classification
+completes. An indeterminate terminal record is immutable; deliberate operator
+resolution creates a linked operation and audit event rather than rewriting
+history.
+
 ## 7. Concurrency control
 
-- **In-process**: existing lock discipline serializes mutation within the
-  owner.
+- **In-process**: one control-plane mutation authority serializes every
+  mutation path within the owner. Path-local locks and the HTTP adapter lock
+  are subordinate safeguards, not separate consistency domains.
 - **Cross-process**: the store lease (CP-5) admits exactly one owner; a
   second process fails closed at admission rather than corrupting state.
 - **Optimistic safety net**: snapshot commits carry a revision and commit
@@ -110,12 +136,15 @@ cases that require distributed reasoning are exactly the P3 nonclaim.
 
 ## 8. Persistence and coordination seams
 
-The store contract owns transactions, unique claims, revisions, and the
-lease. Providers must verify granted admission results (journal mode, sync
-level) rather than trusting requests — the WAL admission finding from issue
-#1092, generalized. The clock, audit sink, lease provider, and a future
-coordination provider are separate seams so `RuntimeControlPlane` never
-encodes a deployment topology. A provider that cannot supply a required
+The profile composition requires transactions, unique claims, revisions, a
+lease, audit, and recovery observation through explicit provider capabilities.
+Providers must verify granted admission results (journal mode, sync level)
+rather than trusting requests — the WAL admission finding from issue #1092,
+generalized. The clock, audit sink, lease provider, and a future coordination
+provider are separate seams so `RuntimeControlPlane` never encodes a deployment
+topology. Backend effect observation extends the existing
+`RuntimeTarget`/backend protocol and manifest pattern; a persistence provider
+never calls backend-native APIs. A provider that cannot supply a required
 capability fails construction; profiles never degrade silently.
 
 ## 9. Security boundaries
@@ -125,7 +154,31 @@ boundary: P0/P1 inherit the embedding process's identity and the store's
 filesystem protections (owned directories, tightened modes, identity-pinned
 databases per the PR #1136 hardening); P2 adds the HTTP adapter's
 authentication and target binding (#1090, #1133) in front of the same core.
-Audit events carry actor provenance in every profile.
+P2 retains strict defaults, bounded pre-parser request admission, bearer or
+explicitly trusted proxy identity, role checks, and participant subject/audience
+bindings. The proxy must strip caller-supplied identity headers, and the store
+must not treat operation ids or idempotency keys as authorization.
+
+P0/P1 trust their embedding process to authenticate callers, but the embedder
+still supplies a typed actor context for each mutation. P2 derives that same
+context from authenticated identity before calling the core; transport routes
+must not call identity-less mutation methods or append successful audit after
+the core returns. Admission persists immutable actor, authorization, target/run,
+operation-kind, and request-commitment context. Retry, receipt, status,
+reconciliation, and resolution paths authorize against that context, and the
+terminal audit becomes visible in the same transaction as terminal state.
+Admission denials with no operation use the bounded rejection-audit path.
+
+Bearer tokens, storage credentials, host paths, raw request bodies, backend
+exception text, and encryption material are operator data. They never enter
+snapshots, operation records, audit details, diagnostics, logs, migrations,
+fixtures, or health output, and never travel in process argv. Scenario
+credential egress continues through the existing account-credential
+sanitizers. Stable redacted HTTP 422/500 envelopes remain authoritative;
+provider failures map to coarse response or `Diagnostic` codes rather than
+exposing exception strings. P2 is one application worker unless and until P3
+exists. TLS termination, proxy trust, service-account privileges, and process
+supervision remain deployment responsibilities.
 
 ## 10. Lifecycle, configuration, and operations
 
@@ -133,6 +186,13 @@ The embedder owns process lifecycle, configuration, upgrade sequencing, and
 backup scheduling; the control plane owns schema versioning, one-time
 migration from superseded stores (with durable, fsynced backups), integrity
 verification at startup, and refusing to open state it cannot verify.
+Configuration enters as explicit typed composition input; the core does not
+parse environment variables or secrets, and the current repository has no
+serve command. Startup acquires the owner lease before schema inspection,
+migration, cache loading, or reconciliation, and becomes ready only after all
+four succeed. Shutdown stops admission, drains mutation, commits or records
+indeterminacy, closes the provider, then releases the lease. Scenario time is
+not the operational clock used for leases, deadlines, audit, or recovery.
 Operational health and the indeterminate-operation runbook are CP-12.
 
 ## 11. What this composition does not do
@@ -141,4 +201,7 @@ It does not make two application workers coherent over a shared database
 (P3 nonclaim), does not give P0 any durability, does not let the HTTP
 adapter scale writes beyond its single owner, and does not decide a
 specific storage engine here — CP-6 lands the P1 reference store under the
-contract, and any conforming provider may replace it.
+contract, and any conforming provider may replace it. It also does not provide
+multitenancy, cross-target or cross-run stores, exactly-once backend effects,
+automatic replay, a durable broker, a TLS endpoint, a secret resolver, or a
+replacement for archival run provenance and evidence contracts.

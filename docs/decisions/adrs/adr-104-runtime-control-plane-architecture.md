@@ -10,19 +10,24 @@ accepted
 
 ## Classification
 
-Classification: FM0
+Classification: FM3
 
 Required artifacts: an evidence-backed current-state assessment, a profiled
 composition architecture with explicit state authority and failure semantics,
 a requirement and surface disposition, a dependency-ordered implementation
-program, and a structural test pinning the design set.
+program, an explicit abstract operation-state model with safety and security
+invariants, and a structural test pinning the design set. The state model is
+[`specs/formal/runtime-control-plane/README.md`](../../../specs/formal/runtime-control-plane/README.md).
 
 Waivers: issue #1151 is design authority. It does not implement or select a
 storage engine by code change, publish new portable schemas, change runtime
 execution behavior, claim a distributed or highly available topology, or
 report any coordination, consistency, or recovery result as demonstrated;
 every profile guarantee named here becomes binding only when its
-implementation issue lands with tests.
+implementation issue lands with tests. No TLA+, Alloy, theorem-proved
+linearizability, exactly-once external-effect proof, distributed refinement,
+or universal recovery proof is claimed; those are disproportionate while P3
+and all executable contract changes remain outside this design-only issue.
 
 ## Context
 
@@ -66,14 +71,17 @@ model or a mandatory service.
 
 - **P0 ephemeral**: in-memory store, one process, no durability claims.
   Intended for tests and single-scenario embedding. Loss of the process is
-  loss of the run.
+  loss of the run. One control plane owns one target and one run-scoped store.
 - **P1 local durable**: one owning process admitted by a store lease;
   crash-consistent authoritative state through a transactional local store;
   startup reconciliation of interrupted operations. Intended for local
-  tools, embedded consumers, and air-gapped single-host use.
+  tools, embedded consumers, and air-gapped single-host use. The durable store
+  pins one immutable target/run scope and refuses a mismatched reopen.
 - **P2 served**: the reference HTTP adapter fronting a P1 core; many
   clients, exactly one owning service process; mutations serialized by the
-  owner; reads carry the snapshot revision they observed.
+  owner; reads carry the snapshot revision they observed. Many clients do not
+  imply target, run, or tenant multiplexing: P2 retains P1's one-target,
+  one-run store scope.
 - **P3 coordinated**: multi-process or multi-host ownership. Explicitly a
   nonclaim of this decision: the extension seams (lease provider, revision
   compare-and-swap, coordination provider) are contracted now, and no P3
@@ -88,18 +96,25 @@ indexes, receipt caches — must be rebuildable from authoritative state and
 must never answer a request in a way that contradicts it; any cache kept
 across a mutation boundary carries an explicit coherence rule. Audit events
 are append-only evidence with provenance and are never rewritten in place.
-External backend effects are not control-plane state: the control plane
-records intent and observed outcome, and where neither is available it
-records indeterminacy rather than inferring success or absence.
+Each accepted operation binds its immutable actor, target/run scope, operation
+kind, and request commitment; these fields are authoritative and cannot be
+replaced by transport metadata on a later read or retry. External backend
+effects are not control-plane state: the control plane records intent and
+observed outcome, and where neither is available it records indeterminacy
+rather than inferring success or absence.
 
 ### 4. Operations are durable work with atomic terminal commits
 
 An operation's lifecycle is recorded before its effects: the claim that an
 operation is running is durable before the backend is invoked, and the
 terminal transition commits the resulting snapshot, the terminal operation
-record, and the audit event in one store transaction, extending the pattern
-participant transitions already use to every operation. After process loss,
-startup reconciliation classifies each non-terminal operation as
+record, and an actor-bound audit event in one store transaction, extending the
+pattern participant transitions already use to every operation. This applies
+to every mutation family, including workflow cancellation and timeout
+reconciliation, rejected and pre-computed operation records, participant
+actions, and participant crossings; none may retain an independent persistence
+workflow. After process loss, startup reconciliation classifies each
+non-terminal operation as
 effect-absent (safe to fail closed), effect-applied (state is advanced from
 observation), or indeterminate — an explicit terminal outcome with a stable
 diagnostic that requires operator or embedder action. Interrupted work is
@@ -111,11 +126,13 @@ retries from blindly re-invoking the backend.
 Exactly one writer owns a store at a time in P1 and P2, admitted through a
 store lease. Snapshot commits carry a revision and commit by
 compare-and-swap, so a stale writer fails closed instead of overwriting.
-Idempotency keys are unique claims in the authoritative store, not cache
-entries. Within a process, one operation lock serializes every mutation
-path — today the generic execution path is unlocked and the participant and
-manager paths hold two unordered locks; across processes, admission is the
-lease, not advisory locking.
+Idempotency keys are unique claims scoped by store, immutable actor, and
+operation kind in the authoritative store, not cache entries. Within a
+process, one mutation authority serializes every control-plane mutation path;
+path-local participant locks and the HTTP adapter lock remain subordinate.
+`RuntimeManager` is a separate direct-execution facade and does not coordinate
+with a control plane aimed at the same backend. Across processes, admission is
+the lease, not advisory locking.
 
 ### 6. Boundaries against the rest of RAES
 
@@ -129,7 +146,33 @@ coordination providers implement the store, lease, and clock contracts; the
 control plane owns operation bookkeeping, receipts, snapshots, transitions,
 and audit.
 
-### 7. Disposition of the incumbent surfaces
+### 7. Identity, authorization, and isolation
+
+P0 and P1 trust the embedding process to authenticate its caller, but the
+embedder must still supply a typed actor/principal context for every mutation.
+P2 derives that same context only from the authenticated HTTP identity and
+passes it into the core; caller-supplied identity headers, operation ids,
+idempotency keys, and persisted receipts are never authority. Authorization
+binds the actor's role and subject scope to the selected target and any
+participant or operation reference before core mutation or receipt disclosure.
+
+The accepted operation persists the resulting actor and authorization scope.
+All later status, retry, reconciliation, resolution, and audit paths use that
+immutable context. A duplicate idempotency claim can return a receipt only to
+the same authorized actor and scope. A successful or failed terminal mutation
+commits its actor-bound audit record atomically with its terminal record and
+snapshot revision. Admission denials that create no operation are recorded by
+the existing bounded rejection-audit path and never include tokens, request
+bodies, paths, backend exceptions, or other secret-bearing values.
+
+For P0--P2, a store is an isolation boundary for exactly one target and one
+embedder-supplied run. One store must not mix targets, runs, or service tenants,
+and authored `deployment_tenants` are scenario topology rather than API
+tenants. Multitenancy, cross-target stores, cross-run scheduling, and shared
+authorization namespaces are P3 nonclaims requiring a future ADR and explicit
+coordination, fencing, cache-coherence, and tenant-isolation contracts.
+
+### 8. Disposition of the incumbent surfaces
 
 `RuntimeControlPlane`, the store protocol, the in-memory store, and the
 reference HTTP adapter are retained and brought under this contract. The
@@ -189,3 +232,9 @@ demonstrated its lost-update and partial-state failures.
 - The implementation program in the design set orders this work into
   bounded issues in the Runtime Control-Plane milestone; no guarantee named
   here is claimable before its issue lands.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|---|---|---|
+| 2026-09-03 | #1151 | Reclassified the stateful control-plane design as FM3 and added the abstract lifecycle, actor-bound audit, authorization, idempotency, and target/run isolation invariants required before implementation. |

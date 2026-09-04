@@ -18,6 +18,7 @@ REQUIRED_DELIVERABLES = {
     "docs/research/runtime-control-plane/requirement-disposition.md",
     "docs/research/runtime-control-plane/implementation-program.md",
     "docs/research/runtime-control-plane/implementation-program.json",
+    "specs/formal/runtime-control-plane/README.md",
 }
 REQUIRED_PROFILES = {"P0", "P1", "P2", "P3"}
 REQUIRED_WORK_PACKAGES = {
@@ -69,6 +70,11 @@ def test_profiles_declare_claims_and_nonclaims() -> None:
     assert set(profiles) == REQUIRED_PROFILES
     for profile in profiles.values():
         assert profile["nonclaims"], f"{profile['id']} must state explicit nonclaims"
+    for profile_id in ("P0", "P1", "P2"):
+        profile = profiles[profile_id]
+        assert profile["scope"] == "one target and one run per store"
+        assert profile["actor_boundary"]
+        assert "multitenancy" in profile["nonclaims"]
     assert profiles["P3"]["claims"] == [], "P3 is a seam-only nonclaim"
 
 
@@ -76,6 +82,7 @@ def test_work_packages_form_an_acyclic_dependency_program() -> None:
     program = _program()
     packages = {package["id"]: package for package in program["work_packages"]}
     assert set(packages) == REQUIRED_WORK_PACKAGES
+    assert {"CP-7", "CP-8"} <= set(packages["CP-9"]["depends_on"])
     for package in packages.values():
         for dependency in package["depends_on"]:
             assert dependency in packages, f"{package['id']} depends on unknown {dependency}"
@@ -90,6 +97,18 @@ def test_work_packages_form_an_acyclic_dependency_program() -> None:
             del remaining[pid]
 
 
+def test_work_packages_are_concrete_and_traced() -> None:
+    packages = _program()["work_packages"]
+    issue_numbers = [package["issue"] for package in packages]
+    assert all(isinstance(issue, int) and issue > 0 for issue in issue_numbers)
+    assert len(issue_numbers) == len(set(issue_numbers))
+    for package in packages:
+        assert package["acceptance_criteria"]
+        assert package["verification"]
+        assert package["requirement"] == "API-404"
+        assert package["adr"] == "ADR-104"
+
+
 def test_dispositions_cover_the_deferred_surfaces() -> None:
     program = _program()
     assert set(program["dispositions"]) == REQUIRED_DISPOSITIONS
@@ -101,3 +120,22 @@ def test_adr_and_design_docs_reference_each_other() -> None:
     assert "#1151" in adr
     assert "adr-104-runtime-control-plane-architecture.md" in index
     assert "API-404" in index
+
+
+def test_fm3_state_model_pins_safety_and_security_invariants() -> None:
+    adr = (REPO_ROOT / "docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md").read_text(encoding="utf-8")
+    model = (REPO_ROOT / "specs/formal/runtime-control-plane/README.md").read_text(encoding="utf-8")
+    assert "Classification: FM3" in adr
+    assert "specs/formal/runtime-control-plane/README.md" in adr
+    for required_term in (
+        "INDETERMINATE",
+        "actor",
+        "authorization",
+        "idempotency",
+        "compare-and-swap",
+        "Invariant",
+    ):
+        assert required_term in model
+    assert "`REJECTED` is not an `OperationState`" in model
+    for abstract_operation in ("deny", "cancel"):
+        assert f"| `{abstract_operation}` |" in model

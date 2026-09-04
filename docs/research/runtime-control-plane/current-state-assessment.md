@@ -8,6 +8,11 @@ Evidence below cites the `dev` tree at the time of assessment
 (`701858d1`). Line-level behavior was verified by direct reading, not
 inferred from documentation.
 
+The pre-implementation refresh on 2026-09-03 also checked the current `dev`
+tree (`cba73a81`). The original findings still hold. The refresh additionally
+found the codec, workflow, and identity-scope gaps recorded below; these are
+current-repository evidence, not claims imported from the deferred store work.
+
 ## 1. The contract surface today
 
 `raes_runtime/control_plane.py` defines `RuntimeControlPlane`. Its
@@ -18,13 +23,16 @@ map (`self._operations = self._store.load_records()`). Nothing invalidates
 or rebuilds these caches after construction: a second process sharing the
 same store is invisible to the first.
 
-In-process locking is partial and unordered. `_participant_control_lock`
-covers participant actions and control mediation, and the separate
-`RuntimeManager` mixin holds its own `_participant_execution_lock` with no
-ordering discipline between the two; the generic operation path holds no
-lock at all, so concurrent direct library submissions race `_snapshot`,
-`_operations`, and the store writes even before any multi-process question
-arises. The HTTP adapter's mutation lock protects only HTTP callers.
+In-process locking is fragmented by entry path. `_participant_control_lock`
+covers participant actions and control mediation, while `_operation_lock`
+guards only operation-map access and not the generic mutation sequence. The
+generic operation and workflow paths hold no control-plane mutation lock, so
+concurrent direct library submissions race `_snapshot`, `_operations`, and
+store writes even before any multi-process question arises. `RuntimeManager`
+is a separate direct-execution facade with its own participant-execution lock;
+that lock does not coordinate a manager and a control plane aimed at the same
+backend. The HTTP adapter's mutation lock protects only callers entering that
+one application instance.
 
 ## 2. The store protocol
 
@@ -88,6 +96,34 @@ The participant transition path does not share the atomicity defect: it
 commits through the store's transition-commit methods as one guarded unit
 and is the template CP-2 generalizes.
 
+The same independently durable pattern also exists outside the generic path.
+`WorkflowControlMixin.cancel_workflow()` and
+`reconcile_workflow_timeouts()` assign the in-memory snapshot, call
+`save_snapshot`, and only then persist the operation record. Rejected
+submissions and `persist_succeeded_operation()` persist records without a
+transactional audit. The atomicity and lock boundary must therefore cover
+every control-plane mutation, not only `execute_operation()`.
+
+### Codec and validation drift
+
+Live state currently has parallel representations: the
+`raes_contracts.runtime_state.RuntimeSnapshot` dataclass, the published
+`RuntimeSnapshotEnvelopeModel`, the hand-built store codec in
+`control_plane_store.py`, and the hand-built HTTP projection in
+`control_plane_api_models.py`. They already disagree:
+`RuntimeSnapshot.participant_episode_closure_records` exists and participates
+in snapshot updates and SEM-222 validation, but is absent from the published
+envelope, store payload/from-payload functions, and HTTP projection. A P1
+round trip can therefore silently drop that state.
+
+The operation-record decoder similarly uses permissive `.get(...)` defaults
+and `str(...)` coercions instead of validating a closed carrier before domain
+reconstruction. That is unsuitable for authoritative durable state: malformed
+or version-incompatible records can be normalized into plausible records
+instead of failing startup. The P1 codec must reuse the closed contract-model
+validation surface and treat lossy legacy import as an explicit migration
+result, not duplicate schema logic inside SQL rows or repository classes.
+
 ## 4. The reference HTTP adapter
 
 `control_plane_api/` implements the served surface behind one composition
@@ -105,6 +141,27 @@ authentication and target binding come from #1090/#1133
 timeout reconciliation fails closed per #1132
 (`control_plane_timeouts.py`). These surfaces are retained under P2.
 
+`ControlPlaneSecurityConfig` is an explicit in-memory composition object; the
+repository has no control-plane environment parser, serve command, TLS
+terminator, or service-unit definition. `AuditEvent.details` is an unrestricted
+dictionary, while request rejection is the only control-plane path using a
+module logger. Those facts make configuration/secret injection, value-free
+audit fields, deployment exposure, and operational health explicit P2/CP-12
+boundaries rather than incumbent guarantees.
+
+Authentication currently terminates at the route rather than becoming
+authoritative operation context. `_operation_routes.py` obtains a
+`_MutatingIdentity`, but calls `submit_provisioning`, `submit_orchestration`, or
+`submit_evaluation` without it; those core methods and
+`OperationExecutionRequest` have no actor/authorization field. The route then
+appends the successful audit event only after the core returns. Operation
+status reads likewise authorize a role/target at the route and call the
+identity-less `get_operation(operation_id)`, so the persisted receipt cannot
+enforce ownership or prevent an authorized client on the same target from
+discovering another client's operation. CP-1/CP-2/CP-7/CP-8 must propagate and
+persist immutable actor scope, bind receipt/idempotency access to it, and move
+terminal audit into the atomic core commit.
+
 Nothing in the repository runs the adapter: `create_control_plane_app` is a
 factory, `uvicorn` is a declared but unused dependency, and there is no
 serve entrypoint or CLI command. Every consumer today is an embedded ASGI
@@ -113,6 +170,15 @@ issue #1093 preflight states plainly that the in-process lock "does not
 create a distributed queue" and that "a future multi-host service must use
 a durable broker/worker design with explicit leases and recovery" — which
 is exactly the boundary ADR-104 records as profile P2 and the P3 nonclaim.
+
+The persistent state has no first-class target, scenario, run, or service-
+tenant namespace. `RuntimeControlPlane` binds one target in memory, and HTTP
+identities are checked against that target, but `LocalControlPlaneStore` can be
+reopened with a differently named target. Scenario/run selection is owned by
+the embedding application; ADR-087 `deployment_tenants` are authored scenario
+topology and are not control-plane tenants. P0--P2 must therefore remain one
+target/run scope per store and refuse mismatched durable identity rather than
+claim multiplexed isolation.
 
 ## 5. Test surfaces pinning today's behavior
 
@@ -146,7 +212,7 @@ work rather than redesigning it.
 | Gap | Evidence | Owning work package |
 | --- | --- | --- |
 | No explicit lifecycle contract; no indeterminate terminal state | `OperationState` lacks it (`ACCEPTED` exists unused); interrupted work stays `RUNNING` | CP-1 |
-| Generic path unlocked; two unordered lock domains | no lock in `execute_operation`; `_participant_control_lock` vs the manager's `_participant_execution_lock` | CP-2, CP-4 |
+| Mutation paths have no shared authority | no mutation lock in `execute_operation` or workflow control; `_participant_control_lock` is path-local; a separate `RuntimeManager` does not coordinate with a control plane | CP-2, CP-4 |
 | Non-atomic terminal effects on the generic path | `execute_operation` steps 2/4/5 above | CP-2 |
 | No startup reconciliation | records load unchanged at construction | CP-3 |
 | Unconditional snapshot/record writes | `save_snapshot`/`save_record` have no expected revision | CP-4 |
@@ -154,3 +220,9 @@ work rather than redesigning it.
 | Non-transactional durable store | `LocalControlPlaneStore` JSON files | CP-6 |
 | Non-atomic idempotency claims; status and snapshot reads answered from permanent caches | `find_by_idempotency` + later `save_record`; `get_operation` over `self._operations`, `get_snapshot` over `self._snapshot` | CP-7 |
 | Application-local mutation serialization | `_offload.py` `asyncio.Lock` | CP-8 |
+| Workflow/rejection mutation paths bypass the generic terminal-commit shape | `control_plane_workflow_control.py`; `_reject_diagnostics`; `persist_succeeded_operation` | CP-2 |
+| Parallel snapshot/operation codecs can silently coerce or drop state | `RuntimeSnapshot`; `RuntimeSnapshotEnvelopeModel`; `_snapshot_payload`/`_snapshot_from_payload`; `_snapshot_model`; `_record_from_payload` | CP-1, CP-6, CP-9 |
+| Durable store is not pinned to a target/run authority | `LocalControlPlaneStore(base_dir)` carries no target or run identity | CP-5, CP-6 |
+| No control-plane configuration/serve/deployment boundary | app factory exists, but there is no environment loader, serve command, TLS, or service unit | CP-8, CP-10, CP-12 |
+| Audit/log/health planes are not fully specified | free-form `AuditEvent.details`; request rejection is the only logger-backed adapter path | CP-8, CP-12 |
+| HTTP identity is not authoritative operation provenance | mutating routes call identity-less core submission methods, append success audit post hoc, and read status by operation id without original-actor binding | CP-1, CP-2, CP-7, CP-8 |

@@ -6,7 +6,7 @@ type: FUNCTIONAL
 priority: MUST
 wave: 1
 created_at: 2026-04-03T05:55:58.825305Z
-updated_at: 2026-04-05T06:33:22.964497Z
+updated_at: 2026-09-03T03:26:53.000000Z
 ---
 
 # API-404 — Secure, Durable, And Idempotent Control-Plane Semantics
@@ -25,7 +25,20 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 - IMPLEMENTS → GITHUB_ISSUE `1151` (design(runtime): define the runtime control-plane architecture)
 - DOCUMENTS → ADR `docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md` (ADR-104: Runtime Control-Plane Architecture)
 - DOCUMENTS → DOCUMENTATION `docs/research/runtime-control-plane/index.md` (Runtime control-plane architecture design set)
+- DOCUMENTS → SPEC `specs/formal/runtime-control-plane/README.md` (ADR-104 FM3 abstract operation model and invariants)
 - TESTS → TEST `implementations/python/tests/test_issue_1151_runtime_control_plane_design.py` (Structural acceptance gate for the design set)
+- DOCUMENTS → GITHUB_ISSUE `1182` (CP-1: Operation lifecycle contract)
+- DOCUMENTS → GITHUB_ISSUE `1181` (CP-2: Atomic terminal commit)
+- DOCUMENTS → GITHUB_ISSUE `1179` (CP-3: Startup reconciliation)
+- DOCUMENTS → GITHUB_ISSUE `1180` (CP-4: Snapshot revision compare-and-swap)
+- DOCUMENTS → GITHUB_ISSUE `1183` (CP-5: Store lease admission)
+- DOCUMENTS → GITHUB_ISSUE `1092` (CP-6: Transactional local store)
+- DOCUMENTS → GITHUB_ISSUE `1184` (CP-7: Atomic idempotency claims and cache demotion)
+- DOCUMENTS → GITHUB_ISSUE `1188` (CP-8: Served profile alignment)
+- DOCUMENTS → GITHUB_ISSUE `1187` (CP-9: Crash and profile conformance suite)
+- DOCUMENTS → GITHUB_ISSUE `1189` (CP-10: Profile declaration and capability discovery)
+- DOCUMENTS → GITHUB_ISSUE `1185` (CP-11: API-404 requirement update)
+- DOCUMENTS → GITHUB_ISSUE `1186` (CP-12: Recovery runbook and operator tooling)
 - IMPLEMENTS → GITHUB_ISSUE `1090` (Fail-closed bearer-token authentication and target binding)
 - IMPLEMENTS → GITHUB_ISSUE `1091` (Bounded pre-routing HTTP request admission)
 - DOCUMENTS → GITHUB_ISSUE `1093` (In-process HTTP offload and rejection-audit slice)
