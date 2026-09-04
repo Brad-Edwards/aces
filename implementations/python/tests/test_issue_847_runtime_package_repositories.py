@@ -135,8 +135,10 @@ def test_repository_components_are_canonical_set_like_values() -> None:
     ),
 )
 def test_repository_profile_rejects_unsafe_or_ambiguous_input(repository: dict[str, object], message: str) -> None:
+    package = _package(repository=repository)
+
     with pytest.raises(ValidationError, match=message):
-        RuntimePackage.model_validate(_package(repository=repository))
+        RuntimePackage.model_validate(package)
 
 
 @pytest.mark.parametrize(
@@ -169,15 +171,15 @@ def test_default_repository_packages_keep_backward_compatible_opaque_metadata() 
 
 
 def test_runtime_configuration_rejects_duplicate_package_identity() -> None:
+    runtime = {
+        "packages": [
+            _package(version="4.12.0-1"),
+            _package(version="4.13.0-1", repository=_repository(uri="https://packages.example.test/apt")),
+        ]
+    }
+
     with pytest.raises(ValidationError, match="Duplicate runtime package identity 'apt:wazuh-agent:'"):
-        RuntimeConfiguration.model_validate(
-            {
-                "packages": [
-                    _package(version="4.12.0-1"),
-                    _package(version="4.13.0-1", repository=_repository(uri="https://packages.example.test/apt")),
-                ]
-            }
-        )
+        RuntimeConfiguration.model_validate(runtime)
 
 
 def test_runtime_configuration_allows_same_package_name_for_distinct_identity_dimensions() -> None:
