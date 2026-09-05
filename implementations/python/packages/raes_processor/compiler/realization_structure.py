@@ -50,7 +50,7 @@ class _StructureCompiler:
             structure = _scalar_structure(record)
         return structure
 
-    def record(self, value: dict, path: str, pointer: str, depth: int) -> RealizationRecord:
+    def record(self, value: dict[str, object], path: str, pointer: str, depth: int) -> RealizationRecord:
         fields = {}
         parent_open = self.is_open(pointer)
         for key, child in value.items():
@@ -72,7 +72,7 @@ class _StructureCompiler:
             for designation in self.scenario.instantiation_provenance.realization_designations
         )
 
-    def collection(self, source: list, pointer: str, root_open: bool) -> RealizationCollection:
+    def collection(self, source: list[object], pointer: str, root_open: bool) -> RealizationCollection:
         descriptor = self.registered.descriptor
         identity_fields = descriptor.collection_identity_fields
         indices = _authored_member_indices(source, identity_fields)
@@ -107,7 +107,7 @@ def _scalar_structure(record: ExplicitnessRecord | None) -> RealizationStructure
     return ExactRealizationValue(kind="exact")
 
 
-def _authored_member_indices(source: list, identity_fields: tuple[str, ...]) -> dict[tuple, int]:
+def _authored_member_indices(source: list[object], identity_fields: tuple[str, ...]) -> dict[tuple[object, ...], int]:
     indices = {}
     for index, item in enumerate(source):
         raw = item.model_dump(mode="json") if isinstance(item, BaseModel) else item

@@ -78,7 +78,12 @@ def realization_member_identity(value: object, fields: tuple[str, ...]) -> str |
 
 
 def _record_field_matches(
-    key: str, child: RealizationStructure, expected: dict, actual: dict, depth: int, observed: bool
+    key: str,
+    child: RealizationStructure,
+    expected: dict[str, object],
+    actual: dict[str, object],
+    depth: int,
+    observed: bool,
 ) -> bool:
     selected_key = key if observed else key.removesuffix("_present").removesuffix("_commitment")
     return (
@@ -88,7 +93,9 @@ def _record_field_matches(
     )
 
 
-def _unbound_record_fields_match(rule: RealizationRecord, expected: dict, actual: dict) -> bool:
+def _unbound_record_fields_match(
+    rule: RealizationRecord, expected: dict[str, object], actual: dict[str, object]
+) -> bool:
     # Unauthored defaults are a closed-scope baseline, not authored leaves.
     return rule.additional or all(
         key in expected and _equal(expected[key], value) for key, value in actual.items() if key not in rule.fields
