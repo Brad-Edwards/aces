@@ -2343,13 +2343,14 @@ def test_legacy_store_claim_fallback_returns_existing_idempotency_record() -> No
 
 def test_runtime_legacy_store_recovers_interrupted_records_one_at_a_time() -> None:
     store = _LegacyControlPlaneStore()
+    target = create_stub_target()
     first = _running_record("legacy-recovery-first")
     second = _running_record("legacy-recovery-second")
     store.delegate.save_record(first)
     store.delegate.save_record(second)
 
     with pytest.warns(LegacyControlPlaneStoreWarning, match="non-crash-atomic 3.x"):
-        control_plane = RuntimeControlPlane(create_stub_target(), store=store)  # type: ignore[arg-type]
+        control_plane = RuntimeControlPlane(target, store=store)  # type: ignore[arg-type]
 
     assert store.write_calls == ["save_record", "save_record"]
     for operation_id in (first.receipt.operation_id, second.receipt.operation_id):
