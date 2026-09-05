@@ -47,7 +47,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "cddd0301ef5d403be263f582c14d05c366f5a4fc4fe6bd93aefa4feecdeca533"
+      "content_sha256": "98de08e1bdb9a81afa913162c07563d89ec73a3f598d3562ce7b301df7b86de8"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
