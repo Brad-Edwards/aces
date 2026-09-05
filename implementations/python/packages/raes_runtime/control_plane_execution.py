@@ -102,7 +102,7 @@ def _execute_participant_action_locked(
         submitted_at=submitted_at,
         accepted=True,
     )
-    control_plane._persist_record(
+    claimed = control_plane._claim_record(
         ControlPlaneOperationRecord(
             receipt=receipt,
             status=status,
@@ -110,6 +110,8 @@ def _execute_participant_action_locked(
             request_fingerprint=request_fingerprint,
         )
     )
+    if claimed.receipt.operation_id != operation_id:
+        return claimed.receipt
     result = _call_backend_apply(
         method,
         request,
@@ -122,8 +124,6 @@ def _execute_participant_action_locked(
             None,
         ),
     )
-    control_plane._snapshot = result.snapshot
-    control_plane._store.save_snapshot(control_plane._snapshot)
     final_state = OperationState.SUCCEEDED if result.success else OperationState.FAILED
     final_status = OperationStatus(
         operation_id=operation_id,
@@ -134,13 +134,14 @@ def _execute_participant_action_locked(
         diagnostics=[*status.diagnostics, *result.diagnostics],
         changed_addresses=list(result.changed_addresses),
     )
-    control_plane._persist_record(
+    control_plane._commit_terminal_operation(
+        result.snapshot,
         ControlPlaneOperationRecord(
             receipt=receipt,
             status=final_status,
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
-        )
+        ),
     )
     return receipt
 
@@ -164,7 +165,7 @@ def persist_succeeded_operation(
         updated_at=request.submitted_at,
         changed_addresses=list(request.changed_addresses or []),
     )
-    control_plane._persist_record(
+    claimed = control_plane._claim_record(
         ControlPlaneOperationRecord(
             receipt=receipt,
             status=status,
@@ -172,6 +173,8 @@ def persist_succeeded_operation(
             request_fingerprint=request.request_fingerprint,
         )
     )
+    if claimed.receipt.operation_id != request.operation_id:
+        return claimed.receipt
     return receipt
 
 
@@ -201,6 +204,14 @@ def execute_operation(
     control_plane: object,
     request: OperationExecutionRequest,
 ) -> OperationReceipt:
+    with control_plane._operation_lock:
+        return _execute_operation_locked(control_plane, request)
+
+
+def _execute_operation_locked(
+    control_plane: object,
+    request: OperationExecutionRequest,
+) -> OperationReceipt:
     existing = control_plane._idempotent_receipt(
         idempotency_key=request.idempotency_key,
         request_fingerprint=request.request_fingerprint,
@@ -225,7 +236,7 @@ def execute_operation(
         accepted=True,
         diagnostics=list(request.diagnostics),
     )
-    control_plane._persist_record(
+    claimed = control_plane._claim_record(
         ControlPlaneOperationRecord(
             receipt=receipt,
             status=status,
@@ -233,6 +244,8 @@ def execute_operation(
             request_fingerprint=request.request_fingerprint,
         )
     )
+    if claimed.receipt.operation_id != operation_id:
+        return claimed.receipt
     result = _call_backend_apply(
         request.method,
         request.plan,
@@ -254,8 +267,6 @@ def execute_operation(
             None,
         ),
     )
-    control_plane._snapshot = result.snapshot
-    control_plane._store.save_snapshot(control_plane._snapshot)
     final_state = OperationState.SUCCEEDED if result.success else OperationState.FAILED
     final_status = OperationStatus(
         operation_id=operation_id,
@@ -266,12 +277,13 @@ def execute_operation(
         diagnostics=[*status.diagnostics, *result.diagnostics],
         changed_addresses=list(result.changed_addresses),
     )
-    control_plane._persist_record(
+    control_plane._commit_terminal_operation(
+        result.snapshot,
         ControlPlaneOperationRecord(
             receipt=receipt,
             status=final_status,
             idempotency_key=request.idempotency_key,
             request_fingerprint=request.request_fingerprint,
-        )
+        ),
     )
     return receipt

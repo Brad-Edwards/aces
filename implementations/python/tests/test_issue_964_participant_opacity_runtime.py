@@ -643,6 +643,7 @@ def test_restart_requires_the_exact_persisted_opacity_context(tmp_path) -> None:
         store=store,
     )
     admit(first, idempotency_key="opacity-restart")
+    first.close()
 
     restarted_resolver = _OpacityResolver()
     restarted_resolver.subjects = list(first_resolver.subjects)
@@ -654,6 +655,7 @@ def test_restart_requires_the_exact_persisted_opacity_context(tmp_path) -> None:
         enforce_final_sink_flow_control=False,
     )
     assert restarted.snapshot.participant_crossing_history[CROSSING_PARTICIPANT]
+    restarted.close()
 
     stale = _OpacityResolver()
     stale.subjects = list(first_resolver.subjects)

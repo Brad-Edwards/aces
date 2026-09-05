@@ -352,14 +352,12 @@ def commit_prepared_crossing(
 
     if prepared.existing_receipt is not None:
         return prepared.existing_receipt
-    control_plane._store.commit_participant_transition(
+    control_plane._commit_participant_transition(
         expected_history_heads=prepared.expected_history_heads,
         snapshot=prepared.next_snapshot,
         record=prepared.record,
         audit_event=prepared.audit_event,
     )
-    control_plane._snapshot = prepared.next_snapshot
-    control_plane._operations[prepared.record.receipt.operation_id] = prepared.record
     return prepared.record.receipt
 
 

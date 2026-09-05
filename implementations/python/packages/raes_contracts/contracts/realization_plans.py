@@ -370,6 +370,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     proposition_truth_results: dict[str, PropositionTruthResultModel] = Field(default_factory=dict)
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
+    participant_episode_closure_records: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
     participant_control_history: dict[str, list[ParticipantControlOccurrenceModel]] = Field(default_factory=dict)
     participant_crossing_history: dict[str, list[ParticipantCrossingOccurrenceModel]] = Field(default_factory=dict)

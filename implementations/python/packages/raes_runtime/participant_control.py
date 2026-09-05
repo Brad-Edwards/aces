@@ -28,6 +28,7 @@ from raes_contracts.runtime_state import OperationReceipt
 from raes_processor.models import ParticipantBehaviorRuntime
 
 from .control_plane_execution import execute_participant_action
+from .control_plane_lifecycle import runtime_owned
 from .participant_control_diagnostics import (
     _NO_PARTICIPANT_RUNTIME_MESSAGE,
     _participant_binding_address,
@@ -221,6 +222,7 @@ class ParticipantControlMixin(
 ):
     """Participant runtime methods for the shared runtime control plane."""
 
+    @runtime_owned
     def control_participant_execution(
         self,
         request: ParticipantExecutionControlRequestModel,
@@ -255,6 +257,7 @@ class ParticipantControlMixin(
             request_fingerprint=request_fingerprint,
         )
 
+    @runtime_owned
     def participant_execution_state(
         self,
         execution_scope_ref: str,
@@ -267,6 +270,7 @@ class ParticipantControlMixin(
             raise ValueError("participant runtime does not expose execution-service readback")
         return method(execution_scope_ref, self._snapshot)
 
+    @runtime_owned
     def initialize_participant_episode(
         self,
         participant_address: str,
@@ -295,6 +299,7 @@ class ParticipantControlMixin(
             request_fingerprint=request_fingerprint,
         )
 
+    @runtime_owned
     def reset_participant_episode(
         self,
         participant_address: str,
@@ -325,6 +330,7 @@ class ParticipantControlMixin(
             request_fingerprint=request_fingerprint,
         )
 
+    @runtime_owned
     def restart_participant_episode(
         self,
         participant_address: str,
@@ -355,6 +361,7 @@ class ParticipantControlMixin(
             request_fingerprint=request_fingerprint,
         )
 
+    @runtime_owned
     def terminate_participant_episode(
         self,
         participant_address: str,
@@ -385,6 +392,7 @@ class ParticipantControlMixin(
             request_fingerprint=request_fingerprint,
         )
 
+    @runtime_owned
     def admit_participant_action(
         self,
         participant_behavior: ParticipantBehaviorRuntime,
@@ -424,6 +432,7 @@ class ParticipantControlMixin(
         )
         return submit_bound_participant_action(self, participant_behavior, request, options)
 
+    @runtime_owned
     def admit_participant_decision_surface_selection(
         self,
         participant_behavior: ParticipantBehaviorRuntime,

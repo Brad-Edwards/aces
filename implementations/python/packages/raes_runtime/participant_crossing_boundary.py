@@ -19,6 +19,7 @@ from raes_contracts.runtime_state import OperationReceipt, OperationState
 from raes_processor.models import ParticipantBehaviorRuntime
 
 from .control_plane_execution import apply_authorized_participant_action
+from .control_plane_lifecycle import runtime_owned
 from .control_plane_security import ControlPlaneIdentity
 from .participant_control_intents import ParticipantControlIntent, ParticipantControlIntentBase
 from .participant_control_mediation import (
@@ -60,6 +61,7 @@ _CONTROL_INTERACTIONS = {
 class ParticipantCrossingControlIngressMixin:
     """Own one RUN-319 decision and RUN-310 transition under one state cut."""
 
+    @runtime_owned
     def record_participant_control(
         self,
         participant_address: str,
@@ -180,14 +182,12 @@ class ParticipantCrossingControlIngressMixin:
             )
             if sink_decision is not None:
                 audit = apply_flow_sink_details(audit, sink_decision)
-            self._store.commit_participant_transition(
+            self._commit_participant_transition(
                 expected_history_heads=crossing.expected_history_heads,
                 snapshot=next_snapshot,
                 record=record,
                 audit_event=audit,
             )
-            self._snapshot = next_snapshot
-            self._operations[record.receipt.operation_id] = record
             return record.receipt
 
 
@@ -251,14 +251,12 @@ def execute_action_ingress_crossing(
         )
         if sink_decision is not None:
             authorization_audit = apply_flow_sink_details(authorization_audit, sink_decision)
-        control_plane._store.commit_participant_transition(
+        control_plane._commit_participant_transition(
             expected_history_heads=crossing.expected_history_heads,
             snapshot=crossing.next_snapshot,
             record=authorization_record,
             audit_event=authorization_audit,
         )
-        control_plane._snapshot = crossing.next_snapshot
-        control_plane._operations[authorization_record.receipt.operation_id] = authorization_record
 
         result = apply_authorized_participant_action(
             method=execution.method,
@@ -288,14 +286,12 @@ def execute_action_ingress_crossing(
         )
         if sink_decision is not None:
             audit = apply_flow_sink_details(audit, sink_decision)
-        control_plane._store.commit_participant_transition(
+        control_plane._commit_participant_transition(
             expected_history_heads=crossing.record.result_history_heads,
             snapshot=next_snapshot,
             record=record,
             audit_event=audit,
         )
-        control_plane._snapshot = next_snapshot
-        control_plane._operations[record.receipt.operation_id] = record
         return record.receipt
 
 

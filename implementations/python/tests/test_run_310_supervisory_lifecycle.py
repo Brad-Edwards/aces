@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import replace
 from pathlib import Path
 
@@ -623,6 +624,7 @@ def test_supervisory_control_restarts_and_replays_before_the_next_transition(
         identity=_identity(),
         idempotency_key="key-proposal",
     ).accepted
+    first.close()
 
     restarted = RuntimeControlPlane(
         create_stub_target(),
@@ -644,6 +646,7 @@ def test_supervisory_control_restarts_and_replays_before_the_next_transition(
         idempotency_key="key-approval",
     ).accepted
     assert len(restarted.snapshot.participant_control_history[_PARTICIPANT]) == 2
+    restarted.close()
 
 
 def test_controller_state_replay_is_scoped_to_one_episode() -> None:
@@ -816,11 +819,16 @@ def test_failed_atomic_control_commit_exposes_no_partial_transition(
         payload_ref="payload:proposal-1",
     )
 
-    def fail_atomic_write(path: Path, content: str) -> None:
-        del path, content
+    real_upsert = store._upsert_record
+
+    def fail_record_upsert(
+        connection: sqlite3.Connection,
+        record: ControlPlaneOperationRecord,
+    ) -> None:
+        real_upsert(connection, record)
         raise OSError("commit failed")
 
-    monkeypatch.setattr(store, "_atomic_write", fail_atomic_write)
+    monkeypatch.setattr(store, "_upsert_record", fail_record_upsert)
     identity = _identity()
     with pytest.raises(OSError, match="commit failed"):
         control_plane.record_participant_control(
