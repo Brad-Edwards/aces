@@ -11,6 +11,7 @@ working records that remain visible in the repository.
 - [Documentation style guide](explain/reference/documentation-style-guide.md)
 - [Release process](explain/releasing.md)
 - [Architecture decisions](decisions/adrs/README.md)
+- [Developer package and artifact architecture](decisions/package-artifacts/README.md)
 - [Current design-review follow-ups to historical ADRs](research/language-extensibility/adr-follow-ups.md)
 
 ## Inspect working records
