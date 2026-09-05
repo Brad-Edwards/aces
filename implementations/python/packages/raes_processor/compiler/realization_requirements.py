@@ -1,6 +1,7 @@
 """Realization-requirement compilation (SEM-218)."""
 
 from collections.abc import Mapping
+from dataclasses import replace
 
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance, ExplicitnessRecord
 from raes.nodes import NodeType
@@ -41,6 +42,7 @@ from .addresses import (
 from .realization_authority_posture import designated_registered_posture, explicit_registered_posture
 from .realization_concern_binding import realization_requirement_address
 from .realization_concern_explicitness import semantic_explicitness_record
+from .realization_structure import compile_realization_structure
 from .realization_value_domains import compiled_os_value_domain, nested_authored_value
 
 
@@ -311,6 +313,14 @@ def _compiled_registered_realization(
         section_name=section_name,
         declaration_name=declaration_name,
     )
+    structure = None
+    structure_error = False
+    if record is not None:
+        structure, structure_error, root_open = compile_realization_structure(
+            scenario, registered, explicitness, authored_value=authored_value, field_pointer=field_pointer
+        )
+        if root_open and structure is not None:
+            posture = replace(posture, explicitness=ExplicitnessClass.OPEN, mode=RealizationAuthorityMode.OPEN)
     authority = CompiledRealizationAuthority(
         field_path=registered.field_path,
         address=address,
@@ -342,6 +352,8 @@ def _compiled_registered_realization(
         constraint_provenance=constraint_provenance,
         value_constraints=value_constraints,
         process_resource_limits=process_resource_limits,
+        structure=structure,
+        structure_error=structure_error,
     )
     return requirement, authority
 

@@ -21,6 +21,12 @@ Current state: identified gap. Honest portability requires normative semantics f
 
 ## Traceability
 
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure.py` (Value-free structural authority and shared keyed refinement comparison)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/realization_structure.py` (Authored leaf and scoped collection lowering for mixed runtime constraints)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/realization_concern_explicitness.py` (Concern-owned leaf selection with non-authoritative aggregate support summaries)
+- TESTS → TEST `implementations/python/tests/test_issue_1200_mixed_runtime_constraints.py` (Admitted apply, serialized authority, exact siblings, delegated packages, unknown observations and numeric DNS identity)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1200-mixed-runtime-constraints-preflight.md` (Mixed runtime constraint and portable authority guardrails)
+
 - IMPLEMENTS → GITHUB_ISSUE `1043` (Issue #1043 forwarding-agent realization semantics)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/runtime_forwarding_agent.py` (Forwarding-agent ownership-role model)
 - TESTS → TEST `implementations/python/tests/test_issue_1043_forwarding_agent_posture.py` (Forwarding-agent ownership and evidence-binding tests)

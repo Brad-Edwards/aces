@@ -84,6 +84,7 @@ def _realization_authority_model(
         ],
         verification_scope=authority.verification_scope,
         required_observation_strength=authority.required_observation_strength,
+        structure=authority.structure,
     )
 
 

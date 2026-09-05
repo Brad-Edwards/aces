@@ -17,6 +17,7 @@ from raes_contracts.apparatus import (
 from raes_contracts.bounded_domains import scalar_in_domain
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisioningPlan
+from raes_contracts.realization_structure import structure_matches
 from raes_contracts.runtime_state import (
     RealizationObservationDisclosure,
     RealizationProvenanceEntry,
@@ -87,7 +88,9 @@ def _evaluate_non_compute_registered_realization(
         realized_value = (
             concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else MISSING_CONCERN_VALUE
         )
-    if requirement.explicitness is ExplicitnessClass.OPEN:
+    if requirement.structure_error:
+        return silent_approximation_diagnostic(requirement), None
+    if requirement.explicitness is ExplicitnessClass.OPEN and requirement.structure is None:
         return _evaluate_open_realization(requirement, realized_value, returned_snapshot, manifest)
     return _evaluate_declared_realization(
         requirement,
@@ -174,6 +177,10 @@ def _projected_declared_realization_result(
     if process_limit_diagnostic is not None:
         result = (process_limit_diagnostic, None)
     else:
+        if requirement.structure is not None:
+            if not structure_matches(requirement.structure, declared_projection, realized_projection):
+                return silent_approximation_diagnostic(requirement), None
+            honoured = realized_projection == declared_projection
         if honoured is None:
             honoured = realized_projection == declared_projection
         constrained_os_rejected = (
