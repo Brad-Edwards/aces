@@ -43,31 +43,95 @@ class _StructureCompiler:
             raise ValueError("realization structure exceeds the supported depth")
         record = self.records.get(path)
         if isinstance(value, dict):
-            fields = {}
-            for key, child in value.items():
-                source_key = key.removesuffix("_present").removesuffix("_commitment")
-                child_path = f"{path}.{source_key}"
-                if child_path not in self.records:
-                    child_open = self.is_open(f"{pointer}/{_escape(source_key)}")
-                    if self.is_open(pointer) != child_open:
-                        fields[key] = (
-                            OpenRealizationValue(kind="open") if child_open else ExactRealizationValue(kind="exact")
-                        )
-                    continue
+            structure = self.record(value, path, pointer, depth)
+        elif isinstance(value, list):
+            structure = _sequence_structure(record)
+        else:
+            structure = _scalar_structure(record)
+        return structure
+
+    def record(self, value: dict, path: str, pointer: str, depth: int) -> RealizationRecord:
+        fields = {}
+        parent_open = self.is_open(pointer)
+        for key, child in value.items():
+            source_key = key.removesuffix("_present").removesuffix("_commitment")
+            child_path = f"{path}.{source_key}"
+            if child_path in self.records:
                 fields[key] = self.build(child, child_path, f"{pointer}/{_escape(source_key)}", depth=depth + 1)
-            return RealizationRecord(kind="record", fields=fields, additional=self.is_open(pointer))
-        if isinstance(value, list):
-            # Root keyed collections are handled before recursion. A nested
-            # collection whose complete value is exact retains its projector's
-            # ordering/comparison semantics. Unsupported mixed nesting rejects.
-            if record is None or record.classification is ExplicitnessClass.EXACT:
-                return ExactRealizationValue(kind="exact")
-            raise ValueError("mixed nested collection has no declared identity policy")
-        if record is not None and record.classification is ExplicitnessClass.CONSTRAINED:
-            raise ValueError("mixed scalar bound has no publication-safe domain")
-        if record is not None and record.classification is ExplicitnessClass.OPEN:
-            return OpenRealizationValue(kind="open", taxonomy_sentinel=True)
-        return ExactRealizationValue(kind="exact")
+            else:
+                child_open = self.is_open(f"{pointer}/{_escape(source_key)}")
+                if parent_open != child_open:
+                    fields[key] = (
+                        OpenRealizationValue(kind="open") if child_open else ExactRealizationValue(kind="exact")
+                    )
+        return RealizationRecord(kind="record", fields=fields, additional=parent_open)
+
+    def has_open_descendant(self, pointer: str) -> bool:
+        return any(
+            designation.field_pointer.startswith(f"{pointer}/") and self.is_open(designation.field_pointer)
+            for designation in self.scenario.instantiation_provenance.realization_designations
+        )
+
+    def collection(self, source: list, pointer: str, root_open: bool) -> RealizationCollection:
+        descriptor = self.registered.descriptor
+        identity_fields = descriptor.collection_identity_fields
+        indices = _authored_member_indices(source, identity_fields)
+        projection = descriptor.project(source)
+        if not isinstance(projection, list):
+            raise ValueError("keyed concern must project a collection")
+        members = {}
+        for item in projection:
+            identity = tuple(item[key] for key in identity_fields)
+            index = indices[identity]
+            digest = realization_member_identity(item, identity_fields)
+            if digest is None:
+                raise ValueError("collection identity is not a concrete scalar tuple")
+            members[digest] = self.build(item, f"{self.registered.field_path}[{index}]", f"{pointer}/{index}")
+        return RealizationCollection(
+            kind="collection", members=members, identity_fields=identity_fields, additional=root_open
+        )
+
+
+def _sequence_structure(record: ExplicitnessRecord | None) -> RealizationStructure:
+    # Exact nested sequences retain their projector's comparison semantics.
+    if record is not None and record.classification is not ExplicitnessClass.EXACT:
+        raise ValueError("mixed nested collection has no declared identity policy")
+    return ExactRealizationValue(kind="exact")
+
+
+def _scalar_structure(record: ExplicitnessRecord | None) -> RealizationStructure:
+    if record is not None and record.classification is ExplicitnessClass.CONSTRAINED:
+        raise ValueError("mixed scalar bound has no publication-safe domain")
+    if record is not None and record.classification is ExplicitnessClass.OPEN:
+        return OpenRealizationValue(kind="open", taxonomy_sentinel=True)
+    return ExactRealizationValue(kind="exact")
+
+
+def _authored_member_indices(source: list, identity_fields: tuple[str, ...]) -> dict[tuple, int]:
+    indices = {}
+    for index, item in enumerate(source):
+        raw = item.model_dump(mode="json") if isinstance(item, BaseModel) else item
+        if not isinstance(raw, dict):
+            raise ValueError("keyed concern must contain records")
+        identity = tuple(raw[key] for key in identity_fields)
+        if identity in indices:
+            raise ValueError("duplicate authored identity")
+        indices[identity] = index
+    return indices
+
+
+def _unkeyed_structure(
+    compiler: _StructureCompiler, authored_value: object, root_open: bool
+) -> tuple[RealizationStructure | None, bool, bool]:
+    leaves = semantic_explicitness_leaves(
+        compiler.records,
+        field_path=compiler.registered.field_path,
+        excluded_fields=compiler.registered.descriptor.explicitness_excluded_fields,
+    )
+    mixed_open = any(r.classification is ExplicitnessClass.OPEN for r in leaves)
+    if mixed_open and not isinstance(authored_value, (list, dict, BaseModel)):
+        return OpenRealizationValue(kind="open", taxonomy_sentinel=True), False, root_open
+    return None, mixed_open, root_open
 
 
 def _escape(token: str) -> str:
@@ -89,50 +153,17 @@ def compile_realization_structure(
     descriptor = registered.descriptor
     identity_fields = descriptor.collection_identity_fields
     record = records.get(registered.field_path)
-    nested_open = any(
-        designation.field_pointer.startswith(f"{field_pointer}/") and compiler.is_open(designation.field_pointer)
-        for designation in scenario.instantiation_provenance.realization_designations
-    )
+    nested_open = compiler.has_open_descendant(field_pointer)
     if record is not None and record.classification is ExplicitnessClass.EXACT and not root_open and not nested_open:
         return None, False, False
     if not identity_fields:
-        leaves = semantic_explicitness_leaves(
-            records, field_path=registered.field_path, excluded_fields=descriptor.explicitness_excluded_fields
-        )
-        mixed_open = any(r.classification is ExplicitnessClass.OPEN for r in leaves)
-        if mixed_open and not isinstance(authored_value, (list, dict, BaseModel)):
-            return OpenRealizationValue(kind="open", taxonomy_sentinel=True), False, root_open
-        return None, mixed_open, root_open
-    source = list(authored_value) if isinstance(authored_value, list) else []
-    if not source:
-        return None, False, root_open
+        return _unkeyed_structure(compiler, authored_value, root_open)
     try:
-        projection = descriptor.project(authored_value)
-        if not isinstance(projection, list):
-            raise ValueError("keyed concern must project a collection")
-        indices = {}
-        for index, item in enumerate(source):
-            raw = item.model_dump(mode="json") if isinstance(item, BaseModel) else item
-            if not isinstance(raw, dict):
-                raise ValueError("keyed concern must contain records")
-            identity = tuple(raw[key] for key in identity_fields)
-            if identity in indices:
-                raise ValueError("duplicate authored identity")
-            indices[identity] = index
-        members = {}
-        for item in projection:
-            identity = tuple(item[key] for key in identity_fields)
-            index = indices[identity]
-            digest = realization_member_identity(item, identity_fields)
-            if digest is None:
-                raise ValueError("collection identity is not a concrete scalar tuple")
-            members[digest] = compiler.build(item, f"{registered.field_path}[{index}]", f"{field_pointer}/{index}")
-        return (
-            RealizationCollection(
-                kind="collection", members=members, identity_fields=identity_fields, additional=root_open
-            ),
-            False,
-            root_open or nested_open,
-        )
+        if isinstance(authored_value, list) and authored_value:
+            structure = compiler.collection(authored_value, field_pointer, root_open)
+            result = structure, False, root_open or nested_open
+        else:
+            result = None, False, root_open
     except (TypeError, ValueError, KeyError):
-        return None, True, root_open
+        result = None, True, root_open
+    return result

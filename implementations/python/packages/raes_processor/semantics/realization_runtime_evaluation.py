@@ -89,16 +89,18 @@ def _evaluate_non_compute_registered_realization(
             concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else MISSING_CONCERN_VALUE
         )
     if requirement.structure_error:
-        return silent_approximation_diagnostic(requirement), None
-    if requirement.explicitness is ExplicitnessClass.OPEN and requirement.structure is None:
-        return _evaluate_open_realization(requirement, realized_value, returned_snapshot, manifest)
-    return _evaluate_declared_realization(
-        requirement,
-        concern_value(op.payload, path),
-        realized_value,
-        returned_snapshot,
-        manifest,
-    )
+        result = silent_approximation_diagnostic(requirement), None
+    elif requirement.explicitness is ExplicitnessClass.OPEN and requirement.structure is None:
+        result = _evaluate_open_realization(requirement, realized_value, returned_snapshot, manifest)
+    else:
+        result = _evaluate_declared_realization(
+            requirement,
+            concern_value(op.payload, path),
+            realized_value,
+            returned_snapshot,
+            manifest,
+        )
+    return result
 
 
 def _evaluate_open_realization(
@@ -175,27 +177,35 @@ def _projected_declared_realization_result(
         manifest,
     )
     if process_limit_diagnostic is not None:
-        result = (process_limit_diagnostic, None)
+        return process_limit_diagnostic, None
+    if honoured is None or requirement.structure is not None:
+        honoured = realized_projection == declared_projection
+    if _projected_constraints_rejected(requirement, declared_projection, realized_projection, honoured):
+        result = (silent_approximation_diagnostic(requirement), None)
+    elif realized_value is not MISSING_CONCERN_VALUE:
+        result = (None, realization_provenance_entry(requirement, honoured))
     else:
-        if requirement.structure is not None:
-            if not structure_matches(requirement.structure, declared_projection, realized_projection):
-                return silent_approximation_diagnostic(requirement), None
-            honoured = realized_projection == declared_projection
-        if honoured is None:
-            honoured = realized_projection == declared_projection
-        constrained_os_rejected = (
-            requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS
-            and requirement.explicitness is ExplicitnessClass.CONSTRAINED
-            and requirement.value_domain is not None
-            and not scalar_in_domain(realized_projection, requirement.value_domain)
-        )
-        if constrained_os_rejected or (requirement.explicitness is ExplicitnessClass.EXACT and not honoured):
-            result = (silent_approximation_diagnostic(requirement), None)
-        elif realized_value is not MISSING_CONCERN_VALUE:
-            result = (None, realization_provenance_entry(requirement, honoured))
-        else:
-            result = (None, None)
+        result = (None, None)
     return result
+
+
+def _projected_constraints_rejected(
+    requirement: CompiledRealizationRequirement,
+    declared_projection: object,
+    realized_projection: object,
+    honoured: bool,
+) -> bool:
+    if requirement.structure is not None and not structure_matches(
+        requirement.structure, declared_projection, realized_projection
+    ):
+        return True
+    constrained_os_rejected = (
+        requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS
+        and requirement.explicitness is ExplicitnessClass.CONSTRAINED
+        and requirement.value_domain is not None
+        and not scalar_in_domain(realized_projection, requirement.value_domain)
+    )
+    return constrained_os_rejected or (requirement.explicitness is ExplicitnessClass.EXACT and not honoured)
 
 
 def _observation_corroborates(

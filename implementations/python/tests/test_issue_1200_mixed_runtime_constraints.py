@@ -21,6 +21,45 @@ from raes_runtime.control_plane_api_models import _provisioning_plan
 from test_issue_1066_runtime_resource_limits import _supporting_manifest
 
 
+@pytest.mark.parametrize(
+    "expected, actual, accepted",
+    [
+        (1, True, False),
+        ({"value": 1}, {"value": True}, False),
+        ([1], [True], False),
+        ([1], [1, 2], False),
+        ({"value": 1}, {}, False),
+        ({"value": [1]}, {"value": [1]}, True),
+    ],
+)
+def test_structural_exact_comparison_preserves_json_types(expected, actual, accepted):
+    from raes_contracts.realization_structure import ExactRealizationValue, structure_matches
+
+    assert structure_matches(ExactRealizationValue(kind="exact"), expected, actual) is accepted
+
+
+@pytest.mark.parametrize("actual", [None, {}, [{}], [{"id": None}], [{"id": "db"}] * 2])
+def test_structural_collection_rejects_invalid_member_identity(actual):
+    from raes_contracts.realization_structure import (
+        ExactRealizationValue,
+        RealizationCollection,
+        realization_member_identity,
+        structure_matches,
+    )
+
+    expected = [{"id": "db"}]
+    identity = realization_member_identity(expected[0], ("id",))
+    rule = RealizationCollection(
+        kind="collection",
+        identity_fields=("id",),
+        members={identity: ExactRealizationValue(kind="exact")},
+        additional=True,
+    )
+    assert structure_matches(rule, expected, expected)
+    assert not structure_matches(rule, expected, actual)
+    assert not structure_matches(rule, actual, expected)
+
+
 def _fixture(runtime, *, open_packages=False, allow_invalid=False, scope=None, closed_scopes=()):
     import yaml
 
