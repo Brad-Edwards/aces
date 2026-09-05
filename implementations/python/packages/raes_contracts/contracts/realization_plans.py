@@ -18,6 +18,7 @@ from ..planning import (
     RuntimeDomain,
     require_plan_operation_identity,
 )
+from ..realization_structure import RealizationStructure
 from ..versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
 from ..vocabulary import ObservationStrength, RealizationVerificationScope
 from .base import ContractModel, NonEmptyString
@@ -170,6 +171,7 @@ class ResolvedRealizationAuthorityModel(ContractModel):
     bounds: list[RealizationAuthorityBoundModel] = Field(default_factory=list)
     verification_scope: RealizationVerificationScope | None = None
     required_observation_strength: ObservationStrength | None = None
+    structure: RealizationStructure | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def _validate_mode_bounds(self) -> ResolvedRealizationAuthorityModel:

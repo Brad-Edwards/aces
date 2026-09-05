@@ -114,6 +114,7 @@ def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
                 ),
                 verification_scope=entry.verification_scope,
                 required_observation_strength=entry.required_observation_strength,
+                structure=entry.structure,
             )
             for entry in model.realization_authority
         ),

@@ -2,9 +2,9 @@
   "contract_id": "provisioning-plan-v1",
   "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
   "stability": "draft",
-  "content_hash": "18166a63a4da604a62d4957fac6cca4344a285de17c7fa67746bfcbeae58ac5c",
+  "content_hash": "a625dafd3e57bb8ded36fde153fa03139b855069adcec7da5373edd0fadeb56e",
   "last_change": {
-    "summary": "Added mandatory resolved realization authority, operation identity, and separate authored compute-substrate constraints to provisioning plans for issues #1067 and #1076.",
-    "content_hash": "18166a63a4da604a62d4957fac6cca4344a285de17c7fa67746bfcbeae58ac5c"
+    "summary": "Preserve exact leaves, required keyed members and scoped additions with optional value-free structural authority; unsupported readers reject the closed extension (issue #1200).",
+    "content_hash": "a625dafd3e57bb8ded36fde153fa03139b855069adcec7da5373edd0fadeb56e"
   }
 }

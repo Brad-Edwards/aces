@@ -639,6 +639,27 @@ def test_effective_observation_rejects_unresolved_limit_variables() -> None:
     assert provenance == ()
 
 
+def test_mixed_constrained_collection_preserves_exact_sibling_member() -> None:
+    declared = [_exact_limit(soft=32768), {**_exact_limit(), "subject": {"name": "worker", "role": "primary"}}]
+    constraint = RealizationValueConstraint(
+        identity_digest=process_resource_limit_identity_digest(declared[0]),
+        leaf="soft",
+        parameter=("soft_limit",),
+        allowed_values=(32768, 65536),
+    )
+    requirement = _requirement(ExplicitnessClass.CONSTRAINED, constraints=(constraint,))
+    for hard, accepted in ((65536, True), (131072, False)):
+        realized = [{**declared[1], "hard": hard}, {**declared[0], "soft": 65536}]
+        diagnostics, provenance = realization_disclosure(
+            (requirement,),
+            _plan(declared),
+            _snapshot(realized, observation_strength=ObservationStrength.GUEST_OBSERVED),
+            manifest=_supporting_manifest(),
+        )
+        assert (not diagnostics) is accepted
+        assert bool(provenance) is accepted
+
+
 def test_open_backend_choice_requires_typed_apparatus_permission_and_is_disclosed() -> None:
     requirement = _requirement(ExplicitnessClass.OPEN)
     selected = [_exact_limit()]
