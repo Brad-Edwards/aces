@@ -59,8 +59,9 @@ def test_closure_names_a_universe_and_does_not_close_the_machine():
     request = record(software=software)
     assert accepts(request, {"software": {"nmap": {}}, "incidental_dependencies": {"libc": "6"}})
     assert not accepts(request, {"software": {"nmap": {}, "curl": {}}})
+    unnamed_closure = replace(software, universe=None)
     with pytest.raises(ValueError, match="closure-universe-required"):
-        accepts(replace(software, universe=None), {"nmap": {}})
+        accepts(unnamed_closure, {"nmap": {}})
 
 
 def test_one_supported_witness_does_not_prove_universal_support():
@@ -95,8 +96,9 @@ def test_defaults_are_lexical_not_conjunction_or_input_order():
     assert effective_posture(("a", "b", "c"), scopes, "closed") == "closed"
     assert effective_posture(("sibling",), tuple(reversed(scopes)), "closed") == "open"
     assert effective_posture(("a", "b"), (), "open") == "open"
+    duplicate_scopes = (Scope((), "open"), Scope((), "closed"))
     with pytest.raises(ValueError, match="duplicate-scope"):
-        effective_posture((), (Scope((), "open"), Scope((), "closed")), "closed")
+        effective_posture((), duplicate_scopes, "closed")
 
 
 def test_stable_identity_duplicate_rejection_and_typed_atoms():
@@ -104,8 +106,9 @@ def test_stable_identity_duplicate_rejection_and_typed_atoms():
     assert accepts(rule, {"beta": 2, "alpha": 1})
     assert not accepts(rule, {"alpha": 2, "beta": 1})
     assert not accepts(atom(1), True)
+    duplicate_identity = Record((Field("same", atom(1)), Field("same", atom(2))))
     with pytest.raises(ValueError, match="duplicate-identity"):
-        accepts(Record((Field("same", atom(1)), Field("same", atom(2)))), {})
+        accepts(duplicate_identity, {})
 
 
 def test_cycles_missing_references_and_budgets_are_not_empty_sets():
@@ -202,8 +205,9 @@ def test_world_round_trip_and_domain_budget_preserve_type_sensitive_meaning():
         == frozenset({0})
     )
     assert normalize(normalize(rule)) == normalize(rule)
+    oversized_domain = Atom((0, 1, 2))
     with pytest.raises(ValueError, match="limit-exceeded"):
-        accepts(Atom((0, 1, 2)), 2, limit=8)
+        accepts(oversized_domain, 2, limit=8)
 
 
 def test_null_witness_is_distinct_from_no_supported_choice():

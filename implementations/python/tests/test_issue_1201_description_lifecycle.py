@@ -35,8 +35,9 @@ def test_partial_capture_keeps_unknown_redacted_absence_and_contradiction_separa
     assert assess((request,), (Fact(("version",), "known", "1"),), universe) == "satisfied-in-finite-universe"
     contradictory = (Fact(("os",), "known", "Kali"), Fact(("os",), "known", "Debian"))
     assert assess((request,), contradictory, universe) == "contradictory-or-unrepresented"
+    invalid_facts = (Fact(("version",), "redacted", "hidden"),)
     with pytest.raises(ValueError, match="knowledge-value-forbidden"):
-        assess((request,), (Fact(("version",), "redacted", "hidden"),), universe)
+        assess((request,), invalid_facts, universe)
     assert promote(facts, (("os",),)) == Record((Field("os", Atom(("Kali",))),))
     with pytest.raises(ValueError, match="promotion-needs-known-fact"):
         promote(facts, (("version",),))
@@ -109,20 +110,25 @@ def test_unsupported_capture_and_prohibition_conflicts_fail_before_any_collectio
     def forbidden_collector():
         pytest.fail("admission must precede every producer")
 
+    requested = (Demand((), "selected", ("packets",)),)
+    unsupported = frozenset()
+    supported = frozenset({key})
+    conflicting = (Demand((), "none", forbid_experimental=True), Demand(("node",), "selected", ("packets",)))
+    forbidden = (Demand((), "none", forbidden=("packets",)),)
     with pytest.raises(ValueError, match="unsupported-capture"):
-        capture((Demand((), "selected", ("packets",)),), {key: forbidden_collector}, frozenset())
+        capture(requested, {key: forbidden_collector}, unsupported)
     with pytest.raises(ValueError, match="policy-conflict"):
         capture(
-            (Demand((), "none", forbid_experimental=True), Demand(("node",), "selected", ("packets",))),
+            conflicting,
             {key: forbidden_collector},
-            frozenset({key}),
+            supported,
         )
     with pytest.raises(ValueError, match="policy-conflict"):
         capture(
-            (Demand((), "none", forbidden=("packets",)),),
+            forbidden,
             {key: forbidden_collector},
-            frozenset({key}),
-            operational=frozenset({key}),
+            supported,
+            operational=supported,
         )
 
 
@@ -156,12 +162,15 @@ def test_abstract_two_computers_three_actions_execute_without_concrete_inventory
 
 
 def test_source_and_model_budgets_include_direct_input_shapes():
+    oversized_atom = Atom(("x" * 4097,))
+    integer_atom = Atom((1,))
+    non_leaf_facts = (Fact((), "known", {"x": True}),)
     with pytest.raises(ValueError, match="limit-exceeded"):
-        accepts(Atom(("x" * 4097,)), "short")
+        accepts(oversized_atom, "short")
     with pytest.raises(ValueError, match="limit-exceeded"):
-        accepts(Atom((1,)), 1 << 300)
+        accepts(integer_atom, 1 << 300)
     with pytest.raises(ValueError, match="fact-needs-leaf"):
-        assess((), (Fact((), "known", {"x": True}),), ({"x": 1},))
+        assess((), non_leaf_facts, ({"x": 1},))
 
 
 def test_knowledge_never_grants_backend_discretion():
