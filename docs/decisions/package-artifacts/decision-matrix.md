@@ -103,6 +103,6 @@ revisiting Aqua/Hermit before extending repository installer code.
 
 Choose a concrete repository service only when an owner provides a tested
 deployment satisfying the mirror-only, backup/restore, quota and export
-acceptance cases. That deployment decision cannot weaken ADR-105/106. A change
+acceptance cases. That deployment decision cannot weaken ADR-106/107. A change
 to integrity authority, public credential requirements or the no-custom-HTTP
 rule requires an ADR, not a provider configuration change.

@@ -145,8 +145,9 @@ adr-098-portable-artifact-requirement-satisfaction
 adr-099-participant-relative-predicate-opacity
 adr-100-participant-crossing-bisimulation
 adr-101-adversarial-participant-flow-control
-adr-105-developer-package-and-artifact-management
-adr-106-artifact-promotion-and-release-admission
+adr-105-recursive-partial-description-semantics
+adr-106-developer-package-and-artifact-management
+adr-107-artifact-promotion-and-release-admission
 ```
 
 | ADR | Title | Status | Date |
@@ -255,5 +256,6 @@ adr-106-artifact-promotion-and-release-admission
 | [102](adr-102-mixed-cross-backend-participant-control.md) | Mixed Cross-Backend Participant Control | accepted | 2026-07-31 |
 | [103](adr-103-branch-aware-python-coverage-policy.md) | Branch-Aware Python Coverage Policy | accepted | 2026-08-13 |
 | [104](adr-104-runtime-control-plane-architecture.md) | Runtime Control-Plane Architecture | accepted | 2026-08-17 |
-| [105](adr-105-developer-package-and-artifact-management.md) | Developer Package and Artifact Management | proposed | 2026-09-05 |
-| [106](adr-106-artifact-promotion-and-release-admission.md) | Artifact Promotion and Release Admission | proposed | 2026-09-05 |
+| [105](adr-105-recursive-partial-description-semantics.md) | Recursive Partial Description Semantics | proposed | 2026-09-05 |
+| [106](adr-106-developer-package-and-artifact-management.md) | Developer Package and Artifact Management | proposed | 2026-09-05 |
+| [107](adr-107-artifact-promotion-and-release-admission.md) | Artifact Promotion and Release Admission | proposed | 2026-09-05 |

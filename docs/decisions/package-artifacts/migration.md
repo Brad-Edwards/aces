@@ -3,7 +3,7 @@
 ## Design gate and execution rules
 
 [Issue #1168](https://github.com/OpenRAE/rae/issues/1168) is the design gate for
-[milestone 69](https://github.com/OpenRAE/rae/milestone/69). ADR-105 and ADR-106
+[milestone 69](https://github.com/OpenRAE/rae/milestone/69). ADR-106 and ADR-107
 are proposed until the maintainer accepts the concrete design. Record acceptance
 in their status and ADR pin manifest, integrate the reviewed design, and close
 the design issue only after verifying its outputs and issue graph. That action
@@ -176,7 +176,7 @@ Client rollback selects a previous *admissible* native client/profile or
 read-only seed, keeping reviewed hashes and required tests. It cannot restore
 custom HTTP, live checksum selection, a revoked digest, an untrusted cache or
 mutable release publication. Storage rollback restores original immutable
-bytes and authenticated records. Publication rollback follows ADR-106's
+bytes and authenticated records. Publication rollback follows ADR-107's
 destination-query/same-byte recovery, never deleting/replacing a live version
 to conceal a mismatch.
 

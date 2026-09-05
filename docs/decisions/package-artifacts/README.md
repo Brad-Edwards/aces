@@ -6,8 +6,8 @@ for maintainer acceptance. It does not claim that its migration is implemented.
 
 Read the documents in this order:
 
-1. [ADR-105: architecture decision](../adrs/adr-105-developer-package-and-artifact-management.md)
-   and [ADR-106: promotion and release admission](../adrs/adr-106-artifact-promotion-and-release-admission.md).
+1. [ADR-106: architecture decision](../adrs/adr-106-developer-package-and-artifact-management.md)
+   and [ADR-107: promotion and release admission](../adrs/adr-107-artifact-promotion-and-release-admission.md).
 2. [Repository inventory](inventory.md): concrete sources, gaps, owners and boundaries.
 3. [Decision matrix](decision-matrix.md): solution classes and selection rationale.
 4. [Architecture](architecture.md): authority, clients, profiles, trust and state models.

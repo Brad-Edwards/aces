@@ -1,10 +1,10 @@
-# ADR-106: Artifact Promotion and Release Admission
+# ADR-107: Artifact Promotion and Release Admission
 
 ## Status
 
 proposed
 
-Accepted together with ADR-105 only after maintainer approval under #1168.
+Accepted together with ADR-106 only after maintainer approval under #1168.
 
 ## Date
 

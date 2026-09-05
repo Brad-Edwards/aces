@@ -1,4 +1,4 @@
-# ADR-105: Developer Package and Artifact Management
+# ADR-106: Developer Package and Artifact Management
 
 ## Status
 
@@ -72,7 +72,7 @@ Adopt a layered architecture with native ecosystem clients:
 5. Nox remains the verification graph. Release publication retains the exact-SHA
    and required-container prerequisites, adding digest-bound artifact admission,
    SBOM/provenance and immutable promotion as described in
-   [ADR-106](adr-106-artifact-promotion-and-release-admission.md).
+   [ADR-107](adr-107-artifact-promotion-and-release-admission.md).
 
 ### No custom HTTP stack
 
