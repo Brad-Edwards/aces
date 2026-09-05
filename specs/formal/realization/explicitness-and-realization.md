@@ -163,6 +163,57 @@ validation failure, not as permission to fill them in. This is the
 closed-world default for the ecosystem; the existing closed-Pydantic
 SDL model boundary (`extra="forbid"`) enforces it structurally today.
 
+### Mixed constraints and collection membership (issue #1200)
+
+A collection's aggregate explicitness is a support summary, not permission to
+discard its children. An exact authored leaf MUST remain binding beside an
+open or constrained sibling. An effective open scope delegates unspecified
+descendants; naming an exact package does not close the surrounding package
+inventory. Collection membership and value constraints MUST be compared
+independently. Required members cannot be removed, renamed, duplicated or
+replaced. Closing a collection restricts additions in that modeled inventory,
+not all incidental state on the machine.
+
+The portable resolved-authority entry MAY carry a `structure` descriptor:
+exact leaves refer to the admitted operation's value, open leaves permit typed
+choices, records retain their authored fields and scoped additions, and keyed
+collections retain required members by canonical identity digest. The carrier
+does not copy exact values or arbitrary variable domains. It is checked against
+the operation during readmission and against canonical, validated observations
+after execution. Unknown or missing observations MUST NOT establish satisfaction
+of a required leaf. Existing scope/strength and manifest corroboration checks
+remain in force; this correction adds no observation, retention or export demand.
+
+The initial mixed collection profiles are database services (service ID) and
+packages (required manager/name coordinates). Package architecture remains
+binding when authored; when omitted under an open scope it is delegated.
+Ambiguous multiple package rows with the same partial coordinates require a
+more expressive identity contract and MUST be rejected before mutation.
+Unchanged exact collections retain their legacy canonical comparison, including
+full package identities. Ordered nested sequences retain their owning exact
+comparison. Mixed nested collections or unsafe scalar domains lacking an
+owning comparison policy MUST produce an actionable
+`realization.authority-bound-unavailable` diagnostic. Existing process-limit
+finite domains retain their typed identity-bound comparison and exact siblings.
+This supported fragment includes an inherited open package scope with an exact
+nmap child: other packages may be added and unspecified fields chosen, while
+the nmap version and any other explicit leaf remain binding.
+More-specific closed child scopes retain the omitted field's closed baseline,
+even when the surrounding record remains open.
+
+Legacy typed `other`/`unknown` sentinels remain distinguishable from literal
+strings with those spellings. They do not erase sibling constraints or prove
+a concrete observed value. The DNS `record_type: other` discriminator paired
+with a concrete numeric `type_code` denotes an exact extension identity;
+the owning uint16 and RDATA validation remains authoritative.
+
+This is an optional extension of the draft provisioning-plan contract.
+Legacy exact plans omit `structure` and retain their prior meaning. A reader
+without structural-authority support MUST reject the new field through the
+existing closed contract, rather than ignore it. Trusted planner-plan digests
+bind the complete descriptor; a relay cannot strip or widen it. Schema
+publication entries and the reference bundle MUST remain identical.
+
 ### Scoped default cascade
 
 `Scenario.realization` is optional. When present, it contains a root `default`

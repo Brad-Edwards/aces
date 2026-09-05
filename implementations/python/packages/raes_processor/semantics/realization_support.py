@@ -9,6 +9,7 @@ from raes_contracts.apparatus import (
     RealizationSupportDeclaration,
 )
 from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.realization_structure import RealizationCollection, RealizationRecord
 from raes_contracts.vocabulary import RealizationSupportMode
 
 from .realization_apparatus_defaults import (
@@ -51,6 +52,10 @@ def _realization_support_diagnostic(
     declarations = [
         declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
     ]
+    if isinstance(requirement.structure, (RealizationCollection, RealizationRecord)):
+        exact_diagnostic = _exact_support_diagnostic(requirement, declarations)
+        if exact_diagnostic is not None:
+            return exact_diagnostic
     if requirement.requirement_kind == "process-resource-limits":
         diagnostic = process_resource_limit_support_diagnostic(
             requirement,

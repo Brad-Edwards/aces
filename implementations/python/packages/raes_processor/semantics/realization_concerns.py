@@ -51,6 +51,7 @@ class RealizationConcernDescriptor:
     observation_strength: ObservationStrength | None = None
     non_stateful_mounts_only: bool = False
     explicitness_excluded_fields: frozenset[str] = RUNTIME_NON_REALIZATION_FIELDS
+    collection_identity_fields: tuple[str, ...] = ()
 
     @property
     def authored_suffix(self) -> str:
@@ -260,6 +261,7 @@ _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (
             verification_scope=lambda _value: RealizationVerificationScope.CONFIGURATION,
             observation_strength=ObservationStrength.GUEST_OBSERVED,
             explicitness_excluded_fields=RUNTIME_NON_REALIZATION_FIELDS | profile.excluded_fields,
+            collection_identity_fields=profile.collection_identity_fields,
         )
         for profile in RUNTIME_CONCERN_PROFILES
     ),
