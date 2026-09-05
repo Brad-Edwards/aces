@@ -54,21 +54,26 @@ from raes_contracts.vocabulary import (
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import plan
 from raes_processor.semantics.realization import realization_disclosure
+from raes_processor.semantics.realization_concerns import realization_concern_descriptors
 from raes_runtime.control_plane_api_models import _snapshot_model
 
 _OPEN_NODE_REALIZATION_SUFFIXES = {
-    "os",
-    "os_distribution",
-    "os_version",
-    "architecture",
-    "runtime.environment",
-    "runtime.mounts",
-    "runtime.linux_capabilities",
-    "runtime.operational_policy.resource_limits.process_limits",
-    "runtime.network.published_ports",
-    "runtime.forwarding_agents",
-    "runtime.service_listeners",
+    descriptor.authored_suffix
+    for descriptor in realization_concern_descriptors()
+    if descriptor.section == "nodes" and descriptor.concern_kind != "node-type"
 }
+
+
+def _runtime_observation_capabilities() -> dict[str, RealizationObservationCapability]:
+    capability = RealizationObservationCapability(
+        verification_scope=RealizationVerificationScope.CONFIGURATION,
+        observation_strength=ObservationStrength.GUEST_OBSERVED,
+    )
+    return {
+        descriptor.concern_kind: capability
+        for descriptor in realization_concern_descriptors()
+        if descriptor.authored_path[:1] == ("runtime",)
+    }
 
 
 def _open_node_realization_fields(node_name: str) -> set[str]:
@@ -117,6 +122,7 @@ def _manifest(mode: RealizationSupportMode) -> BackendManifest:
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset({"runtime-snapshot-v1"}),
                 observation_capabilities={
+                    **_runtime_observation_capabilities(),
                     "operating-system": RealizationObservationCapability(
                         verification_scope=RealizationVerificationScope.PRESENCE,
                         observation_strength=ObservationStrength.GUEST_OBSERVED,
@@ -182,6 +188,7 @@ def _open_manifest_with_envelope(*, path: str, value: str) -> BackendManifest:
         support_mode=RealizationSupportMode.OPEN_REALIZATION,
         observation_capabilities={
             **manifest.realization_support[0].observation_capabilities,
+            **_runtime_observation_capabilities(),
             "process-resource-limits": RealizationObservationCapability(
                 verification_scope=RealizationVerificationScope.CONFIGURATION,
                 observation_strength=ObservationStrength.GUEST_OBSERVED,
@@ -425,6 +432,7 @@ def test_open_demand_is_rejected_without_open_realization_support():
         for diagnostic in rejected.diagnostics
         if diagnostic.code == "realization.unsupported-open-requirement"
     ]
+    assert not rejected.is_valid
     assert diagnostics
     assert "nodes.web.os" in diagnostics[0].message
     assert "linux" not in diagnostics[0].message
@@ -443,6 +451,7 @@ def test_root_delegation_uses_injected_selected_apparatus_default():
     )
 
     assert not any(diagnostic.code.startswith("realization.") for diagnostic in legacy_closed.diagnostics)
+    assert not delegated_open.is_valid
     assert any(
         diagnostic.code == "realization.unsupported-open-requirement" for diagnostic in delegated_open.diagnostics
     )
@@ -633,20 +642,67 @@ def test_open_disclosure_requires_an_active_plan_operation(action: ChangeAction 
 
 
 def test_published_schemas_match_designation_and_governing_scope_models():
+    from raes_contracts.realization_observation import (
+        ObservedOperatingSystemIdentity,
+        RealizationObservationDisclosure,
+    )
+
     repository = Path(__file__).resolve().parents[3]
     scenario = _scenario("realization:\n  default: open")
     instantiated = instantiate_scenario(scenario)
-    provenance = [
-        {
-            "address": "node.web",
-            "field_path": "nodes.web.os",
-            "domain": "runtime-realization",
-            "requirement_kind": "os-family",
-            "explicitness": "open",
-            "provenance": "backend-realized",
-            "governing_scope": "#/",
-        }
-    ]
+    model = compile_runtime_model(scenario)
+    requirement = _requirement(model, "nodes.web.os")
+    declared_plan = ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.CREATE,
+                address=requirement.address,
+                resource_type="node",
+                payload={"node_kind": "compute"},
+            )
+        ]
+    )
+    returned_snapshot = RuntimeSnapshot(
+        entries={
+            requirement.address: SnapshotEntry(
+                address=requirement.address,
+                domain=RuntimeDomain.PROVISIONING,
+                resource_type="node",
+                payload={"node_kind": "compute", "os_family": "linux"},
+            )
+        },
+        realization_observations=(
+            RealizationObservationDisclosure(
+                address=requirement.address,
+                field_path="nodes.web.operating-system",
+                domain=requirement.domain,
+                requirement_kind="operating-system",
+                verification_scope=RealizationVerificationScope.PRESENCE,
+                observation_strength=ObservationStrength.GUEST_OBSERVED,
+                operating_system=ObservedOperatingSystemIdentity(
+                    family="linux",
+                    distribution="ubuntu",
+                    version="22.04",
+                ),
+                operation_id="op-schema-conformance-1",
+                envelope_digest="sha256:" + "a" * 64,
+                configuration_digest="sha256:" + "b" * 64,
+                observer_version="guest-os-release/v1",
+                sequence=1,
+                binding_verified=True,
+            ),
+        ),
+    )
+    diagnostics, provenance = realization_disclosure(
+        (requirement,),
+        declared_plan,
+        returned_snapshot,
+        manifest=_manifest(RealizationSupportMode.OPEN_REALIZATION),
+    )
+    assert diagnostics == []
+    runtime_snapshot_payload = _snapshot_model(
+        RuntimeSnapshotEnvelope(snapshot=RuntimeSnapshot(realization_provenance=provenance))
+    ).model_dump(mode="json", by_alias=True)
     cases = (
         (
             "contracts/schemas/sdl/sdl-authoring-input-v1.json",
@@ -658,7 +714,7 @@ def test_published_schemas_match_designation_and_governing_scope_models():
         ),
         (
             "contracts/schemas/snapshots/runtime-snapshot-v1.json",
-            {"schema_version": "runtime-snapshot/v1", "realization_provenance": provenance},
+            runtime_snapshot_payload,
         ),
     )
 

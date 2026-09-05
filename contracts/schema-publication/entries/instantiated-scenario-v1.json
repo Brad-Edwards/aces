@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "d3f83594bc9f7dfbe05e6c2ad522e6e0d3c099b563a07a3cf955a8a62e7eef62",
+  "content_hash": "ad443145c32851ee2dadba948a552c8bf99f2dfc6a72545aea4b2b7577a972f9",
   "last_change": {
-    "summary": "Added governed operating-system distribution identity and release-only version constraints for issue #1077.",
-    "content_hash": "d3f83594bc9f7dfbe05e6c2ad522e6e0d3c099b563a07a3cf955a8a62e7eef62"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "ad443145c32851ee2dadba948a552c8bf99f2dfc6a72545aea4b2b7577a972f9"
   }
 }

@@ -251,3 +251,5 @@ adr-101-adversarial-participant-flow-control
 | [100](adr-100-participant-crossing-bisimulation.md) | Proof-Bearing Participant-Crossing Bisimulation | accepted | 2026-07-29 |
 | [101](adr-101-adversarial-participant-flow-control.md) | Adversarial Participant Boundary Flow Control | accepted | 2026-07-30 |
 | [102](adr-102-mixed-cross-backend-participant-control.md) | Mixed Cross-Backend Participant Control | accepted | 2026-07-31 |
+| [103](adr-103-branch-aware-python-coverage-policy.md) | Branch-Aware Python Coverage Policy | accepted | 2026-08-13 |
+| [104](adr-104-runtime-control-plane-architecture.md) | Runtime Control-Plane Architecture | accepted | 2026-08-17 |

@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Set
 from dataclasses import dataclass
 
-from .drivers.libvirt import _error_code, _existing_uuid, _raes_uuid
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
+
+from .drivers.libvirt import (
+    _ABSENCE_ERROR_CODES,
+    _DEACTIVATE_TOLERATED_ERROR_CODES,
+    _error_code,
+    _existing_uuid,
+    _list_absence_error_codes,
+    _raes_uuid,
+)
 from .techvault_matrix import runtime_name
 
 
@@ -71,8 +80,11 @@ def _resolve_by_name(
     except KeyError:
         resolved = _resolve_verified_absence(connection, list_method, address)
     except Exception as exc:
-        if _error_code(exc) in {42, 43}:
+        code = _error_code(exc)
+        if code in _list_absence_error_codes(list_method):
             resolved = _resolve_verified_absence(connection, list_method, address)
+        else:
+            _record_suppressed_failure("_resolve_by_name", exc, native_code=code)
     else:
         resolved = NativeResolution(native=native, name=name)
     return resolved
@@ -102,21 +114,25 @@ def verify_native_removed(
 
 
 def deactivate_and_undefine(native: object) -> bool:
-    return _invoke_native_action(native, "destroy", {42, 43, 55}) and _invoke_native_action(
+    return _invoke_native_action(native, "destroy", _DEACTIVATE_TOLERATED_ERROR_CODES) and _invoke_native_action(
         native,
         "undefine",
-        {42, 43},
+        _ABSENCE_ERROR_CODES,
     )
 
 
-def _invoke_native_action(native: object, method_name: str, tolerated_codes: set[int]) -> bool:
+def _invoke_native_action(native: object, method_name: str, tolerated_codes: Set[int]) -> bool:
     method = getattr(native, method_name, None)
     if not callable(method):
         return False
     try:
         method()
     except Exception as exc:
-        return _error_code(exc) in tolerated_codes
+        code = _error_code(exc)
+        tolerated = code in tolerated_codes
+        if not tolerated:
+            _record_suppressed_failure("_invoke_native_action", exc, native_code=code)
+        return tolerated
     return True
 
 
@@ -126,7 +142,8 @@ def _list_native(connection: object, method_name: str) -> tuple[object, ...] | N
         return None
     try:
         native = method()
-    except Exception:
+    except Exception as exc:
+        _record_suppressed_failure("_list_native", exc)
         return None
     return tuple(native) if isinstance(native, list | tuple) else None
 
@@ -137,7 +154,8 @@ def _native_name(native: object) -> str:
         return ""
     try:
         value = method()
-    except Exception:
+    except Exception as exc:
+        _record_suppressed_failure("_native_name", exc)
         return ""
     return value if isinstance(value, str) else ""
 

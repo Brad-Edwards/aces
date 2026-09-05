@@ -6,7 +6,7 @@ type: FUNCTIONAL
 priority: MUST
 wave: 2
 created_at: 2026-04-05T00:54:58.405111Z
-updated_at: 2026-05-18T02:32:39.252532Z
+updated_at: 2026-09-04T00:00:00Z
 ---
 
 # SEM-218 — Explicitness And Realization Semantics
@@ -20,6 +20,12 @@ The ecosystem shall define semantics distinguishing binding author declarations 
 Current state: identified gap. Honest portability requires normative semantics for what is binding, what may be realized later, and when approximation is forbidden.
 
 ## Traceability
+
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure.py` (Value-free structural authority and shared keyed refinement comparison)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/realization_structure.py` (Authored leaf and scoped collection lowering for mixed runtime constraints)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/realization_concern_explicitness.py` (Concern-owned leaf selection with non-authoritative aggregate support summaries)
+- TESTS → TEST `implementations/python/tests/test_issue_1200_mixed_runtime_constraints.py` (Admitted apply, serialized authority, exact siblings, delegated packages, unknown observations and numeric DNS identity)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1200-mixed-runtime-constraints-preflight.md` (Mixed runtime constraint and portable authority guardrails)
 
 - IMPLEMENTS → GITHUB_ISSUE `1043` (Issue #1043 forwarding-agent realization semantics)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/runtime_forwarding_agent.py` (Forwarding-agent ownership-role model)
@@ -97,3 +103,11 @@ Current state: identified gap. Honest portability requires normative semantics f
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/compiler/provisioning.py` (Process-limit constraint provenance compilation)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/semantics/realization_process_limits.py` (Typed process-limit admission and constraint semantics)
 - TESTS → TEST `implementations/python/tests/test_issue_1066_runtime_resource_limits.py` (Absent, exact, constrained, open, unsupported, substituted, excess, and evidence conformance)
+- IMPLEMENTS → GITHUB_ISSUE `1078` (Complete SEM-218 boundary coverage across RuntimeConfiguration)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1078-runtime-configuration-boundary-coverage-preflight.md` (Complete runtime-field ownership and architecture inventory)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1078-runtime-configuration-boundary-remediation.md` (Issue 1078 implementation and backend-boundary decision)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_processor/semantics/realization_runtime_concern_profiles.py` (Executable RuntimeConfiguration ownership and enforcement inventory)
+- TESTS → TEST `implementations/python/tests/test_issue_1078_runtime_boundary_coverage.py` (Complete runtime concern, posture, closure, observation, and secret conformance)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-847-runtime-package-repositories-preflight.md` (Typed package-repository profile and existing runtime-packages authority boundary)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/runtime_packages.py` (Closed, pinned APT repository profile within the runtime-packages concern)
+- TESTS → TEST `implementations/python/tests/test_issue_847_runtime_package_repositories.py` (Repository validation, compilation, projection, schema, and compatibility coverage)

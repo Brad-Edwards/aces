@@ -135,7 +135,7 @@ class RuntimeControlPlane(
             if callable(acquire_runtime_lease):
                 self._runtime_lease = acquire_runtime_lease()
             self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
-            self._operations = self._store.load_records()
+            self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
             self._operations = reconcile_interrupted_operations(self._store_commits, self._operations)
             self._behavior_specifications = dict(behavior_specifications or {})
             self._crossing_policy_resolver = crossing_policy_resolver
@@ -179,7 +179,8 @@ class RuntimeControlPlane(
 
         self._assert_runtime_owner()
         audit_events = self._store.read_audit()
-        operation_records = list(self._operations.values())
+        with self._operation_lock:
+            operation_records = list(self._operations.values())
         return operational_apparatus_summary(
             target_name=self._target.name,
             snapshot=self._snapshot,
@@ -330,7 +331,8 @@ class RuntimeControlPlane(
     @runtime_owned
     def get_operation(self, operation_id: str) -> OperationStatus | None:
         self._assert_runtime_owner()
-        record = self._operations.get(operation_id)
+        with self._operation_lock:
+            record = self._operations.get(operation_id)
         return None if record is None else record.status
 
     @runtime_owned
@@ -434,7 +436,8 @@ class RuntimeControlPlane(
             return None
         if record.request_fingerprint and request_fingerprint and record.request_fingerprint != request_fingerprint:
             raise ValueError("Idempotency-Key was reused with a different request body.")
-        self._operations[record.receipt.operation_id] = record
+        with self._operation_lock:
+            self._operations[record.receipt.operation_id] = record
         return record.receipt
 
     def _claim_record(self, record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
@@ -446,5 +449,6 @@ class RuntimeControlPlane(
             and persisted.request_fingerprint != record.request_fingerprint
         ):
             raise ValueError("Idempotency-Key was reused with a different request body.")
-        self._operations[persisted.receipt.operation_id] = persisted
+        with self._operation_lock:
+            self._operations[persisted.receipt.operation_id] = persisted
         return persisted

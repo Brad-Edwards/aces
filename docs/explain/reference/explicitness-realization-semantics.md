@@ -62,6 +62,26 @@ engineering risk is concept conflation: treating "not specified yet",
 
 ## Canonical Incumbents
 
+Issue #1200 preserves mixed constraints through the portable plan, rather than
+using a weakest-child aggregate as comparison authority. The optional typed
+`structure` entry records exact/open leaves, record additions and required keyed
+members without duplicating operation values. Compilation uses authored
+explicitness provenance, so normalization defaults are not promoted to author
+constraints. Package manager/name selectors intentionally leave an omitted
+architecture open; ambiguous partial identities reject before mutation.
+
+Both direct apply and serialized/control-plane readmission consume this
+descriptor. The shared structural matcher checks required membership without
+depending on observation ordering; canonical concern projection still owns
+typed shape, excluded fields and sensitive-value commitments. Unknown/missing
+observations do not create satisfaction provenance. Numeric DNS extension codes
+retain exact identity through the owning model's contextual classification.
+See `test_issue_1200_mixed_runtime_constraints.py` for the positive/negative
+apply pairs and `test_issue_1066_runtime_resource_limits.py` for retained
+finite-domain and exact-sibling checks. Unsupported mixed shapes receive the
+existing actionable authority-bound diagnostic. No new evidence demand or
+backend-specific interpretation is introduced.
+
 Build on these existing surfaces before adding anything new:
 
 - SDL parsing and closed models: `raes.parser`, `raes.SDLModel`, and
@@ -290,6 +310,28 @@ match is exact string membership plus support-mode compatibility. If compiled
 explicitness metadata is added to plan payloads or published contracts, it must
 go through the existing `ContractModel` / schema-generation path; otherwise keep
 it model-side like existing compiler provenance metadata.
+
+## Complete Runtime-Configuration Coverage
+
+Every top-level `RuntimeConfiguration` field has an executable ownership and
+enforcement disposition. The canonical concern registry splits mixed runtime
+objects at semantic boundaries, carries those paths through compiled and
+resolved authority, and validates returned values against the owning closed SDL
+type. Configuration concerns exclude readiness, run outcomes, live counters,
+loaded state, evidence references, and similar observations before posture is
+classified.
+
+Exact runtime support is concern-specific: a backend needs the generic exact
+capability, the exact concern-kind token, and a matching observation
+capability. Open and constrained concerns use the same manifest and envelope
+admission path. None of those declarations replaces independent readback, and
+a backend must remain unsupported when it can only echo submitted plan values.
+
+Closed collection authority applies to the scenario-significant managed
+projection, not the complete native operating-system inventory. Base-image
+packages, transitive dependencies, incidental daemons, native handles, and
+measurement apparatus remain on their existing substrate or evidence owners
+unless deliberately promoted into the corresponding runtime concern.
 
 ## Gotchas And Anti-Patterns
 

@@ -45,24 +45,33 @@ def _validate_descriptor_exports(
             raise SDLParseError(f"Module '{descriptor.id}' exports undefined {section_name}: " + ", ".join(undefined))
 
 
-def _rewrite_node(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:
-    payload["features"] = {
-        _maybe_rename(name, symbols["features"]): role for name, role in payload.get("features", {}).items()
-    }
-    payload["conditions"] = {
-        _maybe_rename(name, symbols["conditions"]): role for name, role in payload.get("conditions", {}).items()
-    }
-    payload["injects"] = {
-        _maybe_rename(name, symbols["injects"]): role for name, role in payload.get("injects", {}).items()
-    }
+def _rewrite_node_named_mappings(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for section in ("features", "conditions", "injects"):
+        payload[section] = {
+            _maybe_rename(name, symbols[section]): role for name, role in payload.get(section, {}).items()
+        }
     payload["vulnerabilities"] = [
         _maybe_rename(name, symbols["vulnerabilities"]) for name in payload.get("vulnerabilities", [])
     ]
+
+
+def _rewrite_node_role_entities(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
     for role in payload.get("roles", {}).values():
         if isinstance(role, dict):
             role["entities"] = [_maybe_rename(name, symbols["entities"]) for name in role.get("entities", [])]
-    runtime = payload.get("runtime")
-    container = runtime.get("container") if isinstance(runtime, dict) else None
+
+
+def _rewrite_node_network_namespace(
+    runtime: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    container = runtime.get("container")
     namespaces = container.get("namespaces") if isinstance(container, dict) else None
     network = namespaces.get("network") if isinstance(namespaces, dict) else None
     if isinstance(network, dict) and network.get("target_node_ref"):
@@ -71,6 +80,30 @@ def _rewrite_node(payload: dict[str, Any], symbols: dict[str, dict[str, str] | s
             "nodes",
             symbols["nodes"],
         )
+
+
+def _rewrite_generated_environment_sources(
+    runtime: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for collection_name in ("environment", "environment_files"):
+        for entry in runtime.get(collection_name, []):
+            source = entry.get("value_from") if isinstance(entry, dict) else None
+            if isinstance(source, dict) and source.get("generated_artifact"):
+                source["generated_artifact"] = _rewrite_section_ref(
+                    str(source["generated_artifact"]),
+                    "generated_artifacts",
+                    symbols["generated_artifacts"],
+                )
+
+
+def _rewrite_node(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:
+    _rewrite_node_named_mappings(payload, symbols)
+    _rewrite_node_role_entities(payload, symbols)
+    runtime = payload.get("runtime")
+    if isinstance(runtime, dict):
+        _rewrite_node_network_namespace(runtime, symbols)
+        _rewrite_generated_environment_sources(runtime, symbols)
 
 
 def _rewrite_infrastructure(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:

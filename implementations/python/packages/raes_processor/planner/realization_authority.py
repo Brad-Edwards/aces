@@ -233,6 +233,7 @@ def _compiled_runtime_view(
         required_observation_strength=authority.required_observation_strength,
         value_constraints=value_constraints,
         process_resource_limits=process_resource_limits,
+        structure=authority.structure,
     )
 
 

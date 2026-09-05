@@ -39,9 +39,8 @@ from raes_runtime.result_contracts import (
 from raes_conformance.conformance.diagnostics import _SEMANTIC_INVALID_DIAGNOSTIC_CODE, _diagnostic
 
 
-def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
-    validated = RuntimeSnapshotEnvelopeModel.model_validate(payload)
-    entries = {
+def _snapshot_entries(validated: RuntimeSnapshotEnvelopeModel) -> dict[str, SnapshotEntry]:
+    return {
         address: SnapshotEntry(
             address=entry.address,
             domain=RuntimeDomain(entry.domain),
@@ -53,8 +52,44 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
         )
         for address, entry in validated.entries.items()
     }
+
+
+def _realization_disclosures(
+    validated: RuntimeSnapshotEnvelopeModel,
+) -> tuple[RealizationObservationDisclosure, ...]:
+    return tuple(
+        RealizationObservationDisclosure(
+            address=entry.address,
+            field_path=entry.field_path,
+            domain=entry.domain,
+            requirement_kind=entry.requirement_kind,
+            verification_scope=entry.verification_scope,
+            observation_strength=entry.observation_strength,
+            observed_value=entry.observed_value,
+            operating_system=(
+                ObservedOperatingSystemIdentity(
+                    family=entry.operating_system.family,
+                    distribution=entry.operating_system.distribution,
+                    version=entry.operating_system.version,
+                )
+                if entry.operating_system is not None
+                else None
+            ),
+            operation_id=entry.operation_id,
+            envelope_digest=entry.envelope_digest,
+            configuration_digest=entry.configuration_digest,
+            observer_version=entry.observer_version,
+            sequence=entry.sequence,
+            binding_verified=entry.binding_verified,
+        )
+        for entry in validated.realization_observations
+    )
+
+
+def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
+    validated = RuntimeSnapshotEnvelopeModel.model_validate(payload)
     return RuntimeSnapshot(
-        entries=entries,
+        entries=_snapshot_entries(validated),
         orchestration_results={
             address: result.model_dump(mode="json") for address, result in validated.orchestration_results.items()
         },
@@ -124,33 +159,7 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
             for context_id, context in validated.time_management_contexts.items()
         },
         time_model_state=validated.time_model_state,
-        realization_observations=tuple(
-            RealizationObservationDisclosure(
-                address=entry.address,
-                field_path=entry.field_path,
-                domain=entry.domain,
-                requirement_kind=entry.requirement_kind,
-                verification_scope=entry.verification_scope,
-                observation_strength=entry.observation_strength,
-                observed_value=entry.observed_value,
-                operating_system=(
-                    ObservedOperatingSystemIdentity(
-                        family=entry.operating_system.family,
-                        distribution=entry.operating_system.distribution,
-                        version=entry.operating_system.version,
-                    )
-                    if entry.operating_system is not None
-                    else None
-                ),
-                operation_id=entry.operation_id,
-                envelope_digest=entry.envelope_digest,
-                configuration_digest=entry.configuration_digest,
-                observer_version=entry.observer_version,
-                sequence=entry.sequence,
-                binding_verified=entry.binding_verified,
-            )
-            for entry in validated.realization_observations
-        ),
+        realization_observations=_realization_disclosures(validated),
         metadata=dict(validated.metadata),
     )
 

@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "617becb282057789766c4c77967e0241ae64adab788ba491b7fa910678f3b953",
+  "content_hash": "d08e616869e52a2e533b49344827b161eb8d9d908f9c8c5ad61081f203bc4fe2",
   "last_change": {
-    "summary": "Propagated governed operating-system distribution and release identity through satisfiability witnesses for issue #1077.",
-    "content_hash": "617becb282057789766c4c77967e0241ae64adab788ba491b7fa910678f3b953"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "d08e616869e52a2e533b49344827b161eb8d9d908f9c8c5ad61081f203bc4fe2"
   }
 }

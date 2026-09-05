@@ -40,6 +40,7 @@ from raes_contracts.realization_envelope import (
     realization_envelope_digest,
     realizer_configuration_digest,
 )
+from raes_contracts.realization_observation import RealizationObservationDisclosure
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 from raes_contracts.vocabulary import (
     ObservationStrength,
@@ -129,8 +130,6 @@ def _snapshot(
 ) -> RuntimeSnapshot:
     observations = ()
     if observation_strength is not None:
-        from raes_contracts.realization_observation import RealizationObservationDisclosure
-
         observations = (
             RealizationObservationDisclosure(
                 address=_ADDRESS,
@@ -210,12 +209,19 @@ def _supporting_manifest(
             replace(
                 declaration,
                 support_mode=mode,
+                supported_exact_requirement_kinds=(
+                    declaration.supported_exact_requirement_kinds | {"runtime-processes"}
+                ),
                 supported_constraint_kinds=(
                     declaration.supported_constraint_kinds | frozenset({"process-resource-limits"})
                 ),
                 observation_capabilities={
                     **declaration.observation_capabilities,
                     "process-resource-limits": RealizationObservationCapability(
+                        verification_scope=RealizationVerificationScope.CONFIGURATION,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                    "runtime-processes": RealizationObservationCapability(
                         verification_scope=RealizationVerificationScope.CONFIGURATION,
                         observation_strength=ObservationStrength.GUEST_OBSERVED,
                     ),
@@ -633,6 +639,27 @@ def test_effective_observation_rejects_unresolved_limit_variables() -> None:
     assert provenance == ()
 
 
+def test_mixed_constrained_collection_preserves_exact_sibling_member() -> None:
+    declared = [_exact_limit(soft=32768), {**_exact_limit(), "subject": {"name": "worker", "role": "primary"}}]
+    constraint = RealizationValueConstraint(
+        identity_digest=process_resource_limit_identity_digest(declared[0]),
+        leaf="soft",
+        parameter=("soft_limit",),
+        allowed_values=(32768, 65536),
+    )
+    requirement = _requirement(ExplicitnessClass.CONSTRAINED, constraints=(constraint,))
+    for hard, accepted in ((65536, True), (131072, False)):
+        realized = [{**declared[1], "hard": hard}, {**declared[0], "soft": 65536}]
+        diagnostics, provenance = realization_disclosure(
+            (requirement,),
+            _plan(declared),
+            _snapshot(realized, observation_strength=ObservationStrength.GUEST_OBSERVED),
+            manifest=_supporting_manifest(),
+        )
+        assert (not diagnostics) is accepted
+        assert bool(provenance) is accepted
+
+
 def test_open_backend_choice_requires_typed_apparatus_permission_and_is_disclosed() -> None:
     requirement = _requirement(ExplicitnessClass.OPEN)
     selected = [_exact_limit()]
@@ -707,7 +734,17 @@ def test_backend_boundary_retains_baseline_on_malformed_limit_observation() -> N
                         payload=payload,
                     )
                 },
-                realization_observations=observation_snapshot.realization_observations,
+                realization_observations=(
+                    *observation_snapshot.realization_observations,
+                    RealizationObservationDisclosure(
+                        address=_ADDRESS,
+                        field_path="nodes.worker.runtime.processes",
+                        domain="runtime-realization",
+                        requirement_kind="runtime-processes",
+                        verification_scope=RealizationVerificationScope.CONFIGURATION,
+                        observation_strength=ObservationStrength.GUEST_OBSERVED,
+                    ),
+                ),
             ),
             changed_addresses=[_ADDRESS],
         )

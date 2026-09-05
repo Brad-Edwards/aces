@@ -11,6 +11,7 @@ from pydantic_core import CoreSchema
 from ..artifact_requirements import ArtifactMechanismCapability
 from ..operating_systems import OS_VERSION_PATTERN, validate_operating_system_pair
 from ..vocabulary import (
+    GeneratedArtifactDeliveryMode,
     GeneratedArtifactKind,
     ObservationStrength,
     ProcessResourceLimitKind,
@@ -59,6 +60,53 @@ class OperatingSystemCompatibilityModel(ContractModel):
         return json_schema
 
 
+def _validate_operating_system_rows(model: ProvisionerCapabilitiesModel) -> None:
+    os_keys = [(entry.family, entry.distribution) for entry in model.operating_systems]
+    if len(os_keys) != len(set(os_keys)):
+        raise ValueError("operating_systems must not contain duplicate family/distribution rows")
+    undeclared_families = {
+        entry.family for entry in model.operating_systems if entry.family not in model.supported_os_families
+    }
+    if undeclared_families:
+        raise ValueError(
+            "operating_systems families must be present in supported_os_families: "
+            + ", ".join(sorted(undeclared_families))
+        )
+
+
+def _validate_account_feature_coupling(model: ProvisionerCapabilitiesModel) -> None:
+    if model.supports_accounts and not model.supported_account_features:
+        raise ValueError("provisioners that support accounts must declare supported_account_features")
+    if not model.supports_accounts and model.supported_account_features:
+        raise ValueError("supported_account_features require supports_accounts=true")
+
+
+def _validate_generated_artifact_kind_coupling(model: ProvisionerCapabilitiesModel) -> None:
+    if len(model.supported_generated_artifact_kinds) != len(set(model.supported_generated_artifact_kinds)):
+        raise ValueError("supported_generated_artifact_kinds must not contain duplicates")
+    if model.supports_generated_artifacts and not model.supported_generated_artifact_kinds:
+        raise ValueError(
+            "provisioners that support generated artifacts must declare supported_generated_artifact_kinds"
+        )
+    if not model.supports_generated_artifacts and model.supported_generated_artifact_kinds:
+        raise ValueError("supported_generated_artifact_kinds require supports_generated_artifacts=true")
+
+
+def _validate_generated_artifact_delivery_coupling(model: ProvisionerCapabilitiesModel) -> None:
+    if len(model.supported_generated_artifact_delivery_modes) != len(
+        set(model.supported_generated_artifact_delivery_modes)
+    ):
+        raise ValueError("supported_generated_artifact_delivery_modes must not contain duplicates")
+    if not model.supports_generated_artifacts and model.supported_generated_artifact_delivery_modes:
+        raise ValueError("supported_generated_artifact_delivery_modes require supports_generated_artifacts=true")
+
+
+def _validate_feature_coupling(model: ProvisionerCapabilitiesModel) -> None:
+    _validate_account_feature_coupling(model)
+    _validate_generated_artifact_kind_coupling(model)
+    _validate_generated_artifact_delivery_coupling(model)
+
+
 class ProvisionerCapabilitiesModel(ContractModel):
     name: NonEmptyString
     supported_node_types: list[NonEmptyString] = Field(min_length=1)
@@ -77,6 +125,10 @@ class ProvisionerCapabilitiesModel(ContractModel):
         default_factory=list,
         json_schema_extra={"uniqueItems": True},
     )
+    supported_generated_artifact_delivery_modes: list[GeneratedArtifactDeliveryMode] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
     supports_persistent_volumes: bool = False
     constraints: dict[str, str] = Field(default_factory=dict)
 
@@ -90,17 +142,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
             "capabilities.provisioner.supported_os_families",
             self.supported_os_families,
         )
-        os_keys = [(entry.family, entry.distribution) for entry in self.operating_systems]
-        if len(os_keys) != len(set(os_keys)):
-            raise ValueError("operating_systems must not contain duplicate family/distribution rows")
-        undeclared_families = {
-            entry.family for entry in self.operating_systems if entry.family not in self.supported_os_families
-        }
-        if undeclared_families:
-            raise ValueError(
-                "operating_systems families must be present in supported_os_families: "
-                + ", ".join(sorted(undeclared_families))
-            )
+        _validate_operating_system_rows(self)
         _validate_controlled_vocabulary_terms(
             "capabilities.provisioner.supported_node_architectures",
             self.supported_node_architectures,
@@ -121,18 +163,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
             "capabilities.provisioner.supported_service_materialization_profiles",
             self.supported_service_materialization_profiles,
         )
-        if self.supports_accounts and not self.supported_account_features:
-            raise ValueError("provisioners that support accounts must declare supported_account_features")
-        if not self.supports_accounts and self.supported_account_features:
-            raise ValueError("supported_account_features require supports_accounts=true")
-        if len(self.supported_generated_artifact_kinds) != len(set(self.supported_generated_artifact_kinds)):
-            raise ValueError("supported_generated_artifact_kinds must not contain duplicates")
-        if self.supports_generated_artifacts and not self.supported_generated_artifact_kinds:
-            raise ValueError(
-                "provisioners that support generated artifacts must declare supported_generated_artifact_kinds"
-            )
-        if not self.supports_generated_artifacts and self.supported_generated_artifact_kinds:
-            raise ValueError("supported_generated_artifact_kinds require supports_generated_artifacts=true")
+        _validate_feature_coupling(self)
         return self
 
     @classmethod

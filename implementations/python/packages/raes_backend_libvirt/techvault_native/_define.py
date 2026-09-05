@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 from raes_contracts.diagnostics import Diagnostic
 
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
+
 from .._techvault_native_ops import (
     _CODE_OPERATION_FAILED,
     _CODE_OWNERSHIP_CONFLICT,
@@ -76,7 +78,8 @@ def define_network(
     except _OwnershipConflict:
         driver._names.pop(address, None)
         diagnostic = _diagnostic(_CODE_OWNERSHIP_CONFLICT, address)
-    except Exception:
+    except Exception as exc:
+        _record_suppressed_failure("define_network", exc)
         if native is None:
             driver._names.pop(address, None)
         else:
@@ -88,7 +91,8 @@ def define_network(
         handle = NetworkHandle(address=address, realized=True)
         try:
             observations = network_observations(native, network)
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("define_network", exc)
             diagnostic = _diagnostic(_CODE_READBACK_FAILED, address)
     return handle, diagnostic, observations
 
@@ -152,7 +156,8 @@ def define_domain(
     except _OwnershipConflict:
         driver._names.pop(address, None)
         diagnostic = _diagnostic(_CODE_OWNERSHIP_CONFLICT, address)
-    except Exception:
+    except Exception as exc:
+        _record_suppressed_failure("define_domain", exc)
         if native is None:
             driver._cleanup_artifacts(address)
             driver._names.pop(address, None)
@@ -171,6 +176,7 @@ def define_domain(
                 kernel=kernel,
                 initrd=initrd,
             )
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("define_domain", exc)
             diagnostic = _diagnostic(_CODE_READBACK_FAILED, address)
     return handle, diagnostic, observations

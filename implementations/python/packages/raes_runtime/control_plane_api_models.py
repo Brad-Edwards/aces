@@ -34,6 +34,8 @@ from raes_contracts.planning import (
 )
 from raes_contracts.runtime_state import OperationStatus, RuntimeSnapshotEnvelope
 
+from raes_runtime.control_plane_store_payloads import _realization_observations_payload
+
 
 class _ParticipantInitializeBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -112,6 +114,7 @@ def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
                 ),
                 verification_scope=entry.verification_scope,
                 required_observation_strength=entry.required_observation_strength,
+                structure=entry.structure,
             )
             for entry in model.realization_authority
         ),
@@ -239,39 +242,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             }
             for entry in snapshot.realization_provenance
         ],
-        "realization_observations": [
-            {
-                "address": entry.address,
-                "field_path": entry.field_path,
-                "domain": entry.domain,
-                "requirement_kind": entry.requirement_kind,
-                "verification_scope": entry.verification_scope.value,
-                "observation_strength": entry.observation_strength.value,
-                **(
-                    {
-                        "observed_value": entry.observed_value,
-                        "operating_system": (
-                            {
-                                "family": entry.operating_system.family,
-                                "distribution": entry.operating_system.distribution,
-                                "version": entry.operating_system.version,
-                            }
-                            if entry.operating_system is not None
-                            else None
-                        ),
-                        "operation_id": entry.operation_id,
-                        "envelope_digest": entry.envelope_digest,
-                        "configuration_digest": entry.configuration_digest,
-                        "observer_version": entry.observer_version,
-                        "sequence": entry.sequence,
-                        "binding_verified": entry.binding_verified,
-                    }
-                    if entry.requirement_kind in {"compute-substrate", "operating-system"}
-                    else {}
-                ),
-            }
-            for entry in snapshot.realization_observations
-        ],
+        "realization_observations": _realization_observations_payload(snapshot),
         "realization_envelope": (
             snapshot.realization_envelope.model_dump(mode="json") if snapshot.realization_envelope is not None else None
         ),

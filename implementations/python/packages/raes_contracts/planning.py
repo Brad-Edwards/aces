@@ -21,6 +21,7 @@ from raes_contracts.addressing import require_compiled_address
 from raes_contracts.bounded_domains import DomainDescriptor
 from raes_contracts.compute_substrate import validate_compute_substrate_constraint
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.realization_structure import RealizationStructure
 from raes_contracts.vocabulary import ObservationStrength, RealizationVerificationScope
 
 if TYPE_CHECKING:
@@ -158,6 +159,7 @@ class ResolvedRealizationAuthority:
     bounds: tuple[RealizationAuthorityBound, ...] = ()
     verification_scope: RealizationVerificationScope | None = None
     required_observation_strength: ObservationStrength | None = None
+    structure: RealizationStructure | None = None
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address)

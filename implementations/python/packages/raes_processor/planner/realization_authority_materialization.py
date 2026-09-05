@@ -163,6 +163,9 @@ def materialize_realization_authority(
     diagnostics: list[Diagnostic] = []
     for authority in model.realization_authority:
         requirement = _matching_requirement(model.realization_requirements, authority)
+        if requirement is not None and requirement.structure_error:
+            diagnostics.append(_unsafe_bound_diagnostic(authority))
+            continue
         try:
             mode = _resolved_mode(
                 authority,
@@ -196,6 +199,7 @@ def materialize_realization_authority(
                 bounds=bounds,
                 verification_scope=authority.verification_scope,
                 required_observation_strength=authority.required_observation_strength,
+                structure=requirement.structure if requirement is not None else None,
             )
         )
     return tuple(resolved), diagnostics
@@ -215,7 +219,11 @@ def _unsafe_bound_diagnostic(authority: CompiledRealizationAuthority) -> Diagnos
         code="realization.authority-bound-unavailable",
         domain=authority.domain,
         address=authority.address,
-        message=f"No publication-safe typed author bound is available for '{authority.requirement_kind}'.",
+        message=(
+            f"No publication-safe typed author bound is available for '{authority.requirement_kind}' "
+            f"at '{authority.field_path}'. This mixed demand needs an owning collection identity "
+            "and representable leaf bounds; use supported bounded forms or extend the concern contract."
+        ),
     )
 
 

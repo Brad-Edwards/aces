@@ -24,7 +24,7 @@
       "binding_class": "external-service-project-key",
       "rationale": "Retains the existing service-owned SonarCloud project designation without treating it as current RAES product identity.",
       "occurrences": 2,
-      "content_sha256": "bcb2fa9327da30146ede9dba4f6294e0ed94c9e86287a8b278d7be2508c806f0"
+      "content_sha256": "c81253a9b5807d7c9796e888d73b68dad932ff512f3f40345ecec5c7da7d4622"
     }
   ],
   "records": [
@@ -47,7 +47,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "1112779f7f33a932c90fd5e1bde641199bdf02a9910d89b0207e5ba92ab7562f"
+      "content_sha256": "bc4f3aa84b1b62c139aff2308bbb6377a93431e9b0ea7b411dbef4b8debdc468"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -299,7 +299,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 20,
-      "content_sha256": "3bfc03a198bf951a689747605ad6cac40cdb15e4efcdeb6dae1eaf65432b8716"
+      "content_sha256": "19e18d246b9fc3679fd433ef1e05730f0badac0d76fb6442edaa90cce392e012"
     },
     {
       "path": "docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md",
@@ -495,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "dc023117f930026916eab8c545cf7eaa6ced7245006493c37061032e3f2ecb33"
+      "content_sha256": "9addf92641cb502ff6f91df34cad83352e155169ccbb7097279a1bf5c475a8ac"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1524,7 +1524,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
-      "content_sha256": "6071efbcb9ff2c713a5f4d5a61f421b8adbcf217591ade1e146e4d222fa0b077"
+      "content_sha256": "6aa1cc1499ece9f51a165b4d31365a22c400339df6cccf0282baae1f22117472"
     },
     {
       "path": "docs/research/formal-semantic-validation/execution-snapshot-v1.json",

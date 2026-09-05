@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import os
 import shutil
 import tempfile
@@ -10,10 +9,11 @@ from pathlib import Path
 from typing import cast
 
 from raes_backend_protocols.naming import provider_resource_name
-from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
 from raes_contracts.realization_observation import RealizationObservation
 
+from raes_backend_libvirt._observability import record_suppressed_failure as _record_suppressed_failure
 from raes_backend_libvirt.driver import (
     DomainHandle,
     DomainSpec,
@@ -26,6 +26,13 @@ from ...envelopes import load_libvirt_realization_envelope
 from .._libvirt_xml import _domain_xml, _network_xml, _nwfilter_xml
 from ..seed import _SEED_DIR_MODE, GenisoimageSeedBuilder, SeedBuilder, write_seed_files
 from ._deployment_batch import realize_domain_specs, realize_network_specs
+from ._deployment_diagnostics import (
+    _CODE_OPERATION_FAILED,
+    _CODE_OWNERSHIP_CONFLICT,
+    _CODE_UNAVAILABLE,
+    _CONNECTION_ADDRESS,
+    _failure,
+)
 from ._native import (
     Connector,
     _call_libvirt,
@@ -34,7 +41,6 @@ from ._native import (
     _filter_owner_uuid,
     _find_native,
     _is_absence_error,
-    _lookup,
     _NativeLookupError,
     _NativeResource,
     _OwnershipConflict,
@@ -43,11 +49,6 @@ from ._native import (
     _stop_native,
 )
 
-_DOMAIN = "runtime"
-_CODE_OPERATION_FAILED = "libvirt-backend.driver.operation-failed"
-_CODE_UNAVAILABLE = "libvirt-backend.driver.unavailable"
-_CODE_OWNERSHIP_CONFLICT = "libvirt-backend.driver.ownership-conflict"
-_CONNECTION_ADDRESS = "runtime.libvirt.connection"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
 _WORKSPACE_PREFIX = "raes-libvirt-"
 
@@ -100,7 +101,8 @@ class LibvirtDeploymentDriver:
         created_domains: list[str] = []
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("realize", exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         realize_network_specs(self, connection, networks, created_networks, network_handles, diagnostics)
@@ -149,7 +151,8 @@ class LibvirtDeploymentDriver:
                 native = lookup(self._name_for(address))
                 active = getattr(native, "isActive", None)
                 owned_and_active = _existing_uuid(native) == _raes_uuid(address) and callable(active) and active() == 1
-            except Exception:
+            except Exception as exc:
+                _record_suppressed_failure("_compute_substrate_observation", exc)
                 owned_and_active = False
             if owned_and_active:
                 envelope = load_libvirt_realization_envelope(self.driver_mode)
@@ -172,7 +175,8 @@ class LibvirtDeploymentDriver:
 
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("observe", exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
         observations: list[RealizationObservation] = []
         diagnostics: list[Diagnostic] = []
@@ -221,7 +225,8 @@ class LibvirtDeploymentDriver:
             native.create()
         except _OwnershipConflict:
             return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("_realize_network", exc)
             return _failure(spec.address, _CODE_OPERATION_FAILED)
         self._realized.add(spec.address)
         return None
@@ -250,7 +255,8 @@ class LibvirtDeploymentDriver:
             native.create()
         except _OwnershipConflict:
             return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("_realize_domain", exc)
             return _failure(spec.address, _CODE_OPERATION_FAILED)
         self._realized.add(spec.address)
         return None
@@ -264,7 +270,8 @@ class LibvirtDeploymentDriver:
         diagnostics: list[Diagnostic] = []
         try:
             connection = self._conn()
-        except Exception:
+        except Exception as exc:
+            _record_suppressed_failure("destroy", exc)
             return DriverResult(diagnostics=(_failure(_CONNECTION_ADDRESS, _CODE_UNAVAILABLE),))
 
         domain_handles = self._destroy_domains(connection, domains, diagnostics)
@@ -385,7 +392,12 @@ class LibvirtDeploymentDriver:
         # refuse to redefine a filter at this name unless it is owner-stamped for
         # this RAES address. A foreign filter (or one for another address that
         # normalizes to the same name) is never overwritten; apply fails closed.
-        existing = _lookup(connection, "nwfilterLookupByName", filter_name)
+        # Unlike domain/network definition, nwfilterDefineXML is an upsert and
+        # cannot surface a lookup failure as a later duplicate-name conflict.
+        # Distinguish proven absence from every other lookup failure here so a
+        # mismatched native error can never authorize replacing a host-global
+        # filter whose ownership was not verified.
+        existing = _find_native(connection, "nwfilterLookupByName", filter_name)
         if existing is not None and _existing_uuid(existing) != owner:
             raise _OwnershipConflict(filter_name)
         define = getattr(connection, "nwfilterDefineXML", None)
@@ -416,7 +428,7 @@ class LibvirtDeploymentDriver:
         failure, never a pre-existing resource an UPDATE would otherwise destroy.
         """
 
-        native = _lookup(connection, lookup_method, name)
+        native = _find_native(connection, lookup_method, name)
         if native is None:
             return False
         if _existing_uuid(native) != _raes_uuid(address):
@@ -426,59 +438,60 @@ class LibvirtDeploymentDriver:
         return True
 
     def _undefine_nwfilter(self, connection: object, address: str) -> None:
-        filter_name = self._filters.pop(address, None)
+        filter_name = self._filters.get(address)
         if filter_name is None:
             return
-        native = _lookup(connection, "nwfilterLookupByName", filter_name)
-        if native is None:
-            return
-        if _existing_uuid(native) != _filter_owner_uuid(address):
-            # A filter at this name we do not own must never be undefined.
-            return
-        # Best-effort cleanup of our own filter: a filter that cannot be undefined
-        # (in use, missing) must not fail the destroy.
-        with contextlib.suppress(Exception):
-            cast(_NativeResource, native).undefine()
-
-    def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
         try:
-            native = _find_native(connection, lookup_method, self._name_for(address))
-        except _NativeLookupError:
-            # Connection/permission/internal lookup failure: fail closed so the
-            # snapshot is preserved for retry instead of claiming the object gone.
-            return False
-        # A None result is genuine absence — teardown is idempotently satisfied.
-        # A present object is torn down only when its UUID proves RAES ownership
-        # (the same invariant as convergence), never a foreign name collision.
-        if native is not None:
-            if _existing_uuid(native) != _raes_uuid(address):
-                raise _OwnershipConflict(address)
+            native = _find_native(connection, "nwfilterLookupByName", filter_name)
+        except _NativeLookupError as exc:
+            _record_suppressed_failure("_undefine_nwfilter", exc.__cause__ or exc)
+            return
+        if native is None:
+            self._filters.pop(address, None)
+        elif _existing_uuid(native) != _filter_owner_uuid(address):
+            # A filter at this name we do not own must never be undefined.
+            self._filters.pop(address, None)
+        else:
+            # Best-effort cleanup of our own filter: a filter that cannot be
+            # undefined (in use, missing) must not fail the destroy.
             try:
-                _stop_native(native)
                 cast(_NativeResource, native).undefine()
             except Exception as exc:
-                # An object that vanished between lookup and undefine is still torn
-                # down; a stop/undefine that failed for permission or an internal
-                # reason fails closed and preserves the snapshot for retry.
-                return _is_absence_error(exc)
-        return True
+                if _is_absence_error(exc):
+                    self._filters.pop(address, None)
+                else:
+                    _record_suppressed_failure("_undefine_nwfilter", exc)
+            else:
+                self._filters.pop(address, None)
+
+    def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
+        removed = True
+        try:
+            native = _find_native(connection, lookup_method, self._name_for(address))
+        except _NativeLookupError as exc:
+            # Connection/permission/internal lookup failure: fail closed so the
+            # snapshot is preserved for retry instead of claiming the object gone.
+            _record_suppressed_failure("_destroy_one", exc.__cause__ or exc)
+            removed = False
+        else:
+            # A None result is genuine absence — teardown is idempotently satisfied.
+            # A present object is torn down only when its UUID proves RAES ownership
+            # (the same invariant as convergence), never a foreign name collision.
+            if native is not None:
+                if _existing_uuid(native) != _raes_uuid(address):
+                    raise _OwnershipConflict(address)
+                try:
+                    _stop_native(native)
+                    cast(_NativeResource, native).undefine()
+                except Exception as exc:
+                    # An object that vanished between lookup and undefine is still torn
+                    # down; a stop/undefine that failed for permission or an internal
+                    # reason fails closed and preserves the snapshot for retry.
+                    removed = _is_absence_error(exc)
+                    if not removed:
+                        _record_suppressed_failure("_destroy_one", exc)
+        return removed
 
     def _rollback(self, networks: list[str], domains: list[str]) -> None:
         if networks or domains:
             self.destroy(networks=tuple(networks), domains=tuple(domains))
-
-
-_FAILURE_MESSAGES = {
-    _CODE_UNAVAILABLE: "Libvirt connection is unavailable for this backend operation.",
-    _CODE_OWNERSHIP_CONFLICT: (
-        "Libvirt object for '{address}' already exists under the same name but is not "
-        "owned by this RAES address; refusing to converge an object this plan does not own."
-    ),
-}
-
-
-def _failure(address: str, code: str) -> Diagnostic:
-    template = _FAILURE_MESSAGES.get(code, "Libvirt operation for '{address}' did not succeed.")
-    return Diagnostic(
-        code=code, domain=_DOMAIN, address=address, message=template.format(address=address), severity=Severity.ERROR
-    )

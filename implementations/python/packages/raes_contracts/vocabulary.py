@@ -27,6 +27,23 @@ class GeneratedArtifactKind(str, Enum):
     SSH_KEY_BUNDLE = "ssh_key_bundle"
 
 
+class GeneratedArtifactDeliveryMode(str, Enum):
+    """Portable ways a generated-artifact output is delivered to a consumer.
+
+    ``mount`` is the read-only file projection declared directly on
+    ``generated_artifacts[].consumers[]``. ``environment`` and ``env_file`` are
+    node-owned runtime environment bindings authored on
+    ``nodes.<node>.runtime.environment[]`` / ``environment_files[]`` whose
+    generated-artifact consumer projection the compiler derives. A provisioner
+    declares each mode it can realize separately so it cannot claim mount
+    delivery while silently dropping environment or env-file injection.
+    """
+
+    MOUNT = "mount"
+    ENVIRONMENT = "environment"
+    ENV_FILE = "env_file"
+
+
 class WorkflowFeature(str, Enum):
     """Portable workflow control features that an orchestrator may support."""
 

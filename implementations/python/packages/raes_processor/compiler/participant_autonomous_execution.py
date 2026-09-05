@@ -184,6 +184,58 @@ def _compiled_execution_bindings(
             list(dict.fromkeys(target_refs)),
             addressable_ref_index=addressable_ref_index,
         )
+        interactions = tuple(action.interactions)
+        interaction_classes = tuple(dict.fromkeys(interaction.interaction_class.value for interaction in interactions))
+        shared_state_refs = tuple(
+            dict.fromkeys(str(ref) for interaction in interactions for ref in interaction.shared_state_refs)
+        )
+        related_action_contract_addresses = tuple(
+            dict.fromkeys(
+                _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts))
+                for interaction in interactions
+                for ref in interaction.related_actions
+            )
+        )
+        commutative_shared_state_refs = tuple(
+            dict.fromkeys(
+                str(ref)
+                for interaction in interactions
+                if interaction.commutative
+                for ref in interaction.shared_state_refs
+            )
+        )
+        commutative_related_action_contract_addresses = tuple(
+            dict.fromkeys(
+                _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts))
+                for interaction in interactions
+                if interaction.commutative
+                for ref in interaction.related_actions
+            )
+        )
+        merge_rule_refs = tuple(
+            dict.fromkeys(
+                interaction.merge_rule_ref for interaction in interactions if interaction.merge_rule_ref is not None
+            )
+        )
+        shared_state_merge_rules = tuple(
+            dict.fromkeys(
+                (str(ref), interaction.merge_rule_ref)
+                for interaction in interactions
+                if interaction.merge_rule_ref is not None
+                for ref in interaction.shared_state_refs
+            )
+        )
+        related_action_merge_rules = tuple(
+            dict.fromkeys(
+                (
+                    _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts)),
+                    interaction.merge_rule_ref,
+                )
+                for interaction in interactions
+                if interaction.merge_rule_ref is not None
+                for ref in interaction.related_actions
+            )
+        )
         bindings_by_key.setdefault(
             (action_contract_address, target_addresses),
             ParticipantExecutionBindingRuntime(
@@ -192,6 +244,14 @@ def _compiled_execution_bindings(
                 participant_implementation_ref=policy.participant_implementation_ref,
                 max_action_attempts=policy.max_action_attempts,
                 max_in_flight=policy.max_in_flight,
+                interaction_classes=interaction_classes,
+                shared_state_refs=shared_state_refs,
+                related_action_contract_addresses=related_action_contract_addresses,
+                commutative_shared_state_refs=commutative_shared_state_refs,
+                commutative_related_action_contract_addresses=commutative_related_action_contract_addresses,
+                merge_rule_refs=merge_rule_refs,
+                shared_state_merge_rules=shared_state_merge_rules,
+                related_action_merge_rules=related_action_merge_rules,
             ),
         )
     bindings = tuple(bindings_by_key.values())

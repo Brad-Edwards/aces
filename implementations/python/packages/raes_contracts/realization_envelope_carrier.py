@@ -152,6 +152,23 @@ class RealizerConfigurationModel(ContractModel):
         return json_schema
 
 
+def _validate_transformation_coupling(model: RealizationConcernDisclosureModel) -> None:
+    if len(model.transformations) != len(set(model.transformations)):
+        raise ValueError("transformations must not contain duplicates")
+    if model.disposition is ConcernDisposition.TRANSFORMED and not model.transformations:
+        raise ValueError("transformed disposition requires transformations")
+    if model.disposition is not ConcernDisposition.TRANSFORMED and model.transformations:
+        raise ValueError("transformations require transformed disposition")
+
+
+def _validate_observation_coupling(model: RealizationConcernDisclosureModel) -> None:
+    if model.disposition is ConcernDisposition.UNSUPPORTED:
+        if model.observation_strength is not ObservationStrength.NONE or model.mechanism is not None:
+            raise ValueError("unsupported disposition cannot claim observation or mechanism")
+    elif model.observation_strength is ObservationStrength.NONE or model.mechanism is None:
+        raise ValueError("supported dispositions require observation and mechanism")
+
+
 class RealizationConcernDisclosureModel(ContractModel):
     """Typed support, transformation, and observation claim for one concern."""
 
@@ -163,17 +180,8 @@ class RealizationConcernDisclosureModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_disposition(self) -> RealizationConcernDisclosureModel:
-        if len(self.transformations) != len(set(self.transformations)):
-            raise ValueError("transformations must not contain duplicates")
-        if self.disposition is ConcernDisposition.TRANSFORMED and not self.transformations:
-            raise ValueError("transformed disposition requires transformations")
-        if self.disposition is not ConcernDisposition.TRANSFORMED and self.transformations:
-            raise ValueError("transformations require transformed disposition")
-        if self.disposition is ConcernDisposition.UNSUPPORTED:
-            if self.observation_strength is not ObservationStrength.NONE or self.mechanism is not None:
-                raise ValueError("unsupported disposition cannot claim observation or mechanism")
-        elif self.observation_strength is ObservationStrength.NONE or self.mechanism is None:
-            raise ValueError("supported dispositions require observation and mechanism")
+        _validate_transformation_coupling(self)
+        _validate_observation_coupling(self)
         if self.concern is RealizationConcern.COMPUTE_SUBSTRATE and self.mechanism is not None:
             try:
                 validate_controlled_vocabulary_value(_COMPUTE_SUBSTRATE_VOCABULARY, self.mechanism)

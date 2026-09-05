@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -69,6 +70,16 @@ def test_live_repository_identity_uses_openrae_owner() -> None:
         assert f"{previous_owner}/rae" not in source, relative_path
 
 
+def test_requirement_issue_links_use_current_repository_identity() -> None:
+    previous_repository = ("RAE" + "System") + "/rae"
+    requirement_files = sorted((REPO_ROOT / "docs/requirements").glob("*/requirement.md"))
+
+    assert requirement_files
+    for requirement_file in requirement_files:
+        source = requirement_file.read_text(encoding="utf-8")
+        assert previous_repository not in source, requirement_file.relative_to(REPO_ROOT)
+
+
 def test_publishers_build_only_the_curated_public_source() -> None:
     rtd = yaml.safe_load((REPO_ROOT / ".readthedocs.yaml").read_text(encoding="utf-8"))
     assert rtd["sphinx"] == {
@@ -86,3 +97,40 @@ def test_publishers_build_only_the_curated_public_source() -> None:
     makefile = (REPO_ROOT / "docs" / "Makefile").read_text(encoding="utf-8")
     assert "SOURCEDIR     = public" in makefile
     assert "BUILDDIR      = _build" in makefile
+
+
+def test_python_support_metadata_and_blocking_matrix_are_aligned() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "implementations" / "python" / "pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+    supported = ["3.11", "3.12", "3.13", "3.14"]
+
+    assert project["requires-python"] == ">=3.11,<3.15"
+    assert {
+        classifier.removeprefix("Programming Language :: Python :: ")
+        for classifier in project["classifiers"]
+        if re.fullmatch(r"Programming Language :: Python :: 3\.\d+", classifier)
+    } == set(supported)
+
+    ci = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    interpreter_job = ci["jobs"]["interpreters"]
+    assert interpreter_job["strategy"]["fail-fast"] is False
+    assert interpreter_job["strategy"]["matrix"]["python-version"] == supported
+    assert interpreter_job["env"] == {
+        "UV_PYTHON": "${{ matrix.python-version }}",
+        "RAES_EXPECTED_PYTHON": "${{ matrix.python-version }}",
+    }
+
+    preview = yaml.safe_load(
+        (REPO_ROOT / ".github" / "workflows" / "python-free-threaded-preview.yml").read_text(encoding="utf-8")
+    )
+    preview_job = preview["jobs"]["python-314t"]
+    assert preview_job["continue-on-error"] is True
+    assert preview_job["env"] == {
+        "UV_PYTHON": "3.14t",
+        "RAES_EXPECTED_PYTHON": "3.14",
+        "RAES_EXPECT_FREE_THREADED": "1",
+    }
+
+    compatibility_lane = (REPO_ROOT / "tools" / "nox_support" / "test_lanes.py").read_text(encoding="utf-8")
+    assert 'assert is_gil_enabled() is False, "interpreter is not free-threaded"' in compatibility_lane
+    assert 'assert is_gil_enabled() is True, "standard lane selected a free-threaded interpreter"' in compatibility_lane

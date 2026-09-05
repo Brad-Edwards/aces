@@ -41,17 +41,10 @@ def _build_operations(
     return actions, deleted_entries
 
 
-def _build_provisioning_plan(
-    resources: dict[str, PlannedResource],
+def _ordered_apply_ops(
+    provisioning_resources: dict[str, PlannedResource],
     actions: dict[str, ChangeAction],
-    deleted_entries: dict[str, SnapshotEntry],
-    manifest: BackendManifest,
-    realization_requirements: tuple[CompiledRealizationRequirement, ...],
-    realization_authority: tuple[ResolvedRealizationAuthority, ...],
-) -> ProvisioningPlan:
-    provisioning_resources = {
-        address: resource for address, resource in resources.items() if resource.domain == RuntimeDomain.PROVISIONING
-    }
+) -> list[ProvisionOp]:
     ops: list[ProvisionOp] = []
     for address in _topological_order(provisioning_resources):
         resource = provisioning_resources[address]
@@ -65,6 +58,11 @@ def _build_provisioning_plan(
                 refresh_dependencies=resource.refresh_dependencies,
             )
         )
+    return ops
+
+
+def _ordered_delete_ops(deleted_entries: dict[str, SnapshotEntry]) -> list[ProvisionOp]:
+    ops: list[ProvisionOp] = []
     for address in _delete_order(
         {address: entry for address, entry in deleted_entries.items() if entry.domain == RuntimeDomain.PROVISIONING}
     ):
@@ -79,6 +77,22 @@ def _build_provisioning_plan(
                 refresh_dependencies=entry.refresh_dependencies,
             )
         )
+    return ops
+
+
+def _build_provisioning_plan(
+    resources: dict[str, PlannedResource],
+    actions: dict[str, ChangeAction],
+    deleted_entries: dict[str, SnapshotEntry],
+    manifest: BackendManifest,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...],
+    realization_authority: tuple[ResolvedRealizationAuthority, ...],
+) -> ProvisioningPlan:
+    provisioning_resources = {
+        address: resource for address, resource in resources.items() if resource.domain == RuntimeDomain.PROVISIONING
+    }
+    ops = _ordered_apply_ops(provisioning_resources, actions)
+    ops.extend(_ordered_delete_ops(deleted_entries))
     return ProvisioningPlan(
         resources=provisioning_resources,
         operations=ops,

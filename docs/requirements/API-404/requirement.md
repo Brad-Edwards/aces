@@ -6,7 +6,7 @@ type: FUNCTIONAL
 priority: MUST
 wave: 1
 created_at: 2026-04-03T05:55:58.825305Z
-updated_at: 2026-08-12T00:00:00.000000Z
+updated_at: 2026-09-03T03:26:53.000000Z
 ---
 
 # API-404 — Secure, Durable, And Idempotent Control-Plane Semantics
@@ -22,9 +22,37 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 ## Traceability
 
 - IMPLEMENTS → GITHUB_ISSUE `8` (API-404: Secure, Durable, And Idempotent Control-Plane Semantics)
-- IMPLEMENTS → GITHUB_ISSUE `1092` (Make the local control plane crash-consistent and explicitly single-process)
+- IMPLEMENTS → GITHUB_ISSUE `1151` (design(runtime): define the runtime control-plane architecture)
+- DOCUMENTS → ADR `docs/decisions/adrs/adr-104-runtime-control-plane-architecture.md` (ADR-104: Runtime Control-Plane Architecture)
+- DOCUMENTS → DOCUMENTATION `docs/research/runtime-control-plane/index.md` (Runtime control-plane architecture design set)
+- DOCUMENTS → SPEC `specs/formal/runtime-control-plane/README.md` (ADR-104 FM3 abstract operation model and invariants)
+- TESTS → TEST `implementations/python/tests/test_issue_1151_runtime_control_plane_design.py` (Structural acceptance gate for the design set)
+- DOCUMENTS → GITHUB_ISSUE `1182` (CP-1: Operation lifecycle contract)
+- DOCUMENTS → GITHUB_ISSUE `1181` (CP-2: Atomic terminal commit)
+- DOCUMENTS → GITHUB_ISSUE `1179` (CP-3: Startup reconciliation)
+- DOCUMENTS → GITHUB_ISSUE `1180` (CP-4: Snapshot revision compare-and-swap)
+- DOCUMENTS → GITHUB_ISSUE `1183` (CP-5: Store lease admission)
+- DOCUMENTS → GITHUB_ISSUE `1092` (CP-6: Transactional local store)
+- DOCUMENTS → GITHUB_ISSUE `1184` (CP-7: Atomic idempotency claims and cache demotion)
+- DOCUMENTS → GITHUB_ISSUE `1188` (CP-8: Served profile alignment)
+- DOCUMENTS → GITHUB_ISSUE `1187` (CP-9: Crash and profile conformance suite)
+- DOCUMENTS → GITHUB_ISSUE `1189` (CP-10: Profile declaration and capability discovery)
+- DOCUMENTS → GITHUB_ISSUE `1185` (CP-11: API-404 requirement update)
+- DOCUMENTS → GITHUB_ISSUE `1186` (CP-12: Recovery runbook and operator tooling)
+- IMPLEMENTS → GITHUB_ISSUE `1090` (Fail-closed bearer-token authentication and target binding)
+- IMPLEMENTS → GITHUB_ISSUE `1091` (Bounded pre-routing HTTP request admission)
+- DOCUMENTS → GITHUB_ISSUE `1093` (In-process HTTP offload and rejection-audit slice)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/operation-receipt-v1.json` (Operation receipt JSON Schema — submission acknowledgment contract)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/operation-status-v1.json` (Operation status JSON Schema — durable operation state contract)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_api/_auth.py` (Fail-closed bearer and verified-proxy authentication)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_api/_offload.py` (Bounded worker offload and mutation admission)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_api_guards.py` (Bounded fail-closed request-size admission and rejection-audit offload)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_security.py` (HTTP admission and pending-work limits)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1093-control-plane-offload-preflight.md` (In-process ASGI offload and rejection semantics)
+- TESTS → TEST `implementations/python/tests/test_runtime_control_plane.py` (Core control-plane unit tests)
+- TESTS → TEST `implementations/python/tests/test_runtime_control_plane_api.py` (HTTP/JSON control-plane API tests — auth, idempotency, durability, audit)
+- TESTS → TEST `implementations/python/tests/test_issue_1093_request_rejection_offload.py` (Non-blocking, saturation-bounded, fail-closed request rejection audit tests)
+- IMPLEMENTS → GITHUB_ISSUE `1092` (Make the local control plane crash-consistent and explicitly single-process)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_store.py` (Atomic terminal commits and interrupted-operation reconciliation contract)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_recovery.py` (Conservative startup recovery policy for interrupted operations)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_durability.py` (Commit-outcome cache publication, reconciliation, and poison-on-unknown behavior)
@@ -36,6 +64,4 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_store_paths.py` (Descriptor-verified private directories, fail-closed durability synchronization, and metadata-only SQLite path validation)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_store_compatibility.py` (Deprecated 3.x custom-store fallback and optional atomic capability adapter)
 - DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1092-local-control-plane-durability-preflight.md` (Crash recovery and supported process topology)
-- TESTS → TEST `implementations/python/tests/test_runtime_control_plane.py` (Core control-plane unit tests)
-- TESTS → TEST `implementations/python/tests/test_runtime_control_plane_api.py` (HTTP/JSON control-plane API tests — auth, idempotency, durability, audit)
 - TESTS → TEST `implementations/python/tests/test_issue_1092_control_plane_crash_consistency.py` (Atomic and legacy terminal commit, WAL admission, backup file/directory synchronization, interrupted-operation recovery, descriptor-free SQLite paths, URI no-recreation, multiprocess stress, retry, and runtime-owner tests)

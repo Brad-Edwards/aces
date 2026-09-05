@@ -344,6 +344,7 @@ action_contracts:
           Portal probing changes participant-local knowledge about the DMZ
           service while preserving the authored enterprise topology.
         shared_state_refs: [nodes.customer-portal.services.http]
+        commutative: true
 
 observation_boundaries:
   participant-view:

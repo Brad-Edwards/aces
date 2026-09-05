@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "81714a436a72b511cdc61b2599af1327ad07d96520569718cc3d53b121d81074",
+  "content_hash": "2a6f907c65d3b40051f3a38604607f0d57d0b6f277ea38c167eae6c2c7b750ac",
   "last_change": {
-    "summary": "Added governed operating-system distribution authoring and release-only version semantics for issue #1077.",
-    "content_hash": "81714a436a72b511cdc61b2599af1327ad07d96520569718cc3d53b121d81074"
+    "summary": "Added the closed, SHA-256-pinned APT runtime package repository profile for issue #847.",
+    "content_hash": "2a6f907c65d3b40051f3a38604607f0d57d0b6f277ea38c167eae6c2c7b750ac"
   }
 }

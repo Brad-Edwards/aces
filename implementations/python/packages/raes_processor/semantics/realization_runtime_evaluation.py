@@ -17,7 +17,9 @@ from raes_contracts.apparatus import (
 from raes_contracts.bounded_domains import scalar_in_domain
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisioningPlan
+from raes_contracts.realization_structure import structure_matches
 from raes_contracts.runtime_state import (
+    RealizationObservationDisclosure,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
 )
@@ -86,15 +88,19 @@ def _evaluate_non_compute_registered_realization(
         realized_value = (
             concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else MISSING_CONCERN_VALUE
         )
-    if requirement.explicitness is ExplicitnessClass.OPEN:
-        return _evaluate_open_realization(requirement, realized_value, returned_snapshot, manifest)
-    return _evaluate_declared_realization(
-        requirement,
-        concern_value(op.payload, path),
-        realized_value,
-        returned_snapshot,
-        manifest,
-    )
+    if requirement.structure_error:
+        result = silent_approximation_diagnostic(requirement), None
+    elif requirement.explicitness is ExplicitnessClass.OPEN and requirement.structure is None:
+        result = _evaluate_open_realization(requirement, realized_value, returned_snapshot, manifest)
+    else:
+        result = _evaluate_declared_realization(
+            requirement,
+            concern_value(op.payload, path),
+            realized_value,
+            returned_snapshot,
+            manifest,
+        )
+    return result
 
 
 def _evaluate_open_realization(
@@ -171,23 +177,56 @@ def _projected_declared_realization_result(
         manifest,
     )
     if process_limit_diagnostic is not None:
-        result = (process_limit_diagnostic, None)
+        return process_limit_diagnostic, None
+    if honoured is None or requirement.structure is not None:
+        honoured = realized_projection == declared_projection
+    if _projected_constraints_rejected(requirement, declared_projection, realized_projection, honoured):
+        result = (silent_approximation_diagnostic(requirement), None)
+    elif realized_value is not MISSING_CONCERN_VALUE:
+        result = (None, realization_provenance_entry(requirement, honoured))
     else:
-        if honoured is None:
-            honoured = realized_projection == declared_projection
-        constrained_os_rejected = (
-            requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS
-            and requirement.explicitness is ExplicitnessClass.CONSTRAINED
-            and requirement.value_domain is not None
-            and not scalar_in_domain(realized_projection, requirement.value_domain)
-        )
-        if constrained_os_rejected or (requirement.explicitness is ExplicitnessClass.EXACT and not honoured):
-            result = (silent_approximation_diagnostic(requirement), None)
-        elif realized_value is not MISSING_CONCERN_VALUE:
-            result = (None, realization_provenance_entry(requirement, honoured))
-        else:
-            result = (None, None)
+        result = (None, None)
     return result
+
+
+def _projected_constraints_rejected(
+    requirement: CompiledRealizationRequirement,
+    declared_projection: object,
+    realized_projection: object,
+    honoured: bool,
+) -> bool:
+    if requirement.structure is not None and not structure_matches(
+        requirement.structure, declared_projection, realized_projection
+    ):
+        return True
+    constrained_os_rejected = (
+        requirement.requirement_kind in OPERATING_SYSTEM_REQUIREMENT_KINDS
+        and requirement.explicitness is ExplicitnessClass.CONSTRAINED
+        and requirement.value_domain is not None
+        and not scalar_in_domain(realized_projection, requirement.value_domain)
+    )
+    return constrained_os_rejected or (requirement.explicitness is ExplicitnessClass.EXACT and not honoured)
+
+
+def _observation_corroborates(
+    requirement: CompiledRealizationRequirement,
+    observation: RealizationObservationDisclosure,
+    manifest: BackendManifest | None,
+) -> bool:
+    """Return whether one disclosed observation satisfies the requirement's evidence bar."""
+
+    required_scope = requirement.verification_scope
+    return (
+        (required_scope is None or verification_scope_satisfies(observation.verification_scope, required_scope))
+        and (
+            requirement.required_observation_strength is None
+            or observation_strength_satisfies(
+                observation.observation_strength,
+                requirement.required_observation_strength,
+            )
+        )
+        and manifest_corroborates(requirement, observation, manifest)
+    )
 
 
 def _corroboration_diagnostic(
@@ -198,26 +237,10 @@ def _corroboration_diagnostic(
     """Reject exact inventory equality that lacks its declared observation basis."""
 
     required_scope = requirement.verification_scope
-    requires_bound_evidence = requirement.requirement_kind in (
-        {"process-resource-limits"} | OPERATING_SYSTEM_REQUIREMENT_KINDS
-    )
-    if (requirement.explicitness is not ExplicitnessClass.EXACT and not requires_bound_evidence) or (
-        required_scope is None and requirement.required_observation_strength is None
-    ):
+    if required_scope is None and requirement.required_observation_strength is None:
         return None
     observation = matching_observation(requirement, returned_snapshot)
-    if (
-        observation is not None
-        and (required_scope is None or verification_scope_satisfies(observation.verification_scope, required_scope))
-        and (
-            requirement.required_observation_strength is None
-            or observation_strength_satisfies(
-                observation.observation_strength,
-                requirement.required_observation_strength,
-            )
-        )
-        and manifest_corroborates(requirement, observation, manifest)
-    ):
+    if observation is not None and _observation_corroborates(requirement, observation, manifest):
         return None
     return Diagnostic(
         code=BACKEND_CONTRACT_INVALID,

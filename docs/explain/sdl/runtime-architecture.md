@@ -527,6 +527,29 @@ releases authority. Run one ASGI worker with reload disabled. This is a
 single-host reference boundary, not a distributed queue, replication, or
 multi-host availability claim.
 
+Bearer and verified-proxy authentication require the same exact target binding.
+An identity with no target, and an explicitly supplied bearer that is unknown,
+revoked, or scoped to another target, is rejected; a rejected bearer never
+falls back to proxy headers. Request admission is also bounded before FastAPI
+parses or dispatches a body: a public ASGI wrapper checks one digits-only
+`Content-Length`, then consumes at most the configured byte limit and replays
+one coalesced body message. This boundary does not rely on framework-private
+request caches and returns a stable `413` before a route can run.
+
+The HTTP adapter offloads synchronous backend and store calls to AnyIO's
+bounded worker pool. An application-scoped async lock serializes target
+mutations without occupying a worker while requests wait; independent reads
+remain responsive while a backend is slow. The pending mutation count is
+bounded by `ControlPlaneSecurityConfig.max_pending_mutations` and overload
+returns `503` plus `Retry-After`. This in-process execution boundary neither
+replaces backend I/O timeouts nor claims durable or distributed job queuing.
+Request-size rejection also offloads audit persistence; an audit-store failure
+cannot admit an invalid body or replace the stable `400`/`413` response. These
+pre-routing audits use a separate one-worker limiter and a bounded pending
+count, so an unauthenticated rejection flood cannot consume the default AnyIO
+workers required by authenticated reads; excess audit records are dropped with
+an operational warning.
+
 ## Current Scope
 
 The current runtime scope includes:

@@ -578,6 +578,16 @@
       "title": "EvaluatorCapabilitiesModel",
       "type": "object"
     },
+    "GeneratedArtifactDeliveryMode": {
+      "description": "Portable ways a generated-artifact output is delivered to a consumer.\n\n``mount`` is the read-only file projection declared directly on\n``generated_artifacts[].consumers[]``. ``environment`` and ``env_file`` are\nnode-owned runtime environment bindings authored on\n``nodes.<node>.runtime.environment[]`` / ``environment_files[]`` whose\ngenerated-artifact consumer projection the compiler derives. A provisioner\ndeclares each mode it can realize separately so it cannot claim mount\ndelivery while silently dropping environment or env-file injection.",
+      "enum": [
+        "mount",
+        "environment",
+        "env_file"
+      ],
+      "title": "GeneratedArtifactDeliveryMode",
+      "type": "string"
+    },
     "GeneratedArtifactKind": {
       "description": "Portable kinds of material a provisioner may generate.",
       "enum": [
@@ -1992,6 +2002,14 @@
           },
           "title": "Supported Domain Profiles",
           "type": "array"
+        },
+        "supported_generated_artifact_delivery_modes": {
+          "items": {
+            "$ref": "#/$defs/GeneratedArtifactDeliveryMode"
+          },
+          "title": "Supported Generated Artifact Delivery Modes",
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_generated_artifact_kinds": {
           "items": {

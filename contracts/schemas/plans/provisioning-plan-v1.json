@@ -98,6 +98,21 @@
       "title": "ExactDomain",
       "type": "object"
     },
+    "ExactRealizationValue": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "exact",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "ExactRealizationValue",
+      "type": "object"
+    },
     "ExplicitnessProvenance": {
       "description": "Where the classified value came from in the SDL lifecycle.",
       "enum": [
@@ -199,6 +214,26 @@
       ],
       "title": "ObservationStrength",
       "type": "string"
+    },
+    "OpenRealizationValue": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "open",
+          "title": "Kind",
+          "type": "string"
+        },
+        "taxonomy_sentinel": {
+          "default": false,
+          "title": "Taxonomy Sentinel",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "OpenRealizationValue",
+      "type": "object"
     },
     "PlanOperationModel": {
       "additionalProperties": false,
@@ -451,6 +486,69 @@
       "title": "RealizationAuthorityMode",
       "type": "string"
     },
+    "RealizationCollection": {
+      "additionalProperties": false,
+      "properties": {
+        "additional": {
+          "default": false,
+          "title": "Additional",
+          "type": "boolean"
+        },
+        "identity_fields": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Identity Fields",
+          "type": "array"
+        },
+        "kind": {
+          "const": "collection",
+          "title": "Kind",
+          "type": "string"
+        },
+        "members": {
+          "maxProperties": 4096,
+          "patternProperties": {
+            "^sha256:[a-f0-9]{64}$": {
+              "discriminator": {
+                "mapping": {
+                  "collection": "#/$defs/RealizationCollection",
+                  "exact": "#/$defs/ExactRealizationValue",
+                  "open": "#/$defs/OpenRealizationValue",
+                  "record": "#/$defs/RealizationRecord"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ExactRealizationValue"
+                },
+                {
+                  "$ref": "#/$defs/OpenRealizationValue"
+                },
+                {
+                  "$ref": "#/$defs/RealizationRecord"
+                },
+                {
+                  "$ref": "#/$defs/RealizationCollection"
+                }
+              ]
+            }
+          },
+          "title": "Members",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "identity_fields",
+        "members"
+      ],
+      "title": "RealizationCollection",
+      "type": "object"
+    },
     "RealizationEnvelopeIdentityModel": {
       "additionalProperties": false,
       "description": "Immutable realization-envelope identity carried across runtime contracts.",
@@ -489,6 +587,57 @@
         "configuration_digest"
       ],
       "title": "RealizationEnvelopeIdentityModel",
+      "type": "object"
+    },
+    "RealizationRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "additional": {
+          "default": false,
+          "title": "Additional",
+          "type": "boolean"
+        },
+        "fields": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "collection": "#/$defs/RealizationCollection",
+                "exact": "#/$defs/ExactRealizationValue",
+                "open": "#/$defs/OpenRealizationValue",
+                "record": "#/$defs/RealizationRecord"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ExactRealizationValue"
+              },
+              {
+                "$ref": "#/$defs/OpenRealizationValue"
+              },
+              {
+                "$ref": "#/$defs/RealizationRecord"
+              },
+              {
+                "$ref": "#/$defs/RealizationCollection"
+              }
+            ]
+          },
+          "maxProperties": 4096,
+          "title": "Fields",
+          "type": "object"
+        },
+        "kind": {
+          "const": "record",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "fields"
+      ],
+      "title": "RealizationRecord",
       "type": "object"
     },
     "RealizationResolutionSource": {
@@ -708,6 +857,40 @@
         },
         "source": {
           "$ref": "#/$defs/RealizationResolutionSource"
+        },
+        "structure": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "collection": "#/$defs/RealizationCollection",
+                  "exact": "#/$defs/ExactRealizationValue",
+                  "open": "#/$defs/OpenRealizationValue",
+                  "record": "#/$defs/RealizationRecord"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ExactRealizationValue"
+                },
+                {
+                  "$ref": "#/$defs/OpenRealizationValue"
+                },
+                {
+                  "$ref": "#/$defs/RealizationRecord"
+                },
+                {
+                  "$ref": "#/$defs/RealizationCollection"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Structure"
         },
         "verification_scope": {
           "anyOf": [
