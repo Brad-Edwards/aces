@@ -6,7 +6,7 @@ type: FUNCTIONAL
 priority: MUST
 wave: 2
 created_at: 2026-04-05T00:54:58.405111Z
-updated_at: 2026-09-04T00:00:00Z
+updated_at: 2026-09-05T00:00:00Z
 ---
 
 # SEM-218 — Explicitness And Realization Semantics
@@ -111,3 +111,13 @@ Current state: identified gap. Honest portability requires normative semantics f
 - DOCUMENTS → DOCUMENTATION `docs/decisions/issue-847-runtime-package-repositories-preflight.md` (Typed package-repository profile and existing runtime-packages authority boundary)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes/runtime_packages.py` (Closed, pinned APT repository profile within the runtime-packages concern)
 - TESTS → TEST `implementations/python/tests/test_issue_847_runtime_package_repositories.py` (Repository validation, compilation, projection, schema, and compatibility coverage)
+
+- DOCUMENTS → GITHUB_ISSUE `1201` (Recursive partial-description design and finite reference model; production semantics unchanged)
+- DOCUMENTS → ADR `docs/decisions/adrs/adr-105-recursive-partial-description-semantics.md` (Proposed recursive partial-description decision)
+- DOCUMENTS → DOCUMENTATION `docs/research/partial-description/semantics.md` (Candidate contract and versioned adoption boundary)
+- DOCUMENTS → DOCUMENTATION `docs/research/partial-description/verification.md` (Finite model acceptance matrix and limitations)
+- DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1201-recursive-description-semantics-preflight.md` (Architecture and canonical-owner assessment)
+- IMPLEMENTS → CODE_FILE `implementations/python/research/partial_description.py` (Finite design oracle for explicit constraints, delegation and scoped closure; not production enforcement)
+- IMPLEMENTS → CODE_FILE `implementations/python/research/description_lifecycle.py` (Finite lifecycle and abstract-execution design examples)
+- TESTS → TEST `implementations/python/tests/test_issue_1201_partial_description.py` (Finite composition, delegation and quantifier counterexamples)
+- TESTS → TEST `implementations/python/tests/test_issue_1201_description_lifecycle.py` (Version, knowledge, reporting and data-demand design checks)
