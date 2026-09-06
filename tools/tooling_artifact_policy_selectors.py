@@ -195,23 +195,24 @@ def _tracked_literal_failure(
     assert isinstance(consumer_prefix, str)
     prefix, marker, suffix = authority_template.partition("{selector}")
     authority_text = safe_text(repo_root, authority_path)
+    authority_failure = None
     if authority_text is None or not marker:
-        return [
-            failure(
-                "tooling-selector-authority",
-                f"{selector_id} authority cannot be read",
-                authority_path,
-            )
-        ]
-    selectors = set(re.findall(re.escape(prefix) + r"([^\r\n]+?)" + re.escape(suffix), authority_text))
-    if len(selectors) != 1:
-        return [
-            failure(
+        authority_failure = failure(
+            "tooling-selector-authority",
+            f"{selector_id} authority cannot be read",
+            authority_path,
+        )
+        selectors: set[str] = set()
+    else:
+        selectors = set(re.findall(re.escape(prefix) + r"([^\r\n]+?)" + re.escape(suffix), authority_text))
+        if len(selectors) != 1:
+            authority_failure = failure(
                 "tooling-selector-authority",
                 f"{selector_id} authority must resolve to exactly one selector",
                 authority_path,
             )
-        ]
+    if authority_failure is not None:
+        return [authority_failure]
     return _literal_consumer_failures(repo_root, tracked_paths, selector_id, selectors.pop(), consumer_prefix)
 
 

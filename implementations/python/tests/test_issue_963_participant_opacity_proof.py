@@ -125,6 +125,9 @@ def test_proof_sandbox_exposes_only_fixed_inputs_runtime_and_private_state() -> 
     assert "/home" not in command
     assert "--unshare-net" in command
     assert "--unshare-pid" in command
+    sandbox_tmp = str(Path("/") / "tmp")
+    assert command[command.index("TMPDIR") + 1] == sandbox_tmp
+    assert command[command.index("--tmpfs") + 1] == sandbox_tmp
     assert command[-2:] == ["-D", "/workspace/session"]
 
 

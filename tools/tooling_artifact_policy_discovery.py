@@ -63,16 +63,24 @@ def ast_name(node: ast.AST) -> str | None:
     return name
 
 
+def _node_aliases(node: ast.AST) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    if isinstance(node, ast.Import):
+        aliases = {
+            alias.asname or alias.name.split(".", maxsplit=1)[0]: (
+                alias.name if alias.asname else alias.name.split(".", maxsplit=1)[0]
+            )
+            for alias in node.names
+        }
+    elif isinstance(node, ast.ImportFrom) and node.module:
+        aliases = {alias.asname or alias.name: f"{node.module}.{alias.name}" for alias in node.names}
+    return aliases
+
+
 def _aliases(nodes: Sequence[ast.AST]) -> dict[str, str]:
     aliases: dict[str, str] = {}
     for node in nodes:
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                local = alias.asname or alias.name.split(".", maxsplit=1)[0]
-                aliases[local] = alias.name if alias.asname else local
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            for alias in node.names:
-                aliases[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+        aliases.update(_node_aliases(node))
     return aliases
 
 
@@ -86,14 +94,19 @@ def _assigned_names(node: ast.Assign | ast.AnnAssign) -> set[str]:
     return {target.id for target in targets if isinstance(target, ast.Name)}
 
 
+def _assigned_selection_names(node: ast.AST, aliases: Mapping[str, str]) -> set[str]:
+    assigned: set[str] = set()
+    if isinstance(node, (ast.Assign, ast.AnnAssign)):
+        value_name = ast_name(node.value) if node.value is not None else None
+        if value_name is not None and _resolved_name(value_name, aliases) == SELECTION_CALL:
+            assigned = _assigned_names(node)
+    return assigned
+
+
 def _selection_aliases(nodes: Sequence[ast.AST], aliases: Mapping[str, str]) -> set[str]:
     selection_aliases: set[str] = set()
     for node in nodes:
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        value_name = ast_name(node.value) if node.value is not None else None
-        if value_name is not None and _resolved_name(value_name, aliases) == SELECTION_CALL:
-            selection_aliases.update(_assigned_names(node))
+        selection_aliases.update(_assigned_selection_names(node, aliases))
     return selection_aliases
 
 
@@ -145,7 +158,7 @@ def _callable_aliases(nodes: Sequence[ast.AST], aliases: Mapping[str, str]) -> d
         value_name = ast_name(node.value) if node.value is not None else None
         resolved = _resolved_name(value_name, aliases) if value_name is not None else ""
         if is_command_executor(resolved) or resolved in NETWORK_CALLS:
-            callable_aliases.update({name: resolved for name in _assigned_names(node)})
+            callable_aliases.update(dict.fromkeys(_assigned_names(node), resolved))
     return callable_aliases
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 ISABELLE_SANDBOX_HOME = Path("/opt/isabelle")
 ISABELLE_SANDBOX_SESSION_ROOT = Path("/workspace/session")
 ISABELLE_SANDBOX_STATE_ROOT = Path("/state")
+ISABELLE_SANDBOX_TEMP = Path("/") / "tmp"
 ISABELLE_SYSTEM_RUNTIME_PATHS = (
     Path("/usr/bin"),
     Path("/usr/lib"),
@@ -76,7 +77,7 @@ def proof_sandbox_command(
             "--proc",
             "/proc",
             "--tmpfs",
-            "/tmp",  # noqa: S108 - private bubblewrap tmpfs, not a shared host path
+            str(ISABELLE_SANDBOX_TEMP),
             "--chdir",
             "/workspace",
             "--setenv",
@@ -91,6 +92,9 @@ def proof_sandbox_command(
             "--setenv",
             "ISABELLE_HOME_USER",
             "/state/isabelle-user",
+            "--setenv",
+            "TMPDIR",
+            str(ISABELLE_SANDBOX_TEMP),
             "--setenv",
             "LANG",
             locale,

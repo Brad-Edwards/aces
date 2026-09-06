@@ -192,38 +192,42 @@ def _snapshot_manifest_failures(
 ) -> list[PolicyFailure]:
     if not isinstance(relative_path, str) or not isinstance(expected_size, int):
         return []
+    failures: list[PolicyFailure] = []
     source_path = safe_repo_path(repo_root, relative_path)
     if (
         source_path is None
         or not is_regular_repo_file(repo_root, relative_path)
         or source_path.stat().st_size > MAX_SCANNED_FILE_BYTES
     ):
-        return [
+        failures.append(
             failure(
                 "tooling-source-snapshot-missing",
                 "locked source snapshot is missing",
                 relative_path,
             )
-        ]
-    try:
-        source_bytes = source_path.read_bytes()
-    except OSError:
-        return [
-            failure(
-                "tooling-source-snapshot-missing",
-                "locked source snapshot cannot be read",
-                relative_path,
-            )
-        ]
-    if len(source_bytes) == expected_size and hashlib.sha256(source_bytes).hexdigest() == digest:
-        return []
-    return [
-        failure(
-            "tooling-source-snapshot-drift",
-            "locked source snapshot bytes differ",
-            relative_path,
         )
-    ]
+    else:
+        try:
+            source_bytes = source_path.read_bytes()
+        except OSError:
+            failures.append(
+                failure(
+                    "tooling-source-snapshot-missing",
+                    "locked source snapshot cannot be read",
+                    relative_path,
+                )
+            )
+        else:
+            matches = len(source_bytes) == expected_size and hashlib.sha256(source_bytes).hexdigest() == digest
+            if not matches:
+                failures.append(
+                    failure(
+                        "tooling-source-snapshot-drift",
+                        "locked source snapshot bytes differ",
+                        relative_path,
+                    )
+                )
+    return failures
 
 
 def _manifest_entry_failures(
@@ -367,6 +371,36 @@ def _has_dependency_cycle(known_artifacts: set[str], dependency_graph: Mapping[s
     return any(visit(artifact_id) for artifact_id in sorted(known_artifacts))
 
 
+def _artifact_platform_failures(
+    repo_root: Path,
+    artifact_id: str,
+    artifact: Mapping[str, Any],
+    profiles: Mapping[str, Mapping[str, Any]],
+    denied_digests: set[str],
+    identities: set[tuple[str, str]],
+    dependency_graph: dict[str, set[str]],
+) -> list[PolicyFailure]:
+    failures: list[PolicyFailure] = []
+    for platform_value in as_list(artifact.get("platforms")):
+        platform = as_mapping(platform_value)
+        platform_id = platform.get("platform_id")
+        if not isinstance(platform_id, str):
+            continue
+        identity = (artifact_id, normalize_platform_id(platform_id))
+        if identity in identities:
+            failures.append(
+                failure(
+                    "tooling-artifact-identity-duplicate",
+                    f"duplicate canonical artifact/platform identity for {artifact_id}",
+                    ARTIFACT_LOCK_PATH,
+                )
+            )
+        identities.add(identity)
+        dependency_graph[artifact_id].update(string_set(platform.get("dependencies")))
+        failures.extend(_platform_failures(repo_root, artifact_id, artifact, platform, profiles, denied_digests))
+    return failures
+
+
 def artifact_failures(repo_root: Path, documents: Mapping[str, dict[str, Any]]) -> list[PolicyFailure]:
     """Validate artifact identities, profiles, manifests, policies, and dependencies."""
 
@@ -391,23 +425,17 @@ def artifact_failures(repo_root: Path, documents: Mapping[str, dict[str, Any]]) 
         dependency_graph.setdefault(artifact_id, set())
         failures.extend(_artifact_metadata_failures(artifact_id, artifact))
         failures.extend(_artifact_policy_failures(artifact_id, artifact, policies))
-        for platform_value in as_list(artifact.get("platforms")):
-            platform = as_mapping(platform_value)
-            platform_id = platform.get("platform_id")
-            if not isinstance(platform_id, str):
-                continue
-            identity = (artifact_id, normalize_platform_id(platform_id))
-            if identity in identities:
-                failures.append(
-                    failure(
-                        "tooling-artifact-identity-duplicate",
-                        f"duplicate canonical artifact/platform identity for {artifact_id}",
-                        ARTIFACT_LOCK_PATH,
-                    )
-                )
-            identities.add(identity)
-            dependency_graph[artifact_id].update(string_set(platform.get("dependencies")))
-            failures.extend(_platform_failures(repo_root, artifact_id, artifact, platform, profiles, denied_digests))
+        failures.extend(
+            _artifact_platform_failures(
+                repo_root,
+                artifact_id,
+                artifact,
+                profiles,
+                denied_digests,
+                identities,
+                dependency_graph,
+            )
+        )
     known_artifacts = set(artifact_ids)
     failures.extend(_graph_failures(known_artifacts, dependency_graph, profiles))
     return failures

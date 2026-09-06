@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tarfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from tools import (
@@ -14,6 +15,7 @@ from tools import (
     check_attack_tactic_vocabulary,
     check_autonomous_behavior_vocabularies,
     check_nist_csf_defensive_vocabulary,
+    check_tooling_artifact_policy,
     gitleaks_tool,
     isabelle_tool,
     osv_scanner_tool,
@@ -1068,3 +1070,104 @@ def test_remote_vocabulary_checks_enforce_policy_before_network(
     monkeypatch.setattr("tools.tooling_policy_gate.load_tooling_artifact_selection", reject_policy)
     with pytest.raises(RuntimeError, match="policy-sentinel"):
         remote_check()
+
+
+@pytest.mark.parametrize(
+    ("checker", "selected_url"),
+    [
+        (
+            check_attack_tactic_vocabulary,
+            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/fixture.json",
+        ),
+        (
+            check_atlas_tactic_vocabulary,
+            "https://github.com/mitre-atlas/atlas-data/releases/download/v2026.06/ATLAS-2026.06.yaml",
+        ),
+        (
+            check_nist_csf_defensive_vocabulary,
+            "https://csrc.nist.gov/fixture.json",
+        ),
+    ],
+)
+def test_remote_vocabulary_helpers_accept_reviewed_urls_and_bytes(checker, selected_url: str) -> None:
+    payload = b"reviewed source snapshot"
+    source = SimpleNamespace(source_url=selected_url)
+
+    assert checker._remote_url_failure(source, selected_url) is None
+    assert (
+        checker._remote_bytes_failure(
+            payload,
+            size=len(payload),
+            sha256=hashlib.sha256(payload).hexdigest(),
+        )
+        is None
+    )
+    assert checker._remote_url_failure(source, "https://example.invalid/source") is not None
+    assert checker._remote_bytes_failure(payload, size=len(payload) + 1, sha256=_SHA_A) is not None
+
+
+def test_autonomous_remote_helpers_verify_reviewed_snapshots(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = b"reviewed source snapshot"
+    digest = f"sha256:{hashlib.sha256(payload).hexdigest()}"
+    activity_url = "https://www.w3.org/TR/2017/REC-activitystreams-vocabulary-20170523/"
+    fipa_url = "https://www.fipa.org/specs/fipa00037/SC00037J.pdf"
+    monkeypatch.setattr(
+        check_autonomous_behavior_vocabularies,
+        "_fetch_official_bytes",
+        lambda *_args, **_kwargs: payload,
+    )
+    monkeypatch.setattr(
+        check_autonomous_behavior_vocabularies,
+        "_extract_activitystreams_type_names",
+        lambda _data: list(check_autonomous_behavior_vocabularies.ACTIVITYSTREAMS_TYPES),
+    )
+
+    assert (
+        check_autonomous_behavior_vocabularies._check_activitystreams_remote(
+            SimpleNamespace(source_url=activity_url, source_digest=digest),
+            activity_url,
+            expected_size=len(payload),
+            expected_sha256=hashlib.sha256(payload).hexdigest(),
+        )
+        == []
+    )
+    assert (
+        check_autonomous_behavior_vocabularies._check_fipa_remote(
+            SimpleNamespace(source_artifact_url=fipa_url, source_digest=digest),
+            fipa_url,
+            expected_size=len(payload),
+            expected_sha256=hashlib.sha256(payload).hexdigest(),
+        )
+        == []
+    )
+
+
+def test_tooling_policy_cli_paths_are_bounded(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> None:
+    monkeypatch.setattr(check_tooling_artifact_policy, "evaluate_tooling_artifact_policy", lambda _root: [])
+    assert check_tooling_artifact_policy.main([]) == 0
+    assert check_tooling_artifact_policy.main(["--select-artifact", "tool-a"]) == 2
+    assert "requires artifact" in capsys.readouterr().err
+
+
+def test_tooling_policy_cli_emits_a_validated_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    selected = {"artifact_id": "tool-a", "version": "1.0.0"}
+    monkeypatch.setattr(check_tooling_artifact_policy, "select_tooling_artifact", lambda *_args, **_kwargs: selected)
+
+    result = check_tooling_artifact_policy.main(
+        [
+            "--select-artifact",
+            "tool-a",
+            "--version",
+            "1.0.0",
+            "--platform-id",
+            "linux-x86_64",
+            "--profile-id",
+            "public-linux-x86_64",
+        ]
+    )
+
+    assert result == 0
+    assert json.loads(capsys.readouterr().out) == selected

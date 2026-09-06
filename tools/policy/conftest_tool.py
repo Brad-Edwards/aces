@@ -8,11 +8,15 @@ import tarfile
 import tempfile
 from hashlib import sha256
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tools.http_download import download_bytes
 
 from ..tool_versions import CONTFEST_VERSION
 from .common import REPO_ROOT, PolicyFailure
+
+if TYPE_CHECKING:
+    from tools.tooling_policy_gate import LockedManifestEntry
 
 POLICY_DIR = REPO_ROOT / "tools" / "policy" / "conftest"
 CACHE_ROOT = REPO_ROOT / ".cache" / "raes-sdl" / "tooling" / "conftest"
@@ -35,7 +39,11 @@ def _locked_binary_cache_hit(path: Path, *, expected_sha256: str, expected_size:
     return path.stat().st_size == expected_size and _sha256_file(path) == expected_sha256
 
 
-def _install_locked_binary(archive_bytes: bytes, installed, binary_path: Path) -> None:
+def _install_locked_binary(
+    archive_bytes: bytes,
+    installed: LockedManifestEntry,
+    binary_path: Path,
+) -> None:
     with tempfile.TemporaryDirectory(prefix="raes-conftest-") as tmpdir:
         archive_path = Path(tmpdir) / "locked-conftest-archive.tar.gz"
         archive_path.write_bytes(archive_bytes)

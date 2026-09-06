@@ -33,7 +33,7 @@ from tools.isabelle_tool import (  # noqa: E402
     run_isabelle_build,
 )
 from tools.tool_versions import ISABELLE_VERSION  # noqa: E402
-from tools.tooling_policy_gate import load_tooling_artifact_selection  # noqa: E402
+from tools.tooling_policy_gate import LockedManifestEntry, load_tooling_artifact_selection  # noqa: E402
 
 MANIFEST_RELATIVE_PATH = Path("specs/formal/participant-semantics/participant-opacity-proof-evidence.json")
 THEORY_RELATIVE_PATH = ISABELLE_SESSION_RELATIVE_PATH / "Participant_Opacity.thy"
@@ -289,7 +289,7 @@ def _validate_theorem_inventory(manifest: dict[str, Any], theory_text: str) -> N
         raise ProofEvidenceError("checked theory contains an unfinished or undeclared proof feature")
 
 
-def _validate_toolchain_identity(toolchain: dict[str, Any], raw: Any) -> None:
+def _validate_toolchain_identity(toolchain: dict[str, Any], raw: LockedManifestEntry) -> None:
     expected = {
         "prover": "Isabelle/HOL",
         "version": f"Isabelle{ISABELLE_VERSION}",
