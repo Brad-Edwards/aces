@@ -94,6 +94,7 @@ _PREFIX_SCHEMA_DIRECTORIES = (
     ),
     ("participant-configuration-result-v", "participant-implementation-configuration"),
     ("semantic-profile-v", "profiles"),
+    ("domain-profile-", "profiles"),
     ("backend-profile-v", "profiles"),
     ("random-stream-profile-v", "profiles"),
     ("participant-information-reconstruction-profile-v", "profiles"),

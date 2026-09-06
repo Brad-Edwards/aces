@@ -505,7 +505,11 @@ adrs:
     pin: b7e17e58fc01e8f07a972ee5abc65e6a8470e2a6d51c2480334a3777df079e98
   - id: ADR-101
     path: docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md
-    pin: add7e6ba4634965a9aa9c09248bfaafd981f1f16956b731fc913ca416ef92ffd
+    pin: 7d613beae8ae50e3232a07be1eedd5db422f252a728f34597d0c5dac65086164
+    amendments:
+      - date: 2026-09-06
+        ref: "#1068"
+        summary: "Clarify modular composition, governed effects and the declared-world boundary under ADR-108 while preserving the security profile and runtime interpreter non-goal."
   - id: ADR-102
     path: docs/decisions/adrs/adr-102-mixed-cross-backend-participant-control.md
     pin: cfcb0f5b7291b47fe6ff6096bb18dd9063b83ee5d4f7f6a9cafbdd06f21bf716
@@ -519,3 +523,6 @@ adrs:
       - date: 2026-09-03
         ref: "#1151"
         summary: "Reclassified the stateful control-plane design as FM3 and added the abstract lifecycle, actor-bound audit, authorization, idempotency, and target/run isolation invariants required before implementation."
+  - id: ADR-108
+    path: docs/decisions/adrs/adr-108-modular-participant-control-and-governed-effects.md
+    pin: d734bb660e153dc6d97c1cbdc5d1079cc837d77d5874da84bd8e8d788c7edf80
