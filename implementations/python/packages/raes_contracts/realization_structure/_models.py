@@ -101,7 +101,20 @@ class RealizationLiteral(RecursiveStructureModel):
     """A type-sensitive exact JSON value, including explicit JSON null."""
 
     kind: Literal["literal"]
-    value: StrictStr | StrictInt | StrictFloat | StrictBool | None
+    value: Annotated[
+        StrictStr | StrictInt | StrictFloat | StrictBool | None,
+        Field(
+            json_schema_extra={
+                "anyOf": [
+                    {"type": "boolean"},
+                    {"type": "integer"},
+                    {"type": "number"},
+                    {"type": "string"},
+                    {"type": "null"},
+                ]
+            }
+        ),
+    ]
 
 
 class RealizationKnowledgeValue(RecursiveStructureModel):

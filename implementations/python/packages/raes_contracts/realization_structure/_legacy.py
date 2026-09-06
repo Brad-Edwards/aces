@@ -150,12 +150,15 @@ def structure_matches(
 ) -> bool:
     """Check one observed projection against its admitted baseline and rules."""
 
+    matches = False
     if _depth > 64:
-        return False
-    if isinstance(rule, ExactRealizationValue):
-        return json_equal(expected, actual)
-    if isinstance(rule, OpenRealizationValue):
-        return not observed or not (rule.taxonomy_sentinel and actual in (None, "unknown", "other"))
-    if isinstance(rule, RealizationRecord):
-        return _record_matches(rule, expected, actual, _depth, observed)
-    return _collection_matches(rule, expected, actual, _depth, observed)
+        matches = False
+    elif isinstance(rule, ExactRealizationValue):
+        matches = json_equal(expected, actual)
+    elif isinstance(rule, OpenRealizationValue):
+        matches = not observed or not (rule.taxonomy_sentinel and actual in (None, "unknown", "other"))
+    elif isinstance(rule, RealizationRecord):
+        matches = _record_matches(rule, expected, actual, _depth, observed)
+    else:
+        matches = _collection_matches(rule, expected, actual, _depth, observed)
+    return matches

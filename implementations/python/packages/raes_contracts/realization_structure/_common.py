@@ -135,16 +135,87 @@ def json_equal(expected: object, actual: object) -> bool:
     """Compare JSON values without Python's bool/int equivalence."""
 
     if type(expected) is not type(actual):
-        return False
-    if isinstance(expected, dict) and isinstance(actual, dict):
-        return expected.keys() == actual.keys() and all(
-            json_equal(value, actual[key]) for key, value in expected.items()
+        equal = False
+    elif isinstance(expected, dict) and isinstance(actual, dict):
+        equal = _json_dict_equal(expected, actual)
+    elif isinstance(expected, list) and isinstance(actual, list):
+        equal = _json_list_equal(expected, actual)
+    else:
+        equal = expected == actual
+    return equal
+
+
+def _json_dict_equal(expected: dict[object, object], actual: dict[object, object]) -> bool:
+    return expected.keys() == actual.keys() and all(json_equal(value, actual[key]) for key, value in expected.items())
+
+
+def _json_list_equal(expected: list[object], actual: list[object]) -> bool:
+    return len(expected) == len(actual) and all(
+        json_equal(left, right) for left, right in zip(expected, actual, strict=True)
+    )
+
+
+def _bounded_scalar_failure(
+    value: object,
+    current_pointer: str,
+    budget: RelationBudget,
+) -> RealizationRelationResult | None:
+    failure = None
+    if isinstance(value, str) and len(value.encode("utf-8")) > budget.limits.max_scalar_bytes:
+        failure = relation_result(
+            RealizationRelationStatus.LIMIT_EXCEEDED,
+            current_pointer,
+            "Realization value validation exceeded max_scalar_bytes.",
         )
-    if isinstance(expected, list) and isinstance(actual, list):
-        return len(expected) == len(actual) and all(
-            json_equal(left, right) for left, right in zip(expected, actual, strict=True)
+    elif isinstance(value, float) and not math.isfinite(value):
+        failure = relation_result(
+            RealizationRelationStatus.INVALID,
+            current_pointer,
+            "Realization values must use finite JSON numbers.",
         )
-    return expected == actual
+    elif type(value) is int and value.bit_length() > budget.limits.max_scalar_bytes * 8:
+        failure = relation_result(
+            RealizationRelationStatus.LIMIT_EXCEEDED,
+            current_pointer,
+            "Realization value validation exceeded the integer-size limit.",
+        )
+    elif type(value) not in (str, int, float, bool, type(None), dict, list):
+        failure = relation_result(
+            RealizationRelationStatus.INVALID,
+            current_pointer,
+            "Realization value is not JSON-compatible.",
+        )
+    return failure
+
+
+def _bounded_container_failure(
+    value: dict[object, object] | list[object],
+    path: tuple[str, ...],
+    depth: int,
+    budget: RelationBudget,
+) -> RealizationRelationResult | None:
+    current_pointer = pointer(path)
+    failure = None
+    if len(value) > budget.limits.max_members:
+        failure = relation_result(
+            RealizationRelationStatus.LIMIT_EXCEEDED,
+            current_pointer,
+            "Realization value validation exceeded max_members.",
+        )
+    else:
+        children = value.items() if isinstance(value, dict) else enumerate(value)
+        for key, child in children:
+            if isinstance(value, dict) and not isinstance(key, str):
+                failure = relation_result(
+                    RealizationRelationStatus.INVALID,
+                    current_pointer,
+                    "Realization record keys must be strings.",
+                )
+            else:
+                failure = validate_bounded_value(child, (*path, str(key)), depth + 1, budget)
+            if failure is not None:
+                break
+    return failure
 
 
 def validate_bounded_value(
@@ -154,51 +225,15 @@ def validate_bounded_value(
     budget: RelationBudget,
 ) -> RealizationRelationResult | None:
     current_pointer = pointer(path)
+    failure = None
     if exhausted := budget.spend_node(depth):
-        return relation_result(
+        failure = relation_result(
             RealizationRelationStatus.LIMIT_EXCEEDED,
             current_pointer,
             f"Realization value validation exceeded {exhausted}.",
         )
-    if isinstance(value, str) and len(value.encode("utf-8")) > budget.limits.max_scalar_bytes:
-        return relation_result(
-            RealizationRelationStatus.LIMIT_EXCEEDED,
-            current_pointer,
-            "Realization value validation exceeded max_scalar_bytes.",
-        )
-    if isinstance(value, float) and not math.isfinite(value):
-        return relation_result(
-            RealizationRelationStatus.INVALID,
-            current_pointer,
-            "Realization values must use finite JSON numbers.",
-        )
-    if type(value) is int and value.bit_length() > budget.limits.max_scalar_bytes * 8:
-        return relation_result(
-            RealizationRelationStatus.LIMIT_EXCEEDED,
-            current_pointer,
-            "Realization value validation exceeded the integer-size limit.",
-        )
-    if type(value) not in (str, int, float, bool, type(None), dict, list):
-        return relation_result(
-            RealizationRelationStatus.INVALID,
-            current_pointer,
-            "Realization value is not JSON-compatible.",
-        )
-    if isinstance(value, (dict, list)):
-        if len(value) > budget.limits.max_members:
-            return relation_result(
-                RealizationRelationStatus.LIMIT_EXCEEDED,
-                current_pointer,
-                "Realization value validation exceeded max_members.",
-            )
-        children = value.items() if isinstance(value, dict) else enumerate(value)
-        for key, child in children:
-            if isinstance(value, dict) and not isinstance(key, str):
-                return relation_result(
-                    RealizationRelationStatus.INVALID,
-                    current_pointer,
-                    "Realization record keys must be strings.",
-                )
-            if invalid := validate_bounded_value(child, (*path, str(key)), depth + 1, budget):
-                return invalid
-    return None
+    if failure is None:
+        failure = _bounded_scalar_failure(value, current_pointer, budget)
+    if failure is None and isinstance(value, (dict, list)):
+        failure = _bounded_container_failure(value, path, depth, budget)
+    return failure

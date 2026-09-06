@@ -267,6 +267,7 @@ def test_keyed_collection_aliases_are_explicit_and_collision_free() -> None:
         [{"manager": "debian", "name": "nmap", "version": "7.95"}],
     ).conformant
 
+    colliding_alias = RealizationIdentityAlias(identity=("apt", "nmap"), target=("apt", "nmap"))
     with pytest.raises(ValueError, match="alias identities must not collide"):
         RealizationKeyedCollectionConstraint(
             kind="keyed-collection",
@@ -274,7 +275,7 @@ def test_keyed_collection_aliases_are_explicit_and_collision_free() -> None:
             identity_fields=root.identity_fields,
             members=root.members,
             closure=root.closure,
-            aliases=(RealizationIdentityAlias(identity=("apt", "nmap"), target=("apt", "nmap")),),
+            aliases=(colliding_alias,),
         )
 
 

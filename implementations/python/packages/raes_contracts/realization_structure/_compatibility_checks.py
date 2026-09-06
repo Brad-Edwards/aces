@@ -50,33 +50,54 @@ def constraint_is_exact(
 ) -> bool:
     """Return true only when a recursive subtree admits exactly one JSON value."""
 
-    if node.presence is not RealizationPresence.REQUIRED or node.origin is not RealizationOrigin.AUTHOR:
-        return False
-    if isinstance(node, RealizationLiteral):
-        return json_equal(node.value, expected)
-    if isinstance(node, RealizationRecordConstraint):
-        if not isinstance(expected, Mapping) or set(expected) != set(node.fields):
-            return False
-        closure = closure_for(document, node.closure, path)
-        assert closure is not None
-        if closure.posture is not RealizationClosurePosture.CLOSED:
-            return False
-        return all(
+    exact = node.presence is RealizationPresence.REQUIRED and node.origin is RealizationOrigin.AUTHOR
+    if exact and isinstance(node, RealizationLiteral):
+        exact = json_equal(node.value, expected)
+    elif exact and isinstance(node, RealizationRecordConstraint):
+        exact = _record_constraint_is_exact(document, node, expected, path)
+    elif exact and isinstance(node, RealizationSequenceConstraint):
+        exact = _sequence_constraint_is_exact(document, node, expected, path)
+    else:
+        exact = False
+    return exact
+
+
+def _record_constraint_is_exact(
+    document: RealizationConstraintDocument,
+    node: RealizationRecordConstraint,
+    expected: object,
+    path: tuple[str, ...],
+) -> bool:
+    exact = isinstance(expected, Mapping) and set(expected) == set(node.fields)
+    closure = closure_for(document, node.closure, path)
+    assert closure is not None
+    exact = exact and closure.posture is RealizationClosurePosture.CLOSED
+    if exact:
+        assert isinstance(expected, Mapping)
+        exact = all(
             constraint_is_exact(document, child, expected[key], (*path, key)) for key, child in node.fields.items()
         )
-    if isinstance(node, RealizationSequenceConstraint):
-        if (
-            not isinstance(expected, list)
-            or len(expected) != len(node.items)
-            or not node.min_items <= len(expected) <= node.max_items
-        ):
-            return False
-        closure = closure_for(document, node.closure, path)
-        assert closure is not None
-        if closure.posture is not RealizationClosurePosture.CLOSED:
-            return False
-        return all(
+    return exact
+
+
+def _sequence_constraint_is_exact(
+    document: RealizationConstraintDocument,
+    node: RealizationSequenceConstraint,
+    expected: object,
+    path: tuple[str, ...],
+) -> bool:
+    exact = (
+        isinstance(expected, list)
+        and len(expected) == len(node.items)
+        and node.min_items <= len(expected) <= node.max_items
+    )
+    closure = closure_for(document, node.closure, path)
+    assert closure is not None
+    exact = exact and closure.posture is RealizationClosurePosture.CLOSED
+    if exact:
+        assert isinstance(expected, list)
+        exact = all(
             constraint_is_exact(document, child, expected[index], (*path, str(index)))
             for index, child in enumerate(node.items)
         )
-    return False
+    return exact
