@@ -110,6 +110,7 @@ def _domain_profile_schema_bundle() -> dict[str, dict[str, Any]]:
 
 def _core_schema_bundle() -> dict[str, dict[str, Any]]:
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
+    from raes_contracts.realization_structure import RealizationConstraintDocument
     from raes_contracts.semantic_comparison import SemanticComparisonRequestModel, SemanticComparisonResultModel
 
     from ..behavioral_relation_profiles import BehavioralRelationProfileModel
@@ -144,6 +145,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "scenario-satisfiability-evidence-v1": ScenarioSatisfiabilityEvidenceModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
         "realization-envelope-v1": BackendRealizationEnvelopeModel.model_json_schema(),
+        "recursive-realization-constraint-v1": RealizationConstraintDocument.model_json_schema(),
         "processor-manifest-v2": ProcessorManifestV2Model.model_json_schema(),
         "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_json_schema(),
         "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
