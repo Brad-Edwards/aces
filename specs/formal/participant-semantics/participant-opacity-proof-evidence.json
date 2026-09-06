@@ -288,11 +288,15 @@
     "tool_sources": [
       {
         "path": "tools/check_participant_opacity_proof.py",
-        "digest": "sha256:2927a0a3a8a72d3c294650c1b9f8eafe01903e75ebc7d2d20853d9822bc09333"
+        "digest": "sha256:4c9559bb40db2b6245abc42810e28c28f86155cedbaa8831c66b6844702fa46d"
+      },
+      {
+        "path": "tools/isabelle_sandbox.py",
+        "digest": "sha256:f3ee2b4772e13ab61aa7b9222fc638e5b1e22bb86876b4cae83201f4b2e73f91"
       },
       {
         "path": "tools/isabelle_tool.py",
-        "digest": "sha256:0631d662de132c2d7742d093adb2432861993cb54feb6178abcc98b28f58e0a9"
+        "digest": "sha256:4cce34a5885ccacbe300302ec904fb07e524ac7821db6cd77a139a985c5e9147"
       }
     ]
   },

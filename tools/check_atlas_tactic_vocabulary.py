@@ -234,6 +234,27 @@ def _check_catalog(catalog: ControlledVocabularyCatalogModel, source: AtlasTacti
     return failures
 
 
+def _remote_url_failure(source: AtlasTacticsSourceModel, selected_url: str) -> str | None:
+    expected_path = "/mitre-atlas/atlas-data/releases/download/v2026.06/ATLAS-2026.06.yaml"
+    failure = None
+    if source.source_url != selected_url:
+        failure = f"{SOURCE_RELATIVE_PATH}: source URL differs from the reviewed lock selection"
+    else:
+        parsed = urllib.parse.urlparse(selected_url)
+        if parsed.scheme != "https" or parsed.netloc != "github.com" or parsed.path != expected_path:
+            failure = (
+                f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay pinned to the v2026.06 GitHub release asset"
+            )
+    return failure
+
+
+def _remote_bytes_failure(data: bytes, *, size: int, sha256: str) -> str | None:
+    digest = _sha256_digest(data)
+    if len(data) != size or digest != f"sha256:{sha256}":
+        return f"{SOURCE_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest"
+    return None
+
+
 def _check_remote(source: AtlasTacticsSourceModel) -> list[str]:
     from tools.tooling_policy_gate import load_tooling_artifact_selection
 
@@ -246,28 +267,22 @@ def _check_remote(source: AtlasTacticsSourceModel) -> list[str]:
     if len(selection.source_urls) != 1 or len(selection.raw_manifest) != 1:
         raise RuntimeError("ATLAS lock selection must contain one source and raw snapshot")
     raw = selection.raw_manifest[0]
-    if source.source_url != selection.source_urls[0]:
-        return [f"{SOURCE_RELATIVE_PATH}: source URL differs from the reviewed lock selection"]
-    parsed = urllib.parse.urlparse(selection.source_urls[0])
-    if (
-        parsed.scheme != "https"
-        or parsed.netloc != "github.com"
-        or parsed.path != "/mitre-atlas/atlas-data/releases/download/v2026.06/ATLAS-2026.06.yaml"
-    ):
-        return [
-            f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay pinned to the v2026.06 GitHub release asset"
-        ]
+    url_failure = _remote_url_failure(source, selection.source_urls[0])
+    if url_failure is not None:
+        return [url_failure]
     with urllib.request.urlopen(selection.source_urls[0], timeout=60) as response:  # noqa: S310
         data = response.read()
     digest = _sha256_digest(data)
-    if len(data) != raw.size or digest != f"sha256:{raw.sha256}":
-        return [f"{SOURCE_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest"]
+    bytes_failure = _remote_bytes_failure(data, size=raw.size, sha256=raw.sha256)
+    if bytes_failure is not None:
+        return [bytes_failure]
+    failures: list[str] = []
     if digest != source.source_digest:
-        return [f"{SOURCE_RELATIVE_PATH}: source_digest differs from the reviewed lock manifest"]
+        failures.append(f"{SOURCE_RELATIVE_PATH}: source_digest differs from the reviewed lock manifest")
     remote_tactics = _extract_atlas_tactics(yaml.safe_load(data))
     if remote_tactics != _source_tactics(source):
-        return [f"{SOURCE_RELATIVE_PATH}: tactic snapshot differs from pinned upstream ATLAS YAML"]
-    return []
+        failures.append(f"{SOURCE_RELATIVE_PATH}: tactic snapshot differs from pinned upstream ATLAS YAML")
+    return failures
 
 
 def parse_args() -> argparse.Namespace:

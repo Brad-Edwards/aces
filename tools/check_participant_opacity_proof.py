@@ -289,37 +289,7 @@ def _validate_theorem_inventory(manifest: dict[str, Any], theory_text: str) -> N
         raise ProofEvidenceError("checked theory contains an unfinished or undeclared proof feature")
 
 
-def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
-    toolchain = _require_object(manifest["toolchain"], "proof toolchain")
-    _require_keys(
-        toolchain,
-        {
-            "prover",
-            "version",
-            "archive_url",
-            "archive_sha256",
-            "archive_bytes",
-            "acquire_command",
-            "replay_command",
-            "working_directory",
-            "locale",
-            "platform_boundary",
-            "network",
-            "filesystem",
-            "limits",
-            "tool_sources",
-        },
-        "proof toolchain",
-    )
-    selection = load_tooling_artifact_selection(
-        artifact_id="isabelle",
-        version=ISABELLE_VERSION,
-        platform_id="linux-x86_64",
-        profile_id="proof-linux-x86_64",
-    )
-    if len(selection.raw_manifest) != 1:
-        raise ProofEvidenceError("Isabelle lock selection must contain one raw archive")
-    raw = selection.raw_manifest[0]
+def _validate_toolchain_identity(toolchain: dict[str, Any], raw: Any) -> None:
     expected = {
         "prover": "Isabelle/HOL",
         "version": f"Isabelle{ISABELLE_VERSION}",
@@ -333,8 +303,9 @@ def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
     }
     if any(toolchain.get(key) != value for key, value in expected.items()):
         raise ProofEvidenceError("proof toolchain pin or execution posture drifted")
-    if toolchain.get("archive_url") not in selection.source_urls:
-        raise ProofEvidenceError("proof toolchain archive URL is outside the reviewed lock selection")
+
+
+def _validate_toolchain_commands(toolchain: dict[str, Any]) -> None:
     expected_acquire = [
         "uv",
         "run",
@@ -358,6 +329,9 @@ def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
     ]
     if toolchain["acquire_command"] != expected_acquire or toolchain["replay_command"] != expected_replay:
         raise ProofEvidenceError("proof toolchain command is not the fixed repository command")
+
+
+def _validate_toolchain_limits(toolchain: dict[str, Any]) -> None:
     limits = _require_object(toolchain["limits"], "proof process limits")
     _require_keys(
         limits,
@@ -388,9 +362,13 @@ def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
         "generated_artifact_retention": "none",
     }:
         raise ProofEvidenceError("proof process limits drifted")
+
+
+def _validate_tool_sources(toolchain: dict[str, Any], repo_root: Path) -> None:
     tool_sources = _require_list(toolchain["tool_sources"], "proof tool sources")
     if [item.get("path") for item in tool_sources if isinstance(item, dict)] != [
         "tools/check_participant_opacity_proof.py",
+        "tools/isabelle_sandbox.py",
         "tools/isabelle_tool.py",
     ]:
         raise ProofEvidenceError("proof tool source set or order is invalid")
@@ -398,6 +376,44 @@ def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
         item = _require_object(source, "proof tool source")
         _require_keys(item, {"path", "digest"}, "proof tool source")
         _validate_digest_bound_path(repo_root, item, "proof tool source")
+
+
+def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
+    toolchain = _require_object(manifest["toolchain"], "proof toolchain")
+    _require_keys(
+        toolchain,
+        {
+            "prover",
+            "version",
+            "archive_url",
+            "archive_sha256",
+            "archive_bytes",
+            "acquire_command",
+            "replay_command",
+            "working_directory",
+            "locale",
+            "platform_boundary",
+            "network",
+            "filesystem",
+            "limits",
+            "tool_sources",
+        },
+        "proof toolchain",
+    )
+    selection = load_tooling_artifact_selection(
+        artifact_id="isabelle",
+        version=ISABELLE_VERSION,
+        platform_id="linux-x86_64",
+        profile_id="proof-linux-x86_64",
+    )
+    if len(selection.raw_manifest) != 1:
+        raise ProofEvidenceError("Isabelle lock selection must contain one raw archive")
+    if toolchain.get("archive_url") not in selection.source_urls:
+        raise ProofEvidenceError("proof toolchain archive URL is outside the reviewed lock selection")
+    _validate_toolchain_identity(toolchain, selection.raw_manifest[0])
+    _validate_toolchain_commands(toolchain)
+    _validate_toolchain_limits(toolchain)
+    _validate_tool_sources(toolchain, repo_root)
 
 
 def _validate_session(manifest: dict[str, Any], repo_root: Path) -> str:

@@ -257,9 +257,9 @@ def test_python_discovery_parses_each_tracked_source_once(
     tmp_path: Path,
 ) -> None:
     root = _seed_policy(tmp_path)
-    from tools import check_tooling_artifact_policy
+    from tools import tooling_artifact_policy_discovery
 
-    parse = check_tooling_artifact_policy.ast.parse
+    parse = tooling_artifact_policy_discovery.ast.parse
     parse_calls = 0
 
     def count_parse(*args: object, **kwargs: object):
@@ -267,7 +267,7 @@ def test_python_discovery_parses_each_tracked_source_once(
         parse_calls += 1
         return parse(*args, **kwargs)
 
-    monkeypatch.setattr(check_tooling_artifact_policy.ast, "parse", count_parse)
+    monkeypatch.setattr(tooling_artifact_policy_discovery.ast, "parse", count_parse)
     assert _failures(root) == set()
     assert parse_calls == 1
 

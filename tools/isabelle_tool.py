@@ -21,7 +21,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from tools import isabelle_sandbox  # noqa: E402
 from tools.tool_versions import ISABELLE_VERSION  # noqa: E402
+
+ISABELLE_SYSTEM_RUNTIME_PATHS = isabelle_sandbox.ISABELLE_SYSTEM_RUNTIME_PATHS
+_proof_sandbox_command = isabelle_sandbox.proof_sandbox_command
 
 ISABELLE_ARCHIVE_NAME = f"Isabelle{ISABELLE_VERSION}_linux.tar.gz"
 ISABELLE_SESSION = "Participant_Opacity"
@@ -33,23 +37,6 @@ ISABELLE_FILE_LIMIT_BYTES = 4 * 1024 * 1024 * 1024
 ISABELLE_PROCESS_ADDRESS_SPACE_LIMIT_MIB = 32768
 ISABELLE_JAVA_MAX_HEAP_MIB = 2048
 ISABELLE_ML_MAX_HEAP_MIB = 2048
-ISABELLE_SANDBOX_HOME = Path("/opt/isabelle")
-ISABELLE_SANDBOX_SESSION_ROOT = Path("/workspace/session")
-ISABELLE_SANDBOX_STATE_ROOT = Path("/state")
-ISABELLE_SYSTEM_RUNTIME_PATHS = (
-    Path("/usr/bin"),
-    Path("/usr/lib"),
-    Path("/usr/lib64"),
-    Path("/usr/share/locale"),
-    Path("/usr/share/fontconfig"),
-    Path("/usr/share/fonts"),
-    Path("/usr/share/zoneinfo"),
-    Path("/lib"),
-    Path("/lib64"),
-    Path("/etc/fonts"),
-    Path("/etc/ld.so.cache"),
-    Path("/var/cache/fontconfig"),
-)
 ISABELLE_REQUIRED_FONTCONFIG_PATHS = (
     Path("/etc/fonts"),
     Path("/usr/share/fonts"),
@@ -57,6 +44,7 @@ ISABELLE_REQUIRED_FONTCONFIG_PATHS = (
 ISABELLE_FONTCONFIG_LIST = Path("/usr/bin/fc-list")
 ISABELLE_FONTCONFIG_QUERY_TIMEOUT_SECONDS = 10
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
+_INVALID_INSTALLATION = "pinned Isabelle installation marker or executable is invalid"
 
 
 class IsabelleToolError(RuntimeError):
@@ -196,6 +184,28 @@ def _extract_archive(archive_path: Path, destination: Path, *, installed_path: s
         extracted.replace(destination)
 
 
+def _installed_relative_path(installed_path: str) -> Path:
+    try:
+        return Path(installed_path).relative_to(f"Isabelle{ISABELLE_VERSION}")
+    except ValueError as exc:
+        raise IsabelleToolError("Isabelle installed manifest escapes the selected distribution") from exc
+
+
+def _verify_installed_executable(binary: Path, *, expected_sha256: str, expected_size: int) -> None:
+    try:
+        status = binary.lstat()
+    except OSError as exc:
+        raise IsabelleToolError("pinned Isabelle executable is unavailable") from exc
+    valid = (
+        stat.S_ISREG(status.st_mode)
+        and status.st_size == expected_size
+        and _sha256_file(binary) == expected_sha256
+        and os.access(binary, os.X_OK)
+    )
+    if not valid:
+        raise IsabelleToolError("pinned Isabelle executable differs from the reviewed lock manifest")
+
+
 def acquire_isabelle(repo_root: Path = REPO_ROOT) -> Path:
     """Acquire and checksum-verify the pinned development-only distribution."""
 
@@ -235,24 +245,11 @@ def acquire_isabelle(repo_root: Path = REPO_ROOT) -> Path:
             expected_size=raw.size,
         )
     _verify_archive(archive_path, expected_sha256=raw.sha256, expected_size=raw.size)
-    try:
-        installed_relative_path = Path(installed.path).relative_to(f"Isabelle{ISABELLE_VERSION}")
-    except ValueError as exc:
-        raise IsabelleToolError("Isabelle installed manifest escapes the selected distribution") from exc
+    installed_relative_path = _installed_relative_path(installed.path)
     binary = home / installed_relative_path
     if not binary.is_file():
         _extract_archive(archive_path, home, installed_path=installed.path)
-    try:
-        binary_status = binary.lstat()
-    except OSError as exc:
-        raise IsabelleToolError("pinned Isabelle executable is unavailable") from exc
-    if (
-        not stat.S_ISREG(binary_status.st_mode)
-        or binary_status.st_size != installed.size
-        or _sha256_file(binary) != installed.sha256
-        or not os.access(binary, os.X_OK)
-    ):
-        raise IsabelleToolError("pinned Isabelle executable differs from the reviewed lock manifest")
+    _verify_installed_executable(binary, expected_sha256=installed.sha256, expected_size=installed.size)
     marker = _installation_marker(repo_root)
     _write_installation_marker(marker, raw.sha256)
     return home
@@ -280,21 +277,18 @@ def require_isabelle(repo_root: Path = REPO_ROOT) -> Path:
     safe_tooling_cache_parent(repo_root, home, artifact_id="Isabelle")
     _reject_unsafe_cache_directory(home)
     marker = _installation_marker(repo_root)
-    try:
-        installed_relative_path = Path(installed.path).relative_to(f"Isabelle{ISABELLE_VERSION}")
-    except ValueError as exc:
-        raise IsabelleToolError("Isabelle installed manifest escapes the selected distribution") from exc
+    installed_relative_path = _installed_relative_path(installed.path)
     binary = home / installed_relative_path
     try:
         if not stat.S_ISREG(marker.lstat().st_mode):
-            raise IsabelleToolError("pinned Isabelle installation marker or executable is invalid")
+            raise IsabelleToolError(_INVALID_INSTALLATION)
         installed_digest = marker.read_text(encoding="ascii").strip()
     except OSError as exc:
         raise IsabelleToolError("pinned Isabelle is not acquired; run the acquire command first") from exc
     try:
         binary_status = binary.lstat()
     except OSError as exc:
-        raise IsabelleToolError("pinned Isabelle installation marker or executable is invalid") from exc
+        raise IsabelleToolError(_INVALID_INSTALLATION) from exc
     if (
         installed_digest != raw.sha256
         or not stat.S_ISREG(binary_status.st_mode)
@@ -302,7 +296,7 @@ def require_isabelle(repo_root: Path = REPO_ROOT) -> Path:
         or _sha256_file(binary) != installed.sha256
         or not os.access(binary, os.X_OK)
     ):
-        raise IsabelleToolError("pinned Isabelle installation marker or executable is invalid")
+        raise IsabelleToolError(_INVALID_INSTALLATION)
     return home
 
 
@@ -340,95 +334,6 @@ def expected_isabelle_result() -> dict[str, object]:
     encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
     result["result_digest"] = f"sha256:{hashlib.sha256(encoded).hexdigest()}"
     return result
-
-
-def _proof_sandbox_command(
-    *,
-    bwrap: Path,
-    home: Path,
-    session_root: Path,
-    state_root: Path,
-) -> list[str]:
-    """Build the fixed proof sandbox without exposing the host root or home."""
-
-    command = [
-        str(bwrap),
-        "--unshare-net",
-        "--unshare-pid",
-        "--unshare-ipc",
-        "--unshare-uts",
-        "--die-with-parent",
-        "--new-session",
-        "--clearenv",
-        "--dir",
-        "/opt",
-        "--dir",
-        "/workspace",
-        "--dir",
-        "/usr",
-        "--dir",
-        "/usr/share",
-        "--dir",
-        "/etc",
-        "--dir",
-        "/var",
-        "--dir",
-        "/var/cache",
-    ]
-    for runtime_path in ISABELLE_SYSTEM_RUNTIME_PATHS:
-        if runtime_path.exists():
-            command.extend(("--ro-bind", str(runtime_path), str(runtime_path)))
-    command.extend(
-        (
-            "--ro-bind",
-            str(home),
-            str(ISABELLE_SANDBOX_HOME),
-            "--ro-bind",
-            str(session_root),
-            str(ISABELLE_SANDBOX_SESSION_ROOT),
-            "--bind",
-            str(state_root),
-            str(ISABELLE_SANDBOX_STATE_ROOT),
-            "--dev",
-            "/dev",
-            "--proc",
-            "/proc",
-            "--tmpfs",
-            "/tmp",  # noqa: S108 - private bubblewrap tmpfs, not a shared host path
-            "--chdir",
-            "/workspace",
-            "--setenv",
-            "PATH",
-            "/usr/bin",
-            "--setenv",
-            "HOME",
-            "/state/user",
-            "--setenv",
-            "USER_HOME",
-            "/state/user",
-            "--setenv",
-            "ISABELLE_HOME_USER",
-            "/state/isabelle-user",
-            "--setenv",
-            "LANG",
-            ISABELLE_LOCALE,
-            "--setenv",
-            "LC_ALL",
-            ISABELLE_LOCALE,
-            "--setenv",
-            "TZ",
-            "UTC",
-            str(ISABELLE_SANDBOX_HOME / "bin" / "isabelle"),
-            "build",
-            "-o",
-            "threads=2",
-            "-o",
-            "timeout=300",
-            "-D",
-            str(ISABELLE_SANDBOX_SESSION_ROOT),
-        )
-    )
-    return command
 
 
 def _fontconfig_has_fonts(font_list: Path = ISABELLE_FONTCONFIG_LIST) -> bool:
@@ -498,6 +403,7 @@ def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
             home=home,
             session_root=session_root,
             state_root=state_root,
+            locale=ISABELLE_LOCALE,
         )
         try:
             with output_path.open("wb") as output:

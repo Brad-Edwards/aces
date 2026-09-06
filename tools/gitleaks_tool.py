@@ -30,6 +30,26 @@ def _locked_binary_cache_hit(path: Path, *, expected_sha256: str, expected_size:
     return path.stat().st_size == expected_size and _sha256_file(path) == expected_sha256
 
 
+def _install_locked_binary(archive_bytes: bytes, installed, binary_path: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="raes-gitleaks-") as tmpdir:
+        archive_path = Path(tmpdir) / "locked-gitleaks-archive.tar.gz"
+        archive_path.write_bytes(archive_bytes)
+        with tarfile.open(archive_path, "r:gz") as archive:
+            member = archive.getmember(installed.path)
+            if not member.isfile():
+                raise RuntimeError("gitleaks installed manifest does not select a regular archive member")
+            extracted_stream = archive.extractfile(member)
+            if extracted_stream is None:
+                raise RuntimeError("gitleaks installed archive member cannot be read")
+            extracted_bytes = extracted_stream.read()
+        if len(extracted_bytes) != installed.size or sha256(extracted_bytes).hexdigest() != installed.sha256:
+            raise RuntimeError("gitleaks installed binary differs from the reviewed lock manifest")
+        extracted = Path(tmpdir) / "locked-gitleaks-binary"
+        extracted.write_bytes(extracted_bytes)
+        extracted.chmod(extracted.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        shutil.move(extracted, binary_path)
+
+
 def ensure_gitleaks(repo_root: Path = REPO_ROOT, *, version: str = GITLEAKS_VERSION) -> Path:
     from tools.tooling_policy_gate import (
         host_platform_id,
@@ -60,24 +80,7 @@ def ensure_gitleaks(repo_root: Path = REPO_ROOT, *, version: str = GITLEAKS_VERS
     if len(archive_bytes) != raw.size or actual_checksum != raw.sha256:
         raise RuntimeError(f"gitleaks checksum or size mismatch for locked asset {asset_name}")
 
-    with tempfile.TemporaryDirectory(prefix="raes-gitleaks-") as tmpdir:
-        archive_path = Path(tmpdir) / "locked-gitleaks-archive.tar.gz"
-        archive_path.write_bytes(archive_bytes)
-        with tarfile.open(archive_path, "r:gz") as archive:
-            member = archive.getmember(installed.path)
-            if not member.isfile():
-                raise RuntimeError("gitleaks installed manifest does not select a regular archive member")
-            extracted_stream = archive.extractfile(member)
-            if extracted_stream is None:
-                raise RuntimeError("gitleaks installed archive member cannot be read")
-            extracted_bytes = extracted_stream.read()
-        if len(extracted_bytes) != installed.size or sha256(extracted_bytes).hexdigest() != installed.sha256:
-            raise RuntimeError("gitleaks installed binary differs from the reviewed lock manifest")
-        extracted = Path(tmpdir) / "locked-gitleaks-binary"
-        extracted.write_bytes(extracted_bytes)
-        extracted.chmod(extracted.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-        shutil.move(extracted, binary_path)
-
+    _install_locked_binary(archive_bytes, installed, binary_path)
     return binary_path
 
 

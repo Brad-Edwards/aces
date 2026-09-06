@@ -187,6 +187,23 @@ def _check_catalog(
     return failures
 
 
+def _remote_url_failure(source: NistCsfDefensiveCategorySourceModel, selected_url: str) -> str | None:
+    failure = None
+    if source.source_url != selected_url:
+        failure = f"{SOURCE_RELATIVE_PATH}: source URL differs from the reviewed lock selection"
+    else:
+        parsed = urllib.parse.urlparse(selected_url)
+        if parsed.scheme != "https" or parsed.netloc != "csrc.nist.gov":
+            failure = f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay on csrc.nist.gov HTTPS"
+    return failure
+
+
+def _remote_bytes_failure(data: bytes, *, size: int, sha256: str) -> str | None:
+    if len(data) != size or hashlib.sha256(data).hexdigest() != sha256:
+        return f"{SOURCE_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest"
+    return None
+
+
 def _check_remote(source: NistCsfDefensiveCategorySourceModel) -> list[str]:
     from tools.tooling_policy_gate import load_tooling_artifact_selection
 
@@ -199,19 +216,18 @@ def _check_remote(source: NistCsfDefensiveCategorySourceModel) -> list[str]:
     if len(selection.source_urls) != 1 or len(selection.raw_manifest) != 1:
         raise RuntimeError("NIST CSF lock selection must contain one source and raw snapshot")
     raw = selection.raw_manifest[0]
-    if source.source_url != selection.source_urls[0]:
-        return [f"{SOURCE_RELATIVE_PATH}: source URL differs from the reviewed lock selection"]
-    parsed = urllib.parse.urlparse(selection.source_urls[0])
-    if parsed.scheme != "https" or parsed.netloc != "csrc.nist.gov":
-        return [f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay on csrc.nist.gov HTTPS"]
+    url_failure = _remote_url_failure(source, selection.source_urls[0])
+    if url_failure is not None:
+        return [url_failure]
     request = urllib.request.Request(  # noqa: S310 - allowlisted NIST HTTPS endpoint above
         selection.source_urls[0],
         headers={"User-Agent": "RAES-NIST-CSF-verifier/1"},
     )
     with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
         data = response.read()
-    if len(data) != raw.size or hashlib.sha256(data).hexdigest() != raw.sha256:
-        return [f"{SOURCE_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest"]
+    bytes_failure = _remote_bytes_failure(data, size=raw.size, sha256=raw.sha256)
+    if bytes_failure is not None:
+        return [bytes_failure]
     categories = _extract_defensive_categories(data)
     failures: list[str] = []
     if categories != _source_categories(source):

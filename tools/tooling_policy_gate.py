@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 _VALIDATOR_TIMEOUT_SECONDS = 180
+_INVALID_SELECTION_RESPONSE = "development artifact policy failed before acquisition: invalid selection response"
 
 
 @dataclass(frozen=True)
@@ -35,22 +36,24 @@ class LockedArtifactSelection:
     installed_manifest: tuple[LockedManifestEntry, ...]
 
 
+def _is_portable_manifest_path(path: str) -> bool:
+    relative = PurePosixPath(path)
+    return not (
+        path != relative.as_posix()
+        or relative.is_absolute()
+        or "\\" in path
+        or re.match(r"^[A-Za-z]:", path)
+        or any(part in {"", ".", ".."} for part in relative.parts)
+    )
+
+
 def _locked_manifest_entry(value: object) -> LockedManifestEntry:
     if not isinstance(value, dict):
         raise RuntimeError("development artifact policy failed before acquisition: invalid manifest entry")
     path = value.get("path")
     digest = value.get("sha256")
     size = value.get("size")
-    if not isinstance(path, str):
-        raise RuntimeError("development artifact policy failed before acquisition: invalid manifest path")
-    relative = PurePosixPath(path)
-    if (
-        path != relative.as_posix()
-        or relative.is_absolute()
-        or "\\" in path
-        or re.match(r"^[A-Za-z]:", path)
-        or any(part in {"", ".", ".."} for part in relative.parts)
-    ):
+    if not isinstance(path, str) or not _is_portable_manifest_path(path):
         raise RuntimeError("development artifact policy failed before acquisition: invalid manifest path")
     if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
         raise RuntimeError("development artifact policy failed before acquisition: invalid manifest digest")
@@ -126,17 +129,14 @@ def _frozen_validator_command(policy_root: Path) -> list[str]:
     ]
 
 
-def load_tooling_artifact_selection(
+def _validator_stdout(
+    validator_command: list[str],
     *,
     artifact_id: str,
     version: str,
     platform_id: str,
     profile_id: str,
-) -> LockedArtifactSelection:
-    """Load one reviewed lock selection before cache lookup or acquisition."""
-
-    policy_root = REPO_ROOT
-    validator_command = _frozen_validator_command(policy_root)
+) -> str:
     try:
         proc = subprocess.run(
             [
@@ -150,7 +150,7 @@ def load_tooling_artifact_selection(
                 "--profile-id",
                 profile_id,
             ],
-            cwd=policy_root,
+            cwd=REPO_ROOT,
             text=True,
             capture_output=True,
             check=False,
@@ -163,15 +163,28 @@ def load_tooling_artifact_selection(
     if proc.returncode != 0:
         details = proc.stderr.strip() or "the frozen project validator rejected the selection"
         raise RuntimeError(f"development artifact policy failed before acquisition:\n{details}")
+    return proc.stdout
+
+
+def _selection_document(payload: str) -> dict[str, object]:
     try:
-        selection = json.loads(proc.stdout)
+        selection = json.loads(payload)
     except (json.JSONDecodeError, UnicodeError) as exc:
-        raise RuntimeError("development artifact policy failed before acquisition: invalid selection response") from exc
+        raise RuntimeError(_INVALID_SELECTION_RESPONSE) from exc
     if not isinstance(selection, dict):
-        raise RuntimeError("development artifact policy failed before acquisition: invalid selection response")
+        raise RuntimeError(_INVALID_SELECTION_RESPONSE)
+    return selection
+
+
+def _selection_from_document(
+    selection: dict[str, object],
+    profile_id: str,
+) -> tuple[LockedArtifactSelection, object]:
     try:
         source = selection["source"]
         platform = selection["platform"]
+        if not isinstance(source, dict) or not isinstance(platform, dict):
+            raise TypeError
         raw_manifest = tuple(_locked_manifest_entry(item) for item in platform["raw_manifest"])
         installed_manifest = tuple(_locked_manifest_entry(item) for item in platform["installed_manifest"])
         result = LockedArtifactSelection(
@@ -187,30 +200,68 @@ def load_tooling_artifact_selection(
         )
         selected_profile_ids = platform["profile_ids"]
     except (KeyError, TypeError) as exc:
-        raise RuntimeError("development artifact policy failed before acquisition: invalid selection response") from exc
-    if (
-        result.artifact_id != artifact_id
-        or result.version != version
-        or result.platform_id != platform_id
-        or result.profile_id != profile_id
-        or not isinstance(selected_profile_ids, list)
-        or profile_id not in selected_profile_ids
-        or not result.source_urls
-        or not result.raw_manifest
-        or not result.installed_manifest
-        or any(
-            not isinstance(value, str) or not value
-            for value in (
-                result.platform_id,
-                result.repository,
-                result.release,
-                *result.source_urls,
-            )
+        raise RuntimeError(_INVALID_SELECTION_RESPONSE) from exc
+    return result, selected_profile_ids
+
+
+def _selection_is_valid(
+    selection: LockedArtifactSelection,
+    selected_profile_ids: object,
+    *,
+    artifact_id: str,
+    version: str,
+    platform_id: str,
+    profile_id: str,
+) -> bool:
+    identity = (selection.artifact_id, selection.version, selection.platform_id, selection.profile_id)
+    expected_identity = (artifact_id, version, platform_id, profile_id)
+    scalar_values = (
+        selection.platform_id,
+        selection.repository,
+        selection.release,
+        *selection.source_urls,
+    )
+    required_collections = (
+        selection.source_urls,
+        selection.raw_manifest,
+        selection.installed_manifest,
+    )
+    return all(
+        (
+            identity == expected_identity,
+            isinstance(selected_profile_ids, list),
+            isinstance(selected_profile_ids, list) and profile_id in selected_profile_ids,
+            all(required_collections),
+            all(isinstance(value, str) and value for value in scalar_values),
         )
-        or any(
-            not isinstance(item.path, str) or not isinstance(item.sha256, str) or not isinstance(item.size, int)
-            for item in (*result.raw_manifest, *result.installed_manifest)
-        )
+    )
+
+
+def load_tooling_artifact_selection(
+    *,
+    artifact_id: str,
+    version: str,
+    platform_id: str,
+    profile_id: str,
+) -> LockedArtifactSelection:
+    """Load one reviewed lock selection before cache lookup or acquisition."""
+
+    validator_command = _frozen_validator_command(REPO_ROOT)
+    payload = _validator_stdout(
+        validator_command,
+        artifact_id=artifact_id,
+        version=version,
+        platform_id=platform_id,
+        profile_id=profile_id,
+    )
+    result, selected_profile_ids = _selection_from_document(_selection_document(payload), profile_id)
+    if not _selection_is_valid(
+        result,
+        selected_profile_ids,
+        artifact_id=artifact_id,
+        version=version,
+        platform_id=platform_id,
+        profile_id=profile_id,
     ):
-        raise RuntimeError("development artifact policy failed before acquisition: invalid selection response")
+        raise RuntimeError(_INVALID_SELECTION_RESPONSE)
     return result
