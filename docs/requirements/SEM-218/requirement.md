@@ -29,6 +29,7 @@ Current state: identified gap. Honest portability requires normative semantics f
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure/_scopes.py` (Closure overlays across materialized, additional, delegated, keyed, and sequence paths)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure/_limits.py` (Shared structural and metadata work admission)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure/_normalization.py` (Concise literal and stable-identity normalization)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure/_normalization_scopes.py` (Source-index to semantic-identity scope normalization)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure/_composition.py` (Canonical composition and structural refinement)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure/_compatibility.py` (Lossless legacy conversion boundary)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/realization_structure/_compatibility_upgrade_leaf.py` (Legacy leaf upgrade and compatibility-closure helpers)

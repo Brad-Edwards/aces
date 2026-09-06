@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from ._build import RealizationConstraintBuildResult, build_failure
-from ._common import RelationBudget, actual_identity, pointer, pointer_tokens
+from ._common import RelationBudget, actual_identity, pointer
 from ._limits import admit_normalization_metadata
 from ._models import (
     DEFAULT_REALIZATION_CONSTRAINT_LIMITS,
@@ -27,6 +27,7 @@ from ._models import (
     RecursiveRealizationStructure,
     identity_key,
 )
+from ._normalization_scopes import normalize_scope_identities
 
 
 def normalize_realization_literal(
@@ -48,7 +49,7 @@ def normalize_realization_literal(
     result = result or profile_failure
     normalized_scopes: tuple[RealizationScope, ...] = ()
     if result is None:
-        normalized_scopes, result = _normalize_scope_identities(scopes, value, profiles, budget)
+        normalized_scopes, result = normalize_scope_identities(scopes, value, profiles, budget)
     if result is None:
         result = _normalize_document(
             value,
@@ -120,128 +121,6 @@ def _normalize_document(
     return result
 
 
-MISSING_SCOPE_VALUE = object()
-
-
-@dataclass
-class _ScopeCursor:
-    source_path: list[str]
-    semantic_path: list[str]
-    current: object
-
-
-def _advance_keyed_scope(
-    cursor: _ScopeCursor,
-    token: str,
-    profile: RealizationCollectionProfile,
-    address: str,
-    budget: RelationBudget,
-) -> RealizationConstraintBuildResult | None:
-    failure = None
-    assert isinstance(cursor.current, list)
-    if not token.isdigit() or int(token) >= len(cursor.current):
-        failure = build_failure(
-            RealizationRelationStatus.INVALID,
-            address,
-            "A keyed-collection scope must resolve an authored member position.",
-        )
-    elif exhausted := budget.spend_identity():
-        failure = build_failure(
-            RealizationRelationStatus.LIMIT_EXCEEDED,
-            address,
-            f"Scope normalization exceeded {exhausted}.",
-        )
-    else:
-        item = cursor.current[int(token)]
-        identity = actual_identity(item, profile.identity_fields)
-        if identity is None:
-            failure = build_failure(
-                RealizationRelationStatus.INVALID,
-                address,
-                "A keyed-collection scope resolves a member without concrete semantic identity.",
-            )
-        else:
-            cursor.semantic_path.append(f"@{identity_key(identity)}")
-            cursor.source_path.append(token)
-            cursor.current = item
-    return failure
-
-
-def _advance_plain_scope(cursor: _ScopeCursor, token: str) -> None:
-    cursor.semantic_path.append(token)
-    cursor.source_path.append(token)
-    if isinstance(cursor.current, Mapping):
-        cursor.current = cursor.current.get(token, MISSING_SCOPE_VALUE)
-    elif isinstance(cursor.current, list) and token.isdigit() and int(token) < len(cursor.current):
-        cursor.current = cursor.current[int(token)]
-    else:
-        cursor.current = MISSING_SCOPE_VALUE
-
-
-def _normalize_one_scope(
-    scope: RealizationScope,
-    value: object,
-    collection_profiles: Mapping[str, RealizationCollectionProfile],
-    budget: RelationBudget,
-) -> tuple[RealizationScope | None, RealizationConstraintBuildResult | None]:
-    cursor = _ScopeCursor([], [], value)
-    failure = None
-    for token in pointer_tokens(scope.field_pointer):
-        exhausted = budget.spend_operation()
-        if exhausted is not None:
-            failure = build_failure(
-                RealizationRelationStatus.LIMIT_EXCEEDED,
-                scope.field_pointer,
-                f"Scope normalization exceeded {exhausted}.",
-            )
-        else:
-            profile = collection_profiles.get(pointer(tuple(cursor.source_path)))
-            if isinstance(cursor.current, list) and profile is not None:
-                failure = _advance_keyed_scope(cursor, token, profile, scope.field_pointer, budget)
-            else:
-                _advance_plain_scope(cursor, token)
-        if failure is not None:
-            break
-    normalized = (
-        None
-        if failure is not None
-        else scope.model_copy(update={"field_pointer": pointer(tuple(cursor.semantic_path))})
-    )
-    return normalized, failure
-
-
-def _normalize_scope_identities(
-    scopes: tuple[RealizationScope, ...],
-    value: object,
-    collection_profiles: Mapping[str, RealizationCollectionProfile],
-    budget: RelationBudget,
-) -> tuple[tuple[RealizationScope, ...], RealizationConstraintBuildResult | None]:
-    normalized: list[RealizationScope] = []
-    failure = None
-    for scope in scopes:
-        if exhausted := budget.spend_operation():
-            failure = build_failure(
-                RealizationRelationStatus.LIMIT_EXCEEDED,
-                scope.field_pointer,
-                f"Scope normalization exceeded {exhausted}.",
-            )
-        else:
-            converted, failure = _normalize_one_scope(scope, value, collection_profiles, budget)
-            if failure is None:
-                assert converted is not None
-                normalized.append(converted)
-        if failure is not None:
-            break
-    pointers = [scope.field_pointer for scope in normalized]
-    if failure is None and len(pointers) != len(set(pointers)):
-        failure = build_failure(
-            RealizationRelationStatus.INVALID,
-            "",
-            "Scope normalization produced duplicate semantic member addresses.",
-        )
-    return (() if failure is not None else tuple(normalized)), failure
-
-
 def _normalization_origin(
     origins: Mapping[str, RealizationOrigin | str],
     path: tuple[str, ...],
@@ -304,39 +183,61 @@ def _normalize_record(
     origin: RealizationOrigin,
 ) -> tuple[RecursiveRealizationStructure | None, RealizationConstraintBuildResult | None]:
     fields: dict[str, RecursiveRealizationStructure] = {}
-    failure = None
-    if len(value) > context.budget.limits.max_members:
-        failure = build_failure(
-            RealizationRelationStatus.LIMIT_EXCEEDED,
-            pointer(semantic_path),
-            "Literal normalization exceeded max_members.",
-        )
-    else:
-        for key, child in value.items():
-            if not isinstance(key, str):
-                failure = build_failure(
-                    RealizationRelationStatus.INVALID,
-                    pointer(semantic_path),
-                    "Literal normalization requires string record keys.",
-                )
-            else:
-                normalized, failure = _normalize_literal_node(
-                    child,
-                    (*semantic_path, key),
-                    (*source_path, key),
-                    context,
-                )
-                if failure is None:
-                    assert normalized is not None
-                    fields[key] = normalized
-            if failure is not None:
-                break
+    failure = _record_member_limit_failure(value, semantic_path, context)
+    if failure is None:
+        fields, failure = _normalize_record_fields(value, semantic_path, source_path, context)
     node = (
         None
         if failure is not None
         else RealizationRecordConstraint(kind="recursive-record", fields=fields, origin=origin)
     )
     return node, failure
+
+
+def _record_member_limit_failure(
+    value: Mapping[object, object],
+    semantic_path: tuple[str, ...],
+    context: _NormalizationContext,
+) -> RealizationConstraintBuildResult | None:
+    return (
+        build_failure(
+            RealizationRelationStatus.LIMIT_EXCEEDED,
+            pointer(semantic_path),
+            "Literal normalization exceeded max_members.",
+        )
+        if len(value) > context.budget.limits.max_members
+        else None
+    )
+
+
+def _normalize_record_fields(
+    value: Mapping[object, object],
+    semantic_path: tuple[str, ...],
+    source_path: tuple[str, ...],
+    context: _NormalizationContext,
+) -> tuple[dict[str, RecursiveRealizationStructure], RealizationConstraintBuildResult | None]:
+    fields: dict[str, RecursiveRealizationStructure] = {}
+    failure = None
+    for key, child in value.items():
+        if not isinstance(key, str):
+            failure = build_failure(
+                RealizationRelationStatus.INVALID,
+                pointer(semantic_path),
+                "Literal normalization requires string record keys.",
+            )
+        else:
+            normalized, failure = _normalize_literal_node(
+                child,
+                (*semantic_path, key),
+                (*source_path, key),
+                context,
+            )
+            if failure is None:
+                assert normalized is not None
+                fields[key] = normalized
+        if failure is not None:
+            break
+    return fields, failure
 
 
 def _normalize_collection(
@@ -438,41 +339,19 @@ def _normalize_keyed_collection(
     identities: set[str] = set()
     failure = None
     for index, child in enumerate(value):
-        if exhausted := context.budget.spend_identity():
-            failure = build_failure(
-                RealizationRelationStatus.LIMIT_EXCEEDED,
-                pointer(semantic_path),
-                f"Profiled collection normalization exceeded {exhausted}.",
-            )
-        else:
-            identity = actual_identity(child, profile.identity_fields)
-            if identity is None:
-                failure = build_failure(
-                    RealizationRelationStatus.INVALID,
-                    pointer((*semantic_path, str(index))),
-                    "A profiled collection member has no complete concrete semantic identity.",
-                )
-            else:
-                key = identity_key(identity)
-                if key in identities:
-                    failure = build_failure(
-                        RealizationRelationStatus.INVALID,
-                        pointer(semantic_path),
-                        "A profiled collection contains a duplicate semantic identity.",
-                    )
-                else:
-                    identities.add(key)
-                    normalized, failure = _normalize_literal_node(
-                        child,
-                        (*semantic_path, f"@{key}"),
-                        (*source_path, str(index)),
-                        context,
-                    )
-                    if failure is None:
-                        assert normalized is not None
-                        members.append(RealizationCollectionMember(identity=identity, constraint=normalized))
+        member, failure = _normalize_keyed_member(
+            child,
+            index,
+            semantic_path,
+            source_path,
+            context,
+            profile,
+            identities,
+        )
         if failure is not None:
             break
+        assert member is not None
+        members.append(member)
     node = (
         None
         if failure is not None
@@ -486,3 +365,52 @@ def _normalize_keyed_collection(
         )
     )
     return node, failure
+
+
+def _normalize_keyed_member(
+    child: object,
+    index: int,
+    semantic_path: tuple[str, ...],
+    source_path: tuple[str, ...],
+    context: _NormalizationContext,
+    profile: RealizationCollectionProfile,
+    identities: set[str],
+) -> tuple[RealizationCollectionMember | None, RealizationConstraintBuildResult | None]:
+    failure = None
+    identity = None
+    if exhausted := context.budget.spend_identity():
+        failure = build_failure(
+            RealizationRelationStatus.LIMIT_EXCEEDED,
+            pointer(semantic_path),
+            f"Profiled collection normalization exceeded {exhausted}.",
+        )
+    if failure is None:
+        identity = actual_identity(child, profile.identity_fields)
+    if failure is None and identity is None:
+        failure = build_failure(
+            RealizationRelationStatus.INVALID,
+            pointer((*semantic_path, str(index))),
+            "A profiled collection member has no complete concrete semantic identity.",
+        )
+    key = identity_key(identity) if identity is not None else None
+    if failure is None and key in identities:
+        failure = build_failure(
+            RealizationRelationStatus.INVALID,
+            pointer(semantic_path),
+            "A profiled collection contains a duplicate semantic identity.",
+        )
+    normalized = None
+    if failure is None:
+        assert key is not None
+        identities.add(key)
+        normalized, failure = _normalize_literal_node(
+            child,
+            (*semantic_path, f"@{key}"),
+            (*source_path, str(index)),
+            context,
+        )
+    member = None
+    if failure is None:
+        assert identity is not None and normalized is not None
+        member = RealizationCollectionMember(identity=identity, constraint=normalized)
+    return member, failure

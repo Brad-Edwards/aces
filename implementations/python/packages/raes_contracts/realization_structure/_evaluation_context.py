@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from ._common import RealizationRelationResult, RelationBudget, closure_for, pointer, relation_result
 from ._models import (
@@ -21,8 +21,9 @@ class EvaluationContext:
     reference_hops: int = 0
 
     def follow_reference(self, target: str) -> EvaluationContext:
-        return replace(
-            self,
+        return EvaluationContext(
+            document=self.document,
+            budget=self.budget,
             reference_stack=(*self.reference_stack, target),
             reference_hops=self.reference_hops + 1,
         )
