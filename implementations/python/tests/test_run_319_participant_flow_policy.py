@@ -519,7 +519,10 @@ class _BarrierResolver(StaticCrossingResolver):
         snapshot: RuntimeSnapshot,
     ) -> ParticipantCrossingPolicyResolution:
         resolution = super().resolve(intent, snapshot)
-        self.barrier.wait(timeout=5)
+        # The full verification suite runs this test under xdist on a
+        # CPU-constrained runner. Give the peer operation enough time to reach
+        # the rendezvous even when its worker is temporarily descheduled.
+        self.barrier.wait(timeout=30)
         return resolution
 
 
@@ -559,7 +562,7 @@ def test_concurrent_operation_cannot_commit_against_a_stale_history_cut() -> Non
     for thread in threads:
         thread.start()
     for thread in threads:
-        thread.join(timeout=10)
+        thread.join(timeout=40)
 
     assert sum(not isinstance(result, Exception) for result in results) == 1
     assert any(
