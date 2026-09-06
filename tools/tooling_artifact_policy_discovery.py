@@ -111,16 +111,27 @@ def _selection_aliases(nodes: Sequence[ast.AST], aliases: Mapping[str, str]) -> 
     return selection_aliases
 
 
+def _is_selection_call(
+    node: ast.AST,
+    aliases: Mapping[str, str],
+    selection_aliases: set[str],
+) -> bool:
+    if not isinstance(node, ast.Call) or (call_name := ast_name(node.func)) is None:
+        return False
+    return _resolved_name(call_name, aliases) == SELECTION_CALL or call_name in {
+        "load_tooling_artifact_selection",
+        *selection_aliases,
+    }
+
+
 def _selection_call_observation(
     node: ast.AST,
     aliases: Mapping[str, str],
     selection_aliases: set[str],
 ) -> tuple[str | None, bool] | None:
-    if not isinstance(node, ast.Call) or (call_name := ast_name(node.func)) is None:
+    if not _is_selection_call(node, aliases, selection_aliases):
         return None
-    resolved_name = _resolved_name(call_name, aliases)
-    if resolved_name != SELECTION_CALL and call_name not in {"load_tooling_artifact_selection", *selection_aliases}:
-        return None
+    assert isinstance(node, ast.Call)
     keywords = {keyword.arg: keyword.value for keyword in node.keywords if keyword.arg is not None}
     artifact_node = keywords.get("artifact_id")
     complete = keywords.keys() >= REQUIRED_SELECTION_KEYWORDS and "policy_root" not in keywords

@@ -851,8 +851,10 @@ def test_runtime_error_reconciliation_does_not_seal_a_concurrent_operation(
         raise RuntimeError("injected terminal commit failure")
 
     monkeypatch.setattr(store, "commit_terminal_operation", fail_terminal_commit)
+    snapshot = RuntimeSnapshot()
+    terminal = _terminal_record(failing)
     with pytest.raises(RuntimeError, match="terminal commit failure"):
-        control_plane._commit_terminal_operation(RuntimeSnapshot(), _terminal_record(failing))
+        control_plane._commit_terminal_operation(snapshot, terminal)
 
     records = store.load_records()
     assert records[failing.receipt.operation_id].status.state is OperationState.INDETERMINATE

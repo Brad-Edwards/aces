@@ -237,6 +237,7 @@ def _load(root: Path, relative: str) -> dict:
 
 
 @pytest.mark.integration
+@pytest.mark.timeout(300)
 def test_checked_in_tooling_policy_is_valid_and_deterministic() -> None:
     first = evaluate_tooling_artifact_policy(REPO_ROOT)
     second = evaluate_tooling_artifact_policy(REPO_ROOT)
