@@ -217,23 +217,54 @@ def _check_remote(
     activitystreams: ActivityStreamsActivityTypesSourceModel,
     fipa: FipaCommunicativeActsSourceModel,
 ) -> list[str]:
+    from tools.tooling_policy_gate import load_tooling_artifact_selection
+
+    activitystreams_selection = load_tooling_artifact_selection(
+        artifact_id="w3c-activitystreams-activity-types-snapshot",
+        version=ACTIVITYSTREAMS_VERSION,
+        platform_id="source-any",
+        profile_id="source-snapshot",
+    )
+    fipa_selection = load_tooling_artifact_selection(
+        artifact_id="fipa-communicative-acts-snapshot",
+        version=FIPA_VERSION,
+        platform_id="source-any",
+        profile_id="source-snapshot",
+    )
+    if len(activitystreams_selection.source_urls) != 1 or len(activitystreams_selection.raw_manifest) != 1:
+        raise RuntimeError("ActivityStreams lock selection must contain one source and raw snapshot")
+    if len(fipa_selection.source_urls) != 1 or len(fipa_selection.raw_manifest) != 1:
+        raise RuntimeError("FIPA lock selection must contain one source and raw snapshot")
+    activitystreams_raw = activitystreams_selection.raw_manifest[0]
+    fipa_raw = fipa_selection.raw_manifest[0]
     failures: list[str] = []
-    activitystreams_bytes = _fetch_official_bytes(activitystreams.source_url, allowed_host="www.w3.org")
+    if activitystreams.source_url != activitystreams_selection.source_urls[0]:
+        failures.append(f"{ACTIVITYSTREAMS_RELATIVE_PATH}: source URL differs from the reviewed lock selection")
+        return failures
+    activitystreams_bytes = _fetch_official_bytes(
+        activitystreams_selection.source_urls[0],
+        allowed_host="www.w3.org",
+    )
+    if (
+        len(activitystreams_bytes) != activitystreams_raw.size
+        or hashlib.sha256(activitystreams_bytes).hexdigest() != activitystreams_raw.sha256
+    ):
+        failures.append(f"{ACTIVITYSTREAMS_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest")
+        return failures
     if _prefixed_sha256(activitystreams_bytes) != activitystreams.source_digest:
         failures.append(f"{ACTIVITYSTREAMS_RELATIVE_PATH}: retrieved Recommendation bytes differ from source_digest")
     if _extract_activitystreams_type_names(activitystreams_bytes) != list(ACTIVITYSTREAMS_TYPES):
         failures.append(f"{ACTIVITYSTREAMS_RELATIVE_PATH}: retrieved Activity type order/content differs from snapshot")
 
-    fipa_artifact_bytes = _fetch_official_bytes(fipa.source_artifact_url, allowed_host="www.fipa.org")
+    if fipa.source_artifact_url != fipa_selection.source_urls[0]:
+        failures.append(f"{FIPA_RELATIVE_PATH}: source artifact URL differs from the reviewed lock selection")
+        return failures
+    fipa_artifact_bytes = _fetch_official_bytes(fipa_selection.source_urls[0], allowed_host="www.fipa.org")
+    if len(fipa_artifact_bytes) != fipa_raw.size or hashlib.sha256(fipa_artifact_bytes).hexdigest() != fipa_raw.sha256:
+        failures.append(f"{FIPA_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest")
+        return failures
     if _prefixed_sha256(fipa_artifact_bytes) != fipa.source_digest:
         failures.append(f"{FIPA_RELATIVE_PATH}: retrieved specification artifact bytes differ from source_digest")
-    fipa_html_bytes = _fetch_official_bytes(fipa.source_url, allowed_host="www.fipa.org")
-    for concept_id in FIPA_ACTS:
-        if re.search(rb">" + re.escape(concept_id.encode("ascii")) + rb"</span>", fipa_html_bytes) is None:
-            failures.append(
-                f"{FIPA_RELATIVE_PATH}: retrieved specification does not contain an expected act identifier"
-            )
-            break
     return failures
 
 

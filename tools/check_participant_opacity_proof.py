@@ -21,9 +21,6 @@ from raes_contracts.contracts.base import BehavioralClaimBindingModel  # noqa: E
 from raes_contracts.json_ingress import parse_bounded_json_object  # noqa: E402
 
 from tools.isabelle_tool import (  # noqa: E402
-    ISABELLE_ARCHIVE_BYTES,
-    ISABELLE_ARCHIVE_SHA256,
-    ISABELLE_ARCHIVE_URL,
     ISABELLE_BUILD_TIMEOUT_SECONDS,
     ISABELLE_FILE_LIMIT_BYTES,
     ISABELLE_JAVA_MAX_HEAP_MIB,
@@ -36,6 +33,7 @@ from tools.isabelle_tool import (  # noqa: E402
     run_isabelle_build,
 )
 from tools.tool_versions import ISABELLE_VERSION  # noqa: E402
+from tools.tooling_policy_gate import load_tooling_artifact_selection  # noqa: E402
 
 MANIFEST_RELATIVE_PATH = Path("specs/formal/participant-semantics/participant-opacity-proof-evidence.json")
 THEORY_RELATIVE_PATH = ISABELLE_SESSION_RELATIVE_PATH / "Participant_Opacity.thy"
@@ -313,12 +311,20 @@ def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
         },
         "proof toolchain",
     )
+    selection = load_tooling_artifact_selection(
+        artifact_id="isabelle",
+        version=ISABELLE_VERSION,
+        platform_id="linux-x86_64",
+        profile_id="proof-linux-x86_64",
+    )
+    if len(selection.raw_manifest) != 1:
+        raise ProofEvidenceError("Isabelle lock selection must contain one raw archive")
+    raw = selection.raw_manifest[0]
     expected = {
         "prover": "Isabelle/HOL",
         "version": f"Isabelle{ISABELLE_VERSION}",
-        "archive_url": ISABELLE_ARCHIVE_URL,
-        "archive_sha256": f"sha256:{ISABELLE_ARCHIVE_SHA256}",
-        "archive_bytes": ISABELLE_ARCHIVE_BYTES,
+        "archive_sha256": f"sha256:{raw.sha256}",
+        "archive_bytes": raw.size,
         "working_directory": ".",
         "locale": "C.UTF-8",
         "platform_boundary": "linux-x86_64",
@@ -327,6 +333,8 @@ def _validate_toolchain(manifest: dict[str, Any], repo_root: Path) -> None:
     }
     if any(toolchain.get(key) != value for key, value in expected.items()):
         raise ProofEvidenceError("proof toolchain pin or execution posture drifted")
+    if toolchain.get("archive_url") not in selection.source_urls:
+        raise ProofEvidenceError("proof toolchain archive URL is outside the reviewed lock selection")
     expected_acquire = [
         "uv",
         "run",

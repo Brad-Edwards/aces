@@ -153,6 +153,11 @@ _REQUIRED_SCHEMA_AUTHORITY_FIELDS: tuple[str, ...] = (
 _SCHEMA_NORMATIVE_ROOT = "contracts/schemas/"
 _SCHEMA_PUBLICATION_MANIFEST = "contracts/schema-publication-manifest.json"
 _SCHEMA_FORBIDDEN_ROOTS_FLOOR: frozenset[str] = frozenset({"implementations/"})
+# Closed schemas used only to validate repository-internal tooling policy are
+# implementation data, not published ecosystem contracts. This exact root is
+# the sole exception to the filename heuristic below; the publication manifest
+# remains authoritative for public schemas.
+_INTERNAL_TOOLING_SCHEMA_ROOT = "implementations/tooling/schemas/"
 
 
 # --------------------------------------------------------------------------- #
@@ -1174,6 +1179,8 @@ def _check_schemas_outside_normative_root(
                 if not filename.endswith(suffix_tuple):
                     continue
                 rel_path = Path(dirpath, filename).relative_to(repo_root).as_posix()
+                if rel_path.startswith(_INTERNAL_TOOLING_SCHEMA_ROOT):
+                    continue
                 failures.append(
                     _fail(
                         "authority-boundary-schema-misplaced",

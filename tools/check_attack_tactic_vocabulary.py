@@ -206,15 +206,30 @@ def _check_catalog(
 
 
 def _check_remote(source: AttackEnterpriseTacticsSourceModel) -> list[str]:
+    from tools.tooling_policy_gate import load_tooling_artifact_selection
+
+    selection = load_tooling_artifact_selection(
+        artifact_id="attack-enterprise-tactics-snapshot",
+        version=SOURCE_VERSION,
+        platform_id="source-any",
+        profile_id="source-snapshot",
+    )
+    if len(selection.source_urls) != 1 or len(selection.raw_manifest) != 1:
+        raise RuntimeError("ATT&CK lock selection must contain one source and raw snapshot")
+    raw = selection.raw_manifest[0]
     failures: list[str] = []
-    parsed = urllib.parse.urlparse(source.source_url)
+    if source.source_url != selection.source_urls[0]:
+        return [f"{SOURCE_RELATIVE_PATH}: source URL differs from the reviewed lock selection"]
+    parsed = urllib.parse.urlparse(selection.source_urls[0])
     if parsed.scheme != "https" or parsed.netloc != "raw.githubusercontent.com":
         return [f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay pinned to raw.githubusercontent.com HTTPS"]
-    with urllib.request.urlopen(source.source_url, timeout=60) as response:  # noqa: S310
+    with urllib.request.urlopen(selection.source_urls[0], timeout=60) as response:  # noqa: S310
         data = response.read()
     digest = _sha256_digest(data)
+    if len(data) != raw.size or digest != f"sha256:{raw.sha256}":
+        return [f"{SOURCE_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest"]
     if digest != source.source_digest:
-        return [f"{source.source_url}: digest is {digest}; expected {source.source_digest}"]
+        return [f"{SOURCE_RELATIVE_PATH}: source_digest differs from the reviewed lock manifest"]
     remote_tactics = _extract_enterprise_tactics(json.loads(data.decode("utf-8")))
     if remote_tactics != _source_tactics(source):
         failures.append(f"{SOURCE_RELATIVE_PATH}: tactic snapshot differs from pinned upstream STIX bundle")

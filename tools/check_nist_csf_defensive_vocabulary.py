@@ -188,15 +188,31 @@ def _check_catalog(
 
 
 def _check_remote(source: NistCsfDefensiveCategorySourceModel) -> list[str]:
-    parsed = urllib.parse.urlparse(source.source_url)
+    from tools.tooling_policy_gate import load_tooling_artifact_selection
+
+    selection = load_tooling_artifact_selection(
+        artifact_id="nist-csf-defensive-categories-snapshot",
+        version=SOURCE_VERSION,
+        platform_id="source-any",
+        profile_id="source-snapshot",
+    )
+    if len(selection.source_urls) != 1 or len(selection.raw_manifest) != 1:
+        raise RuntimeError("NIST CSF lock selection must contain one source and raw snapshot")
+    raw = selection.raw_manifest[0]
+    if source.source_url != selection.source_urls[0]:
+        return [f"{SOURCE_RELATIVE_PATH}: source URL differs from the reviewed lock selection"]
+    parsed = urllib.parse.urlparse(selection.source_urls[0])
     if parsed.scheme != "https" or parsed.netloc != "csrc.nist.gov":
         return [f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay on csrc.nist.gov HTTPS"]
     request = urllib.request.Request(  # noqa: S310 - allowlisted NIST HTTPS endpoint above
-        source.source_url,
+        selection.source_urls[0],
         headers={"User-Agent": "RAES-NIST-CSF-verifier/1"},
     )
     with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
-        categories = _extract_defensive_categories(response.read())
+        data = response.read()
+    if len(data) != raw.size or hashlib.sha256(data).hexdigest() != raw.sha256:
+        return [f"{SOURCE_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest"]
+    categories = _extract_defensive_categories(data)
     failures: list[str] = []
     if categories != _source_categories(source):
         failures.append(f"{SOURCE_RELATIVE_PATH}: category snapshot differs from the current NIST CSF 2.0 Core export")

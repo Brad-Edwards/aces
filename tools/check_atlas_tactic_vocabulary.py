@@ -235,7 +235,20 @@ def _check_catalog(catalog: ControlledVocabularyCatalogModel, source: AtlasTacti
 
 
 def _check_remote(source: AtlasTacticsSourceModel) -> list[str]:
-    parsed = urllib.parse.urlparse(source.source_url)
+    from tools.tooling_policy_gate import load_tooling_artifact_selection
+
+    selection = load_tooling_artifact_selection(
+        artifact_id="atlas-tactics-snapshot",
+        version=SOURCE_VERSION,
+        platform_id="source-any",
+        profile_id="source-snapshot",
+    )
+    if len(selection.source_urls) != 1 or len(selection.raw_manifest) != 1:
+        raise RuntimeError("ATLAS lock selection must contain one source and raw snapshot")
+    raw = selection.raw_manifest[0]
+    if source.source_url != selection.source_urls[0]:
+        return [f"{SOURCE_RELATIVE_PATH}: source URL differs from the reviewed lock selection"]
+    parsed = urllib.parse.urlparse(selection.source_urls[0])
     if (
         parsed.scheme != "https"
         or parsed.netloc != "github.com"
@@ -244,11 +257,13 @@ def _check_remote(source: AtlasTacticsSourceModel) -> list[str]:
         return [
             f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay pinned to the v2026.06 GitHub release asset"
         ]
-    with urllib.request.urlopen(source.source_url, timeout=60) as response:  # noqa: S310
+    with urllib.request.urlopen(selection.source_urls[0], timeout=60) as response:  # noqa: S310
         data = response.read()
     digest = _sha256_digest(data)
+    if len(data) != raw.size or digest != f"sha256:{raw.sha256}":
+        return [f"{SOURCE_RELATIVE_PATH}: retrieved bytes differ from the reviewed lock manifest"]
     if digest != source.source_digest:
-        return [f"{source.source_url}: digest is {digest}; expected {source.source_digest}"]
+        return [f"{SOURCE_RELATIVE_PATH}: source_digest differs from the reviewed lock manifest"]
     remote_tactics = _extract_atlas_tactics(yaml.safe_load(data))
     if remote_tactics != _source_tactics(source):
         return [f"{SOURCE_RELATIVE_PATH}: tactic snapshot differs from pinned upstream ATLAS YAML"]
