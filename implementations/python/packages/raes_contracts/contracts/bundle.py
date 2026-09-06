@@ -91,6 +91,13 @@ from .vocabulary_sources import (
 
 
 def _core_schema_bundle() -> dict[str, dict[str, Any]]:
+    from raes_contracts.domain_profiles import (
+        DomainProfileAdmissionPolicyModel,
+        DomainProfileBindingModel,
+        DomainProfileDefinitionModel,
+        DomainProfileResolutionContextModel,
+        DomainProfileSupportDeclarationModel,
+    )
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
     from raes_contracts.semantic_comparison import SemanticComparisonRequestModel, SemanticComparisonResultModel
 
@@ -118,6 +125,11 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
         "artifact-requirement-v1": ArtifactRequirementContractModel.model_json_schema(),
+        "domain-profile-definition-v1": DomainProfileDefinitionModel.model_json_schema(),
+        "domain-profile-binding-v1": DomainProfileBindingModel.model_json_schema(),
+        "domain-profile-resolution-context-v1": DomainProfileResolutionContextModel.model_json_schema(),
+        "domain-profile-support-declaration-v1": DomainProfileSupportDeclarationModel.model_json_schema(),
+        "domain-profile-admission-policy-v1": DomainProfileAdmissionPolicyModel.model_json_schema(),
         **transformation_schema_bundle(),
         "semantic-comparison-request-v1": SemanticComparisonRequestModel.model_json_schema(),
         "semantic-comparison-result-v1": SemanticComparisonResultModel.model_json_schema(),
