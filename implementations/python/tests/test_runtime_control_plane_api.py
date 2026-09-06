@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 import textwrap
 from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
+from dataclasses import replace
+from multiprocessing import get_context
 from pathlib import Path
+from threading import Barrier as ThreadBarrier
 from threading import Event
-from typing import Any, TypeVar
+from typing import Any, Protocol, TypeVar
 
 import httpx
 import pytest
-import raes_runtime.control_plane_store as control_plane_store_module
 from fastapi import HTTPException
 from raes import parse_sdl
 from raes_backend_stubs.stubs import create_stub_target
@@ -91,6 +95,23 @@ def _participant_operation_record(operation_id: str, participant_address: str) -
             changed_addresses=[participant_address],
         ),
     )
+
+
+class _BarrierLike(Protocol):
+    def wait(self, timeout: float | None = None) -> int: ...
+
+
+def _save_operation_in_process(store_path: str, index: int, barrier: _BarrierLike) -> None:
+    record = replace(
+        _participant_operation_record(
+            f"process-operation-{index}",
+            f"participant.behavior.process-subject-{index}",
+        ),
+        idempotency_key=f"process-key-{index}",
+        request_fingerprint=f"process-fingerprint-{index}",
+    )
+    barrier.wait(timeout=10)
+    LocalControlPlaneStore(Path(store_path)).save_record(record)
 
 
 def _test_security(
@@ -452,7 +473,7 @@ def test_control_plane_api_operational_apparatus_summary_requires_read_role():
 def test_operational_apparatus_summary_snapshots_operations_safely_during_mutation() -> None:
     target = create_stub_target()
     control_plane = RuntimeControlPlane(target)
-    control_plane._persist_record(_participant_operation_record("existing", "participant.alice"))
+    control_plane._claim_record(_participant_operation_record("existing", "participant.alice"))
     iteration_started = Event()
     mutation_completed = Event()
 
@@ -479,7 +500,7 @@ def test_operational_apparatus_summary_snapshots_operations_safely_during_mutati
         summary = executor.submit(control_plane.operational_apparatus_summary)
         assert iteration_started.wait(timeout=2)
         persistence = executor.submit(
-            control_plane._persist_record,
+            control_plane._claim_record,
             _participant_operation_record("concurrent", "participant.bob"),
         )
         result = summary.result(timeout=3)
@@ -730,9 +751,11 @@ nodes:
             headers=headers,
         ).json()
 
+    control_plane.close()
     restarted = RuntimeControlPlane(target, store=store)
     assert restarted.get_operation(receipt["operation_id"]) is not None
     assert restarted.get_snapshot().snapshot.entries
+    restarted.close()
 
 
 def test_backend_principal_cannot_rewrite_registered_realization_authority() -> None:
@@ -1077,45 +1100,120 @@ def test_request_size_guard_stops_reading_an_oversized_chunked_body():
     assert delivered <= 3
 
 
-def test_local_control_plane_store_saves_snapshot_with_atomic_replace(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-):
-    store = LocalControlPlaneStore(tmp_path / "cp-store")
-    replace_calls: list[tuple[Path, Path]] = []
-    real_replace = control_plane_store_module.os.replace
-
-    def tracked_replace(source: str, destination: str) -> None:
-        replace_calls.append((Path(source), Path(destination)))
-        real_replace(source, destination)
-
-    monkeypatch.setattr(control_plane_store_module.os, "replace", tracked_replace)
-
+def test_local_control_plane_store_commits_snapshot_to_wal_database(tmp_path: Path):
+    store_path = tmp_path / "cp-store"
+    store = LocalControlPlaneStore(store_path)
     store.save_snapshot(RuntimeSnapshot())
 
-    assert replace_calls
-    assert replace_calls[0][1] == tmp_path / "cp-store" / "snapshot.json"
-    assert not replace_calls[0][0].exists()
-    assert not list((tmp_path / "cp-store").glob("*.tmp"))
+    with closing(sqlite3.connect(store_path / "control-plane.sqlite3")) as connection, connection:
+        journal_mode = connection.execute("PRAGMA journal_mode").fetchone()
+        state_count = connection.execute("SELECT COUNT(*) FROM state").fetchone()
+        integrity = connection.execute("PRAGMA quick_check").fetchone()
+
+    assert journal_mode == ("wal",)
+    assert state_count == (1,)
+    assert integrity == ("ok",)
 
 
-def test_local_control_plane_store_cleans_temp_file_after_atomic_replace_failure(
+def test_local_control_plane_store_rolls_back_snapshot_transaction_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
     store = LocalControlPlaneStore(tmp_path / "cp-store")
+    real_upsert = store._upsert_snapshot
 
-    def fail_replace(source: str, destination: str) -> None:
-        del source, destination
-        raise OSError("replace failed")
+    def fail_upsert(connection: sqlite3.Connection, snapshot: RuntimeSnapshot) -> None:
+        real_upsert(connection, snapshot)
+        raise OSError("commit failed")
 
-    monkeypatch.setattr(control_plane_store_module.os, "replace", fail_replace)
+    monkeypatch.setattr(store, "_upsert_snapshot", fail_upsert)
+    snapshot = RuntimeSnapshot()
 
-    with pytest.raises(OSError, match="replace failed"):
-        store.save_snapshot(RuntimeSnapshot())
+    with pytest.raises(OSError, match="commit failed"):
+        store.save_snapshot(snapshot)
 
-    assert not (tmp_path / "cp-store" / "snapshot.json").exists()
-    assert not list((tmp_path / "cp-store").glob("*.tmp"))
+    assert store.load_snapshot() == RuntimeSnapshot()
+
+
+def test_local_control_plane_store_preserves_concurrent_operation_writes(tmp_path: Path) -> None:
+    store_path = tmp_path / "cp-store"
+    stores = (LocalControlPlaneStore(store_path), LocalControlPlaneStore(store_path))
+    records = [
+        replace(
+            _participant_operation_record(
+                f"operation-{index}",
+                f"participant.behavior.subject-{index}",
+            ),
+            idempotency_key=f"key-{index}",
+            request_fingerprint=f"fingerprint-{index}",
+        )
+        for index in range(32)
+    ]
+
+    def save(index: int) -> None:
+        stores[index % len(stores)].save_record(records[index])
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(save, range(len(records))))
+
+    assert set(LocalControlPlaneStore(store_path).load_records()) == {record.receipt.operation_id for record in records}
+
+
+def test_local_control_plane_store_preserves_cross_process_operation_writes(tmp_path: Path) -> None:
+    store_path = tmp_path / "cp-store"
+    LocalControlPlaneStore(store_path)
+    context = get_context("spawn")
+    barrier = context.Barrier(4)
+    processes = [
+        context.Process(
+            target=_save_operation_in_process,
+            args=(str(store_path), index, barrier),
+        )
+        for index in range(4)
+    ]
+
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join(timeout=15)
+    for process in processes:
+        if process.is_alive():
+            process.terminate()
+            process.join(timeout=5)
+
+    assert [process.exitcode for process in processes] == [0, 0, 0, 0]
+    assert set(LocalControlPlaneStore(store_path).load_records()) == {
+        f"process-operation-{index}" for index in range(4)
+    }
+
+
+def test_local_control_plane_store_claims_idempotency_key_once_across_instances(
+    tmp_path: Path,
+) -> None:
+    store_path = tmp_path / "cp-store"
+    stores = (LocalControlPlaneStore(store_path), LocalControlPlaneStore(store_path))
+    records = tuple(
+        replace(
+            _participant_operation_record(
+                f"operation-{index}",
+                f"participant.behavior.subject-{index}",
+            ),
+            idempotency_key="shared-key",
+            request_fingerprint="same-request",
+        )
+        for index in range(2)
+    )
+    barrier = ThreadBarrier(2)
+
+    def claim(index: int) -> ControlPlaneOperationRecord:
+        barrier.wait()
+        return stores[index].claim_record(records[index])
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        claimed = list(executor.map(claim, range(2)))
+
+    assert len({record.receipt.operation_id for record in claimed}) == 1
+    assert len(LocalControlPlaneStore(store_path).load_records()) == 1
 
 
 def test_control_plane_api_cancels_workflow_runs():

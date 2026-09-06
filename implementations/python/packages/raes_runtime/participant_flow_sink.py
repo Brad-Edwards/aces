@@ -263,14 +263,12 @@ def commit_flow_sink_denial(
         reason="flow-sink-denied",
     )
     audit = apply_flow_sink_details(audit, decision)
-    control_plane._store.commit_participant_transition(
+    control_plane._commit_participant_transition(
         expected_history_heads=crossing.expected_history_heads,
         snapshot=crossing.next_snapshot,
         record=record,
         audit_event=audit,
     )
-    control_plane._snapshot = crossing.next_snapshot
-    control_plane._operations[record.receipt.operation_id] = record
     return record.receipt
 
 

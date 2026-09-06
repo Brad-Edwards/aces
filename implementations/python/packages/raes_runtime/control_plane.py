@@ -33,17 +33,21 @@ from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.models import ParticipantBehaviorSpecificationRuntime
 
 from .backend_calls import _call_backend_diagnostics
+from .control_plane_durability import RuntimeDurabilityMixin
 from .control_plane_execution import (
     OperationExecutionRequest,
     _utc_now,
     execute_operation,
 )
+from .control_plane_lifecycle import RuntimeLifecycleMixin, runtime_owned
+from .control_plane_recovery import reconcile_interrupted_operations
 from .control_plane_store import (
     AuditEvent,
     ControlPlaneOperationRecord,
     ControlPlaneStore,
     InMemoryControlPlaneStore,
 )
+from .control_plane_store_compatibility import adapt_control_plane_store
 from .control_plane_submission import _submitted_plan_diagnostics
 from .control_plane_workflow_control import WorkflowControlMixin
 from .operational_apparatus import operational_apparatus_summary
@@ -99,7 +103,13 @@ def _require_final_sink_flow_control_configuration(
         )
 
 
-class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, ParticipantRetrievalMixin):
+class RuntimeControlPlane(
+    RuntimeLifecycleMixin,
+    RuntimeDurabilityMixin,
+    WorkflowControlMixin,
+    ParticipantControlMixin,
+    ParticipantRetrievalMixin,
+):
     """Reference control plane for async runtime submission and observation."""
 
     def __init__(
@@ -113,43 +123,61 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
         enforce_final_sink_flow_control: bool = True,
     ) -> None:
+        self._initialize_runtime_lifecycle()
         _require_crossing_policy_configuration(target, crossing_policy_resolver)
         _require_final_sink_flow_control_configuration(crossing_policy_resolver, enforce_final_sink_flow_control)
         self._target = target
         self._enforce_final_sink_flow_control = enforce_final_sink_flow_control
         self._store = store or InMemoryControlPlaneStore(initial_snapshot)
-        self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
-        self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
-        self._operation_lock = RLock()
-        self._behavior_specifications = dict(behavior_specifications or {})
-        self._crossing_policy_resolver = crossing_policy_resolver
-        self._information_state_context_resolver = information_state_context_resolver
-        self._participant_control_lock = RLock()
-        self._trusted_provisioning_plan_lock = RLock()
-        self._trusted_provisioning_plan_digests: set[str] = set()
-        require_participant_information_state_snapshot(
-            self._snapshot,
-            information_state_context_resolver,
-        )
-        if self._snapshot.participant_crossing_history:
-            if crossing_policy_resolver is None:
-                raise ValueError("persisted participant crossing history requires a policy resolver")
-            validate_persisted_crossing_history(self._snapshot, crossing_policy_resolver)
+        try:
+            self._store_commits = adapt_control_plane_store(self._store)
+            acquire_runtime_lease = getattr(self._store, "acquire_runtime_lease", None)
+            if callable(acquire_runtime_lease):
+                self._runtime_lease = acquire_runtime_lease()
+            self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
+            self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
+            self._operations = reconcile_interrupted_operations(self._store_commits, self._operations)
+            self._behavior_specifications = dict(behavior_specifications or {})
+            self._crossing_policy_resolver = crossing_policy_resolver
+            self._information_state_context_resolver = information_state_context_resolver
+            self._operation_lock = RLock()
+            self._participant_control_lock = self._operation_lock
+            self._trusted_provisioning_plan_lock = RLock()
+            self._trusted_provisioning_plan_digests: set[str] = set()
+            require_participant_information_state_snapshot(
+                self._snapshot,
+                information_state_context_resolver,
+            )
+            if self._snapshot.participant_crossing_history:
+                if crossing_policy_resolver is None:
+                    raise ValueError("persisted participant crossing history requires a policy resolver")
+                validate_persisted_crossing_history(self._snapshot, crossing_policy_resolver)
+        except BaseException:
+            self.close()
+            raise
 
     @property
+    @runtime_owned
     def snapshot(self) -> RuntimeSnapshot:
+        self._assert_runtime_owner()
         return self._snapshot
 
     @property
+    @runtime_owned
     def target_name(self) -> str:
+        self._assert_runtime_owner()
         return self._target.name
 
+    @runtime_owned
     def audit_log(self) -> list[AuditEvent]:
+        self._assert_runtime_owner()
         return self._store.read_audit()
 
+    @runtime_owned
     def operational_apparatus_summary(self) -> dict[str, object]:
         """Return a compact operational view over existing control-plane carriers."""
 
+        self._assert_runtime_owner()
         audit_events = self._store.read_audit()
         with self._operation_lock:
             operation_records = list(self._operations.values())
@@ -160,6 +188,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             audit_events=audit_events,
         )
 
+    @runtime_owned
     def register_planner_produced_provisioning_plan(self, plan: ProvisioningPlan) -> str:
         """Trust one exact planner artifact for later HTTP relay submission.
 
@@ -168,18 +197,22 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         registered artifact, but cannot mint or widen its realization policy.
         """
 
+        self._assert_runtime_owner()
         digest = provisioning_plan_digest(plan)
         with self._trusted_provisioning_plan_lock:
             self._trusted_provisioning_plan_digests.add(digest)
         return digest
 
+    @runtime_owned
     def is_planner_authorized_provisioning_plan(self, plan: ProvisioningPlan) -> bool:
         """Return whether the exact published plan was registered in-process."""
 
+        self._assert_runtime_owner()
         digest = provisioning_plan_digest(plan)
         with self._trusted_provisioning_plan_lock:
             return digest in self._trusted_provisioning_plan_digests
 
+    @runtime_owned
     def submit_provisioning(
         self,
         plan: ProvisioningPlan,
@@ -188,6 +221,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         idempotency_key: str = "",
         request_fingerprint: str = "",
     ) -> OperationReceipt:
+        self._assert_runtime_owner()
         diagnostics = _submitted_plan_diagnostics(
             plan,
             RuntimeDomain.PROVISIONING,
@@ -220,6 +254,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             ),
         )
 
+    @runtime_owned
     def submit_orchestration(
         self,
         plan: OrchestrationPlan,
@@ -228,6 +263,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         idempotency_key: str = "",
         request_fingerprint: str = "",
     ) -> OperationReceipt:
+        self._assert_runtime_owner()
         if self._target.orchestrator is None:
             return self._reject_submission(
                 domain=RuntimeDomain.ORCHESTRATION,
@@ -255,6 +291,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             ),
         )
 
+    @runtime_owned
     def submit_evaluation(
         self,
         plan: EvaluationPlan,
@@ -263,6 +300,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         idempotency_key: str = "",
         request_fingerprint: str = "",
     ) -> OperationReceipt:
+        self._assert_runtime_owner()
         if self._target.evaluator is None:
             return self._reject_submission(
                 domain=RuntimeDomain.EVALUATION,
@@ -290,14 +328,19 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             ),
         )
 
+    @runtime_owned
     def get_operation(self, operation_id: str) -> OperationStatus | None:
+        self._assert_runtime_owner()
         with self._operation_lock:
             record = self._operations.get(operation_id)
         return None if record is None else record.status
 
+    @runtime_owned
     def get_snapshot(self) -> RuntimeSnapshotEnvelope:
+        self._assert_runtime_owner()
         return RuntimeSnapshotEnvelope(snapshot=self._snapshot)
 
+    @runtime_owned
     def record_audit(
         self,
         *,
@@ -309,6 +352,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         operation_id: str = "",
         details: dict[str, object] | None = None,
     ) -> None:
+        self._assert_runtime_owner()
         self._store.append_audit(
             AuditEvent(
                 timestamp=_utc_now(),
@@ -368,7 +412,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             updated_at=submitted_at,
             diagnostics=list(diagnostics),
         )
-        self._persist_record(
+        persisted = self._claim_record(
             ControlPlaneOperationRecord(
                 receipt=receipt,
                 status=status,
@@ -376,7 +420,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
                 request_fingerprint=request_fingerprint,
             )
         )
-        return receipt
+        return persisted.receipt
 
     def _idempotent_receipt(
         self,
@@ -384,6 +428,7 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
         idempotency_key: str,
         request_fingerprint: str,
     ) -> OperationReceipt | None:
+        self._assert_runtime_owner()
         if not idempotency_key:
             return None
         record = self._store.find_by_idempotency(idempotency_key)
@@ -395,7 +440,15 @@ class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, Partici
             self._operations[record.receipt.operation_id] = record
         return record.receipt
 
-    def _persist_record(self, record: ControlPlaneOperationRecord) -> None:
+    def _claim_record(self, record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
+        self._assert_runtime_owner()
+        persisted = self._store_commits.claim_record(record)
+        if (
+            persisted.request_fingerprint
+            and record.request_fingerprint
+            and persisted.request_fingerprint != record.request_fingerprint
+        ):
+            raise ValueError("Idempotency-Key was reused with a different request body.")
         with self._operation_lock:
-            self._operations[record.receipt.operation_id] = record
-        self._store.save_record(record)
+            self._operations[persisted.receipt.operation_id] = persisted
+        return persisted

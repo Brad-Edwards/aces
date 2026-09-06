@@ -18,6 +18,7 @@ from raes_contracts.contracts.participant_crossing import (
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import OperationState, RuntimeSnapshot
 
+from .control_plane_lifecycle import runtime_owned
 from .control_plane_security import ControlPlaneIdentity, ParticipantAudienceSubjectBinding
 from .control_plane_store import ControlPlaneOperationRecord
 from .participant_crossing_egress import ParticipantViewSerialization, serialize_participant_view
@@ -87,6 +88,7 @@ class ParticipantRetrievalMixin:
     _snapshot: RuntimeSnapshot
     _operations: dict[str, ControlPlaneOperationRecord]
 
+    @runtime_owned
     def deliver_participant_directed_view(
         self,
         participant_address: str,
@@ -127,6 +129,7 @@ class ParticipantRetrievalMixin:
             ),
         )
 
+    @runtime_owned
     def get_participant_status_view(
         self,
         participant_address: str,
@@ -179,6 +182,7 @@ class ParticipantRetrievalMixin:
             serialization.with_crossing_evidence(crossing_evidence),
         )
 
+    @runtime_owned
     def get_participant_history_view(
         self,
         participant_address: str,
@@ -242,6 +246,7 @@ class ParticipantRetrievalMixin:
             serialization.with_crossing_evidence(crossing_evidence),
         )
 
+    @runtime_owned
     def get_participant_context_view(
         self,
         participant_address: str,

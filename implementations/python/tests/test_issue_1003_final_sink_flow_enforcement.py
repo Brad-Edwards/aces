@@ -287,6 +287,7 @@ def test_local_store_restart_revalidates_and_replays_idempotently(tmp_path: Path
     resolver = permit_resolver()
     first = action_plane(resolver, store=LocalControlPlaneStore(store_path))
     receipt = admit(first, idempotency_key="restart")
+    first.close()
 
     restarted_resolver = Sem233FlowSinkResolver()
     restarted_resolver.subjects = list(resolver.subjects)
@@ -301,6 +302,7 @@ def test_local_store_restart_revalidates_and_replays_idempotently(tmp_path: Path
 
     assert retry.operation_id == receipt.operation_id
     assert len(restarted.snapshot.participant_crossing_history[PARTICIPANT]) == 2
+    restarted.close()
 
 
 # --- Legacy path and commit-before-effect --------------------------------

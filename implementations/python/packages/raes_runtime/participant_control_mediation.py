@@ -95,15 +95,13 @@ def record_participant_control(
             identity,
             bound,
         )
-        control_plane._store.commit_control_transition(
+        control_plane._commit_control_transition(
             participant_address=participant_address,
             expected_head=prepared.expected_control_head,
             snapshot=prepared.next_snapshot,
             record=prepared.record,
             audit_event=prepared.audit_event,
         )
-        control_plane._snapshot = prepared.next_snapshot
-        control_plane._operations[prepared.record.receipt.operation_id] = prepared.record
         return prepared.record.receipt
 
 

@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "4388410c8e7536fef3f1251b7649b7d2cefef3764bf9da31d221430c92935879",
+  "content_hash": "90ca4bb76c8ff2e46ba7facec0d5199bdd682f379a63686e03b4cbf8b261304d",
   "last_change": {
-    "summary": "Added typed guest-observed operating-system identity bound to operation, envelope, configuration, observer, and sequence for issue #1077.",
-    "content_hash": "4388410c8e7536fef3f1251b7649b7d2cefef3764bf9da31d221430c92935879"
+    "summary": "Published participant episode closure records for issue #1092.",
+    "content_hash": "90ca4bb76c8ff2e46ba7facec0d5199bdd682f379a63686e03b4cbf8b261304d"
   }
 }

@@ -18,6 +18,7 @@ from raes_processor.models import (
     validate_participant_decision_surface_v2_anchor,
 )
 
+from .control_plane_lifecycle import runtime_owned
 from .participant_control_diagnostics import (
     _NO_PARTICIPANT_RUNTIME_MESSAGE,
     _participant_binding_address,
@@ -28,6 +29,7 @@ from .participant_control_diagnostics import (
 class ParticipantDecisionSurfaceV2ControlMixin:
     """Exact-cut decision-surface operations mixed into the control plane."""
 
+    @runtime_owned
     def admit_participant_decision_surface_selection_v2(
         self,
         participant_behavior: ParticipantBehaviorRuntime,

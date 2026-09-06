@@ -358,8 +358,10 @@ def test_failed_techvault_admission_preserves_persisted_runtime_snapshot(tmp_pat
 
     receipt = control_plane.submit_provisioning(_plan(invalid))
     status = control_plane.get_operation(receipt.operation_id)
+    control_plane.close()
     restarted = RuntimeControlPlane(create_libvirt_target(driver=driver), store=store)
 
     assert status is not None and status.state.value == "failed"
     assert restarted.snapshot == baseline
     assert driver.realize_calls == []
+    restarted.close()
