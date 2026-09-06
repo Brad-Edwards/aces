@@ -522,24 +522,21 @@ def test_terminal_commit_rejects_nonterminal_and_immutable_identity_changes(
 
     with pytest.raises(ValueError, match="requires a terminal status"):
         store.commit_terminal_operation(empty_snapshot, running)
-    terminal_status = _terminal_record(running).status
+    terminal_record = _terminal_record(running)
+    terminal_status = terminal_record.status
     for status, message in (
         (replace(terminal_status, operation_id="other"), "identities do not match"),
         (replace(terminal_status, domain=RuntimeDomain.EVALUATION), "domains do not match"),
         (replace(terminal_status, submitted_at="2026-08-11T12:00:04Z"), "submission times do not match"),
     ):
         with pytest.raises(ValueError, match=message):
-            invalid_record = replace(_terminal_record(running), status=status)
-            store.commit_terminal_operation(empty_snapshot, invalid_record)
+            replace(terminal_record, status=status)
 
     store.claim_record(running)
+    denied_receipt = replace(running.receipt, accepted=False)
     with pytest.raises(ValueError, match="denied operation receipts cannot be persisted"):
-        changed_receipt = replace(
-            _terminal_record(running),
-            receipt=replace(running.receipt, accepted=False),
-        )
-        store.commit_terminal_operation(empty_snapshot, changed_receipt)
-    changed_fingerprint = replace(_terminal_record(running), request_fingerprint="changed")
+        replace(terminal_record, receipt=denied_receipt)
+    changed_fingerprint = replace(terminal_record, request_fingerprint="changed")
     with pytest.raises(ValueError, match="operation identity is immutable"):
         store.commit_terminal_operation(empty_snapshot, changed_fingerprint)
 

@@ -60,6 +60,7 @@ def execute_participant_action(
     request_fingerprint: str,
     identity: object | None = None,
 ) -> OperationReceipt:
+    del request_fingerprint
     lock = getattr(control_plane, "_participant_control_lock", None)
     if lock is not None:
         with lock:
@@ -69,7 +70,6 @@ def execute_participant_action(
                 request=request,
                 address=address,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
                 identity=identity,
             )
     return _execute_participant_action_locked(
@@ -78,7 +78,6 @@ def execute_participant_action(
         request=request,
         address=address,
         idempotency_key=idempotency_key,
-        request_fingerprint=request_fingerprint,
         identity=identity,
     )
 
@@ -90,7 +89,6 @@ def _execute_participant_action_locked(
     request: object,
     address: str,
     idempotency_key: str,
-    request_fingerprint: str,
     identity: object | None,
 ) -> OperationReceipt:
     context = operation_admission_context(

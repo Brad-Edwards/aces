@@ -397,7 +397,8 @@ def test_curated_variants_do_not_turn_planned_surfaces_into_native_claims(
 
     assert receipt.accepted is accepted
     if accepted:
-        assert status is not None and status.state.value == "failed"
+        assert status is not None
+        assert status.state.value == "failed"
     else:
         assert status is None
         assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["realization.unsupported-exact-requirement"]

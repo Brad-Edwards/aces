@@ -112,8 +112,8 @@ def _record_from_payload(payload: dict[str, Any]) -> ControlPlaneOperationRecord
         request_fingerprint=carrier.request_fingerprint,
         idempotency_key=carrier.idempotency_key,
         result_payload=carrier.result_payload,
-        decision_history_heads={key: value for key, value in carrier.decision_history_heads.items()},
-        result_history_heads={key: value for key, value in carrier.result_history_heads.items()},
+        decision_history_heads=dict(carrier.decision_history_heads),
+        result_history_heads=dict(carrier.result_history_heads),
     )
 
 

@@ -36,7 +36,10 @@ from .participant_control_occurrences import (
     ParticipantControlOccurrenceContext,
     build_participant_control_occurrence,
 )
-from .participant_control_operation import participant_control_operation_artifacts
+from .participant_control_operation import (
+    ParticipantControlOperationAuthority,
+    participant_control_operation_artifacts,
+)
 from .participant_control_rejections import participant_control_rejection_reason
 from .participant_control_targets import (
     participant_control_target_contexts,
@@ -220,13 +223,15 @@ def prepare_participant_control_transition(
     record, audit_event = participant_control_operation_artifacts(
         participant_address=participant_address,
         intent=intent,
-        identity=identity,
         occurrence=occurrence,
         accepted=accepted,
         rejection_reason=rejection_reason,
-        context=bound.context,
-        semantic_fingerprint=bound.semantic_fingerprint,
-        scoped_key=bound.scoped_key,
+        authority=ParticipantControlOperationAuthority(
+            identity=identity,
+            context=bound.context,
+            semantic_fingerprint=bound.semantic_fingerprint,
+            scoped_key=bound.scoped_key,
+        ),
     )
     return PreparedParticipantControlTransition(
         next_snapshot=next_snapshot,

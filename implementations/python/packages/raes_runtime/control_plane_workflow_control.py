@@ -128,7 +128,6 @@ class WorkflowControlMixin:
                 operation_id=operation_id,
                 submitted_at=submitted_at,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
                 operation_context=operation_context,
             )
         return receipt
@@ -171,7 +170,6 @@ class WorkflowControlMixin:
         operation_id: str,
         submitted_at: str,
         idempotency_key: str,
-        request_fingerprint: str,
         operation_context: OperationAdmissionContext,
     ) -> OperationReceipt:
         cancelled_state = WorkflowExecutionState(
@@ -267,11 +265,11 @@ class WorkflowControlMixin:
         request_fingerprint: str = "",
         identity: object | None = None,
     ) -> OperationReceipt:
+        del request_fingerprint
         with self._operation_lock:
             return self._reconcile_workflow_timeouts_locked(
                 now=now,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
                 identity=identity,
             )
 
@@ -280,7 +278,6 @@ class WorkflowControlMixin:
         *,
         now: str | None,
         idempotency_key: str,
-        request_fingerprint: str,
         identity: object | None,
     ) -> OperationReceipt:
         operation_context = operation_admission_context(

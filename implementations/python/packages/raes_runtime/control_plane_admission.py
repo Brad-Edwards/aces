@@ -17,6 +17,31 @@ from .control_plane_lifecycle import runtime_owned
 from .control_plane_operation_context import operation_admission_context
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 
+_IDEMPOTENCY_REQUEST_CONFLICT = "Idempotency-Key was reused with a different request body."
+_SENSITIVE_RETRY_CONFLICT = "Idempotency-Key was reused without matching sensitive retry proof."
+
+
+def _require_matching_request(
+    persisted: ControlPlaneOperationRecord,
+    requested: ControlPlaneOperationRecord,
+) -> None:
+    if persisted.receipt.context != requested.receipt.context or (
+        persisted.request_fingerprint
+        and requested.request_fingerprint
+        and persisted.request_fingerprint != requested.request_fingerprint
+    ):
+        raise ValueError(_IDEMPOTENCY_REQUEST_CONFLICT)
+
+
+def _require_sensitive_retry_proof(
+    known: str | None,
+    supplied: str | None,
+    *,
+    competing_claim: bool,
+) -> None:
+    if supplied is not None and ((competing_claim and known != supplied) or (known is not None and known != supplied)):
+        raise ValueError(_SENSITIVE_RETRY_CONFLICT)
+
 
 class RuntimeAdmissionMixin:
     """Own denial evidence and value-free idempotency persistence."""
@@ -143,11 +168,9 @@ class RuntimeAdmissionMixin:
         if record.receipt.context != context or (
             record.request_fingerprint and request_fingerprint and record.request_fingerprint != request_fingerprint
         ):
-            raise ValueError("Idempotency-Key was reused with a different request body.")
-        if exact_retry_fingerprint is not None:
-            known_exact = self._ephemeral_idempotency_fingerprints.get(idempotency_key)
-            if known_exact != exact_retry_fingerprint:
-                raise ValueError("Idempotency-Key was reused without matching sensitive retry proof.")
+            raise ValueError(_IDEMPOTENCY_REQUEST_CONFLICT)
+        known_exact = self._ephemeral_idempotency_fingerprints.get(idempotency_key)
+        _require_sensitive_retry_proof(known_exact, exact_retry_fingerprint, competing_claim=True)
         with self._operation_lock:
             self._operations[record.receipt.operation_id] = record
         return record.receipt
@@ -160,22 +183,12 @@ class RuntimeAdmissionMixin:
     ) -> ControlPlaneOperationRecord:
         self._assert_runtime_owner()
         persisted = self._store_commits.claim_record(record)
-        if persisted.receipt.context != record.receipt.context or (
-            persisted.request_fingerprint
-            and record.request_fingerprint
-            and persisted.request_fingerprint != record.request_fingerprint
-        ):
-            raise ValueError("Idempotency-Key was reused with a different request body.")
+        _require_matching_request(persisted, record)
         with self._operation_lock:
             if exact_retry_fingerprint is not None and record.idempotency_key:
                 known_exact = self._ephemeral_idempotency_fingerprints.get(record.idempotency_key)
-                if (
-                    persisted.receipt.operation_id != record.receipt.operation_id
-                    and known_exact != exact_retry_fingerprint
-                ):
-                    raise ValueError("Idempotency-Key was reused without matching sensitive retry proof.")
-                if known_exact is not None and known_exact != exact_retry_fingerprint:
-                    raise ValueError("Idempotency-Key was reused without matching sensitive retry proof.")
+                competing = persisted.receipt.operation_id != record.receipt.operation_id
+                _require_sensitive_retry_proof(known_exact, exact_retry_fingerprint, competing_claim=competing)
                 self._ephemeral_idempotency_fingerprints[record.idempotency_key] = exact_retry_fingerprint
             self._operations[persisted.receipt.operation_id] = persisted
         return persisted

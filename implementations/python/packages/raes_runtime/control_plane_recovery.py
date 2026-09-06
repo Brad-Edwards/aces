@@ -47,7 +47,7 @@ def _interrupted_record(
     terminal_state = (
         OperationState.CANCELLED if record.status.state is OperationState.ACCEPTED else OperationState.INDETERMINATE
     )
-    return replace(
+    interrupted = replace(
         record,
         status=replace(
             record.status,
@@ -65,6 +65,8 @@ def _interrupted_record(
             ],
         ),
     )
+    assert isinstance(interrupted, ControlPlaneOperationRecord)
+    return interrupted
 
 
 __all__ = ("reconcile_interrupted_operations",)

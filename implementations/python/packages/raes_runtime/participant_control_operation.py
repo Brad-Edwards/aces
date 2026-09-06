@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import uuid4
 
 from raes_contracts.contracts import ParticipantControlOccurrenceModel
@@ -20,17 +21,24 @@ from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 from .participant_control_intents import ParticipantControlIntent
 
 
+@dataclass(frozen=True)
+class ParticipantControlOperationAuthority:
+    """Bound identity and persistence authority for one control occurrence."""
+
+    identity: ControlPlaneIdentity
+    context: OperationAdmissionContext
+    semantic_fingerprint: str
+    scoped_key: str
+
+
 def participant_control_operation_artifacts(
     *,
     participant_address: str,
     intent: ParticipantControlIntent,
-    identity: ControlPlaneIdentity,
     occurrence: ParticipantControlOccurrenceModel,
     accepted: bool,
     rejection_reason: str | None,
-    context: OperationAdmissionContext,
-    semantic_fingerprint: str,
-    scoped_key: str,
+    authority: ParticipantControlOperationAuthority,
 ) -> tuple[ControlPlaneOperationRecord, AuditEvent]:
     """Build one terminal operation carrier and its bounded audit event."""
 
@@ -46,7 +54,7 @@ def participant_control_operation_artifacts(
         domain=RuntimeDomain.PARTICIPANT,
         submitted_at=submitted_at,
         accepted=True,
-        context=context,
+        context=authority.context,
         diagnostics=diagnostics,
     )
     status = OperationStatus(
@@ -55,20 +63,20 @@ def participant_control_operation_artifacts(
         state=state,
         submitted_at=submitted_at,
         updated_at=submitted_at,
-        context=context,
+        context=authority.context,
         diagnostics=diagnostics,
         changed_addresses=[participant_address],
     )
     record = ControlPlaneOperationRecord(
         receipt=receipt,
         status=status,
-        request_fingerprint=semantic_fingerprint,
-        idempotency_key=scoped_key,
+        request_fingerprint=authority.semantic_fingerprint,
+        idempotency_key=authority.scoped_key,
     )
     audit_event = AuditEvent(
         timestamp=submitted_at,
         action="record_participant_control",
-        identity=identity.identity,
+        identity=authority.identity.identity,
         allowed=accepted,
         target=participant_address,
         operation_id=operation_id,
@@ -91,4 +99,4 @@ def _rejection_diagnostic(participant_address: str, reason: str | None) -> Diagn
     )
 
 
-__all__ = ("participant_control_operation_artifacts",)
+__all__ = ("ParticipantControlOperationAuthority", "participant_control_operation_artifacts")

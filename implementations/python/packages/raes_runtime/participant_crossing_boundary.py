@@ -192,15 +192,16 @@ class ParticipantCrossingControlIngressMixin:
                 ),
             )
             claimed = self._claim_record(running)
-            if claimed.receipt.operation_id != running.receipt.operation_id:
-                return claimed.receipt
-            self._commit_participant_transition(
-                expected_history_heads=crossing.expected_history_heads,
-                snapshot=next_snapshot,
-                record=record,
-                audit_event=audit,
-            )
-            return record.receipt
+            receipt = claimed.receipt
+            if claimed.receipt.operation_id == running.receipt.operation_id:
+                self._commit_participant_transition(
+                    expected_history_heads=crossing.expected_history_heads,
+                    snapshot=next_snapshot,
+                    record=record,
+                    audit_event=audit,
+                )
+                receipt = record.receipt
+            return receipt
 
 
 def execute_action_ingress_crossing(

@@ -146,8 +146,9 @@ def test_non_success_terminal_states_have_distinct_stable_diagnostics(
 def test_admission_context_is_closed_typed_and_deeply_immutable() -> None:
     context = _context()
 
+    extra_context = {**context.model_dump(), "unknown": "value"}
     with pytest.raises(ValidationError):
-        OperationAdmissionContext.model_validate({**context.model_dump(), "unknown": "value"})
+        OperationAdmissionContext.model_validate(extra_context)
     with pytest.raises(ValidationError):
         _context(request_commitment="not-a-commitment")
     with pytest.raises(ValidationError):
@@ -192,10 +193,12 @@ def test_transport_carriers_require_the_same_closed_admission_context() -> None:
     assert receipt.context == status.context == context
     assert status.state is OperationState.INDETERMINATE
     for model, payload in ((OperationReceiptModel, receipt_payload), (OperationStatusModel, status_payload)):
+        missing_context = {key: value for key, value in payload.items() if key != "context"}
         with pytest.raises(ValidationError):
-            model.model_validate({key: value for key, value in payload.items() if key != "context"})
+            model.model_validate(missing_context)
+        unknown_field = {**payload, "unknown": "value"}
         with pytest.raises(ValidationError):
-            model.model_validate({**payload, "unknown": "value"})
+            model.model_validate(unknown_field)
 
 
 @pytest.mark.parametrize(
@@ -233,6 +236,12 @@ def test_transport_rejects_missing_or_malformed_terminal_classification(state: O
 
 def test_domain_status_adds_canonical_terminal_classification_once() -> None:
     status = _record(OperationState.INDETERMINATE).status
+    malformed = Diagnostic(
+        code="runtime.control-plane.operation-indeterminate",
+        domain="runtime",
+        address="/state",
+        message="non-canonical",
+    )
 
     assert status.diagnostics == [operation_terminal_diagnostic(OperationState.INDETERMINATE)]
     with pytest.raises(ValueError, match="not canonical"):
@@ -243,14 +252,7 @@ def test_domain_status_adds_canonical_terminal_classification_once() -> None:
             submitted_at=status.submitted_at,
             updated_at=status.updated_at,
             context=status.context,
-            diagnostics=[
-                Diagnostic(
-                    code="runtime.control-plane.operation-indeterminate",
-                    domain="runtime",
-                    address="/state",
-                    message="non-canonical",
-                )
-            ],
+            diagnostics=[malformed],
         )
 
 
@@ -305,16 +307,16 @@ def test_store_enforces_context_immutability_and_exact_retry(store_kind: str) ->
     ):
         rewritten_context = _context(**{field: value})
         rewritten = _record(OperationState.SUCCEEDED, context=rewritten_context)
+        snapshot = store.load_snapshot()
         with pytest.raises(ValueError, match="immutable"):
-            store.commit_terminal_operation(store.load_snapshot(), rewritten)
+            store.commit_terminal_operation(snapshot, rewritten)
 
+    invalid_transition = replace(
+        succeeded,
+        status=replace(succeeded.status, state=OperationState.RUNNING, diagnostics=[]),
+    )
     with pytest.raises(ValueError, match="transition"):
-        store.save_record(
-            replace(
-                succeeded,
-                status=replace(succeeded.status, state=OperationState.RUNNING, diagnostics=[]),
-            )
-        )
+        store.save_record(invalid_transition)
 
 
 def test_operation_schemas_publish_closed_context_state_and_diagnostics() -> None:
@@ -391,21 +393,23 @@ def test_idempotency_binds_semantic_commitment_not_transport_fingerprint() -> No
     )
 
     assert representation_retry == first
+    changed_plan = ProvisioningPlan(operation_id="semantic-two")
     with pytest.raises(ValueError, match="different request body"):
         control_plane.submit_provisioning(
-            ProvisioningPlan(operation_id="semantic-two"),
+            changed_plan,
             idempotency_key="semantic-1182",
             request_fingerprint="transport-one",
         )
+    different_actor = ControlPlaneIdentity(
+        identity="different-actor",
+        roles=frozenset({ControlPlaneRole.OPERATOR}),
+        target_name="stub",
+    )
     with pytest.raises(ValueError, match="different request body"):
         control_plane.submit_provisioning(
             first_plan,
             idempotency_key="semantic-1182",
-            identity=ControlPlaneIdentity(
-                identity="different-actor",
-                roles=frozenset({ControlPlaneRole.OPERATOR}),
-                target_name="stub",
-            ),
+            identity=different_actor,
         )
     control_plane.close()
 
