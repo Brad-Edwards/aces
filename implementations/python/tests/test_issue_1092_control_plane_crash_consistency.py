@@ -837,6 +837,28 @@ def test_runtime_seals_reloaded_non_terminal_operations_after_uncertain_terminal
     control_plane.close()
 
 
+def test_runtime_error_reconciliation_does_not_seal_a_concurrent_operation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = InMemoryControlPlaneStore()
+    control_plane = RuntimeControlPlane(create_stub_target(), store=store)
+    failing = _running_record("failing-commit")
+    concurrent = _running_record("concurrent-commit")
+    control_plane._claim_record(failing)
+    store.save_record(concurrent)
+
+    def fail_terminal_commit(_snapshot: RuntimeSnapshot, _record: ControlPlaneOperationRecord) -> None:
+        raise RuntimeError("injected terminal commit failure")
+
+    monkeypatch.setattr(store, "commit_terminal_operation", fail_terminal_commit)
+    with pytest.raises(RuntimeError, match="terminal commit failure"):
+        control_plane._commit_terminal_operation(RuntimeSnapshot(), _terminal_record(failing))
+
+    records = store.load_records()
+    assert records[failing.receipt.operation_id].status.state is OperationState.INDETERMINATE
+    assert records[concurrent.receipt.operation_id] == concurrent
+
+
 def test_runtime_poisoned_when_store_error_cannot_be_reconciled(monkeypatch: pytest.MonkeyPatch) -> None:
     target, provisioning_plan, _ = _target_and_plan()
     store = InMemoryControlPlaneStore()

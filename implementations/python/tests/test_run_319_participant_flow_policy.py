@@ -564,7 +564,7 @@ def test_concurrent_operation_cannot_commit_against_a_stale_history_cut() -> Non
     for thread in threads:
         thread.join(timeout=40)
 
-    assert sum(not isinstance(result, Exception) for result in results) == 1
+    assert sum(not isinstance(result, Exception) for result in results) == 1, [repr(result) for result in results]
     assert any(
         "expected participant history head" in str(result) for result in results if isinstance(result, Exception)
     )
