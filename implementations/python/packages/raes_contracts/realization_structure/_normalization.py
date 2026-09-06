@@ -376,41 +376,57 @@ def _normalize_keyed_member(
     profile: RealizationCollectionProfile,
     identities: set[str],
 ) -> tuple[RealizationCollectionMember | None, RealizationConstraintBuildResult | None]:
-    failure = None
+    identity, key, failure = _keyed_member_identity(child, index, semantic_path, context, profile)
+    normalized = None
+    if failure is None:
+        assert key is not None
+        if key in identities:
+            failure = build_failure(
+                RealizationRelationStatus.INVALID,
+                pointer(semantic_path),
+                "A profiled collection contains a duplicate semantic identity.",
+            )
+        else:
+            identities.add(key)
+            normalized, failure = _normalize_literal_node(
+                child,
+                (*semantic_path, f"@{key}"),
+                (*source_path, str(index)),
+                context,
+            )
+    member = None
+    if failure is None:
+        assert identity is not None and normalized is not None
+        member = RealizationCollectionMember(identity=identity, constraint=normalized)
+    return member, failure
+
+
+def _keyed_member_identity(
+    child: object,
+    index: int,
+    semantic_path: tuple[str, ...],
+    context: _NormalizationContext,
+    profile: RealizationCollectionProfile,
+) -> tuple[
+    tuple[str | int | bool, ...] | None,
+    str | None,
+    RealizationConstraintBuildResult | None,
+]:
     identity = None
+    failure = None
     if exhausted := context.budget.spend_identity():
         failure = build_failure(
             RealizationRelationStatus.LIMIT_EXCEEDED,
             pointer(semantic_path),
             f"Profiled collection normalization exceeded {exhausted}.",
         )
-    if failure is None:
+    else:
         identity = actual_identity(child, profile.identity_fields)
-    if failure is None and identity is None:
-        failure = build_failure(
-            RealizationRelationStatus.INVALID,
-            pointer((*semantic_path, str(index))),
-            "A profiled collection member has no complete concrete semantic identity.",
-        )
+        if identity is None:
+            failure = build_failure(
+                RealizationRelationStatus.INVALID,
+                pointer((*semantic_path, str(index))),
+                "A profiled collection member has no complete concrete semantic identity.",
+            )
     key = identity_key(identity) if identity is not None else None
-    if failure is None and key in identities:
-        failure = build_failure(
-            RealizationRelationStatus.INVALID,
-            pointer(semantic_path),
-            "A profiled collection contains a duplicate semantic identity.",
-        )
-    normalized = None
-    if failure is None:
-        assert key is not None
-        identities.add(key)
-        normalized, failure = _normalize_literal_node(
-            child,
-            (*semantic_path, f"@{key}"),
-            (*source_path, str(index)),
-            context,
-        )
-    member = None
-    if failure is None:
-        assert identity is not None and normalized is not None
-        member = RealizationCollectionMember(identity=identity, constraint=normalized)
-    return member, failure
+    return identity, key, failure
