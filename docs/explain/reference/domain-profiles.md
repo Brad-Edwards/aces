@@ -50,6 +50,11 @@ name a Python object, import path, command, callback, or package installer.
 Semantic handlers and interpreters remain pre-installed caller code selected by
 the exact semantic-contract coordinate after admission.
 
+Each binding admission retains its exact resolution outcome. Callers can
+therefore distinguish an unavailable definition, incompatible revision, digest
+mismatch, namespace refusal, and coordinate collision even when admission maps
+them to the common `resolution-refused` safety outcome.
+
 Structural validation is deliberately narrow and inert:
 
 - JSON ingress is byte-bounded and rejects duplicate members and non-finite
