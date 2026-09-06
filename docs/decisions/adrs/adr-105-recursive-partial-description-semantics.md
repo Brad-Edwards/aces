@@ -13,8 +13,10 @@ proposed
 Classification: FM3
 Required artifacts: decision record, typed finite reference model, algebraic
 checks, explicit abstract transition system, counterexamples, acceptance matrix.
-Waivers: No production schema, parser, compiler, backend or capture migration is
-published by this design deliverable. Public syntax is not selected.
+Waivers: The #1201 design deliverable published no production schema, parser,
+compiler, backend or capture migration. Issue #1203 subsequently publishes the
+draft recursive constraint contract described below; public SDL syntax and
+backend migration remain unselected.
 
 ## Context
 
@@ -59,6 +61,18 @@ of this ADR and migration of production contracts are distinct events.
    before collection, not only at the response boundary.
 8. Introduce these changed meanings only at an explicitly negotiated revision.
    Review the compact model before selecting public syntax or migrating consumers.
+
+### Incremental adoption record
+
+Issue #1203 publishes `recursive-realization-constraint-v1` as the first
+versioned production contract for the shared normal form. The normative
+[recursive realization constraint specification](../../../specs/sdl/recursive-realization-constraints.md)
+defines its boundary. The contract and pure relations live in
+`raes_contracts.realization_structure`; the earlier exact/open/record/collection
+plan structure remains a losslessly checked compatibility subset. This adoption
+does not select new SDL authoring syntax, change ADR-070 universal subsumption,
+authorize a backend witness, or create observation, retention, or export demand.
+Those migrations retain their separately assigned issues.
 
 ## Alternatives Considered
 
