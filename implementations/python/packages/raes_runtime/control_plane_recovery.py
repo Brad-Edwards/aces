@@ -47,8 +47,8 @@ def _interrupted_record(
     terminal_state = (
         OperationState.CANCELLED if record.status.state is OperationState.ACCEPTED else OperationState.INDETERMINATE
     )
-    interrupted = replace(
-        record,
+    interrupted = ControlPlaneOperationRecord(
+        receipt=record.receipt,
         status=replace(
             record.status,
             state=terminal_state,
@@ -64,8 +64,12 @@ def _interrupted_record(
                 operation_terminal_diagnostic(terminal_state),
             ],
         ),
+        request_fingerprint=record.request_fingerprint,
+        idempotency_key=record.idempotency_key,
+        result_payload=record.result_payload,
+        decision_history_heads=record.decision_history_heads,
+        result_history_heads=record.result_history_heads,
     )
-    assert isinstance(interrupted, ControlPlaneOperationRecord)
     return interrupted
 
 
