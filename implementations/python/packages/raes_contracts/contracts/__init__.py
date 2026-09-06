@@ -237,6 +237,7 @@ from .manifests import (
     TimeCapabilitiesModel,
 )
 from .manifests import CleanupCapabilitiesModel as CleanupCapabilitiesModel
+from .operation_carriers import OperationReceiptModel, OperationStatusModel
 from .participant_context import ParticipantContextViewModel
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
@@ -385,8 +386,6 @@ from .random_stream import (
 from .realization_plans import (
     EvaluationPlanModel,
     ObservedOperatingSystemIdentityModel,
-    OperationReceiptModel,
-    OperationStatusModel,
     OrchestrationPlanModel,
     PlannedRealizationConstraintModel,
     PlanOperationModel,

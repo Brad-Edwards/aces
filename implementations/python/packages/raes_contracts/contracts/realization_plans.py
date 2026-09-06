@@ -19,7 +19,7 @@ from ..planning import (
     require_plan_operation_identity,
 )
 from ..realization_structure import RealizationStructure
-from ..versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
+from ..versions import RUNTIME_SNAPSHOT_SCHEMA_VERSION
 from ..vocabulary import ObservationStrength, RealizationVerificationScope
 from .base import ContractModel, NonEmptyString
 from .execution_state import (
@@ -442,30 +442,4 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
         ]
         if len(observation_keys) != len(set(observation_keys)):
             raise ValueError("Runtime snapshot realization_observations must identify unique concerns")
-        return self
-
-
-class OperationReceiptModel(ContractModel):
-    schema_version: Literal[OPERATION_SCHEMA_VERSION] = OPERATION_SCHEMA_VERSION
-    operation_id: str
-    domain: str
-    submitted_at: str
-    accepted: bool
-    diagnostics: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class OperationStatusModel(ContractModel):
-    schema_version: Literal[OPERATION_SCHEMA_VERSION] = OPERATION_SCHEMA_VERSION
-    operation_id: str
-    domain: str
-    state: str
-    submitted_at: str
-    updated_at: str
-    diagnostics: list[dict[str, Any]] = Field(default_factory=list)
-    changed_addresses: list[CompiledAddress] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _validate_changed_addresses(self) -> OperationStatusModel:
-        if len(self.changed_addresses) != len(set(self.changed_addresses)):
-            raise ValueError("changed addresses must be unique")
         return self

@@ -178,17 +178,30 @@ class ParticipantCrossingControlIngressMixin:
                 transition.audit_event,
                 crossing,
                 action="record_participant_control",
-                allowed=record.receipt.accepted,
+                allowed=record.status.state is OperationState.SUCCEEDED,
             )
             if sink_decision is not None:
                 audit = apply_flow_sink_details(audit, sink_decision)
-            self._commit_participant_transition(
-                expected_history_heads=crossing.expected_history_heads,
-                snapshot=next_snapshot,
-                record=record,
-                audit_event=audit,
+            running = replace(
+                record,
+                status=replace(
+                    record.status,
+                    state=OperationState.RUNNING,
+                    diagnostics=[],
+                    changed_addresses=[],
+                ),
             )
-            return record.receipt
+            claimed = self._claim_record(running)
+            receipt = claimed.receipt
+            if claimed.receipt.operation_id == running.receipt.operation_id:
+                self._commit_participant_transition(
+                    expected_history_heads=crossing.expected_history_heads,
+                    snapshot=next_snapshot,
+                    record=record,
+                    audit_event=audit,
+                )
+                receipt = record.receipt
+            return receipt
 
 
 def execute_action_ingress_crossing(

@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
-from dataclasses import asdict
 from typing import Any, Literal
 
-from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field
 from raes_contracts.account_credentials import (
     account_placement_has_credential_bindings,
@@ -19,7 +16,7 @@ from raes_contracts.contracts import (
     ProvisioningPlanModel,
     RuntimeSnapshotEnvelopeModel,
 )
-from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.diagnostics import Diagnostic, Severity, portable_diagnostic_payload
 from raes_contracts.participant_episode import ParticipantEpisodeTerminalReason
 from raes_contracts.planning import (
     ChangeAction,
@@ -180,7 +177,8 @@ def _operation_status_model(status: OperationStatus) -> OperationStatusModel:
             "state": status.state.value,
             "submitted_at": status.submitted_at,
             "updated_at": status.updated_at,
-            "diagnostics": [asdict(diag) for diag in status.diagnostics],
+            "context": status.context.model_dump(mode="json"),
+            "diagnostics": [portable_diagnostic_payload(diag) for diag in status.diagnostics],
             "changed_addresses": list(status.changed_addresses),
         }
     )
@@ -255,11 +253,3 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
         if account_placement_has_credential_bindings(entry_payload):
             entry["payload"] = value_free_account_placement_payload(entry_payload)
     return RuntimeSnapshotEnvelopeModel.model_validate(payload)
-
-
-def _request_fingerprint(request: Request, body: bytes) -> str:
-    digest = hashlib.sha256()
-    digest.update(request.url.path.encode("utf-8"))
-    digest.update(b"\n")
-    digest.update(body)
-    return digest.hexdigest()

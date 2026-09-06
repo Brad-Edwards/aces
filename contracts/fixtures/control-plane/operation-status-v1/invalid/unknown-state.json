@@ -2,7 +2,7 @@
   "schema_version": "runtime-operation/v1",
   "operation_id": "op-1",
   "domain": "orchestration",
-  "state": "succeeded",
+  "state": "uncertain",
   "submitted_at": "2026-04-02T22:00:00Z",
   "updated_at": "2026-04-02T22:00:05Z",
   "context": {
@@ -15,5 +15,5 @@
     "parent_operation_id": null
   },
   "diagnostics": [],
-  "changed_addresses": ["orchestration.workflow.response"]
+  "changed_addresses": []
 }

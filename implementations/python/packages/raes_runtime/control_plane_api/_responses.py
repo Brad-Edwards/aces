@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from typing import TYPE_CHECKING
 
 from raes_contracts.contracts import OperationReceiptModel
+from raes_contracts.diagnostics import portable_diagnostic_payload
 from raes_contracts.runtime_state import OperationReceipt
+
+if TYPE_CHECKING:
+    from ..control_plane import RuntimeControlPlane
+    from ._offload import _ControlPlaneCallExecutor
 
 _CONFLICT_RESPONSES = {409: {"description": "Conflict"}}
 _NOT_FOUND_RESPONSES = {404: {"description": "Not found"}}
@@ -23,6 +28,33 @@ def _receipt_response(receipt: OperationReceipt) -> OperationReceiptModel:
             "domain": receipt.domain.value,
             "submitted_at": receipt.submitted_at,
             "accepted": receipt.accepted,
-            "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
+            "context": receipt.context.model_dump(mode="json"),
+            "diagnostics": [portable_diagnostic_payload(diag) for diag in receipt.diagnostics],
         }
+    )
+
+
+async def _record_operation_receipt_audit(
+    calls: _ControlPlaneCallExecutor,
+    control_plane: RuntimeControlPlane,
+    *,
+    action: str,
+    identity: str,
+    target: str,
+    receipt: OperationReceipt,
+) -> None:
+    """Record the admission outcome without treating acknowledgement as execution success."""
+
+    if not receipt.accepted:
+        # The runtime admission boundary already persisted the single denial
+        # audit before returning its non-persisted receipt.
+        return
+    await calls.run(
+        control_plane.record_audit,
+        action=action,
+        identity=identity,
+        allowed=True,
+        target=target,
+        operation_id=receipt.operation_id,
+        reason="operation-admitted",
     )

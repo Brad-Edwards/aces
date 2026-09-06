@@ -21,13 +21,17 @@ from ..control_plane_api_models import (
     _operation_status_model,
     _orchestration_plan,
     _provisioning_plan,
-    _request_fingerprint,
     _snapshot_model,
 )
 from ..control_plane_security import ControlPlaneSecurityConfig
 from ._auth import _MutatingIdentity, _ReadIdentity
 from ._offload import _control_plane_calls
-from ._responses import _CONFLICT_RESPONSES, _NOT_FOUND_RESPONSES, _receipt_response
+from ._responses import (
+    _CONFLICT_RESPONSES,
+    _NOT_FOUND_RESPONSES,
+    _receipt_response,
+    _record_operation_receipt_audit,
+)
 
 
 def _install_request_guards(
@@ -107,20 +111,17 @@ def _register_operation_submission_routes(
                 control_plane.submit_provisioning,
                 submitted_plan,
                 idempotency_key=request.headers.get("idempotency-key", ""),
-                request_fingerprint=_request_fingerprint(
-                    request,
-                    getattr(request.state, "raw_body", b""),
-                ),
+                identity=identity,
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        await calls.run(
-            control_plane.record_audit,
+        await _record_operation_receipt_audit(
+            calls,
+            control_plane,
             action="submit_provisioning",
             identity=identity.identity,
-            allowed=True,
             target=str(request.url.path),
-            operation_id=receipt.operation_id,
+            receipt=receipt,
         )
         return _receipt_response(receipt)
 
@@ -136,20 +137,17 @@ def _register_operation_submission_routes(
                 control_plane.submit_orchestration,
                 _orchestration_plan(plan),
                 idempotency_key=request.headers.get("idempotency-key", ""),
-                request_fingerprint=_request_fingerprint(
-                    request,
-                    getattr(request.state, "raw_body", b""),
-                ),
+                identity=identity,
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        await calls.run(
-            control_plane.record_audit,
+        await _record_operation_receipt_audit(
+            calls,
+            control_plane,
             action="submit_orchestration",
             identity=identity.identity,
-            allowed=True,
             target=str(request.url.path),
-            operation_id=receipt.operation_id,
+            receipt=receipt,
         )
         return _receipt_response(receipt)
 
@@ -165,20 +163,17 @@ def _register_operation_submission_routes(
                 control_plane.submit_evaluation,
                 _evaluation_plan(plan),
                 idempotency_key=request.headers.get("idempotency-key", ""),
-                request_fingerprint=_request_fingerprint(
-                    request,
-                    getattr(request.state, "raw_body", b""),
-                ),
+                identity=identity,
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        await calls.run(
-            control_plane.record_audit,
+        await _record_operation_receipt_audit(
+            calls,
+            control_plane,
             action="submit_evaluation",
             identity=identity.identity,
-            allowed=True,
             target=str(request.url.path),
-            operation_id=receipt.operation_id,
+            receipt=receipt,
         )
         return _receipt_response(receipt)
 

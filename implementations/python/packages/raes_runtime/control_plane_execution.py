@@ -10,9 +10,19 @@ from uuid import uuid4
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ProvisioningPlan, RuntimeDomain
-from raes_contracts.runtime_state import ApplyResult, OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
+from raes_contracts.runtime_state import (
+    ApplyResult,
+    OperationAdmissionContext,
+    OperationKind,
+    OperationReceipt,
+    OperationState,
+    OperationStatus,
+    RuntimeSnapshot,
+    operation_terminal_diagnostics,
+)
 
 from .backend_calls import _call_backend_apply, _RealizationApplyContext
+from .control_plane_operation_context import operation_admission_context
 from .control_plane_store import ControlPlaneOperationRecord
 
 
@@ -48,7 +58,9 @@ def execute_participant_action(
     address: str,
     idempotency_key: str,
     request_fingerprint: str,
+    identity: object | None = None,
 ) -> OperationReceipt:
+    del request_fingerprint
     lock = getattr(control_plane, "_participant_control_lock", None)
     if lock is not None:
         with lock:
@@ -58,7 +70,7 @@ def execute_participant_action(
                 request=request,
                 address=address,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                identity=identity,
             )
     return _execute_participant_action_locked(
         control_plane,
@@ -66,7 +78,7 @@ def execute_participant_action(
         request=request,
         address=address,
         idempotency_key=idempotency_key,
-        request_fingerprint=request_fingerprint,
+        identity=identity,
     )
 
 
@@ -77,11 +89,18 @@ def _execute_participant_action_locked(
     request: object,
     address: str,
     idempotency_key: str,
-    request_fingerprint: str,
+    identity: object | None,
 ) -> OperationReceipt:
+    context = operation_admission_context(
+        control_plane,
+        kind=OperationKind.PARTICIPANT_ACTION,
+        request=request,
+        identity=identity,
+    )
     existing = control_plane._idempotent_receipt(
         idempotency_key=idempotency_key,
-        request_fingerprint=request_fingerprint,
+        request_fingerprint=context.request_commitment,
+        context=context,
     )
     if existing is not None:
         return existing
@@ -94,6 +113,7 @@ def _execute_participant_action_locked(
         state=OperationState.RUNNING,
         submitted_at=submitted_at,
         updated_at=submitted_at,
+        context=context,
         changed_addresses=[target_address] if isinstance(target_address, str) and target_address else [],
     )
     receipt = OperationReceipt(
@@ -101,13 +121,14 @@ def _execute_participant_action_locked(
         domain=RuntimeDomain.PARTICIPANT,
         submitted_at=submitted_at,
         accepted=True,
+        context=context,
     )
     claimed = control_plane._claim_record(
         ControlPlaneOperationRecord(
             receipt=receipt,
             status=status,
             idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
+            request_fingerprint=context.request_commitment,
         )
     )
     if claimed.receipt.operation_id != operation_id:
@@ -131,7 +152,11 @@ def _execute_participant_action_locked(
         state=final_state,
         submitted_at=submitted_at,
         updated_at=_utc_now(),
-        diagnostics=[*status.diagnostics, *result.diagnostics],
+        context=context,
+        diagnostics=operation_terminal_diagnostics(
+            final_state,
+            [*status.diagnostics, *result.diagnostics],
+        ),
         changed_addresses=list(result.changed_addresses),
     )
     control_plane._commit_terminal_operation(
@@ -140,7 +165,7 @@ def _execute_participant_action_locked(
             receipt=receipt,
             status=final_status,
             idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
+            request_fingerprint=context.request_commitment,
         ),
     )
     return receipt
@@ -155,26 +180,45 @@ def persist_succeeded_operation(
         domain=request.domain,
         submitted_at=request.submitted_at,
         accepted=True,
+        context=request.context,
         diagnostics=[],
     )
-    status = OperationStatus(
+    running_status = OperationStatus(
+        operation_id=request.operation_id,
+        domain=request.domain,
+        state=OperationState.RUNNING,
+        submitted_at=request.submitted_at,
+        updated_at=request.submitted_at,
+        context=request.context,
+    )
+    terminal_status = OperationStatus(
         operation_id=request.operation_id,
         domain=request.domain,
         state=OperationState.SUCCEEDED,
         submitted_at=request.submitted_at,
         updated_at=request.submitted_at,
+        context=request.context,
         changed_addresses=list(request.changed_addresses or []),
     )
     claimed = control_plane._claim_record(
         ControlPlaneOperationRecord(
             receipt=receipt,
-            status=status,
+            status=running_status,
             idempotency_key=request.idempotency_key,
-            request_fingerprint=request.request_fingerprint,
+            request_fingerprint=request.context.request_commitment,
         )
     )
     if claimed.receipt.operation_id != request.operation_id:
         return claimed.receipt
+    control_plane._commit_terminal_operation(
+        control_plane._snapshot,
+        ControlPlaneOperationRecord(
+            receipt=receipt,
+            status=terminal_status,
+            idempotency_key=request.idempotency_key,
+            request_fingerprint=request.context.request_commitment,
+        ),
+    )
     return receipt
 
 
@@ -184,7 +228,7 @@ class SucceededOperationRequest:
     domain: RuntimeDomain
     submitted_at: str
     idempotency_key: str
-    request_fingerprint: str
+    context: OperationAdmissionContext
     changed_addresses: list[str] | None = None
 
 
@@ -198,6 +242,8 @@ class OperationExecutionRequest:
     base_snapshot: RuntimeSnapshot | None
     idempotency_key: str
     request_fingerprint: str
+    context: OperationAdmissionContext
+    exact_retry_fingerprint: str | None = None
 
 
 def execute_operation(
@@ -212,9 +258,16 @@ def _execute_operation_locked(
     control_plane: object,
     request: OperationExecutionRequest,
 ) -> OperationReceipt:
+    exact_retry: dict[str, str] = (
+        {"exact_retry_fingerprint": request.exact_retry_fingerprint}
+        if request.exact_retry_fingerprint is not None
+        else {}
+    )
     existing = control_plane._idempotent_receipt(
         idempotency_key=request.idempotency_key,
         request_fingerprint=request.request_fingerprint,
+        context=request.context,
+        **exact_retry,
     )
     if existing is not None:
         return existing
@@ -227,6 +280,7 @@ def _execute_operation_locked(
         state=OperationState.RUNNING,
         submitted_at=submitted_at,
         updated_at=submitted_at,
+        context=request.context,
         diagnostics=list(request.diagnostics),
     )
     receipt = OperationReceipt(
@@ -234,6 +288,7 @@ def _execute_operation_locked(
         domain=request.domain,
         submitted_at=submitted_at,
         accepted=True,
+        context=request.context,
         diagnostics=list(request.diagnostics),
     )
     claimed = control_plane._claim_record(
@@ -242,7 +297,8 @@ def _execute_operation_locked(
             status=status,
             idempotency_key=request.idempotency_key,
             request_fingerprint=request.request_fingerprint,
-        )
+        ),
+        **exact_retry,
     )
     if claimed.receipt.operation_id != operation_id:
         return claimed.receipt
@@ -274,7 +330,11 @@ def _execute_operation_locked(
         state=final_state,
         submitted_at=submitted_at,
         updated_at=_utc_now(),
-        diagnostics=[*status.diagnostics, *result.diagnostics],
+        context=request.context,
+        diagnostics=operation_terminal_diagnostics(
+            final_state,
+            [*status.diagnostics, *result.diagnostics],
+        ),
         changed_addresses=list(result.changed_addresses),
     )
     control_plane._commit_terminal_operation(
