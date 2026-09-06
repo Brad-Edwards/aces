@@ -14,6 +14,7 @@ _EXACT_SCHEMA_DIRECTORIES = (
         "sdl-lineage-ledger-v1": "provenance",
         "associated-artifact-manifest-v1": "associated-artifacts",
         "runtime-snapshot-v1": "snapshots",
+        "recursive-realization-constraint-v1": "realization-constraints",
     }
     | dict.fromkeys(
         {
