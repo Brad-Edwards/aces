@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from raes_contracts.runtime_state import RuntimeSnapshot
 
+from .control_plane_recovery import reconcile_interrupted_operations
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord, ControlPlaneStore
 from .control_plane_store_compatibility import ControlPlaneStoreCommitAdapter
 
@@ -87,6 +88,7 @@ class RuntimeDurabilityMixin:
         try:
             snapshot = self._store.load_snapshot()
             operations = self._store.load_records()
+            operations = reconcile_interrupted_operations(self._store_commits, operations)
         except Exception as reconciliation_error:
             self._poison_runtime_durability()
             error.add_note(

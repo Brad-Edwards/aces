@@ -650,7 +650,10 @@ def test_restart_marks_interrupted_operation_failed_and_retry_does_not_repeat_ba
     records = store.load_records()
     assert len(records) == 1
     operation_id, interrupted = next(iter(records.items()))
-    assert interrupted.status.state == OperationState.RUNNING
+    expected_state = (
+        OperationState.FAILED if crash_boundary == "before-terminal-transaction" else OperationState.RUNNING
+    )
+    assert interrupted.status.state == expected_state
     assert store.load_snapshot() == RuntimeSnapshot()
     control_plane.close()
 
@@ -744,6 +747,41 @@ def test_runtime_resynchronizes_after_error_reported_after_durable_terminal_comm
     assert restarted_retry.operation_id == durable_record.receipt.operation_id
     assert provisioner.apply_count == 1
     restarted.close()
+
+
+def test_runtime_seals_reloaded_non_terminal_operations_after_uncertain_terminal_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target, provisioning_plan, provisioner = _target_and_plan()
+    store = InMemoryControlPlaneStore()
+    control_plane = RuntimeControlPlane(target, store=store)
+
+    def fail_terminal_commit(_snapshot: RuntimeSnapshot, _record: ControlPlaneOperationRecord) -> None:
+        raise RuntimeError("injected terminal commit failure")
+
+    monkeypatch.setattr(store, "commit_terminal_operation", fail_terminal_commit)
+    with pytest.raises(RuntimeError, match="terminal commit failure"):
+        control_plane.submit_provisioning(
+            provisioning_plan,
+            idempotency_key="uncertain-terminal-commit",
+            request_fingerprint="same-request",
+        )
+
+    durable_record = next(iter(store.load_records().values()))
+    assert durable_record.status.state == OperationState.FAILED
+    assert any(
+        diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE for diagnostic in durable_record.status.diagnostics
+    )
+    assert control_plane.get_operation(durable_record.receipt.operation_id) == durable_record.status
+
+    retry = control_plane.submit_provisioning(
+        provisioning_plan,
+        idempotency_key="uncertain-terminal-commit",
+        request_fingerprint="same-request",
+    )
+    assert retry.operation_id == durable_record.receipt.operation_id
+    assert provisioner.apply_count == 1
+    control_plane.close()
 
 
 def test_runtime_poisoned_when_store_error_cannot_be_reconciled(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2371,10 +2409,11 @@ def test_runtime_legacy_store_preserves_snapshot_first_failure_window() -> None:
     with pytest.raises(RuntimeError, match="legacy terminal-record failure"):
         control_plane.submit_provisioning(provisioning_plan)
 
-    assert store.write_calls == ["save_record", "save_snapshot", "save_record"]
-    assert control_plane.snapshot.entries
-    assert store.delegate.load_snapshot() == control_plane.snapshot
+    assert store.write_calls == ["save_record", "save_snapshot", "save_record", "save_record"]
+    assert store.delegate.load_snapshot().entries
     assert next(iter(store.delegate.load_records().values())).status.state == OperationState.RUNNING
+    with pytest.raises(RuntimeError, match="requires restart"):
+        control_plane.get_snapshot()
     control_plane.close()
 
 
@@ -2388,10 +2427,10 @@ def test_runtime_legacy_store_resynchronizes_after_snapshot_write_failure() -> N
     with pytest.raises(RuntimeError, match="legacy snapshot failure"):
         control_plane.submit_provisioning(provisioning_plan)
 
-    assert store.write_calls == ["save_record", "save_snapshot"]
+    assert store.write_calls == ["save_record", "save_snapshot", "save_record"]
     assert control_plane.snapshot == RuntimeSnapshot()
     assert store.delegate.load_snapshot() == control_plane.snapshot
-    assert next(iter(store.delegate.load_records().values())).status.state == OperationState.RUNNING
+    assert next(iter(store.delegate.load_records().values())).status.state == OperationState.FAILED
     control_plane.close()
 
 
