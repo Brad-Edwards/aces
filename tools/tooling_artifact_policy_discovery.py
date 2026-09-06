@@ -42,6 +42,7 @@ REQUEST_CALLS = frozenset(
     }
 )
 SELECTION_CALL = "tools.tooling_policy_gate.load_tooling_artifact_selection"
+REQUIRED_SELECTION_KEYWORDS = frozenset({"artifact_id", "version", "platform_id", "profile_id"})
 
 
 @dataclass(frozen=True)
@@ -110,27 +111,39 @@ def _selection_aliases(nodes: Sequence[ast.AST], aliases: Mapping[str, str]) -> 
     return selection_aliases
 
 
+def _selection_call_observation(
+    node: ast.AST,
+    aliases: Mapping[str, str],
+    selection_aliases: set[str],
+) -> tuple[str | None, bool] | None:
+    if not isinstance(node, ast.Call) or (call_name := ast_name(node.func)) is None:
+        return None
+    resolved_name = _resolved_name(call_name, aliases)
+    if resolved_name != SELECTION_CALL and call_name not in {"load_tooling_artifact_selection", *selection_aliases}:
+        return None
+    keywords = {keyword.arg: keyword.value for keyword in node.keywords if keyword.arg is not None}
+    artifact_node = keywords.get("artifact_id")
+    complete = keywords.keys() >= REQUIRED_SELECTION_KEYWORDS and "policy_root" not in keywords
+    literal = isinstance(artifact_node, ast.Constant) and isinstance(artifact_node.value, str)
+    artifact_id = artifact_node.value if complete and literal else None
+    return artifact_id, complete and literal
+
+
 def _selection_observation(
     nodes: Sequence[ast.AST],
     aliases: Mapping[str, str],
 ) -> tuple[frozenset[str], bool]:
     artifact_ids: set[str] = set()
     valid = True
-    required_keywords = {"artifact_id", "version", "platform_id", "profile_id"}
     selection_aliases = _selection_aliases(nodes, aliases)
     for node in nodes:
-        if not isinstance(node, ast.Call) or (call_name := ast_name(node.func)) is None:
+        observation = _selection_call_observation(node, aliases, selection_aliases)
+        if observation is None:
             continue
-        resolved_name = _resolved_name(call_name, aliases)
-        if resolved_name != SELECTION_CALL and call_name not in {"load_tooling_artifact_selection", *selection_aliases}:
-            continue
-        keywords = {keyword.arg: keyword.value for keyword in node.keywords if keyword.arg is not None}
-        artifact_node = keywords.get("artifact_id")
-        complete = required_keywords <= keywords.keys() and "policy_root" not in keywords
-        literal = isinstance(artifact_node, ast.Constant) and isinstance(artifact_node.value, str)
-        valid = valid and complete and literal
-        if complete and literal:
-            artifact_ids.add(artifact_node.value)
+        artifact_id, call_is_valid = observation
+        valid = valid and call_is_valid
+        if artifact_id is not None:
+            artifact_ids.add(artifact_id)
     return frozenset(artifact_ids), valid
 
 
