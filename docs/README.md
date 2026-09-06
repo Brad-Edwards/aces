@@ -18,6 +18,7 @@ working records that remain visible in the repository.
 
 - [Decision and preflight notes](decisions/index.md)
 - [Research records](research/)
+- [Modular participant-control architecture and delivery graph](research/modular-participant-control/index.md)
 - [Issue 1198 language extensibility design review](research/language-extensibility/design-review.md)
 - [Clarified design intent: open scopes and backend responsibility](research/language-extensibility/design-intent.md)
 - [Migration records](migration/README.md)
