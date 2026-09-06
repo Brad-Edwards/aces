@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ._domain_profile_contracts import (
+    AdmittedDomainProfileDefinitionModel,
     DomainProfileCoordinateModel,
     DomainProfileDefinitionModel,
     DomainProfileDefinitionProvenanceModel,
@@ -26,6 +27,12 @@ class DomainProfileDefinitionResolution:
         return self.outcome is DomainProfileResolutionOutcome.RESOLVED
 
 
+class _ResolutionRefusal(RuntimeError):
+    def __init__(self, resolution: DomainProfileDefinitionResolution) -> None:
+        self.resolution = resolution
+        super().__init__(resolution.outcome.value)
+
+
 def _resolution_failure(
     outcome: DomainProfileResolutionOutcome,
     message: str,
@@ -45,27 +52,34 @@ def _resolution_failure(
     )
 
 
-def resolve_domain_profile_definition(
+def _refuse_resolution(outcome: DomainProfileResolutionOutcome, message: str) -> None:
+    raise _ResolutionRefusal(_resolution_failure(outcome, message))
+
+
+def _validate_namespace_authority(
     coordinate: DomainProfileCoordinateModel,
     context: DomainProfileResolutionContextModel,
-) -> DomainProfileDefinitionResolution:
-    """Resolve one exact profile from supplied local data without discovery."""
-
+) -> None:
     namespace_rows = [
         admission for admission in context.namespace_admissions if admission.namespace == coordinate.namespace
     ]
     admitted_authorities = {admission.authority for admission in namespace_rows}
     if len(admitted_authorities) > 1:
-        return _resolution_failure(
+        _refuse_resolution(
             DomainProfileResolutionOutcome.NAMESPACE_COLLISION,
             "the profile namespace resolves to conflicting admitted authorities",
         )
     if admitted_authorities != {coordinate.authority}:
-        return _resolution_failure(
+        _refuse_resolution(
             DomainProfileResolutionOutcome.NAMESPACE_UNADMITTED,
             "the profile namespace is not admitted for the requested authority",
         )
 
+
+def _select_exact_definition(
+    coordinate: DomainProfileCoordinateModel,
+    context: DomainProfileResolutionContextModel,
+) -> AdmittedDomainProfileDefinitionModel:
     identity_matches = [
         item
         for item in context.definitions
@@ -74,21 +88,21 @@ def resolve_domain_profile_definition(
         and item.definition.coordinate.profile_id == coordinate.profile_id
     ]
     if not identity_matches:
-        return _resolution_failure(
+        _refuse_resolution(
             DomainProfileResolutionOutcome.DEFINITION_UNAVAILABLE,
             "the requested profile definition is absent from the supplied local context",
         )
 
     revision_matches = [item for item in identity_matches if item.definition.coordinate.revision == coordinate.revision]
     if not revision_matches:
-        return _resolution_failure(
+        _refuse_resolution(
             DomainProfileResolutionOutcome.INCOMPATIBLE_REVISION,
             "the supplied profile definitions do not contain the exact requested revision",
         )
 
     available_digests = {item.definition.coordinate.definition_digest for item in revision_matches}
     if len(available_digests) > 1:
-        return _resolution_failure(
+        _refuse_resolution(
             DomainProfileResolutionOutcome.COORDINATE_COLLISION,
             "the same logical profile coordinate resolves to conflicting definition digests",
         )
@@ -98,19 +112,33 @@ def resolve_domain_profile_definition(
         if item.definition.coordinate.definition_digest == coordinate.definition_digest
     ]
     if not exact:
-        return _resolution_failure(
+        _refuse_resolution(
             DomainProfileResolutionOutcome.DIGEST_MISMATCH,
             "the supplied profile definition digest does not match the exact request",
         )
     if len(exact) > 1:
-        return _resolution_failure(
+        _refuse_resolution(
             DomainProfileResolutionOutcome.COORDINATE_COLLISION,
             "the exact profile coordinate resolves to multiple supplied definitions",
         )
-    selected = exact[0]
-    return DomainProfileDefinitionResolution(
-        outcome=DomainProfileResolutionOutcome.RESOLVED,
-        definition=selected.definition,
-        provenance=selected.provenance,
-        diagnostics=(),
-    )
+    return exact[0]
+
+
+def resolve_domain_profile_definition(
+    coordinate: DomainProfileCoordinateModel,
+    context: DomainProfileResolutionContextModel,
+) -> DomainProfileDefinitionResolution:
+    """Resolve one exact profile from supplied local data without discovery."""
+
+    try:
+        _validate_namespace_authority(coordinate, context)
+        selected = _select_exact_definition(coordinate, context)
+        resolution = DomainProfileDefinitionResolution(
+            outcome=DomainProfileResolutionOutcome.RESOLVED,
+            definition=selected.definition,
+            provenance=selected.provenance,
+            diagnostics=(),
+        )
+    except _ResolutionRefusal as exc:
+        resolution = exc.resolution
+    return resolution

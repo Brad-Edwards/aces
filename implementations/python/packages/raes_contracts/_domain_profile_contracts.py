@@ -42,6 +42,24 @@ def _validate_inert_uri(value: str, *, field_name: str) -> str:
     return value
 
 
+def _validate_schema_vocabularies(
+    schema_document: dict[str, PydanticJsonValue],
+    required_vocabularies: tuple[str, ...],
+) -> None:
+    if required_vocabularies != tuple(sorted(set(required_vocabularies))):
+        raise ValueError("domain profile required vocabularies must be sorted and unique")
+    for vocabulary in required_vocabularies:
+        _validate_inert_uri(vocabulary, field_name="domain profile required schema vocabulary")
+    declared = schema_document.get("$vocabulary", {})
+    if not isinstance(declared, dict) or any(
+        not isinstance(uri, str) or not isinstance(required, bool) for uri, required in declared.items()
+    ):
+        raise ValueError("domain profile schema $vocabulary must map URI strings to booleans")
+    declared_required = tuple(sorted(uri for uri, required in declared.items() if required))
+    if declared_required != required_vocabularies:
+        raise ValueError("domain profile required vocabularies must match required $vocabulary entries")
+
+
 class DomainProfileIdentityModel(_FrozenContractModel):
     """Authority-qualified logical identity at one exact revision."""
 
@@ -106,18 +124,7 @@ class DomainProfileSchemaModel(_FrozenContractModel):
             raise ValueError("domain profile schema document id must match schema_id")
         if self.schema_digest != canonical_json_digest(self.schema_document):
             raise ValueError("domain profile schema digest does not match the schema document")
-        if self.required_vocabularies != tuple(sorted(set(self.required_vocabularies))):
-            raise ValueError("domain profile required vocabularies must be sorted and unique")
-        for vocabulary in self.required_vocabularies:
-            _validate_inert_uri(vocabulary, field_name="domain profile required schema vocabulary")
-        declared_vocabulary = self.schema_document.get("$vocabulary", {})
-        if not isinstance(declared_vocabulary, dict) or any(
-            not isinstance(uri, str) or not isinstance(required, bool) for uri, required in declared_vocabulary.items()
-        ):
-            raise ValueError("domain profile schema $vocabulary must map URI strings to booleans")
-        required_vocabulary = tuple(sorted(uri for uri, required in declared_vocabulary.items() if required))
-        if required_vocabulary != self.required_vocabularies:
-            raise ValueError("domain profile required vocabularies must match required $vocabulary entries")
+        _validate_schema_vocabularies(self.schema_document, self.required_vocabularies)
         return self
 
 

@@ -313,7 +313,8 @@ def test_missing_definition_and_incompatible_revision_are_distinct() -> None:
 
     assert missing.outcome is DomainProfileResolutionOutcome.DEFINITION_UNAVAILABLE
     assert incompatible.outcome is DomainProfileResolutionOutcome.INCOMPATIBLE_REVISION
-    assert not missing.resolved and not incompatible.resolved
+    assert not missing.resolved
+    assert not incompatible.resolved
 
 
 def test_exact_digest_mismatch_is_not_revision_fallback() -> None:
@@ -531,7 +532,8 @@ def test_unsupported_required_operation_and_vocabulary_refuse_admission() -> Non
 
     assert vocabulary_report.results[0].outcome is DomainProfileAdmissionOutcome.UNSUPPORTED_VOCABULARY
     assert operation_report.results[0].outcome is DomainProfileAdmissionOutcome.UNSUPPORTED_OPERATION
-    assert not vocabulary_report.admitted and not operation_report.admitted
+    assert not vocabulary_report.admitted
+    assert not operation_report.admitted
 
 
 @pytest.mark.parametrize(
@@ -726,13 +728,12 @@ def test_duplicate_json_members_and_executable_handler_fields_are_rejected() -> 
 
     with pytest.raises(ValueError, match="duplicate JSON member"):
         parse_domain_profile_binding(encoded)
+    support_payload = {
+        **_support(definition, DomainProfileOperation.EXECUTION).model_dump(mode="json"),
+        "handler": "os.system",
+    }
     with pytest.raises(ValidationError):
-        DomainProfileSupportDeclarationModel.model_validate(
-            {
-                **_support(definition, DomainProfileOperation.EXECUTION).model_dump(mode="json"),
-                "handler": "os.system",
-            }
-        )
+        DomainProfileSupportDeclarationModel.model_validate(support_payload)
 
 
 def test_irrelevant_backend_internal_choice_requires_no_profile_contract() -> None:

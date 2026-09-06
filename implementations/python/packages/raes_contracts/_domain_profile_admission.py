@@ -18,7 +18,7 @@ from ._domain_profile_contracts import (
     DomainProfileResolutionOutcome,
     DomainProfileSupportDeclarationModel,
 )
-from ._domain_profile_resolution import resolve_domain_profile_definition
+from ._domain_profile_resolution import DomainProfileDefinitionResolution, resolve_domain_profile_definition
 from ._domain_profile_validation import (
     _inspect_json_value,
     _InspectionBudget,
@@ -125,34 +125,30 @@ def _admission_result(
     binding: DomainProfileBindingModel,
     outcome: DomainProfileAdmissionOutcome,
     *,
-    structurally_valid: bool = False,
     semantics_supported: bool = False,
     opaque: bool = False,
     provenance: DomainProfileDefinitionProvenanceModel | None = None,
     resolution_outcome: DomainProfileResolutionOutcome | None = None,
     diagnostics: tuple[Diagnostic, ...] | None = None,
 ) -> DomainProfileBindingAdmission:
+    selected_diagnostics = diagnostics
+    if selected_diagnostics is None:
+        selected_diagnostics = ()
+        if outcome is not DomainProfileAdmissionOutcome.VALIDATED:
+            selected_diagnostics = _admission_diagnostic(
+                outcome,
+                warning=outcome is DomainProfileAdmissionOutcome.OPAQUE_PRESERVED,
+            )
     return DomainProfileBindingAdmission(
         binding_id=binding.binding_id,
         outcome=outcome,
         resolution_outcome=resolution_outcome,
-        structurally_valid=structurally_valid,
+        structurally_valid=outcome is DomainProfileAdmissionOutcome.VALIDATED,
         semantics_supported=semantics_supported,
         opaque=opaque,
         definition_provenance=provenance,
         binding_basis=binding.provenance.basis,
-        diagnostics=(
-            diagnostics
-            if diagnostics is not None
-            else (
-                ()
-                if outcome is DomainProfileAdmissionOutcome.VALIDATED
-                else _admission_diagnostic(
-                    outcome,
-                    warning=outcome is DomainProfileAdmissionOutcome.OPAQUE_PRESERVED,
-                )
-            )
-        ),
+        diagnostics=selected_diagnostics,
     )
 
 
@@ -169,6 +165,98 @@ def _matching_support(
     return exact[0] if len(exact) == 1 else None
 
 
+def _opaque_exchange_allowed(
+    binding: DomainProfileBindingModel,
+    policy: DomainProfileAdmissionPolicyModel,
+) -> bool:
+    return (
+        binding.owner.use is DomainProfileBindingUse.OPAQUE_EXCHANGE
+        and policy.allow_opaque_exchange
+        and not _required_operations(binding, policy)
+    )
+
+
+def _admit_unresolved_binding(
+    binding: DomainProfileBindingModel,
+    context: DomainProfileResolutionContextModel,
+    policy: DomainProfileAdmissionPolicyModel,
+    resolution: DomainProfileDefinitionResolution,
+) -> DomainProfileBindingAdmission:
+    if resolution.outcome is not DomainProfileResolutionOutcome.DEFINITION_UNAVAILABLE or not _opaque_exchange_allowed(
+        binding, policy
+    ):
+        return _admission_result(
+            binding,
+            DomainProfileAdmissionOutcome.RESOLUTION_REFUSED,
+            resolution_outcome=resolution.outcome,
+            diagnostics=resolution.diagnostics,
+        )
+    try:
+        _inspect_json_value(binding.value, _InspectionBudget(context.limits))
+        result = _admission_result(
+            binding,
+            DomainProfileAdmissionOutcome.OPAQUE_PRESERVED,
+            opaque=True,
+            resolution_outcome=resolution.outcome,
+        )
+    except _ProfileAdmissionError as exc:
+        result = _admission_result(
+            binding,
+            exc.outcome,
+            resolution_outcome=resolution.outcome,
+        )
+    return result
+
+
+def _resolved_support(
+    binding: DomainProfileBindingModel,
+    definition: DomainProfileDefinitionModel,
+    context: DomainProfileResolutionContextModel,
+    required: tuple[DomainProfileOperation, ...],
+) -> tuple[tuple[DomainProfileOperation, ...], DomainProfileSupportDeclarationModel]:
+    if binding.owner.context not in definition.allowed_contexts:
+        raise _ProfileAdmissionError(
+            DomainProfileAdmissionOutcome.CONTEXT_REFUSED,
+            "the profile definition does not permit the requested host context",
+        )
+    selected_required = required or (DomainProfileOperation.STRUCTURAL_VALIDATION,)
+    support = _matching_support(definition, context)
+    if support is None or not set(selected_required) <= set(support.operations):
+        raise _ProfileAdmissionError(
+            DomainProfileAdmissionOutcome.UNSUPPORTED_OPERATION,
+            "the exact profile and semantic contract lack support for a required operation",
+        )
+    return selected_required, support
+
+
+def _admit_resolved_binding(
+    binding: DomainProfileBindingModel,
+    context: DomainProfileResolutionContextModel,
+    required: tuple[DomainProfileOperation, ...],
+    resolution: DomainProfileDefinitionResolution,
+) -> DomainProfileBindingAdmission:
+    definition = resolution.definition
+    assert definition is not None
+    try:
+        selected_required, support = _resolved_support(binding, definition, context, required)
+        if DomainProfileOperation.STRUCTURAL_VALIDATION in selected_required:
+            _validate_structural_value(binding, definition, support, context.limits)
+        result = _admission_result(
+            binding,
+            DomainProfileAdmissionOutcome.VALIDATED,
+            semantics_supported=bool(set(support.operations) - {DomainProfileOperation.STRUCTURAL_VALIDATION}),
+            provenance=resolution.provenance,
+            resolution_outcome=resolution.outcome,
+        )
+    except _ProfileAdmissionError as exc:
+        result = _admission_result(
+            binding,
+            exc.outcome,
+            resolution_outcome=resolution.outcome,
+        )
+    return result
+
+
 def _admit_one_binding(
     binding: DomainProfileBindingModel,
     context: DomainProfileResolutionContextModel,
@@ -177,68 +265,8 @@ def _admit_one_binding(
     required = _required_operations(binding, policy)
     resolution = resolve_domain_profile_definition(binding.coordinate, context)
     if not resolution.resolved:
-        if (
-            resolution.outcome is DomainProfileResolutionOutcome.DEFINITION_UNAVAILABLE
-            and binding.owner.use is DomainProfileBindingUse.OPAQUE_EXCHANGE
-            and policy.allow_opaque_exchange
-            and not required
-        ):
-            try:
-                _inspect_json_value(binding.value, _InspectionBudget(context.limits))
-            except _ProfileAdmissionError as exc:
-                return _admission_result(
-                    binding,
-                    exc.outcome,
-                    resolution_outcome=resolution.outcome,
-                )
-            return _admission_result(
-                binding,
-                DomainProfileAdmissionOutcome.OPAQUE_PRESERVED,
-                opaque=True,
-                resolution_outcome=resolution.outcome,
-            )
-        return _admission_result(
-            binding,
-            DomainProfileAdmissionOutcome.RESOLUTION_REFUSED,
-            resolution_outcome=resolution.outcome,
-            diagnostics=resolution.diagnostics,
-        )
-
-    definition = resolution.definition
-    assert definition is not None
-    if binding.owner.context not in definition.allowed_contexts:
-        return _admission_result(
-            binding,
-            DomainProfileAdmissionOutcome.CONTEXT_REFUSED,
-            resolution_outcome=resolution.outcome,
-        )
-    if not required:
-        required = (DomainProfileOperation.STRUCTURAL_VALIDATION,)
-
-    support = _matching_support(definition, context)
-    if support is None or not set(required) <= set(support.operations):
-        return _admission_result(
-            binding,
-            DomainProfileAdmissionOutcome.UNSUPPORTED_OPERATION,
-            resolution_outcome=resolution.outcome,
-        )
-    try:
-        if DomainProfileOperation.STRUCTURAL_VALIDATION in required:
-            _validate_structural_value(binding, definition, support, context.limits)
-    except _ProfileAdmissionError as exc:
-        return _admission_result(
-            binding,
-            exc.outcome,
-            resolution_outcome=resolution.outcome,
-        )
-    return _admission_result(
-        binding,
-        DomainProfileAdmissionOutcome.VALIDATED,
-        structurally_valid=DomainProfileOperation.STRUCTURAL_VALIDATION in required,
-        semantics_supported=bool(set(support.operations) - {DomainProfileOperation.STRUCTURAL_VALIDATION}),
-        provenance=resolution.provenance,
-        resolution_outcome=resolution.outcome,
-    )
+        return _admit_unresolved_binding(binding, context, policy, resolution)
+    return _admit_resolved_binding(binding, context, required, resolution)
 
 
 def _flatten_bindings(
