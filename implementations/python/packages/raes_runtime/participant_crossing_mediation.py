@@ -30,9 +30,17 @@ from raes_contracts.contracts.participant_runtime import ParticipantRuntimeOrder
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_opacity_runtime import validate_participant_opacity_runtime_enforcement
 from raes_contracts.planning import RuntimeDomain
-from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
+from raes_contracts.runtime_state import (
+    OperationKind,
+    OperationReceipt,
+    OperationState,
+    OperationStatus,
+    RuntimeSnapshot,
+    operation_terminal_diagnostics,
+)
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 
+from .control_plane_operation_context import operation_admission_context
 from .control_plane_security import ControlPlaneIdentity, ParticipantAudienceSubjectBinding
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 from .participant_opacity_enforcement import (
@@ -332,7 +340,7 @@ def _existing_preparation(
             timestamp=existing.status.updated_at,
             action="participant_crossing_replay",
             identity=identity.identity,
-            allowed=existing.receipt.accepted,
+            allowed=existing.status.state is OperationState.SUCCEEDED,
             target=intent.participant_address,
             operation_id=existing.receipt.operation_id,
             reason="idempotent-replay",
@@ -342,23 +350,6 @@ def _existing_preparation(
         governed_subject=intent.subject,
         existing_receipt=existing.receipt,
     )
-
-
-def commit_prepared_crossing(
-    control_plane: object,
-    prepared: PreparedParticipantCrossing,
-) -> OperationReceipt:
-    """Commit a denied or unresolved crossing when no incumbent operation may run."""
-
-    if prepared.existing_receipt is not None:
-        return prepared.existing_receipt
-    control_plane._commit_participant_transition(
-        expected_history_heads=prepared.expected_history_heads,
-        snapshot=prepared.next_snapshot,
-        record=prepared.record,
-        audit_event=prepared.audit_event,
-    )
-    return prepared.record.receipt
 
 
 def _prepare_policy_unresolved(
@@ -404,12 +395,20 @@ def _prepare_policy_unresolved(
         address=intent.participant_address,
         message="Participant crossing policy could not be resolved.",
     )
+    operation_context = operation_admission_context(
+        control_plane,
+        kind=OperationKind.PARTICIPANT_CROSSING,
+        request=intent,
+        identity=identity,
+        run_scope=f"run:{intent.episode_id}",
+    )
     receipt = OperationReceipt(
         operation_id=operation_id,
         domain=RuntimeDomain.PARTICIPANT,
         submitted_at=submitted_at,
-        accepted=False,
-        diagnostics=[diagnostic],
+        accepted=True,
+        context=operation_context,
+        diagnostics=operation_terminal_diagnostics(OperationState.FAILED, [diagnostic]),
     )
     record = ControlPlaneOperationRecord(
         receipt=receipt,
@@ -419,7 +418,8 @@ def _prepare_policy_unresolved(
             state=OperationState.FAILED,
             submitted_at=submitted_at,
             updated_at=submitted_at,
-            diagnostics=[diagnostic],
+            context=operation_context,
+            diagnostics=operation_terminal_diagnostics(OperationState.FAILED, [diagnostic]),
             changed_addresses=[intent.participant_address],
         ),
         request_fingerprint=semantic_fingerprint,
@@ -491,7 +491,6 @@ __all__ = (
     "ParticipantCrossingTransformationResolution",
     "ParticipantCrossingValidationContext",
     "PreparedParticipantCrossing",
-    "commit_prepared_crossing",
     "prepare_participant_crossing",
     "validate_persisted_crossing_history",
 )

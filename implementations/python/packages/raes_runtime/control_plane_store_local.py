@@ -22,6 +22,7 @@ from .control_plane_store import (
     _require_expected_control_head,
     _require_expected_history_heads,
     _require_interrupted_operation_transition,
+    _require_operation_record_transition,
     _require_terminal_operation_transition,
 )
 from .control_plane_store_lease import RuntimeOwnerLease, require_single_worker_configuration
@@ -37,6 +38,7 @@ from .control_plane_store_paths import (
 from .control_plane_store_paths import (
     _participant_transition_count as _count_participant_transitions,
 )
+from .control_plane_store_record_migration import LOCAL_OPERATION_SCHEMA_VERSION, migrate_sqlite_schema
 from .control_plane_store_records import (
     _audit_event_from_payload,
     _record_from_payload,
@@ -46,7 +48,7 @@ from .control_plane_store_snapshots import _snapshot_from_payload, _snapshot_pay
 
 _DATABASE_NAME = "control-plane.sqlite3"
 _SNAPSHOT_KEY = "runtime-snapshot"
-_SCHEMA_VERSION = "1"
+_SCHEMA_VERSION = LOCAL_OPERATION_SCHEMA_VERSION
 _BUSY_TIMEOUT_MILLISECONDS = 10_000
 _RUNTIME_OWNER_LOCK_NAME = "runtime-owner.lock"
 _OPERATION_RECORD_KIND = "operation record"
@@ -122,7 +124,8 @@ class LocalControlPlaneStore:
 
     def save_record(self, record: ControlPlaneOperationRecord) -> None:
         with self._connection() as connection, _transaction(connection):
-            self._upsert_record(connection, record)
+            if _require_operation_record_transition(self._load_record(connection, record.receipt.operation_id), record):
+                self._upsert_record(connection, record)
 
     def claim_record(self, record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
         """Atomically claim an idempotency key or return its existing record."""
@@ -132,8 +135,12 @@ class LocalControlPlaneStore:
                 existing = self._find_by_idempotency(connection, record.idempotency_key)
                 if existing is not None:
                     return existing
-            self._upsert_record(connection, record)
-            return record
+            existing = self._load_record(connection, record.receipt.operation_id)
+            if _require_operation_record_transition(existing, record):
+                self._upsert_record(connection, record)
+                return record
+            assert existing is not None
+            return existing
 
     def commit_terminal_operation(
         self,
@@ -200,6 +207,8 @@ class LocalControlPlaneStore:
         with self._connection() as connection, _transaction(connection):
             current_snapshot = self._load_snapshot(connection)
             _require_expected_control_head(current_snapshot, participant_address, expected_head)
+            existing = self._load_record(connection, record.receipt.operation_id)
+            _require_operation_record_transition(existing, record)
             self._upsert_snapshot(connection, snapshot)
             self._upsert_record(connection, record)
             payload, digest = _encode_payload(asdict(audit_event))
@@ -220,6 +229,8 @@ class LocalControlPlaneStore:
         with self._connection() as connection, _transaction(connection):
             current_snapshot = self._load_snapshot(connection)
             _require_expected_history_heads(current_snapshot, expected_history_heads)
+            existing = self._load_record(connection, record.receipt.operation_id)
+            _require_operation_record_transition(existing, record)
             self._upsert_snapshot(connection, snapshot)
             self._upsert_record(connection, record)
             payload, digest = _encode_payload(asdict(audit_event))
@@ -313,9 +324,7 @@ class LocalControlPlaneStore:
                     "INSERT OR IGNORE INTO metadata(key, value) VALUES ('schema-version', ?)",
                     (_SCHEMA_VERSION,),
                 )
-                schema_version = connection.execute("SELECT value FROM metadata WHERE key='schema-version'").fetchone()
-                if schema_version is None or schema_version[0] != _SCHEMA_VERSION:
-                    raise ValueError("unsupported local control-plane database schema")
+                migrate_sqlite_schema(connection, _decode_payload, _encode_payload)
                 self._migrate_legacy_json(connection)
             quick_check = connection.execute("PRAGMA quick_check").fetchone()
             if quick_check is None or quick_check[0] != "ok":
