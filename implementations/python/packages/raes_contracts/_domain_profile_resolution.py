@@ -76,17 +76,24 @@ def _validate_namespace_authority(
         )
 
 
-def _select_exact_definition(
+def _identity_matches(
     coordinate: DomainProfileCoordinateModel,
     context: DomainProfileResolutionContextModel,
-) -> AdmittedDomainProfileDefinitionModel:
-    identity_matches = [
+) -> list[AdmittedDomainProfileDefinitionModel]:
+    return [
         item
         for item in context.definitions
         if item.definition.coordinate.namespace == coordinate.namespace
         and item.definition.coordinate.authority == coordinate.authority
         and item.definition.coordinate.profile_id == coordinate.profile_id
     ]
+
+
+def _select_exact_definition(
+    coordinate: DomainProfileCoordinateModel,
+    context: DomainProfileResolutionContextModel,
+) -> AdmittedDomainProfileDefinitionModel:
+    identity_matches = _identity_matches(coordinate, context)
     if not identity_matches:
         _refuse_resolution(
             DomainProfileResolutionOutcome.DEFINITION_UNAVAILABLE,
