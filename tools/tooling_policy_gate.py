@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import platform
 import re
+import shutil
 import stat
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+_VALIDATOR_TIMEOUT_SECONDS = 180
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,36 @@ def host_platform_id() -> str:
     return f"{system}-{machine}"
 
 
+def _frozen_validator_command(policy_root: Path) -> list[str]:
+    validator_python = policy_root / "implementations" / "python" / ".venv" / "bin" / "python"
+    project_root = policy_root / "implementations" / "python"
+    validator = policy_root / "tools" / "check_tooling_artifact_policy.py"
+    if not validator.is_file():
+        raise RuntimeError(
+            "development artifact policy failed before acquisition: the frozen project validator is unavailable"
+        )
+    if validator_python.is_file():
+        return [str(validator_python), str(validator)]
+    uv_executable = shutil.which("uv")
+    if (
+        uv_executable is None
+        or not (project_root / "pyproject.toml").is_file()
+        or not (project_root / "uv.lock").is_file()
+    ):
+        raise RuntimeError(
+            "development artifact policy failed before acquisition: the frozen project validator is unavailable"
+        )
+    return [
+        uv_executable,
+        "run",
+        "--project",
+        str(project_root),
+        "--frozen",
+        "python",
+        str(validator),
+    ]
+
+
 def load_tooling_artifact_selection(
     *,
     artifact_id: str,
@@ -104,17 +136,11 @@ def load_tooling_artifact_selection(
     """Load one reviewed lock selection before cache lookup or acquisition."""
 
     policy_root = REPO_ROOT
-    validator_python = policy_root / "implementations" / "python" / ".venv" / "bin" / "python"
-    validator = policy_root / "tools" / "check_tooling_artifact_policy.py"
-    if not validator_python.is_file() or not validator.is_file():
-        raise RuntimeError(
-            "development artifact policy failed before acquisition: the frozen project validator is unavailable"
-        )
+    validator_command = _frozen_validator_command(policy_root)
     try:
         proc = subprocess.run(
             [
-                str(validator_python),
-                str(validator),
+                *validator_command,
                 "--select-artifact",
                 artifact_id,
                 "--version",
@@ -128,7 +154,7 @@ def load_tooling_artifact_selection(
             text=True,
             capture_output=True,
             check=False,
-            timeout=30,
+            timeout=_VALIDATOR_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise RuntimeError(

@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tomllib
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import parse_qsl, urlsplit
@@ -101,6 +102,15 @@ _EXPECTED_INVENTORY_IDS = frozenset(
         "D01",
     }
 )
+
+
+@dataclass(frozen=True)
+class _PythonScan:
+    selected_artifact_ids: frozenset[str]
+    selection_calls_valid: bool
+    acquisition_count: int
+    parsed: bool
+    unknown_executable_count: int
 
 
 def _failure(rule_id: str, message: str, path: str | None = None) -> PolicyFailure:
@@ -864,6 +874,7 @@ def _selector_failures(
     repo_root: Path,
     documents: Mapping[str, dict[str, Any]],
     tracked_paths: Sequence[str],
+    python_scans: Mapping[str, _PythonScan | None],
 ) -> list[PolicyFailure]:
     lock = documents.get(ARTIFACT_LOCK_PATH)
     bindings = documents.get(SELECTOR_BINDINGS_PATH)
@@ -918,18 +929,18 @@ def _selector_failures(
                         path,
                     )
                 )
-    failures.extend(_runtime_selection_failures(repo_root, lock, bindings, tracked_paths))
+    failures.extend(_runtime_selection_failures(lock, bindings, tracked_paths, python_scans))
     failures.extend(_tracked_literal_failures(repo_root, bindings, tracked_paths))
     return failures
 
 
-def _selection_calls(text: str) -> tuple[set[str], bool]:
+def _python_scan(text: str) -> _PythonScan:
     try:
-        tree = ast.parse(text)
+        nodes = tuple(ast.walk(ast.parse(text)))
     except (SyntaxError, ValueError):
-        return set(), False
+        return _PythonScan(frozenset(), False, 0, False, 0)
     aliases: dict[str, str] = {}
-    for node in ast.walk(tree):
+    for node in nodes:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 local = alias.asname or alias.name.split(".", maxsplit=1)[0]
@@ -938,7 +949,7 @@ def _selection_calls(text: str) -> tuple[set[str], bool]:
             for alias in node.names:
                 aliases[alias.asname or alias.name] = f"{node.module}.{alias.name}"
     selection_aliases: set[str] = set()
-    for node in ast.walk(tree):
+    for node in nodes:
         if not isinstance(node, (ast.Assign, ast.AnnAssign)):
             continue
         value_name = _ast_name(node.value) if node.value is not None else None
@@ -955,7 +966,7 @@ def _selection_calls(text: str) -> tuple[set[str], bool]:
     artifact_ids: set[str] = set()
     valid = True
     required_keywords = {"artifact_id", "version", "platform_id", "profile_id"}
-    for node in ast.walk(tree):
+    for node in nodes:
         if not isinstance(node, ast.Call):
             continue
         call_name = _ast_name(node.func)
@@ -979,14 +990,114 @@ def _selection_calls(text: str) -> tuple[set[str], bool]:
             valid = False
             continue
         artifact_ids.add(artifact_node.value)
-    return artifact_ids, valid
+
+    callable_aliases: dict[str, str] = {}
+    for node in nodes:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        value_name = _ast_name(node.value) if node.value is not None else None
+        if value_name is None:
+            continue
+        first, separator, remainder = value_name.partition(".")
+        resolved_value = (
+            f"{aliases[first]}.{remainder}" if separator and first in aliases else aliases.get(first, value_name)
+        )
+        if not _is_command_executor(resolved_value) and resolved_value not in {
+            "http.client.HTTPConnection",
+            "http.client.HTTPSConnection",
+            "tools.http_download.download_bytes",
+            "urllib.request.urlopen",
+        }:
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        callable_aliases.update({target.id: resolved_value for target in targets if isinstance(target, ast.Name)})
+    aliases.update(callable_aliases)
+    url_openers: set[str] = set()
+    for node in nodes:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)) or not isinstance(node.value, ast.Call):
+            continue
+        factory_name = _ast_name(node.value.func)
+        if factory_name is None:
+            continue
+        factory_first, factory_separator, factory_remainder = factory_name.partition(".")
+        resolved_factory = (
+            f"{aliases[factory_first]}.{factory_remainder}"
+            if factory_separator and factory_first in aliases
+            else aliases.get(factory_first, factory_name)
+        )
+        if resolved_factory != "urllib.request.build_opener":
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        url_openers.update(target.id for target in targets if isinstance(target, ast.Name))
+    acquisition_count = 0
+    unknown_executable_count = 0
+    for node in nodes:
+        if not isinstance(node, ast.Call):
+            continue
+        call_name = _ast_name(node.func)
+        if call_name is None:
+            continue
+        first, separator, remainder = call_name.partition(".")
+        resolved_name = (
+            f"{aliases[first]}.{remainder}" if separator and first in aliases else aliases.get(first, call_name)
+        )
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "open" and isinstance(node.func.value, ast.Call):
+            factory_name = _ast_name(node.func.value.func)
+            if factory_name is not None:
+                factory_first, factory_separator, factory_remainder = factory_name.partition(".")
+                resolved_factory = (
+                    f"{aliases[factory_first]}.{factory_remainder}"
+                    if factory_separator and factory_first in aliases
+                    else aliases.get(factory_first, factory_name)
+                )
+                if resolved_factory == "urllib.request.build_opener":
+                    acquisition_count += 1
+                    continue
+        if resolved_name in {
+            "http.client.HTTPConnection",
+            "http.client.HTTPSConnection",
+            "tools.http_download.download_bytes",
+            "urllib.request.urlopen",
+        }:
+            acquisition_count += 1
+            continue
+        if resolved_name.endswith(".open") and resolved_name.removesuffix(".open") in url_openers:
+            acquisition_count += 1
+            continue
+        if first in aliases and resolved_name in {
+            "aiohttp.request",
+            "httpx.get",
+            "httpx.request",
+            "httpx.stream",
+            "requests.get",
+            "requests.request",
+        }:
+            acquisition_count += 1
+            continue
+        if _is_command_executor(resolved_name):
+            tokens = _command_tokens(node)
+            literal_command = tokens[0] if len(tokens) == 1 else None
+            if _tokens_are_acquisition(tokens) or (
+                literal_command is not None and _ACQUISITION_COMMAND_RE.search(literal_command)
+            ):
+                acquisition_count += 1
+                continue
+            if _tokens_have_unknown_acquisition(tokens):
+                unknown_executable_count += 1
+    return _PythonScan(
+        frozenset(artifact_ids),
+        valid,
+        acquisition_count,
+        True,
+        unknown_executable_count,
+    )
 
 
 def _runtime_selection_failures(
-    repo_root: Path,
     lock: Mapping[str, Any],
     bindings: Mapping[str, Any],
     tracked_paths: Sequence[str],
+    python_scans: Mapping[str, _PythonScan | None],
 ) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
     locked_artifact_ids = {
@@ -1016,8 +1127,8 @@ def _runtime_selection_failures(
     for path in tracked_paths:
         if Path(path).suffix != ".py":
             continue
-        text = _safe_text(repo_root, path)
-        if text is None:
+        scan = python_scans.get(path)
+        if scan is None:
             failures.append(
                 _failure(
                     "tooling-runtime-selection-scan",
@@ -1026,8 +1137,7 @@ def _runtime_selection_failures(
                 )
             )
             continue
-        selected_artifact_ids, valid = _selection_calls(text)
-        if not valid:
+        if not scan.selection_calls_valid:
             failures.append(
                 _failure(
                     "tooling-runtime-selection-drift",
@@ -1035,7 +1145,7 @@ def _runtime_selection_failures(
                     path,
                 )
             )
-        for artifact_id in selected_artifact_ids:
+        for artifact_id in scan.selected_artifact_ids:
             observed.setdefault(artifact_id, set()).add(path)
 
     for artifact_id in sorted(set(declared) | set(observed)):
@@ -1239,113 +1349,8 @@ def _tokens_have_unknown_acquisition(tokens: Sequence[str | None]) -> bool:
 def _python_contains_acquisition(text: str) -> tuple[int, bool, int]:
     """Return acquisition count, parse-safety, and unknown-executable count."""
 
-    try:
-        tree = ast.parse(text)
-    except (SyntaxError, ValueError):
-        return 0, False, 0
-    aliases: dict[str, str] = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                local = alias.asname or alias.name.split(".", maxsplit=1)[0]
-                aliases[local] = alias.name if alias.asname else local
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            for alias in node.names:
-                aliases[alias.asname or alias.name] = f"{node.module}.{alias.name}"
-    callable_aliases: dict[str, str] = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        value_name = _ast_name(node.value) if node.value is not None else None
-        if value_name is None:
-            continue
-        first, separator, remainder = value_name.partition(".")
-        resolved_value = (
-            f"{aliases[first]}.{remainder}" if separator and first in aliases else aliases.get(first, value_name)
-        )
-        if not _is_command_executor(resolved_value) and resolved_value not in {
-            "http.client.HTTPConnection",
-            "http.client.HTTPSConnection",
-            "tools.http_download.download_bytes",
-            "urllib.request.urlopen",
-        }:
-            continue
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        callable_aliases.update({target.id: resolved_value for target in targets if isinstance(target, ast.Name)})
-    aliases.update(callable_aliases)
-    url_openers: set[str] = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)) or not isinstance(node.value, ast.Call):
-            continue
-        factory_name = _ast_name(node.value.func)
-        if factory_name is None:
-            continue
-        factory_first, factory_separator, factory_remainder = factory_name.partition(".")
-        resolved_factory = (
-            f"{aliases[factory_first]}.{factory_remainder}"
-            if factory_separator and factory_first in aliases
-            else aliases.get(factory_first, factory_name)
-        )
-        if resolved_factory != "urllib.request.build_opener":
-            continue
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        url_openers.update(target.id for target in targets if isinstance(target, ast.Name))
-    acquisition_count = 0
-    unknown_executable_count = 0
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        call_name = _ast_name(node.func)
-        if call_name is None:
-            continue
-        first, separator, remainder = call_name.partition(".")
-        resolved_name = (
-            f"{aliases[first]}.{remainder}" if separator and first in aliases else aliases.get(first, call_name)
-        )
-        if isinstance(node.func, ast.Attribute) and node.func.attr == "open" and isinstance(node.func.value, ast.Call):
-            factory_name = _ast_name(node.func.value.func)
-            if factory_name is not None:
-                factory_first, factory_separator, factory_remainder = factory_name.partition(".")
-                resolved_factory = (
-                    f"{aliases[factory_first]}.{factory_remainder}"
-                    if factory_separator and factory_first in aliases
-                    else aliases.get(factory_first, factory_name)
-                )
-                if resolved_factory == "urllib.request.build_opener":
-                    acquisition_count += 1
-                    continue
-        if resolved_name in {
-            "http.client.HTTPConnection",
-            "http.client.HTTPSConnection",
-            "tools.http_download.download_bytes",
-            "urllib.request.urlopen",
-        }:
-            acquisition_count += 1
-            continue
-        if resolved_name.endswith(".open") and resolved_name.removesuffix(".open") in url_openers:
-            acquisition_count += 1
-            continue
-        if first in aliases and resolved_name in {
-            "aiohttp.request",
-            "httpx.get",
-            "httpx.request",
-            "httpx.stream",
-            "requests.get",
-            "requests.request",
-        }:
-            acquisition_count += 1
-            continue
-        if _is_command_executor(resolved_name):
-            tokens = _command_tokens(node)
-            literal_command = tokens[0] if len(tokens) == 1 else None
-            if _tokens_are_acquisition(tokens) or (
-                literal_command is not None and _ACQUISITION_COMMAND_RE.search(literal_command)
-            ):
-                acquisition_count += 1
-                continue
-            if _tokens_have_unknown_acquisition(tokens):
-                unknown_executable_count += 1
-    return acquisition_count, True, unknown_executable_count
+    scan = _python_scan(text)
+    return scan.acquisition_count, scan.parsed, scan.unknown_executable_count
 
 
 def _structured_contains_acquisition(text: str, path: str) -> tuple[int, bool, int]:
@@ -1365,6 +1370,19 @@ def _structured_contains_acquisition(text: str, path: str) -> tuple[int, bool, i
     return len(_ACQUISITION_COMMAND_RE.findall(text)), True, 0
 
 
+def _tracked_python_scans(
+    repo_root: Path,
+    tracked_paths: Sequence[str],
+) -> dict[str, _PythonScan | None]:
+    scans: dict[str, _PythonScan | None] = {}
+    for path in tracked_paths:
+        if Path(path).suffix != ".py":
+            continue
+        text = _safe_text(repo_root, path)
+        scans[path] = None if text is None else _python_scan(text)
+    return scans
+
+
 def _is_acquisition_scan_candidate(path: str) -> bool:
     candidate = Path(path)
     if candidate.suffix in {".yaml", ".yml"}:
@@ -1380,6 +1398,7 @@ def _inventory_failures(
     repo_root: Path,
     documents: Mapping[str, dict[str, Any]],
     tracked_paths: Sequence[str],
+    python_scans: Mapping[str, _PythonScan | None],
 ) -> list[PolicyFailure]:
     coverage = documents.get(INVENTORY_COVERAGE_PATH)
     if coverage is None:
@@ -1462,8 +1481,13 @@ def _inventory_failures(
     for path in tracked_paths:
         if not _is_acquisition_scan_candidate(path):
             continue
-        text = _safe_text(repo_root, path)
-        if text is None:
+        if Path(path).suffix == ".py":
+            scan = python_scans.get(path)
+            text = None
+        else:
+            scan = None
+            text = _safe_text(repo_root, path)
+        if Path(path).suffix == ".py" and scan is None or Path(path).suffix != ".py" and text is None:
             failures.append(
                 _failure(
                     "tooling-acquisition-scan",
@@ -1472,7 +1496,13 @@ def _inventory_failures(
                 )
             )
             continue
-        acquisition_count, parsed, unknown_executable_count = _structured_contains_acquisition(text, path)
+        if scan is not None:
+            acquisition_count = scan.acquisition_count
+            parsed = scan.parsed
+            unknown_executable_count = scan.unknown_executable_count
+        else:
+            assert text is not None
+            acquisition_count, parsed, unknown_executable_count = _structured_contains_acquisition(text, path)
         if not parsed:
             failures.append(
                 _failure(
@@ -1542,10 +1572,11 @@ def evaluate_tooling_artifact_policy(
             paths = []
     else:
         paths = sorted(set(tracked_paths))
+    python_scans = _tracked_python_scans(repo_root, paths)
     failures.extend(_artifact_failures(repo_root, documents))
     failures.extend(_action_failures(repo_root, documents, paths))
-    failures.extend(_selector_failures(repo_root, documents, paths))
-    failures.extend(_inventory_failures(repo_root, documents, paths))
+    failures.extend(_selector_failures(repo_root, documents, paths, python_scans))
+    failures.extend(_inventory_failures(repo_root, documents, paths, python_scans))
     return sorted(set(failures), key=lambda item: (item.path or "", item.rule_id, item.message))
 
 

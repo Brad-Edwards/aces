@@ -17,6 +17,7 @@ from tools import (
     gitleaks_tool,
     isabelle_tool,
     osv_scanner_tool,
+    tooling_policy_gate,
     vale_tool,
 )
 from tools.check_tooling_artifact_policy import (
@@ -249,6 +250,51 @@ def test_seeded_policy_has_no_failures(tmp_path: Path) -> None:
         )
         == []
     )
+
+
+def test_python_discovery_parses_each_tracked_source_once(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    root = _seed_policy(tmp_path)
+    from tools import check_tooling_artifact_policy
+
+    parse = check_tooling_artifact_policy.ast.parse
+    parse_calls = 0
+
+    def count_parse(*args: object, **kwargs: object):
+        nonlocal parse_calls
+        parse_calls += 1
+        return parse(*args, **kwargs)
+
+    monkeypatch.setattr(check_tooling_artifact_policy.ast, "parse", count_parse)
+    assert _failures(root) == set()
+    assert parse_calls == 1
+
+
+def test_selection_launcher_uses_frozen_uv_without_a_project_venv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "implementations" / "python"
+    project_root.mkdir(parents=True)
+    (project_root / "pyproject.toml").write_text("[project]\nname='fixture'\n", encoding="utf-8")
+    (project_root / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+    validator = tmp_path / "tools" / "check_tooling_artifact_policy.py"
+    validator.parent.mkdir()
+    validator.write_text("raise SystemExit(0)\n", encoding="utf-8")
+
+    monkeypatch.setattr(tooling_policy_gate.shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
+    assert tooling_policy_gate._frozen_validator_command(tmp_path) == [
+        "/usr/bin/uv",
+        "run",
+        "--project",
+        str(project_root),
+        "--frozen",
+        "python",
+        str(validator),
+    ]
+    assert tooling_policy_gate._VALIDATOR_TIMEOUT_SECONDS == 180
 
 
 def test_repository_discovery_uses_only_git_tracked_paths(tmp_path: Path) -> None:
