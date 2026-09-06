@@ -10,7 +10,14 @@ import pytest
 from raes.participant_behavior_specification import MixedControlTransitionKind
 from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.planning import RuntimeDomain
-from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
+from raes_contracts.runtime_state import (
+    OperationAdmissionContext,
+    OperationKind,
+    OperationReceipt,
+    OperationState,
+    OperationStatus,
+    RuntimeSnapshot,
+)
 from raes_processor.models import (
     MixedControlControllerStateRuntime,
     MixedControlDispositionRulesRuntime,
@@ -97,11 +104,21 @@ def _control_event(event_id: str, *, revision: int = 1) -> dict[str, object]:
 
 
 def _operation_record(operation_id: str = "operation-1") -> ControlPlaneOperationRecord:
+    context = OperationAdmissionContext(
+        actor_id="operator",
+        authorization_scope=("role:operator",),
+        target_scope="target:stub",
+        run_scope="run:test",
+        operation_kind=OperationKind.PARTICIPANT_CONTROL,
+        request_commitment=f"sha256:{'a' * 64}",
+    )
     return ControlPlaneOperationRecord(
         receipt=OperationReceipt(
             operation_id=operation_id,
             domain=RuntimeDomain.PARTICIPANT,
             submitted_at="2026-07-26T10:00:00Z",
+            accepted=True,
+            context=context,
         ),
         status=OperationStatus(
             operation_id=operation_id,
@@ -109,6 +126,7 @@ def _operation_record(operation_id: str = "operation-1") -> ControlPlaneOperatio
             state=OperationState.SUCCEEDED,
             submitted_at="2026-07-26T10:00:00Z",
             updated_at="2026-07-26T10:00:00Z",
+            context=context,
             changed_addresses=["participant.behavior.red-agent"],
         ),
         request_fingerprint="fingerprint-1",
@@ -331,6 +349,12 @@ def test_atomic_control_transition_commit_checks_head_and_persists_all_outputs(
     record = _operation_record()
     audit = _audit_event()
 
+    store.claim_record(
+        replace(
+            record,
+            status=replace(record.status, state=OperationState.RUNNING, changed_addresses=[]),
+        )
+    )
     store.commit_control_transition(
         participant_address="participant.behavior.red-agent",
         expected_head=None,
@@ -535,7 +559,8 @@ def test_supervisory_control_is_subject_bound_idempotent_and_state_revision_boun
         identity=_identity(),
         idempotency_key="key-stale",
     )
-    assert rejected.accepted is False
+    assert rejected.accepted is True
+    assert control_plane.get_operation(rejected.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
     assert (
         control_plane.snapshot.participant_control_history[_PARTICIPANT][-1]["occurrence"]["reason_code"]
         == "stale-state"
@@ -595,7 +620,8 @@ def test_supervisory_control_records_bounded_policy_and_authority_rejections(
         idempotency_key=f"key-{failure}",
     )
 
-    assert receipt.accepted is False
+    assert receipt.accepted is True
+    assert control_plane.get_operation(receipt.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
     event = control_plane.snapshot.participant_control_history[_PARTICIPANT][-1]
     assert event["occurrence"]["reason_code"] == reason_code
     assert "2.0.0" not in str(receipt.diagnostics)
@@ -795,7 +821,8 @@ def test_unresolved_typed_target_appends_a_bounded_rejection_without_fallback() 
         idempotency_key="key-missing-target",
     )
 
-    assert receipt.accepted is False
+    assert receipt.accepted is True
+    assert control_plane.get_operation(receipt.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
     event = control_plane.snapshot.participant_control_history[_PARTICIPANT][-1]
     assert event["occurrence"]["reason_code"] == "invalid-target"
     assert event["predecessor_event_refs"] == []

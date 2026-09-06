@@ -10,7 +10,7 @@ import sqlite3
 import stat
 import sys
 from contextlib import closing
-from dataclasses import asdict, fields, replace
+from dataclasses import asdict, dataclass, fields, replace
 from hashlib import sha256
 from multiprocessing import get_all_start_methods, get_context
 from pathlib import Path
@@ -39,11 +39,14 @@ from raes_contracts.realization_observation import (
 )
 from raes_contracts.runtime_state import (
     ApplyResult,
+    OperationAdmissionContext,
+    OperationKind,
     OperationReceipt,
     OperationState,
     OperationStatus,
     RuntimeSnapshot,
     SnapshotEntry,
+    operation_terminal_diagnostic,
 )
 from raes_contracts.vocabulary import RealizationVerificationScope
 from raes_processor.compiler import compile_runtime_model
@@ -324,12 +327,21 @@ def _running_record(
     operation_id: str, *, state: OperationState = OperationState.RUNNING
 ) -> ControlPlaneOperationRecord:
     submitted_at = "2026-08-11T12:00:00Z"
+    context = OperationAdmissionContext(
+        actor_id="embedded-process",
+        authorization_scope=("process:trusted-embedder",),
+        target_scope="target:stub",
+        run_scope="run:test",
+        operation_kind=OperationKind.PROVISIONING,
+        request_commitment=f"sha256:{'a' * 64}",
+    )
     return ControlPlaneOperationRecord(
         receipt=OperationReceipt(
             operation_id=operation_id,
             domain=RuntimeDomain.PROVISIONING,
             submitted_at=submitted_at,
             accepted=True,
+            context=context,
         ),
         status=OperationStatus(
             operation_id=operation_id,
@@ -337,10 +349,30 @@ def _running_record(
             state=state,
             submitted_at=submitted_at,
             updated_at=submitted_at,
+            context=context,
         ),
         idempotency_key=f"key-{operation_id}",
-        request_fingerprint=f"fingerprint-{operation_id}",
+        request_fingerprint=context.request_commitment,
     )
+
+
+def _pre_lifecycle_record_payload(
+    record: ControlPlaneOperationRecord,
+    *,
+    accepted: bool = True,
+) -> dict[str, Any]:
+    payload = local_store_module._record_payload(record)
+    payload["receipt"].pop("context")
+    payload["receipt"]["accepted"] = accepted
+    payload["status"].pop("context")
+    if record.status.state in {
+        OperationState.FAILED,
+        OperationState.CANCELLED,
+        OperationState.INDETERMINATE,
+    }:
+        payload["status"]["diagnostics"] = []
+    payload["request_fingerprint"] = "legacy-unclassified-fingerprint"
+    return payload
 
 
 def _terminal_record(record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
@@ -371,18 +403,21 @@ def _atomic_store(kind: str, tmp_path: Path) -> InMemoryControlPlaneStore | Loca
 
 
 def _interrupted_record(record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
+    terminal_state = (
+        OperationState.CANCELLED if record.status.state is OperationState.ACCEPTED else OperationState.INDETERMINATE
+    )
     return replace(
         record,
         status=replace(
             record.status,
-            state=OperationState.FAILED,
+            state=terminal_state,
             updated_at="2026-08-11T12:00:02Z",
             diagnostics=[
                 Diagnostic(
                     code=INTERRUPTED_OPERATION_DIAGNOSTIC_CODE,
                     domain="runtime",
-                    address="runtime.control-plane.provisioning",
-                    message="Backend effects may be indeterminate.",
+                    address="/state",
+                    message="Operation was interrupted before its terminal durable commit.",
                 )
             ],
         ),
@@ -464,6 +499,7 @@ def test_terminal_commit_is_idempotent_but_rejects_snapshot_or_record_rewrite(
     terminal = _terminal_record(_running_record("terminal-idempotency"))
     snapshot = RuntimeSnapshot(metadata={"generation": 1})
 
+    store.claim_record(_running_record("terminal-idempotency"))
     store.commit_terminal_operation(snapshot, terminal)
     store.commit_terminal_operation(snapshot, terminal)
 
@@ -492,16 +528,16 @@ def test_terminal_commit_rejects_nonterminal_and_immutable_identity_changes(
         (replace(terminal_status, domain=RuntimeDomain.EVALUATION), "domains do not match"),
         (replace(terminal_status, submitted_at="2026-08-11T12:00:04Z"), "submission times do not match"),
     ):
-        invalid_record = replace(_terminal_record(running), status=status)
         with pytest.raises(ValueError, match=message):
+            invalid_record = replace(_terminal_record(running), status=status)
             store.commit_terminal_operation(empty_snapshot, invalid_record)
 
     store.claim_record(running)
-    changed_receipt = replace(
-        _terminal_record(running),
-        receipt=replace(running.receipt, accepted=False),
-    )
-    with pytest.raises(ValueError, match="receipt is immutable"):
+    with pytest.raises(ValueError, match="denied operation receipts cannot be persisted"):
+        changed_receipt = replace(
+            _terminal_record(running),
+            receipt=replace(running.receipt, accepted=False),
+        )
         store.commit_terminal_operation(empty_snapshot, changed_receipt)
     changed_fingerprint = replace(_terminal_record(running), request_fingerprint="changed")
     with pytest.raises(ValueError, match="operation identity is immutable"):
@@ -509,12 +545,14 @@ def test_terminal_commit_rejects_nonterminal_and_immutable_identity_changes(
 
 
 @pytest.mark.parametrize("store_kind", ["memory", "local"])
+@pytest.mark.parametrize("source_state", [OperationState.ACCEPTED, OperationState.RUNNING])
 def test_interrupted_reconciliation_validates_and_seals_terminal_record(
     tmp_path: Path,
     store_kind: str,
+    source_state: OperationState,
 ) -> None:
     store = _atomic_store(store_kind, tmp_path)
-    running = _running_record("recovery-invariants")
+    running = _running_record(f"recovery-invariants-{source_state.value}", state=source_state)
     store.save_record(running)
     recovered = _interrupted_record(running)
 
@@ -542,8 +580,22 @@ def test_interrupted_reconciliation_rejects_invalid_replacement(
     store.save_record(running)
     replacement = _interrupted_record(running)
     if invalid_recovery == "nonfailed":
-        replacement = replace(replacement, status=replace(replacement.status, state=OperationState.CANCELLED))
-        message = "must persist a failed status"
+        replacement = replace(
+            replacement,
+            status=replace(
+                replacement.status,
+                state=OperationState.FAILED,
+                diagnostics=[
+                    *[
+                        diagnostic
+                        for diagnostic in replacement.status.diagnostics
+                        if diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE
+                    ],
+                    operation_terminal_diagnostic(OperationState.FAILED),
+                ],
+            ),
+        )
+        message = "must persist indeterminate"
     else:
         replacement = replace(replacement, status=replace(replacement.status, diagnostics=[]))
         message = "requires its stable diagnostic"
@@ -553,18 +605,15 @@ def test_interrupted_reconciliation_rejects_invalid_replacement(
 
 
 @pytest.mark.parametrize("store_kind", ["memory", "local"])
-def test_terminal_commit_rolls_back_idempotency_collision(
+def test_claim_returns_existing_idempotency_owner_without_snapshot_change(
     tmp_path: Path,
     store_kind: str,
 ) -> None:
     store = _atomic_store(f"{store_kind}-collision", tmp_path)
     first = replace(_running_record("first"), idempotency_key="shared")
-    second = replace(_terminal_record(_running_record("second")), idempotency_key="shared")
+    second = replace(_running_record("second"), idempotency_key="shared")
     store.save_record(first)
-    rollback_snapshot = RuntimeSnapshot(metadata={"should": "rollback"})
-
-    with pytest.raises(ValueError, match="idempotency key already belongs"):
-        store.commit_terminal_operation(rollback_snapshot, second)
+    assert store.claim_record(second) == first
 
     assert store.load_snapshot() == RuntimeSnapshot()
     assert set(store.load_records()) == {"first"}
@@ -582,15 +631,17 @@ def test_in_memory_store_idempotency_claim_and_write_collisions_fail_closed() ->
         store.save_record(competing)
 
 
-def test_in_memory_participant_transition_rolls_back_idempotency_collision() -> None:
+def test_in_memory_participant_transition_rolls_back_immutable_claim_rewrite() -> None:
     store = InMemoryControlPlaneStore()
     first = replace(_running_record("first-transition"), idempotency_key="shared-transition")
-    competing = replace(_terminal_record(_running_record("competing-transition")), idempotency_key="shared-transition")
+    competing_running = replace(_running_record("competing-transition"), idempotency_key="competing-claim")
+    competing = replace(_terminal_record(competing_running), idempotency_key="shared-transition")
     store.save_record(first)
+    store.save_record(competing_running)
     rollback_snapshot = RuntimeSnapshot(metadata={"must": "rollback"})
     event = _audit_event("participant-transition")
 
-    with pytest.raises(ValueError, match="idempotency key already belongs"):
+    with pytest.raises(ValueError, match="operation identity is immutable"):
         store.commit_participant_transition(
             expected_history_heads={},
             snapshot=rollback_snapshot,
@@ -600,15 +651,20 @@ def test_in_memory_participant_transition_rolls_back_idempotency_collision() -> 
 
     assert store.load_snapshot() == RuntimeSnapshot()
     assert store.read_audit() == []
-    assert set(store.load_records()) == {first.receipt.operation_id}
+    assert set(store.load_records()) == {
+        first.receipt.operation_id,
+        competing_running.receipt.operation_id,
+    }
 
 
 def test_in_memory_participant_transition_accepts_record_without_idempotency_key() -> None:
     store = InMemoryControlPlaneStore()
-    record = replace(_terminal_record(_running_record("without-idempotency")), idempotency_key="")
+    running = replace(_running_record("without-idempotency"), idempotency_key="")
+    record = _terminal_record(running)
     snapshot = RuntimeSnapshot(metadata={"committed": True})
     event = _audit_event("participant-transition-without-idempotency")
 
+    store.claim_record(running)
     store.commit_participant_transition(
         expected_history_heads={},
         snapshot=snapshot,
@@ -622,7 +678,7 @@ def test_in_memory_participant_transition_accepts_record_without_idempotency_key
 
 
 @pytest.mark.parametrize("crash_boundary", ["before-backend", "before-terminal-transaction"])
-def test_restart_marks_interrupted_operation_failed_and_retry_does_not_repeat_backend(
+def test_restart_classifies_interrupted_operation_and_retry_does_not_repeat_backend(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     crash_boundary: str,
@@ -651,7 +707,7 @@ def test_restart_marks_interrupted_operation_failed_and_retry_does_not_repeat_ba
     assert len(records) == 1
     operation_id, interrupted = next(iter(records.items()))
     expected_state = (
-        OperationState.FAILED if crash_boundary == "before-terminal-transaction" else OperationState.RUNNING
+        OperationState.INDETERMINATE if crash_boundary == "before-terminal-transaction" else OperationState.RUNNING
     )
     assert interrupted.status.state == expected_state
     assert store.load_snapshot() == RuntimeSnapshot()
@@ -660,9 +716,9 @@ def test_restart_marks_interrupted_operation_failed_and_retry_does_not_repeat_ba
     restarted = RuntimeControlPlane(target, store=LocalControlPlaneStore(store_path))
     recovered = restarted.get_operation(operation_id)
     assert recovered is not None
-    assert recovered.state == OperationState.FAILED
+    assert recovered.state == OperationState.INDETERMINATE
     assert any(diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE for diagnostic in recovered.diagnostics)
-    assert "indeterminate" in recovered.diagnostics[-1].message
+    assert recovered.diagnostics[-1].code == "runtime.control-plane.operation-indeterminate"
 
     retry = restarted.submit_provisioning(
         provisioning_plan,
@@ -768,7 +824,7 @@ def test_runtime_seals_reloaded_non_terminal_operations_after_uncertain_terminal
         )
 
     durable_record = next(iter(store.load_records().values()))
-    assert durable_record.status.state == OperationState.FAILED
+    assert durable_record.status.state == OperationState.INDETERMINATE
     assert any(
         diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE for diagnostic in durable_record.status.diagnostics
     )
@@ -838,7 +894,10 @@ def test_startup_reconciliation_is_atomic_and_restarts_cleanly_after_failure(
 
     restarted = RuntimeControlPlane(create_stub_target(), store=LocalControlPlaneStore(store_path))
     recovered = restarted._operations.values()
-    assert {record.status.state for record in recovered} == {OperationState.FAILED}
+    assert {record.status.state for record in recovered} == {
+        OperationState.CANCELLED,
+        OperationState.INDETERMINATE,
+    }
     assert all(
         any(diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE for diagnostic in record.status.diagnostics)
         for record in recovered
@@ -921,6 +980,49 @@ def test_local_store_rejects_unsupported_schema_and_failed_quick_check(
     monkeypatch.setattr(LocalControlPlaneStore, "_connect", failed_quick_check_connect)
     with pytest.raises(ValueError, match="database failed its integrity check"):
         LocalControlPlaneStore(quick_check_path)
+
+
+def test_local_store_migrates_v1_sqlite_operations_and_disposes_denials(tmp_path: Path) -> None:
+    store_path = tmp_path / "v1-operation-records"
+    original = LocalControlPlaneStore(store_path)
+    accepted = _running_record("legacy-sqlite-accepted", state=OperationState.FAILED)
+    denied = _running_record("legacy-sqlite-denied", state=OperationState.FAILED)
+    with original._connection() as connection, local_store_module._transaction(connection):
+        for record, is_accepted in ((accepted, True), (denied, False)):
+            payload, digest = local_store_module._encode_payload(
+                _pre_lifecycle_record_payload(record, accepted=is_accepted)
+            )
+            connection.execute(
+                """
+                INSERT INTO operations(operation_id, idempotency_key, request_fingerprint, payload, digest)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    record.receipt.operation_id,
+                    record.idempotency_key,
+                    "legacy-unclassified-fingerprint",
+                    payload,
+                    digest,
+                ),
+            )
+        connection.execute("UPDATE metadata SET value='1' WHERE key='schema-version'")
+
+    migrated = LocalControlPlaneStore(store_path)
+    records = migrated.load_records()
+
+    assert set(records) == {accepted.receipt.operation_id}
+    migrated_record = records[accepted.receipt.operation_id]
+    assert migrated_record.receipt.context.actor_id == "legacy-store-migration"
+    assert migrated_record.receipt.context == migrated_record.status.context
+    assert migrated_record.request_fingerprint == migrated_record.receipt.context.request_commitment
+    assert migrated_record.status.diagnostics == [operation_terminal_diagnostic(OperationState.FAILED)]
+    assert migrated.find_by_idempotency(denied.idempotency_key) is None
+    denial_audit = migrated.read_audit()[-1]
+    assert denial_audit.operation_id == denied.receipt.operation_id
+    assert denial_audit.allowed is False
+    assert denial_audit.reason == "legacy-denied-operation-disposed"
+    with migrated._connection() as connection:
+        assert connection.execute("SELECT value FROM metadata WHERE key='schema-version'").fetchone() == ("2",)
 
 
 def test_local_store_rejects_non_wal_before_schema_or_legacy_migration(
@@ -1126,14 +1228,18 @@ def test_local_store_migrates_legacy_records_without_snapshot_files(tmp_path: Pa
     store_path.mkdir(mode=0o700)
     record = _running_record("legacy-record-only")
     (store_path / "operations.json").write_text(
-        json.dumps({record.receipt.operation_id: local_store_module._record_payload(record)}),
+        json.dumps({record.receipt.operation_id: _pre_lifecycle_record_payload(record)}),
         encoding="utf-8",
     )
 
     migrated = LocalControlPlaneStore(store_path)
+    migrated_record = migrated.load_records()[record.receipt.operation_id]
 
     assert migrated.load_snapshot() == RuntimeSnapshot()
-    assert migrated.load_records() == {record.receipt.operation_id: record}
+    assert migrated_record.status.state is OperationState.RUNNING
+    assert migrated_record.receipt.context.actor_id == "legacy-store-migration"
+    assert migrated_record.receipt.context == migrated_record.status.context
+    assert migrated_record.request_fingerprint == migrated_record.receipt.context.request_commitment
 
 
 def test_snapshot_serialization_preserves_account_placement_without_credentials() -> None:
@@ -1994,6 +2100,7 @@ def test_runtime_resynchronizes_after_transition_commit_reports_postcommit_error
     control_plane = RuntimeControlPlane(create_stub_target(), store=store)
     snapshot = RuntimeSnapshot(metadata={"committed": transition_kind})
     record = _terminal_record(_running_record(f"{transition_kind}-postcommit"))
+    control_plane._claim_record(_running_record(f"{transition_kind}-postcommit"))
     event = _audit_event(f"{transition_kind}-postcommit")
     method_name = f"commit_{transition_kind}_transition"
     real_commit = getattr(store, method_name)
@@ -2345,12 +2452,12 @@ def test_runtime_preserves_ordered_legacy_store_commits_with_deprecation(
     )
     assert replay == receipt
     assert store.write_calls == ["save_record", "save_snapshot", "save_record"]
-    with pytest.raises(ValueError, match="reused with a different request body"):
-        control_plane.submit_provisioning(
-            provisioning_plan,
-            idempotency_key="legacy-compatible",
-            request_fingerprint="different-request",
-        )
+    representation_retry = control_plane.submit_provisioning(
+        provisioning_plan,
+        idempotency_key="legacy-compatible",
+        request_fingerprint="different-transport-representation",
+    )
+    assert representation_retry == receipt
     assert store.write_calls == ["save_record", "save_snapshot", "save_record"]
     control_plane.close()
 
@@ -2394,7 +2501,7 @@ def test_runtime_legacy_store_recovers_interrupted_records_one_at_a_time() -> No
     for operation_id in (first.receipt.operation_id, second.receipt.operation_id):
         recovered = control_plane.get_operation(operation_id)
         assert recovered is not None
-        assert recovered.state == OperationState.FAILED
+        assert recovered.state == OperationState.INDETERMINATE
         assert any(diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE for diagnostic in recovered.diagnostics)
     control_plane.close()
 
@@ -2430,7 +2537,7 @@ def test_runtime_legacy_store_resynchronizes_after_snapshot_write_failure() -> N
     assert store.write_calls == ["save_record", "save_snapshot", "save_record"]
     assert control_plane.snapshot == RuntimeSnapshot()
     assert store.delegate.load_snapshot() == control_plane.snapshot
-    assert next(iter(store.delegate.load_records().values())).status.state == OperationState.FAILED
+    assert next(iter(store.delegate.load_records().values())).status.state == OperationState.INDETERMINATE
     control_plane.close()
 
 
@@ -2450,10 +2557,15 @@ def test_runtime_requires_policy_resolver_for_persisted_crossing_history() -> No
 
 
 def test_execution_helpers_return_the_durable_winner_when_an_idempotency_claim_loses() -> None:
+    @dataclass(frozen=True)
+    class _ParticipantRequest:
+        participant_address: str
+
     class _LosingClaimControlPlane:
         def __init__(self) -> None:
             self._snapshot = RuntimeSnapshot()
             self._operation_lock = RLock()
+            self._target = create_stub_target()
 
         @staticmethod
         def _idempotent_receipt(**_kwargs: object) -> None:
@@ -2477,7 +2589,7 @@ def test_execution_helpers_return_the_durable_winner_when_an_idempotency_claim_l
     participant_receipt = execute_participant_action(
         control_plane,
         method=unexpected_backend,
-        request=SimpleNamespace(participant_address="participant.demo"),
+        request=_ParticipantRequest(participant_address="participant.demo"),
         address="participant.demo",
         idempotency_key="participant-key",
         request_fingerprint="participant-fingerprint",
@@ -2489,7 +2601,14 @@ def test_execution_helpers_return_the_durable_winner_when_an_idempotency_claim_l
             domain=RuntimeDomain.EVALUATION,
             submitted_at="2026-08-12T00:00:00Z",
             idempotency_key="persist-key",
-            request_fingerprint="persist-fingerprint",
+            context=OperationAdmissionContext(
+                actor_id="embedded-process",
+                authorization_scope=("process:trusted-embedder",),
+                target_scope="target:stub",
+                run_scope="run:test",
+                operation_kind=OperationKind.EVALUATION,
+                request_commitment=f"sha256:{'b' * 64}",
+            ),
         ),
     )
     operation_receipt = execute_operation(
@@ -2503,6 +2622,14 @@ def test_execution_helpers_return_the_durable_winner_when_an_idempotency_claim_l
             base_snapshot=None,
             idempotency_key="operation-key",
             request_fingerprint="operation-fingerprint",
+            context=OperationAdmissionContext(
+                actor_id="embedded-process",
+                authorization_scope=("process:trusted-embedder",),
+                target_scope="target:stub",
+                run_scope="run:test",
+                operation_kind=OperationKind.EVALUATION,
+                request_commitment=f"sha256:{'c' * 64}",
+            ),
         ),
     )
 
@@ -2513,9 +2640,16 @@ def test_execution_helpers_return_the_durable_winner_when_an_idempotency_claim_l
 
 def test_persist_succeeded_operation_returns_newly_claimed_receipt() -> None:
     class _WinningClaimControlPlane:
+        def __init__(self) -> None:
+            self._snapshot = RuntimeSnapshot()
+
         @staticmethod
         def _claim_record(record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
             return record
+
+        @staticmethod
+        def _commit_terminal_operation(*_args: object) -> None:
+            return None
 
     receipt = persist_succeeded_operation(
         _WinningClaimControlPlane(),
@@ -2524,7 +2658,14 @@ def test_persist_succeeded_operation_returns_newly_claimed_receipt() -> None:
             domain=RuntimeDomain.EVALUATION,
             submitted_at="2026-08-12T00:00:00Z",
             idempotency_key="new-key",
-            request_fingerprint="new-fingerprint",
+            context=OperationAdmissionContext(
+                actor_id="embedded-process",
+                authorization_scope=("process:trusted-embedder",),
+                target_scope="target:stub",
+                run_scope="run:test",
+                operation_kind=OperationKind.EVALUATION,
+                request_commitment=f"sha256:{'d' * 64}",
+            ),
         ),
     )
 

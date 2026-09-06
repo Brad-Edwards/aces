@@ -6,7 +6,7 @@ type: FUNCTIONAL
 priority: MUST
 wave: 1
 created_at: 2026-04-03T05:55:58.825305Z
-updated_at: 2026-09-03T03:26:53.000000Z
+updated_at: 2026-09-06T04:13:29.000000Z
 ---
 
 # API-404 — Secure, Durable, And Idempotent Control-Plane Semantics
@@ -27,7 +27,7 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 - DOCUMENTS → DOCUMENTATION `docs/research/runtime-control-plane/index.md` (Runtime control-plane architecture design set)
 - DOCUMENTS → SPEC `specs/formal/runtime-control-plane/README.md` (ADR-104 FM3 abstract operation model and invariants)
 - TESTS → TEST `implementations/python/tests/test_issue_1151_runtime_control_plane_design.py` (Structural acceptance gate for the design set)
-- DOCUMENTS → GITHUB_ISSUE `1182` (CP-1: Operation lifecycle contract)
+- IMPLEMENTS → GITHUB_ISSUE `1182` (CP-1: Operation lifecycle contract)
 - DOCUMENTS → GITHUB_ISSUE `1181` (CP-2: Atomic terminal commit)
 - DOCUMENTS → GITHUB_ISSUE `1179` (CP-3: Startup reconciliation)
 - DOCUMENTS → GITHUB_ISSUE `1180` (CP-4: Snapshot revision compare-and-swap)
@@ -44,6 +44,11 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 - DOCUMENTS → GITHUB_ISSUE `1093` (In-process HTTP offload and rejection-audit slice)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/operation-receipt-v1.json` (Operation receipt JSON Schema — submission acknowledgment contract)
 - IMPLEMENTS → SPEC `contracts/schemas/control-plane/operation-status-v1.json` (Operation status JSON Schema — durable operation state contract)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/operation_lifecycle.py` (Closed operation states, transitions, stable terminal diagnostics, and immutable admission context)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_contracts/contracts/operation_carriers.py` (Closed transport carriers and canonical terminal-diagnostic constraints)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_operation_context.py` (Value-free canonical request commitment and authenticated actor binding)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_admission.py` (Central actor-bound denial auditing and exact idempotency ownership checks)
+- IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_store_record_migration.py` (Versioned legacy operation-record migration and denial-only disposition)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_api/_auth.py` (Fail-closed bearer and verified-proxy authentication)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_api/_offload.py` (Bounded worker offload and mutation admission)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_api_guards.py` (Bounded fail-closed request-size admission and rejection-audit offload)
@@ -51,6 +56,7 @@ Requirement inventory phase. Status audit deferred until the full canonical grap
 - DOCUMENTS → DOCUMENTATION `docs/decisions/issue-1093-control-plane-offload-preflight.md` (In-process ASGI offload and rejection semantics)
 - TESTS → TEST `implementations/python/tests/test_runtime_control_plane.py` (Core control-plane unit tests)
 - TESTS → TEST `implementations/python/tests/test_runtime_control_plane_api.py` (HTTP/JSON control-plane API tests — auth, idempotency, durability, audit)
+- TESTS → TEST `implementations/python/tests/test_issue_1182_operation_lifecycle_contract.py` (Closed transition matrix, malformed carriers, immutability, denial, semantic idempotency, and schema governance)
 - TESTS → TEST `implementations/python/tests/test_issue_1093_request_rejection_offload.py` (Non-blocking, saturation-bounded, fail-closed request rejection audit tests)
 - IMPLEMENTS → GITHUB_ISSUE `1092` (Make the local control plane crash-consistent and explicitly single-process)
 - IMPLEMENTS → CODE_FILE `implementations/python/packages/raes_runtime/control_plane_store.py` (Atomic terminal commits and interrupted-operation reconciliation contract)

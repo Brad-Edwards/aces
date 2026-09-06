@@ -27,7 +27,7 @@ from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingGateDisposition,
 )
-from raes_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope
+from raes_contracts.runtime_state import OperationState, RuntimeSnapshot, RuntimeSnapshotEnvelope
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_api_models import _snapshot_model
@@ -163,7 +163,8 @@ def test_unsupported_backend_never_executes_the_incumbent_action() -> None:
 
     receipt = admit(plane)
 
-    assert receipt.accepted is False
+    assert receipt.accepted is True
+    assert plane.get_operation(receipt.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
     assert plane.snapshot.participant_behavior_history == {}
     decision = plane.snapshot.participant_crossing_history[PARTICIPANT][-1]["occurrence"]
     assert decision["disposition"] == "unsupported"
@@ -180,7 +181,8 @@ def test_independent_ingress_gate_denials_do_not_execute_action(gate: str) -> No
 
     receipt = admit(plane, idempotency_key=f"denied-{gate}")
 
-    assert receipt.accepted is False
+    assert receipt.accepted is True
+    assert plane.get_operation(receipt.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
     assert plane.snapshot.participant_behavior_history == {}
     decision = plane.snapshot.participant_crossing_history[PARTICIPANT][-1]["occurrence"]
     assert decision["gates"][gate] == "deny"
@@ -274,7 +276,8 @@ def test_fresh_denial_of_transformed_action_prevents_backend_execution() -> None
 
     receipt = admit(plane)
 
-    assert receipt.accepted is False
+    assert receipt.accepted is True
+    assert plane.get_operation(receipt.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
     assert plane.snapshot.participant_behavior_history == {}
     assert plane.snapshot.participant_crossing_history[PARTICIPANT][-1]["occurrence"]["disposition"] == "deny"
 
@@ -432,6 +435,20 @@ def test_supervisory_control_derives_handoff_semantics_and_commits_one_transitio
     assert len(plane.snapshot.participant_crossing_history[PARTICIPANT]) == 2
     assert len(plane._operations) == 1
 
+    stale = intent.model_copy(update={"client_correlation_id": "handoff-stale"})
+    rejected = plane.record_participant_control(
+        PARTICIPANT,
+        stale,
+        identity=identity(),
+        crossing_evidence=evidence(),
+        idempotency_key="handoff-stale",
+    )
+
+    assert rejected.accepted is True
+    assert plane.get_operation(rejected.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
+    assert plane.audit_log()[-1].allowed is False
+    assert plane.audit_log()[-1].reason == "stale-state"
+
 
 def test_crossing_history_restarts_and_operation_replays_idempotently(tmp_path: Path) -> None:
     resolver = StaticCrossingResolver()
@@ -567,7 +584,8 @@ def test_missing_policy_fails_closed_with_safe_diagnostic_and_audit() -> None:
 
     receipt = admit(plane, idempotency_key="missing-policy")
 
-    assert receipt.accepted is False
+    assert receipt.accepted is True
+    assert plane.get_operation(receipt.operation_id).state is OperationState.FAILED  # type: ignore[union-attr]
     assert plane.snapshot.participant_behavior_history == {}
     assert plane.snapshot.participant_crossing_history == {}
     assert receipt.diagnostics[0].code == "runtime.participant-crossing-policy-unresolved"
