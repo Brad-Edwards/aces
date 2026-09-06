@@ -61,6 +61,13 @@ from raes_contracts.contracts.participant_execution import (
     ParticipantExecutionServiceStateModel,
 )
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.domain_profiles import (
+    DomainProfileAdmissionPolicyModel,
+    DomainProfileBindingModel,
+    DomainProfileDefinitionModel,
+    DomainProfileResolutionContextModel,
+    DomainProfileSupportDeclarationModel,
+)
 from raes_contracts.participant_opacity import (
     ParticipantOpacityAnalysisEvidenceModel,
     ParticipantOpacityAnalysisInputModel,
@@ -122,6 +129,11 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "sdl-candidate-synthesis-record-v1": CandidateSynthesisRecordModel.model_validate,
     "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
+    "domain-profile-admission-policy-v1": DomainProfileAdmissionPolicyModel.model_validate,
+    "domain-profile-binding-v1": DomainProfileBindingModel.model_validate,
+    "domain-profile-definition-v1": DomainProfileDefinitionModel.model_validate,
+    "domain-profile-resolution-context-v1": DomainProfileResolutionContextModel.model_validate,
+    "domain-profile-support-declaration-v1": DomainProfileSupportDeclarationModel.model_validate,
     "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,
     "semantic-projection-report-v1": SemanticProjectionReportModel.model_validate,
     "fipa-communicative-acts-source-v1": FipaCommunicativeActsSourceModel.model_validate,
