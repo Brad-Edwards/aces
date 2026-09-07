@@ -14,6 +14,7 @@ from raes_contracts.participant_episode import (
 from raes_contracts.planning import ProvisioningPlan, RuntimeDomain
 from raes_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
+from raes_processor.models import ExecutionPlan
 from raes_processor.reference import ScenarioInput
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.registry import RuntimeTarget
@@ -394,11 +395,8 @@ def _target_adapter_cases(
     """
 
     cases = [target_manifest_case(target)]
-    if not cases[0].valid:
-        return tuple(cases)
-
     known = _to_known_profile(profile)
-    if known is None:
+    if not cases[0].valid or known is None:
         return tuple(cases)
 
     scenario = DEFAULT_TARGET_CONFORMANCE_SCENARIO if reference_scenario is None else reference_scenario
@@ -425,9 +423,21 @@ def _target_adapter_cases(
                 ),
             )
         )
-        return tuple(cases)
-    # Legacy API-423-only conformance resolver: opt out of the SEM-233
-    # final-sink permit that this probe's resolver does not produce.
+    else:
+        cases.extend(_target_runtime_cases(target, known, execution_plan))
+    return tuple(cases)
+
+
+def _target_runtime_cases(
+    target: RuntimeTarget,
+    known: BackendCapabilityProfile,
+    execution_plan: ExecutionPlan,
+) -> tuple[ConformanceCaseResult, ...]:
+    """Drive the runtime surfaces that are valid for one known backend profile."""
+
+    cases: list[ConformanceCaseResult] = []
+    # Legacy API-423-only conformance resolver: opt out of the SEM-233 final-sink
+    # permit that this probe's resolver does not produce.
     control_plane = RuntimeControlPlane(
         target,
         initial_snapshot=_participant_execution_probe_snapshot(target),

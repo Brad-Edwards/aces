@@ -432,10 +432,6 @@ def test_study_reconciliation_requires_admitted_run_membership() -> None:
         validate_admitted_trial_study(plan, study, [task], [run])
 
     payload["membership"]["run-001"]["target_ref"]["ref_id"] = run.run_id
+    admitted_study = ExperimentStudyModel.model_validate(payload)
     with pytest.raises(ValueError, match="content-backed evidence inputs"):
-        validate_admitted_trial_study(
-            plan,
-            ExperimentStudyModel.model_validate(payload),
-            [task],
-            [run],
-        )
+        validate_admitted_trial_study(plan, admitted_study, [task], [run])

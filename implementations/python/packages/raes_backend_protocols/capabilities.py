@@ -163,6 +163,10 @@ class ObservationCapabilities:
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("ObservationCapabilities.name must be non-empty")
+        self._validate_observation_summaries()
+        self._validate_capture_offers()
+
+    def _validate_observation_summaries(self) -> None:
         _validate_unique_non_empty_strings(
             "ObservationCapabilities.supported_capture_kinds", self.supported_capture_kinds
         )
@@ -203,6 +207,8 @@ class ObservationCapabilities:
         for contract_id in self.supported_evidence_contracts:
             if not contract_id.startswith("experiment-"):
                 raise ValueError("ObservationCapabilities.supported_evidence_contracts must be experiment contracts")
+
+    def _validate_capture_offers(self) -> None:
         offer_ids = tuple(offer.offer_id for offer in self.capture_offers)
         _validate_unique_non_empty_strings("ObservationCapabilities.capture offer ids", offer_ids)
         for offer in self.capture_offers:

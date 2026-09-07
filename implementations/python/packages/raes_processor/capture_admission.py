@@ -164,6 +164,16 @@ def _subset(required: tuple[str, ...], supported: frozenset[str]) -> bool:
 
 
 def _offer_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> tuple[str, ...]:
+    failures = [
+        *_offer_quality_failures(demand, offer),
+        *_offer_content_failures(demand, offer),
+        *_offer_dimension_failures(demand, offer),
+        *_offer_policy_failures(demand, offer),
+    ]
+    return tuple(sorted(failures))
+
+
+def _offer_quality_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> list[str]:
     failures: list[str] = []
     if offer.availability != "available":
         failures.append("availability-insufficient")
@@ -173,6 +183,11 @@ def _offer_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> tu
         failures.append("disclosure-insufficient")
     if offer.redaction_policy != demand.redaction_policy:
         failures.append("redaction-policy-mismatch")
+    return failures
+
+
+def _offer_content_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> list[str]:
+    failures: list[str] = []
     if demand.output_contract and offer.output_contract != demand.output_contract:
         failures.append("output-contract-mismatch")
     if (
@@ -183,6 +198,11 @@ def _offer_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> tu
         failures.append("field-selector-missing")
     if demand.capture_kind and offer.capture_kind != demand.capture_kind:
         failures.append("capture-kind-mismatch")
+    return failures
+
+
+def _offer_dimension_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> list[str]:
+    failures: list[str] = []
     dimensions = (
         ("artifact-role-mismatch", demand.artifact_roles, offer.artifact_roles),
         ("source-class-mismatch", demand.source_classes, offer.source_classes),
@@ -197,6 +217,11 @@ def _offer_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> tu
     for failure, required, supported in dimensions:
         if not _subset(required, supported):
             failures.append(failure)
+    return failures
+
+
+def _offer_policy_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> list[str]:
+    failures: list[str] = []
     if demand.scope_refs and not set(demand.scope_refs).issubset(offer.scope_refs):
         failures.append("scope-ref-mismatch")
     if demand.media_types and not set(demand.media_types).intersection(offer.media_types):
@@ -205,7 +230,7 @@ def _offer_failures(demand: CaptureDemand, offer: ObservationCaptureOffer) -> tu
         failures.append("sensitivity-mismatch")
     if demand.export_policy != "not-required" and demand.export_policy != offer.export_policy:
         failures.append("export-policy-mismatch")
-    return tuple(sorted(failures))
+    return failures
 
 
 def _diagnostic(demand: CaptureDemand, failure: str) -> Diagnostic:

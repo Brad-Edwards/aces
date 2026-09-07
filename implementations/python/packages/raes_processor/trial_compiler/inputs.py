@@ -10,6 +10,7 @@ from .models import CompilationFailure, TrialCompilationRequest
 from .profiles import admitted_profiles, coordinate_projection, replicate_id
 
 _RUN_PLAN_ADDRESS = "/run_plan"
+_CAPTURE_SPEC_REFS_ADDRESS = "/input_refs/capture_spec_refs"
 
 
 def _fail(code: str, address: str, message: str) -> CompilationFailure:
@@ -83,7 +84,7 @@ def _validate_capture_inputs(request: TrialCompilationRequest) -> None:
     ):
         raise _fail(
             "capture-spec-payload-mismatch",
-            "/input_refs/capture_spec_refs",
+            _CAPTURE_SPEC_REFS_ADDRESS,
             "capture specification references do not resolve exactly to the supplied payloads",
         )
 
@@ -102,7 +103,7 @@ def _validate_capture_inputs(request: TrialCompilationRequest) -> None:
     if pinned != expected_pins:
         raise _fail(
             "capture-spec-ref-mismatch",
-            "/input_refs/capture_spec_refs",
+            _CAPTURE_SPEC_REFS_ADDRESS,
             "capture specification digests do not match the admitted payloads",
         )
 
@@ -114,7 +115,7 @@ def _validate_capture_inputs(request: TrialCompilationRequest) -> None:
     if len(set(requirement_ids)) != len(requirement_ids):
         raise _fail(
             "capture-requirement-ambiguous",
-            "/input_refs/capture_spec_refs",
+            _CAPTURE_SPEC_REFS_ADDRESS,
             "capture requirement identities must be unique across admitted capture specifications",
         )
     task_requirements = {reference.ref_id for reference in request.task.evaluation_protocol.observation_requirements}

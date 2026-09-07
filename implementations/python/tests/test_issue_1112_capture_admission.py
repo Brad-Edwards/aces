@@ -232,13 +232,14 @@ def test_matching_capture_offer_admits_and_precise_installation_does_not_create_
 
 
 def test_sdl_capture_spec_references_fail_closed_when_the_payload_is_unavailable() -> None:
-    payload = _capture_scenario().model_dump(mode="python", by_alias=True)
+    scenario = _capture_scenario()
+    payload = scenario.model_dump(mode="python", by_alias=True)
     requirement = payload["evidence_requirements"]["attacker-action-log"]
     requirement["capture_spec_ref"] = "capture-techvault-evidence-v1"
     requirement["capture_requirement_ref"] = "auth-log-evidence"
 
     execution_plan = plan(
-        compile_runtime_model(_capture_scenario().__class__.model_validate(payload)),
+        compile_runtime_model(scenario.__class__.model_validate(payload)),
         _manifest_with_offers(_offer()),
     )
 
@@ -246,7 +247,7 @@ def test_sdl_capture_spec_references_fail_closed_when_the_payload_is_unavailable
 
     requirement["capture_requirement_ref"] = ""
     with pytest.raises(ValidationError, match="must be declared together"):
-        _capture_scenario().__class__.model_validate(payload)
+        scenario.__class__.model_validate(payload)
 
 
 def test_capture_offer_binds_the_exact_redaction_policy() -> None:
@@ -319,28 +320,34 @@ def _evidence_bundle(
     )
 
 
-def test_post_run_validation_requires_emitted_bytes_and_promised_fields() -> None:
-    task, run, capture_spec, evidence_record, payload = _evidence_bundle()
-
+def _validate_evidence_bundle(
+    task: ExperimentTaskModel,
+    run: ExperimentRunModel,
+    capture_spec: ExperimentCaptureSpecModel,
+    evidence_record: ExperimentEvidenceRecordModel,
+    payload: bytes,
+    *,
+    artifact_id: str = "auth-log-evidence",
+) -> None:
     validate_experiment_run_evidence(
         task,
         run,
         capture_specs={capture_spec.capture_spec_id: capture_spec},
         evidence_records={evidence_record.evidence_record_id: evidence_record},
-        artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
+        artifact_readers={artifact_id: io.BytesIO(payload)},
     )
+
+
+def test_post_run_validation_requires_emitted_bytes_and_promised_fields() -> None:
+    task, run, capture_spec, evidence_record, payload = _evidence_bundle()
+
+    _validate_evidence_bundle(task, run, capture_spec, evidence_record, payload)
 
     missing_task, missing_run, missing_spec, missing_record, missing_payload = _evidence_bundle(
         field_selectors=["/0/not-present"]
     )
     with pytest.raises(ValueError, match="field selector"):
-        validate_experiment_run_evidence(
-            missing_task,
-            missing_run,
-            capture_specs={missing_spec.capture_spec_id: missing_spec},
-            evidence_records={missing_record.evidence_record_id: missing_record},
-            artifact_readers={"auth-log-evidence": io.BytesIO(missing_payload)},
-        )
+        _validate_evidence_bundle(missing_task, missing_run, missing_spec, missing_record, missing_payload)
 
 
 @pytest.mark.parametrize(
@@ -352,13 +359,7 @@ def test_post_run_validation_rejects_evidence_outside_the_capture_window(capture
     evidence_record = evidence_record.model_copy(update={"captured_at": captured_at})
 
     with pytest.raises(ValueError, match="capture window"):
-        validate_experiment_run_evidence(
-            task,
-            run,
-            capture_specs={capture_spec.capture_spec_id: capture_spec},
-            evidence_records={evidence_record.evidence_record_id: evidence_record},
-            artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-        )
+        _validate_evidence_bundle(task, run, capture_spec, evidence_record, payload)
 
 
 def test_post_run_validation_rejects_an_unprovable_trigger_window() -> None:
@@ -372,13 +373,7 @@ def test_post_run_validation_rejects_an_unprovable_trigger_window() -> None:
     capture_spec = ExperimentCaptureSpecModel.model_validate(spec_payload)
 
     with pytest.raises(ValueError, match="timing cannot be proved"):
-        validate_experiment_run_evidence(
-            task,
-            run,
-            capture_specs={capture_spec.capture_spec_id: capture_spec},
-            evidence_records={evidence_record.evidence_record_id: evidence_record},
-            artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-        )
+        _validate_evidence_bundle(task, run, capture_spec, evidence_record, payload)
 
 
 def test_authoritative_task_run_validation_requires_and_consumes_content_inputs() -> None:
@@ -386,16 +381,13 @@ def test_authoritative_task_run_validation_requires_and_consumes_content_inputs(
     with pytest.raises(ValueError, match="content-backed evidence inputs"):
         validate_experiment_run_against_task(task, run)
 
+    invalid_evidence = ExperimentRunEvidenceInputs(
+        capture_specs={capture_spec.capture_spec_id: capture_spec},
+        evidence_records={evidence_record.evidence_record_id: evidence_record},
+        artifact_readers={"auth-log-evidence": io.BytesIO(b"x" * len(payload))},
+    )
     with pytest.raises(ValueError, match="checksum"):
-        validate_experiment_run_against_task(
-            task,
-            run,
-            evidence=ExperimentRunEvidenceInputs(
-                capture_specs={capture_spec.capture_spec_id: capture_spec},
-                evidence_records={evidence_record.evidence_record_id: evidence_record},
-                artifact_readers={"auth-log-evidence": io.BytesIO(b"x" * len(payload))},
-            ),
-        )
+        validate_experiment_run_against_task(task, run, evidence=invalid_evidence)
 
     validate_experiment_run_against_task(
         task,
@@ -428,16 +420,13 @@ def test_authoritative_task_run_validation_rejects_unsatisfied_observation_refer
     task_payload["evaluation_protocol"]["observation_requirements"][0]["ref_digest"] = "sha256:" + "0" * 64
     task = ExperimentTaskModel.model_validate(task_payload)
 
+    evidence = ExperimentRunEvidenceInputs(
+        capture_specs={capture_spec.capture_spec_id: capture_spec},
+        evidence_records={evidence_record.evidence_record_id: evidence_record},
+        artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
+    )
     with pytest.raises(ValueError, match="task observation requirements"):
-        validate_experiment_run_against_task(
-            task,
-            run,
-            evidence=ExperimentRunEvidenceInputs(
-                capture_specs={capture_spec.capture_spec_id: capture_spec},
-                evidence_records={evidence_record.evidence_record_id: evidence_record},
-                artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-            ),
-        )
+        validate_experiment_run_against_task(task, run, evidence=evidence)
 
 
 def test_static_artifact_id_cannot_stand_in_for_the_validated_capture_artifact() -> None:
@@ -453,37 +442,27 @@ def test_static_artifact_id_cannot_stand_in_for_the_validated_capture_artifact()
         satisfies_refs=[{"ref_kind": "evidence", "ref_id": "auth-log-evidence"}],
     )
     payload["evidence_artifacts"].append(dummy_artifact)
+    invalid_run = ExperimentRunModel.model_validate(payload)
 
     with pytest.raises(ValueError, match="validated metric evidence bindings"):
-        validate_experiment_run_evidence(
+        _validate_evidence_bundle(
             task,
-            ExperimentRunModel.model_validate(payload),
-            capture_specs={capture_spec.capture_spec_id: capture_spec},
-            evidence_records={evidence_record.evidence_record_id: evidence_record},
-            artifact_readers={"captured-artifact": io.BytesIO(payload_bytes)},
+            invalid_run,
+            capture_spec,
+            evidence_record,
+            payload_bytes,
+            artifact_id="captured-artifact",
         )
 
 
 def test_output_contract_shape_and_registry_are_enforced_before_selectors() -> None:
     invalid = _evidence_bundle(b'{"events":[{"action":"scan"}]}')
     with pytest.raises(ValueError, match="output_contract"):
-        validate_experiment_run_evidence(
-            invalid[0],
-            invalid[1],
-            capture_specs={invalid[2].capture_spec_id: invalid[2]},
-            evidence_records={invalid[3].evidence_record_id: invalid[3]},
-            artifact_readers={"auth-log-evidence": io.BytesIO(invalid[4])},
-        )
+        _validate_evidence_bundle(*invalid)
 
     unknown = _evidence_bundle(output_contract="unknown-output-contract-v1")
     with pytest.raises(ValueError, match="authoritative contract registry"):
-        validate_experiment_run_evidence(
-            unknown[0],
-            unknown[1],
-            capture_specs={unknown[2].capture_spec_id: unknown[2]},
-            evidence_records={unknown[3].evidence_record_id: unknown[3]},
-            artifact_readers={"auth-log-evidence": io.BytesIO(unknown[4])},
-        )
+        _validate_evidence_bundle(*unknown)
 
 
 def test_output_contract_semantic_invariants_are_enforced() -> None:
@@ -493,13 +472,7 @@ def test_output_contract_semantic_invariants_are_enforced() -> None:
     task, run, capture_spec, evidence_record, _ = _evidence_bundle(payload)
 
     with pytest.raises(ValueError, match="output_contract"):
-        validate_experiment_run_evidence(
-            task,
-            run,
-            capture_specs={capture_spec.capture_spec_id: capture_spec},
-            evidence_records={evidence_record.evidence_record_id: evidence_record},
-            artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-        )
+        _validate_evidence_bundle(task, run, capture_spec, evidence_record, payload)
 
 
 def test_json_lines_is_validated_as_the_declared_array_contract() -> None:
@@ -507,13 +480,7 @@ def test_json_lines_is_validated_as_the_declared_array_contract() -> None:
     payload = b"\n".join(json.dumps(event).encode() for event in events)
     task, run, capture_spec, evidence_record, _ = _evidence_bundle(payload, media_type="application/jsonl")
 
-    validate_experiment_run_evidence(
-        task,
-        run,
-        capture_specs={capture_spec.capture_spec_id: capture_spec},
-        evidence_records={evidence_record.evidence_record_id: evidence_record},
-        artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-    )
+    _validate_evidence_bundle(task, run, capture_spec, evidence_record, payload)
 
 
 def test_redaction_policy_and_artifact_sensitivity_are_bound_to_the_capture() -> None:
@@ -522,13 +489,7 @@ def test_redaction_policy_and_artifact_sensitivity_are_bound_to_the_capture() ->
     capture_payload["capture_requirements"]["auth-log-evidence"]["redaction_policy"] = "policy:mask-identities"
     redacted_spec = ExperimentCaptureSpecModel.model_validate(capture_payload)
     with pytest.raises(ValueError, match="redaction policy was not applied"):
-        validate_experiment_run_evidence(
-            task,
-            run,
-            capture_specs={redacted_spec.capture_spec_id: redacted_spec},
-            evidence_records={evidence_record.evidence_record_id: evidence_record},
-            artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-        )
+        _validate_evidence_bundle(task, run, redacted_spec, evidence_record, payload)
 
     redacted_record_payload = evidence_record.model_dump(mode="json")
     redacted_record_payload.update(sensitivity="redacted", redaction_state="redacted")
@@ -540,25 +501,15 @@ def test_redaction_policy_and_artifact_sensitivity_are_bound_to_the_capture() ->
     redacted_spec = ExperimentCaptureSpecModel.model_validate(redacted_capture_payload)
     redacted_run_payload = run.model_dump(mode="json")
     redacted_run_payload["evidence_artifacts"][0]["sensitivity"] = "redacted"
+    redacted_run = ExperimentRunModel.model_validate(redacted_run_payload)
     with pytest.raises(ValueError, match="has no content verifier"):
-        validate_experiment_run_evidence(
-            task,
-            ExperimentRunModel.model_validate(redacted_run_payload),
-            capture_specs={redacted_spec.capture_spec_id: redacted_spec},
-            evidence_records={redacted_record.evidence_record_id: redacted_record},
-            artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-        )
+        _validate_evidence_bundle(task, redacted_run, redacted_spec, redacted_record, payload)
 
     run_payload = run.model_dump(mode="json")
     run_payload["evidence_artifacts"][0]["sensitivity"] = "public"
+    public_run = ExperimentRunModel.model_validate(run_payload)
     with pytest.raises(ValueError, match="artifact sensitivity"):
-        validate_experiment_run_evidence(
-            task,
-            ExperimentRunModel.model_validate(run_payload),
-            capture_specs={capture_spec.capture_spec_id: capture_spec},
-            evidence_records={evidence_record.evidence_record_id: evidence_record},
-            artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-        )
+        _validate_evidence_bundle(task, public_run, capture_spec, evidence_record, payload)
 
 
 def test_study_evidence_conditions_consume_only_validated_bindings() -> None:
@@ -584,18 +535,18 @@ def test_study_evidence_conditions_consume_only_validated_bindings() -> None:
     run_payload["generated_refs"].append({"ref_kind": "evidence", "ref_id": "metadata-only-evidence"})
     assignment["required_refs"] = [{"ref_kind": "evidence", "ref_id": "metadata-only-evidence"}]
     metadata_only_study = ExperimentStudyModel.model_validate(study_payload)
+    metadata_only_run = ExperimentRunModel.model_validate(run_payload)
+    metadata_only_inputs = ExperimentRunEvidenceInputs(
+        capture_specs={capture_spec.capture_spec_id: capture_spec},
+        evidence_records={evidence_record.evidence_record_id: evidence_record},
+        artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
+    )
     with pytest.raises(ValueError, match="condition assignments"):
         validate_experiment_study_against_tasks_and_runs(
             metadata_only_study,
             [task],
-            [ExperimentRunModel.model_validate(run_payload)],
-            evidence_by_run={
-                run.run_id: ExperimentRunEvidenceInputs(
-                    capture_specs={capture_spec.capture_spec_id: capture_spec},
-                    evidence_records={evidence_record.evidence_record_id: evidence_record},
-                    artifact_readers={"auth-log-evidence": io.BytesIO(payload)},
-                )
-            },
+            [metadata_only_run],
+            evidence_by_run={run.run_id: metadata_only_inputs},
         )
 
 
@@ -609,16 +560,19 @@ def test_sdl_scope_refs_require_exact_offer_scope_targets() -> None:
 
     assert matching.is_valid
     assert any(diagnostic.code == "capture.scope-ref-mismatch" for diagnostic in mismatched.diagnostics)
+    wildcard_scope = frozenset({"*"})
     with pytest.raises(ValueError, match="exact authored targets"):
-        _offer(scope_refs=frozenset({"*"}))
+        _offer(scope_refs=wildcard_scope)
 
 
 def test_reference_backends_publish_no_unimplemented_capture_offers() -> None:
     stub = create_stub_manifest()
     reference = create_reference_backend_manifest()
 
-    assert stub.observation is not None and stub.observation.capture_offers == ()
-    assert reference.observation is not None and reference.observation.capture_offers == ()
+    assert stub.observation is not None
+    assert stub.observation.capture_offers == ()
+    assert reference.observation is not None
+    assert reference.observation.capture_offers == ()
     rejected = plan(compile_runtime_model(_capture_scenario()), stub)
     assert any(diagnostic.code == "capture.offer-missing" for diagnostic in rejected.diagnostics)
 

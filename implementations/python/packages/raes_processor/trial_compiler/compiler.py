@@ -427,9 +427,9 @@ def compile_admitted_trial_plan(
     try:
         plan = _compile(request, coordinate_partitions)
     except _CaptureAdmissionFailure as failure:
-        return TrialCompilationResult(plan=None, diagnostics=failure.diagnostics)
+        result = TrialCompilationResult(plan=None, diagnostics=failure.diagnostics)
     except CompilationFailure as failure:
-        return TrialCompilationResult(plan=None, diagnostics=(_diagnostic(failure),))
+        result = TrialCompilationResult(plan=None, diagnostics=(_diagnostic(failure),))
     except (TypeError, ValueError) as exc:
         failure = _fail(
             "input-invalid",
@@ -437,8 +437,10 @@ def compile_admitted_trial_plan(
             "trial compilation input failed closed validation",
         )
         failure.__cause__ = exc
-        return TrialCompilationResult(plan=None, diagnostics=(_diagnostic(failure),))
-    return TrialCompilationResult(plan=plan, diagnostics=())
+        result = TrialCompilationResult(plan=None, diagnostics=(_diagnostic(failure),))
+    else:
+        result = TrialCompilationResult(plan=plan, diagnostics=())
+    return result
 
 
 __all__ = ["compile_admitted_trial_plan"]

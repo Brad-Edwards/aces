@@ -84,6 +84,15 @@ def _register_operation_submission_routes(
     app: FastAPI,
     control_plane: RuntimeControlPlane,
 ) -> None:
+    _register_provisioning_submission_route(app, control_plane)
+    _register_orchestration_submission_route(app, control_plane)
+    _register_evaluation_submission_route(app, control_plane)
+
+
+def _register_provisioning_submission_route(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
     @app.post("/operations/provisioning", responses=_CONFLICT_RESPONSES)
     async def submit_provisioning(
         request: Request,
@@ -125,6 +134,11 @@ def _register_operation_submission_routes(
         )
         return _receipt_response(receipt)
 
+
+def _register_orchestration_submission_route(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
     @app.post("/operations/orchestration", responses=_CONFLICT_RESPONSES)
     async def submit_orchestration(
         request: Request,
@@ -163,6 +177,11 @@ def _register_operation_submission_routes(
         )
         return _receipt_response(receipt)
 
+
+def _register_evaluation_submission_route(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
     @app.post("/operations/evaluation", responses=_CONFLICT_RESPONSES)
     async def submit_evaluation(
         request: Request,

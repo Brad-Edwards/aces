@@ -45,47 +45,9 @@ class ObservationCaptureOffer:
     scope_refs: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
-        scalar_fields = ("offer_id", "offer_version", "output_contract", "capture_kind", "sensitivity")
-        if any(not getattr(self, field_name).strip() for field_name in scalar_fields):
-            raise ValueError("capture offer identity and semantic fields must be non-empty")
-        for field_name in (
-            "artifact_roles",
-            "media_types",
-            "source_classes",
-            "source_refs",
-            "scopes",
-            "scope_refs",
-            "channel_kinds",
-            "channel_refs",
-            "window_kinds",
-            "integrity_modes",
-            "retention_policy_refs",
-        ):
-            _validate_unique_non_empty_strings(f"ObservationCaptureOffer.{field_name}", getattr(self, field_name))
-        if len(self.field_selectors) != len(set(self.field_selectors)):
-            raise ValueError("ObservationCaptureOffer.field_selectors must not contain duplicate values")
-        if not all((self.field_selectors, self.artifact_roles, self.media_types, self.source_classes, self.scopes)):
-            raise ValueError("capture offers require fields, artifact roles, media types, source classes, and scopes")
-        if not self.channel_kinds and not self.channel_refs:
-            raise ValueError("capture offers must declare channel_kinds or channel_refs")
-        if not self.window_kinds or not self.integrity_modes:
-            raise ValueError("capture offers require window and integrity semantics")
-        if any(_JSON_POINTER_RE.fullmatch(selector) is None for selector in self.field_selectors):
-            raise ValueError("capture offer field_selectors must be canonical RFC 6901 JSON Pointers")
-        if "*" in self.scope_refs:
-            raise ValueError("capture offer scope_refs must name exact authored targets")
-        if self.availability not in {"available", "unsupported", "unavailable"}:
-            raise ValueError("capture offer availability is not governed")
-        if self.fidelity not in {"complete", "lossy"}:
-            raise ValueError("capture offer fidelity is not governed")
-        if self.disclosure not in {"full", "redacted", "withheld"}:
-            raise ValueError("capture offer disclosure is not governed")
-        if (self.disclosure == "full") != (self.redaction_policy is None):
-            raise ValueError("redacted or withheld capture offers require exactly one redaction_policy")
-        if self.redaction_policy is not None and not self.redaction_policy.strip():
-            raise ValueError("capture offer redaction_policy must be non-empty")
-        if self.export_policy not in {"not-required", "available", "unavailable", "withheld", "prohibited"}:
-            raise ValueError("capture offer export_policy is not governed")
+        _validate_offer_identity(self)
+        _validate_offer_collections(self)
+        _validate_offer_governance(self)
 
     def to_payload(self) -> dict[str, object]:
         """Return the canonical plain-data representation."""
@@ -114,6 +76,56 @@ class ObservationCaptureOffer:
             "export_policy": self.export_policy,
             "redaction_policy": self.redaction_policy,
         }
+
+
+def _validate_offer_identity(offer: ObservationCaptureOffer) -> None:
+    scalar_fields = ("offer_id", "offer_version", "output_contract", "capture_kind", "sensitivity")
+    if any(not getattr(offer, field_name).strip() for field_name in scalar_fields):
+        raise ValueError("capture offer identity and semantic fields must be non-empty")
+    if len(offer.field_selectors) != len(set(offer.field_selectors)):
+        raise ValueError("ObservationCaptureOffer.field_selectors must not contain duplicate values")
+    if any(_JSON_POINTER_RE.fullmatch(selector) is None for selector in offer.field_selectors):
+        raise ValueError("capture offer field_selectors must be canonical RFC 6901 JSON Pointers")
+
+
+def _validate_offer_collections(offer: ObservationCaptureOffer) -> None:
+    for field_name in (
+        "artifact_roles",
+        "media_types",
+        "source_classes",
+        "source_refs",
+        "scopes",
+        "scope_refs",
+        "channel_kinds",
+        "channel_refs",
+        "window_kinds",
+        "integrity_modes",
+        "retention_policy_refs",
+    ):
+        _validate_unique_non_empty_strings(f"ObservationCaptureOffer.{field_name}", getattr(offer, field_name))
+    if not all((offer.field_selectors, offer.artifact_roles, offer.media_types, offer.source_classes, offer.scopes)):
+        raise ValueError("capture offers require fields, artifact roles, media types, source classes, and scopes")
+    if not offer.channel_kinds and not offer.channel_refs:
+        raise ValueError("capture offers must declare channel_kinds or channel_refs")
+    if not offer.window_kinds or not offer.integrity_modes:
+        raise ValueError("capture offers require window and integrity semantics")
+    if "*" in offer.scope_refs:
+        raise ValueError("capture offer scope_refs must name exact authored targets")
+
+
+def _validate_offer_governance(offer: ObservationCaptureOffer) -> None:
+    if offer.availability not in {"available", "unsupported", "unavailable"}:
+        raise ValueError("capture offer availability is not governed")
+    if offer.fidelity not in {"complete", "lossy"}:
+        raise ValueError("capture offer fidelity is not governed")
+    if offer.disclosure not in {"full", "redacted", "withheld"}:
+        raise ValueError("capture offer disclosure is not governed")
+    if (offer.disclosure == "full") != (offer.redaction_policy is None):
+        raise ValueError("redacted or withheld capture offers require exactly one redaction_policy")
+    if offer.redaction_policy is not None and not offer.redaction_policy.strip():
+        raise ValueError("capture offer redaction_policy must be non-empty")
+    if offer.export_policy not in {"not-required", "available", "unavailable", "withheld", "prohibited"}:
+        raise ValueError("capture offer export_policy is not governed")
 
 
 __all__ = ["ObservationCaptureOffer"]

@@ -286,7 +286,7 @@ def _stub_participant_runtime() -> ParticipantRuntimeCapabilities:
     )
 
 
-def _stub_observation(*, with_participant_runtime: bool) -> ObservationCapabilities:
+def _stub_observation() -> ObservationCapabilities:
     return ObservationCapabilities(
         name="stub-observation",
         supported_capture_kinds=frozenset({"artifact", "log", "observation", "packet-capture", "telemetry", "trace"}),
@@ -353,9 +353,7 @@ def _stub_capabilities(
         orchestrator=_stub_orchestrator(),
         evaluator=_stub_evaluator(),
         participant_runtime=_stub_participant_runtime() if with_participant_runtime else None,
-        observation=(
-            _stub_observation(with_participant_runtime=with_participant_runtime) if with_observation else None
-        ),
+        observation=(_stub_observation() if with_observation else None),
         cleanup=_stub_cleanup(),
         time=(_stub_time(supports_coordinated_participant_reset=with_participant_runtime) if with_time else None),
     )

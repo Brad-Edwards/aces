@@ -189,21 +189,29 @@ class EvidenceRequirement(SDLModel):
 
     @model_validator(mode="after")
     def _validate_capture_intent(self) -> EvidenceRequirement:
-        if not self.source_refs and self.source_class is None:
-            raise ValueError("evidence requirement must declare source_refs or source_class")
-        if not self.scope_refs and not self.scope:
-            raise ValueError("evidence requirement must declare scope_refs or scope")
-        if not any((self.window, self.trigger_ref, self.boundary_ref, self.boundary_kind)):
-            raise ValueError("evidence requirement must declare window, trigger_ref, boundary_ref, or boundary_kind")
-        if self.channel is None and not self.channel_refs and not self.boundary_kind:
-            raise ValueError("evidence requirement must declare channel, channel_refs, or boundary_kind")
-        if bool(self.output_contract) != bool(self.field_selectors):
-            raise ValueError("output_contract and field_selectors must be declared together")
-        if bool(self.capture_spec_ref) != bool(self.capture_requirement_ref):
-            raise ValueError("capture_spec_ref and capture_requirement_ref must be declared together")
-        if any(re.fullmatch(r"(?:/(?:[^~/]|~[01])*)*", selector) is None for selector in self.field_selectors):
-            raise ValueError("field_selectors must be canonical RFC 6901 JSON Pointers")
+        _validate_capture_dimensions(self)
+        _validate_capture_contract(self)
         return self
+
+
+def _validate_capture_dimensions(requirement: EvidenceRequirement) -> None:
+    if not requirement.source_refs and requirement.source_class is None:
+        raise ValueError("evidence requirement must declare source_refs or source_class")
+    if not requirement.scope_refs and not requirement.scope:
+        raise ValueError("evidence requirement must declare scope_refs or scope")
+    if not any((requirement.window, requirement.trigger_ref, requirement.boundary_ref, requirement.boundary_kind)):
+        raise ValueError("evidence requirement must declare window, trigger_ref, boundary_ref, or boundary_kind")
+    if requirement.channel is None and not requirement.channel_refs and not requirement.boundary_kind:
+        raise ValueError("evidence requirement must declare channel, channel_refs, or boundary_kind")
+
+
+def _validate_capture_contract(requirement: EvidenceRequirement) -> None:
+    if bool(requirement.output_contract) != bool(requirement.field_selectors):
+        raise ValueError("output_contract and field_selectors must be declared together")
+    if bool(requirement.capture_spec_ref) != bool(requirement.capture_requirement_ref):
+        raise ValueError("capture_spec_ref and capture_requirement_ref must be declared together")
+    if any(re.fullmatch(r"(?:/(?:[^~/]|~[01])*)*", selector) is None for selector in requirement.field_selectors):
+        raise ValueError("field_selectors must be canonical RFC 6901 JSON Pointers")
 
 
 __all__ = [
