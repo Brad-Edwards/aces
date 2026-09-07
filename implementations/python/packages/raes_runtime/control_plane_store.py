@@ -15,6 +15,8 @@ from raes_contracts.runtime_state import (
     OperationState,
     OperationStatus,
     RuntimeSnapshot,
+    is_operation_transition_allowed,
+    operation_transition_diagnostic,
 )
 
 from .control_plane_store_snapshots import _snapshot_from_payload as _decode_snapshot_payload
@@ -87,6 +89,9 @@ class ControlPlaneOperationRecord:
     decision_history_heads: dict[str, str | None] = field(default_factory=dict)
     result_history_heads: dict[str, str | None] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _require_operation_record_identity(self)
+
 
 INTERRUPTED_OPERATION_DIAGNOSTIC_CODE = "runtime.control-plane.operation-interrupted"
 _NON_TERMINAL_OPERATION_STATES = {OperationState.ACCEPTED, OperationState.RUNNING}
@@ -99,6 +104,10 @@ def _require_operation_record_identity(record: ControlPlaneOperationRecord) -> N
         raise ValueError("operation receipt and status domains do not match")
     if record.receipt.submitted_at != record.status.submitted_at:
         raise ValueError("operation receipt and status submission times do not match")
+    if record.receipt.context != record.status.context:
+        raise ValueError("operation receipt and status contexts do not match")
+    if not record.receipt.accepted:
+        raise ValueError("denied operation receipts cannot be persisted")
 
 
 def _require_same_operation_identity(
@@ -114,6 +123,7 @@ def _require_same_operation_identity(
         existing.status.operation_id,
         existing.status.domain,
         existing.status.submitted_at,
+        existing.status.context,
         existing.idempotency_key,
         existing.request_fingerprint,
     ) != (
@@ -121,10 +131,31 @@ def _require_same_operation_identity(
         replacement.status.operation_id,
         replacement.status.domain,
         replacement.status.submitted_at,
+        replacement.status.context,
         replacement.idempotency_key,
         replacement.request_fingerprint,
     ):
         raise ValueError("operation identity is immutable after its durable claim")
+
+
+def _require_operation_record_transition(
+    existing: ControlPlaneOperationRecord | None,
+    replacement: ControlPlaneOperationRecord,
+) -> bool:
+    """Validate creation, transition, or exact retry through one authority."""
+
+    _require_operation_record_identity(replacement)
+    if existing is None:
+        if replacement.status.state not in {OperationState.ACCEPTED, OperationState.RUNNING}:
+            raise ValueError("new operation record requires an accepted or running status")
+        return True
+    _require_same_operation_identity(existing, replacement)
+    if existing == replacement:
+        return False
+    if not is_operation_transition_allowed(existing.status.state, replacement.status.state):
+        diagnostic = operation_transition_diagnostic(existing.status.state, replacement.status.state)
+        raise ValueError(f"{diagnostic.code}: {diagnostic.message}")
+    return True
 
 
 def _require_terminal_operation_transition(
@@ -133,17 +164,16 @@ def _require_terminal_operation_transition(
 ) -> bool:
     """Validate a terminal transition and return whether it changes the record."""
 
-    _require_operation_record_identity(replacement)
     if replacement.status.state in _NON_TERMINAL_OPERATION_STATES:
         raise ValueError("terminal operation commit requires a terminal status")
-    if existing is None:
-        return True
-    _require_same_operation_identity(existing, replacement)
-    if existing.status.state in _NON_TERMINAL_OPERATION_STATES:
-        return True
-    if existing != replacement:
-        raise ValueError("a terminal operation record cannot be rewritten")
-    return False
+    try:
+        return _require_operation_record_transition(existing, replacement)
+    except ValueError as exc:
+        if "immutable" in str(exc):
+            raise
+        if existing is not None and existing.status.state not in _NON_TERMINAL_OPERATION_STATES:
+            raise ValueError("a terminal operation record cannot be rewritten") from exc
+        raise
 
 
 def _require_interrupted_operation_transition(
@@ -154,18 +184,26 @@ def _require_interrupted_operation_transition(
 
     if existing is None:
         raise ValueError("interrupted operation no longer exists in durable state")
-    _require_same_operation_identity(existing, replacement)
-    if replacement.status.state != OperationState.FAILED:
-        raise ValueError("interrupted operation recovery must persist a failed status")
+    if existing == replacement:
+        if not any(
+            diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE for diagnostic in replacement.status.diagnostics
+        ):
+            raise ValueError("interrupted operation recovery requires its stable diagnostic")
+        return False
+    if existing.status.state not in _NON_TERMINAL_OPERATION_STATES:
+        raise ValueError("a terminal operation record cannot be rewritten during recovery")
+    expected_state = (
+        OperationState.CANCELLED if existing.status.state is OperationState.ACCEPTED else OperationState.INDETERMINATE
+    )
+    if replacement.status.state is not expected_state:
+        raise ValueError(
+            f"interrupted {existing.status.state.value} operation recovery must persist {expected_state.value}"
+        )
     if not any(
         diagnostic.code == INTERRUPTED_OPERATION_DIAGNOSTIC_CODE for diagnostic in replacement.status.diagnostics
     ):
         raise ValueError("interrupted operation recovery requires its stable diagnostic")
-    if existing.status.state in _NON_TERMINAL_OPERATION_STATES:
-        return True
-    if existing != replacement:
-        raise ValueError("a terminal operation record cannot be rewritten during recovery")
-    return False
+    return _require_operation_record_transition(existing, replacement)
 
 
 class ControlPlaneStore(Protocol):
@@ -398,6 +436,8 @@ class InMemoryControlPlaneStore:
         with self._lock:
             _require_expected_history_heads(self._snapshot, expected_history_heads)
             require_participant_autonomous_runtime_snapshot(snapshot)
+            existing = self._records.get(record.receipt.operation_id)
+            _require_operation_record_transition(existing, record)
             records = {**self._records, record.receipt.operation_id: record}
             idempotency = dict(self._idempotency)
             if record.idempotency_key:
@@ -411,6 +451,9 @@ class InMemoryControlPlaneStore:
             self._audit = [*self._audit, audit_event]
 
     def _save_record(self, record: ControlPlaneOperationRecord) -> None:
+        existing = self._records.get(record.receipt.operation_id)
+        if not _require_operation_record_transition(existing, record):
+            return
         if record.idempotency_key:
             existing_operation_id = self._idempotency.get(record.idempotency_key)
             if existing_operation_id is not None and existing_operation_id != record.receipt.operation_id:

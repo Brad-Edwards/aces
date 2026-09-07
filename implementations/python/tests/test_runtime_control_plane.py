@@ -27,7 +27,7 @@ from raes_contracts.planning import (
     RealizationResolutionSource,
     ResolvedRealizationAuthority,
 )
-from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_contracts.runtime_state import OperationAdmissionContext, OperationKind, RuntimeSnapshot, SnapshotEntry
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import (
     OperationReceipt,
@@ -248,12 +248,21 @@ def _behavior_history_event(participant_address: str, episode_id: str) -> dict[s
 
 def _participant_operation_record(operation_id: str, participant_address: str) -> ControlPlaneOperationRecord:
     submitted_at = "2026-06-05T10:00:00Z"
+    context = OperationAdmissionContext(
+        actor_id="embedded-process",
+        authorization_scope=("process:trusted-embedder",),
+        target_scope="target:stub",
+        run_scope="run:test",
+        operation_kind=OperationKind.PARTICIPANT_ACTION,
+        request_commitment=f"sha256:{'a' * 64}",
+    )
     return ControlPlaneOperationRecord(
         receipt=OperationReceipt(
             operation_id=operation_id,
             domain=RuntimeDomain.PARTICIPANT,
             submitted_at=submitted_at,
             accepted=True,
+            context=context,
         ),
         status=OperationStatus(
             operation_id=operation_id,
@@ -261,6 +270,7 @@ def _participant_operation_record(operation_id: str, participant_address: str) -
             state=OperationState.RUNNING,
             submitted_at=submitted_at,
             updated_at=submitted_at,
+            context=context,
             changed_addresses=[participant_address],
         ),
     )
@@ -769,9 +779,8 @@ class TestParticipantEpisodeControlPlane:
         status = control_plane.get_operation(receipt.operation_id)
 
         assert receipt.accepted is False
-        assert status is not None
-        assert status.state == OperationState.FAILED
-        assert any("is not declared by compiled participant behavior" in diag.message for diag in status.diagnostics)
+        assert status is None
+        assert any("is not declared by compiled participant behavior" in diag.message for diag in receipt.diagnostics)
 
     def test_admit_participant_action_rejects_withheld_observation_refs(self):
         runtime_model = compile_runtime_model(_scenario(_participant_binding_scenario_yaml()))
@@ -794,9 +803,8 @@ class TestParticipantEpisodeControlPlane:
         status = control_plane.get_operation(receipt.operation_id)
 
         assert receipt.accepted is False
-        assert status is not None
-        assert status.state == OperationState.FAILED
-        assert any("withheld_refs" in diag.message for diag in status.diagnostics)
+        assert status is None
+        assert any("withheld_refs" in diag.message for diag in receipt.diagnostics)
 
     def test_initialize_twice_rejects_duplicate(self):
         control_plane = RuntimeControlPlane(create_stub_target())
@@ -921,8 +929,7 @@ class TestParticipantEpisodeControlPlane:
         status = control_plane.get_operation(receipt.operation_id)
 
         assert receipt.accepted is False
-        assert status is not None
-        assert status.state == OperationState.FAILED
+        assert status is None
         assert any("does not provide a participant runtime" in diag.message for diag in receipt.diagnostics)
 
     def test_full_lifecycle_snapshot_chain_is_consistent(self):

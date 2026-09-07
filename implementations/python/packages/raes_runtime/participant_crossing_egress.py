@@ -21,12 +21,13 @@ from raes_contracts.contracts.participant_crossing import (
 from raes_contracts.contracts.participant_crossing_validation import (
     validate_participant_crossing_occurrence_context,
 )
+from raes_contracts.runtime_state import OperationState
 
+from .participant_crossing_commit import commit_prepared_crossing, participant_crossing_permitted
 from .participant_crossing_mediation import (
     ParticipantCrossingEvidence,
     ParticipantCrossingIntent,
     PreparedParticipantCrossing,
-    commit_prepared_crossing,
     prepare_participant_crossing,
 )
 from .participant_crossing_records import _expected_history_heads
@@ -112,12 +113,12 @@ def serialize_participant_view(
             incumbent_carrier=view,
         )
         if prepared.existing_receipt is not None:
-            if not prepared.existing_receipt.accepted:
+            if prepared.record.status.state is not OperationState.SUCCEEDED:
                 raise PermissionError(_PROJECTION_NOT_PERMITTED)
             if prepared.record.result_payload is None:
                 raise ValueError("idempotent participant projection is missing its governed result")
             return type(view).model_validate(prepared.record.result_payload)
-        if not prepared.record.receipt.accepted:
+        if not participant_crossing_permitted(prepared):
             prepared = _with_opacity_egress_observation(
                 control_plane,
                 prepared,

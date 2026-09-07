@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass
-from uuid import uuid4
+from dataclasses import asdict, dataclass, replace
 
 from raes_contracts.contracts import (
     ParticipantControlDeclarationModel,
@@ -16,21 +15,30 @@ from raes_contracts.contracts.participant_control import (
     ParticipantControlDisposition,
     ParticipantControlTargetContextModel,
 )
-from raes_contracts.diagnostics import Diagnostic
-from raes_contracts.planning import RuntimeDomain
-from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
+from raes_contracts.runtime_state import (
+    OperationAdmissionContext,
+    OperationKind,
+    OperationReceipt,
+    OperationState,
+    RuntimeSnapshot,
+)
 from raes_processor.models import (
     MixedControlControllerStateRuntime,
     MixedControlTransitionRuntime,
     ParticipantBehaviorSpecificationRuntime,
 )
 
+from .control_plane_operation_context import operation_admission_context
 from .control_plane_security import ControlPlaneIdentity
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 from .participant_control_intents import ParticipantControlIntent
 from .participant_control_occurrences import (
     ParticipantControlOccurrenceContext,
     build_participant_control_occurrence,
+)
+from .participant_control_operation import (
+    ParticipantControlOperationAuthority,
+    participant_control_operation_artifacts,
 )
 from .participant_control_rejections import participant_control_rejection_reason
 from .participant_control_targets import (
@@ -46,6 +54,7 @@ class _BoundControlRequest:
     state: MixedControlControllerStateRuntime
     semantic_fingerprint: str
     scoped_key: str
+    context: OperationAdmissionContext
 
 
 @dataclass(frozen=True)
@@ -95,6 +104,18 @@ def record_participant_control(
             identity,
             bound,
         )
+        running = replace(
+            prepared.record,
+            status=replace(
+                prepared.record.status,
+                state=OperationState.RUNNING,
+                diagnostics=[],
+                changed_addresses=[],
+            ),
+        )
+        claimed = control_plane._claim_record(running)
+        if claimed.receipt.operation_id != running.receipt.operation_id:
+            return claimed.receipt
         control_plane._commit_control_transition(
             participant_address=participant_address,
             expected_head=prepared.expected_control_head,
@@ -133,6 +154,13 @@ def bind_participant_control_request(
             intent,
             identity,
             idempotency_key,
+        ),
+        context=operation_admission_context(
+            control_plane,
+            kind=OperationKind.PARTICIPANT_CONTROL,
+            request=intent,
+            identity=identity,
+            run_scope=f"run:{intent.episode_id}",
         ),
     )
 
@@ -192,14 +220,18 @@ def prepare_participant_control_transition(
             participant_address: candidate_history,
         },
     )
-    record, audit_event = _operation_artifacts(
-        participant_address,
-        intent,
-        identity,
-        bound,
-        occurrence,
-        accepted,
-        rejection_reason,
+    record, audit_event = participant_control_operation_artifacts(
+        participant_address=participant_address,
+        intent=intent,
+        occurrence=occurrence,
+        accepted=accepted,
+        rejection_reason=rejection_reason,
+        authority=ParticipantControlOperationAuthority(
+            identity=identity,
+            context=bound.context,
+            semantic_fingerprint=bound.semantic_fingerprint,
+            scoped_key=bound.scoped_key,
+        ),
     )
     return PreparedParticipantControlTransition(
         next_snapshot=next_snapshot,
@@ -208,57 +240,6 @@ def prepare_participant_control_transition(
         expected_control_head=_history_head(history),
         bound=bound,
     )
-
-
-def _operation_artifacts(
-    participant_address: str,
-    intent: ParticipantControlIntent,
-    identity: ControlPlaneIdentity,
-    bound: _BoundControlRequest,
-    occurrence: ParticipantControlOccurrenceModel,
-    accepted: bool,
-    rejection_reason: str | None,
-) -> tuple[ControlPlaneOperationRecord, AuditEvent]:
-    operation_id = str(uuid4())
-    submitted_at = occurrence.recorded_at
-    diagnostics = [] if accepted else [_rejection_diagnostic(participant_address, rejection_reason)]
-    receipt = OperationReceipt(
-        operation_id=operation_id,
-        domain=RuntimeDomain.PARTICIPANT,
-        submitted_at=submitted_at,
-        accepted=accepted,
-        diagnostics=diagnostics,
-    )
-    status = OperationStatus(
-        operation_id=operation_id,
-        domain=RuntimeDomain.PARTICIPANT,
-        state=OperationState.SUCCEEDED if accepted else OperationState.FAILED,
-        submitted_at=submitted_at,
-        updated_at=submitted_at,
-        diagnostics=diagnostics,
-        changed_addresses=[participant_address],
-    )
-    record = ControlPlaneOperationRecord(
-        receipt=receipt,
-        status=status,
-        request_fingerprint=bound.semantic_fingerprint,
-        idempotency_key=bound.scoped_key,
-    )
-    audit_event = AuditEvent(
-        timestamp=submitted_at,
-        action="record_participant_control",
-        identity=identity.identity,
-        allowed=accepted,
-        target=participant_address,
-        operation_id=operation_id,
-        reason=rejection_reason or "accepted",
-        details={
-            "episode_id": intent.episode_id,
-            "kind": intent.kind,
-            "event_id": occurrence.event_id,
-        },
-    )
-    return record, audit_event
 
 
 def _specification_for_participant(
@@ -450,15 +431,6 @@ def _scoped_idempotency_key(
     )
     digest = hashlib.sha256("\x1f".join(scope).encode()).hexdigest()
     return f"participant-control:{digest}"
-
-
-def _rejection_diagnostic(participant_address: str, reason: str | None) -> Diagnostic:
-    return Diagnostic(
-        code=f"runtime.participant-control.{reason or 'rejected'}",
-        domain="runtime",
-        address=participant_address,
-        message="Participant supervisory control intent was rejected by the bound runtime policy.",
-    )
 
 
 __all__ = (

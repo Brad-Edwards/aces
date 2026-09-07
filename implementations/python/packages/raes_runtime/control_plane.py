@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from threading import RLock
-from uuid import uuid4
 
 from raes_contracts.contracts import ParticipantInformationStateContextResolver
 from raes_contracts.diagnostics import Diagnostic
@@ -23,8 +22,8 @@ from raes_contracts.planning import (
     RuntimeDomain,
 )
 from raes_contracts.runtime_state import (
+    OperationKind,
     OperationReceipt,
-    OperationState,
     OperationStatus,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
@@ -33,13 +32,18 @@ from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.models import ExecutionPlan, ParticipantBehaviorSpecificationRuntime
 
 from .backend_calls import _call_backend_diagnostics
+from .control_plane_admission import RuntimeAdmissionMixin
 from .control_plane_durability import RuntimeDurabilityMixin
 from .control_plane_execution import (
     OperationExecutionRequest,
-    _utc_now,
     execute_operation,
 )
 from .control_plane_lifecycle import RuntimeLifecycleMixin, runtime_owned
+from .control_plane_operation_context import (
+    operation_admission_context,
+    operation_idempotency_fingerprint,
+    operation_requires_ephemeral_retry_proof,
+)
 from .control_plane_recovery import reconcile_interrupted_operations
 from .control_plane_store import (
     AuditEvent,
@@ -106,6 +110,7 @@ def _require_final_sink_flow_control_configuration(
 class RuntimeControlPlane(
     RuntimeLifecycleMixin,
     RuntimeDurabilityMixin,
+    RuntimeAdmissionMixin,
     WorkflowControlMixin,
     ParticipantControlMixin,
     ParticipantRetrievalMixin,
@@ -141,6 +146,7 @@ class RuntimeControlPlane(
             self._crossing_policy_resolver = crossing_policy_resolver
             self._information_state_context_resolver = information_state_context_resolver
             self._operation_lock = RLock()
+            self._ephemeral_idempotency_fingerprints: dict[str, str] = {}
             self._participant_control_lock = self._operation_lock
             self._trusted_runtime_plan_lock = RLock()
             self._trusted_runtime_plan_digests: set[str] = set()
@@ -258,8 +264,25 @@ class RuntimeControlPlane(
         base_snapshot: RuntimeSnapshot | None = None,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
     ) -> OperationReceipt:
         self._assert_runtime_owner()
+        context = operation_admission_context(
+            self,
+            kind=OperationKind.PROVISIONING,
+            request=plan,
+            base_snapshot=base_snapshot,
+            identity=identity,
+        )
+        exact_retry_fingerprint = (
+            operation_idempotency_fingerprint(
+                kind=OperationKind.PROVISIONING,
+                request=plan,
+                base_snapshot=base_snapshot,
+            )
+            if operation_requires_ephemeral_retry_proof(request=plan, base_snapshot=base_snapshot)
+            else None
+        )
         diagnostics = _submitted_plan_diagnostics(
             plan,
             RuntimeDomain.PROVISIONING,
@@ -273,7 +296,8 @@ class RuntimeControlPlane(
                 domain=RuntimeDomain.PROVISIONING,
                 diagnostics=diagnostics,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                request_fingerprint=context.request_commitment,
+                context=context,
             )
         diagnostics = _call_backend_diagnostics(
             self._target.provisioner.validate,
@@ -290,7 +314,9 @@ class RuntimeControlPlane(
                 diagnostics=diagnostics,
                 base_snapshot=base_snapshot,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                request_fingerprint=context.request_commitment,
+                context=context,
+                exact_retry_fingerprint=exact_retry_fingerprint,
             ),
         )
 
@@ -302,12 +328,31 @@ class RuntimeControlPlane(
         base_snapshot: RuntimeSnapshot | None = None,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
     ) -> OperationReceipt:
         self._assert_runtime_owner()
+        context = operation_admission_context(
+            self,
+            kind=OperationKind.ORCHESTRATION,
+            request=plan,
+            base_snapshot=base_snapshot,
+            identity=identity,
+        )
+        exact_retry_fingerprint = (
+            operation_idempotency_fingerprint(
+                kind=OperationKind.ORCHESTRATION,
+                request=plan,
+                base_snapshot=base_snapshot,
+            )
+            if operation_requires_ephemeral_retry_proof(request=plan, base_snapshot=base_snapshot)
+            else None
+        )
         if self._target.orchestrator is None:
             return self._reject_submission(
                 domain=RuntimeDomain.ORCHESTRATION,
                 message="Target does not provide an orchestrator.",
+                request_fingerprint=context.request_commitment,
+                context=context,
             )
         diagnostics = _submitted_plan_diagnostics(plan, RuntimeDomain.ORCHESTRATION, self._snapshot)
         if not diagnostics:
@@ -317,7 +362,8 @@ class RuntimeControlPlane(
                 domain=RuntimeDomain.ORCHESTRATION,
                 diagnostics=diagnostics,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                request_fingerprint=context.request_commitment,
+                context=context,
             )
         return execute_operation(
             self,
@@ -329,7 +375,9 @@ class RuntimeControlPlane(
                 diagnostics=[],
                 base_snapshot=base_snapshot,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                request_fingerprint=context.request_commitment,
+                context=context,
+                exact_retry_fingerprint=exact_retry_fingerprint,
             ),
         )
 
@@ -341,12 +389,31 @@ class RuntimeControlPlane(
         base_snapshot: RuntimeSnapshot | None = None,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
     ) -> OperationReceipt:
         self._assert_runtime_owner()
+        context = operation_admission_context(
+            self,
+            kind=OperationKind.EVALUATION,
+            request=plan,
+            base_snapshot=base_snapshot,
+            identity=identity,
+        )
+        exact_retry_fingerprint = (
+            operation_idempotency_fingerprint(
+                kind=OperationKind.EVALUATION,
+                request=plan,
+                base_snapshot=base_snapshot,
+            )
+            if operation_requires_ephemeral_retry_proof(request=plan, base_snapshot=base_snapshot)
+            else None
+        )
         if self._target.evaluator is None:
             return self._reject_submission(
                 domain=RuntimeDomain.EVALUATION,
                 message="Target does not provide an evaluator.",
+                request_fingerprint=context.request_commitment,
+                context=context,
             )
         diagnostics = _submitted_plan_diagnostics(plan, RuntimeDomain.EVALUATION, self._snapshot)
         if not diagnostics:
@@ -356,7 +423,8 @@ class RuntimeControlPlane(
                 domain=RuntimeDomain.EVALUATION,
                 diagnostics=diagnostics,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                request_fingerprint=context.request_commitment,
+                context=context,
             )
         return execute_operation(
             self,
@@ -368,7 +436,9 @@ class RuntimeControlPlane(
                 diagnostics=[],
                 base_snapshot=base_snapshot,
                 idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                request_fingerprint=context.request_commitment,
+                context=context,
+                exact_retry_fingerprint=exact_retry_fingerprint,
             ),
         )
 
@@ -383,116 +453,3 @@ class RuntimeControlPlane(
     def get_snapshot(self) -> RuntimeSnapshotEnvelope:
         self._assert_runtime_owner()
         return RuntimeSnapshotEnvelope(snapshot=self._snapshot)
-
-    @runtime_owned
-    def record_audit(
-        self,
-        *,
-        action: str,
-        identity: str,
-        allowed: bool,
-        target: str,
-        reason: str = "",
-        operation_id: str = "",
-        details: dict[str, object] | None = None,
-    ) -> None:
-        self._assert_runtime_owner()
-        self._store.append_audit(
-            AuditEvent(
-                timestamp=_utc_now(),
-                action=action,
-                identity=identity,
-                allowed=allowed,
-                target=target,
-                operation_id=operation_id,
-                reason=reason,
-                details=dict(details or {}),
-            )
-        )
-
-    def _reject_submission(
-        self,
-        *,
-        domain: RuntimeDomain,
-        message: str,
-        idempotency_key: str = "",
-        request_fingerprint: str = "",
-    ) -> OperationReceipt:
-        diagnostic = Diagnostic(
-            code="runtime.control-plane.rejected",
-            domain="runtime",
-            address=f"runtime.control-plane.{domain.value}",
-            message=message,
-        )
-        return self._reject_diagnostics(
-            domain=domain,
-            diagnostics=[diagnostic],
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
-        )
-
-    def _reject_diagnostics(
-        self,
-        *,
-        domain: RuntimeDomain,
-        diagnostics: list[Diagnostic],
-        idempotency_key: str = "",
-        request_fingerprint: str = "",
-    ) -> OperationReceipt:
-        operation_id = str(uuid4())
-        submitted_at = _utc_now()
-        receipt = OperationReceipt(
-            operation_id=operation_id,
-            domain=domain,
-            submitted_at=submitted_at,
-            accepted=False,
-            diagnostics=list(diagnostics),
-        )
-        status = OperationStatus(
-            operation_id=operation_id,
-            domain=domain,
-            state=OperationState.FAILED,
-            submitted_at=submitted_at,
-            updated_at=submitted_at,
-            diagnostics=list(diagnostics),
-        )
-        persisted = self._claim_record(
-            ControlPlaneOperationRecord(
-                receipt=receipt,
-                status=status,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        )
-        return persisted.receipt
-
-    def _idempotent_receipt(
-        self,
-        *,
-        idempotency_key: str,
-        request_fingerprint: str,
-    ) -> OperationReceipt | None:
-        self._assert_runtime_owner()
-        if not idempotency_key:
-            return None
-        record = self._store.find_by_idempotency(idempotency_key)
-        if record is None:
-            return None
-        if record.request_fingerprint and request_fingerprint and record.request_fingerprint != request_fingerprint:
-            raise ValueError("Idempotency-Key was reused with a different request body.")
-        with self._operation_lock:
-            self._operations[record.receipt.operation_id] = record
-        return record.receipt
-
-    def _claim_record(self, record: ControlPlaneOperationRecord) -> ControlPlaneOperationRecord:
-        self._assert_runtime_owner()
-        persisted = self._store_commits.claim_record(record)
-        if (
-            persisted.request_fingerprint
-            and record.request_fingerprint
-            and persisted.request_fingerprint != record.request_fingerprint
-        ):
-            raise ValueError("Idempotency-Key was reused with a different request body.")
-        with self._operation_lock:
-            self._operations[persisted.receipt.operation_id] = persisted
-        return persisted

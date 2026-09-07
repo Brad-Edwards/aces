@@ -26,10 +26,12 @@ from raes_contracts.contracts import (
     ParticipantStatusViewModel,
 )
 from raes_contracts.plan_projection import evaluation_plan_model, orchestration_plan_model, provisioning_plan_model
-from raes_contracts.planning import ProvisioningPlan
+from raes_contracts.planning import ChangeAction, OrchestrationOp, OrchestrationPlan, ProvisioningPlan
 from raes_contracts.runtime_state import (
     ExplicitnessClass,
     ExplicitnessProvenance,
+    OperationAdmissionContext,
+    OperationKind,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
 )
@@ -80,12 +82,21 @@ def _admit_workflow_prerequisites(control_plane: RuntimeControlPlane, execution_
 
 def _participant_operation_record(operation_id: str, participant_address: str) -> ControlPlaneOperationRecord:
     submitted_at = "2026-06-05T10:00:00Z"
+    context = OperationAdmissionContext(
+        actor_id="embedded-process",
+        authorization_scope=("process:trusted-embedder",),
+        target_scope="target:stub",
+        run_scope="run:test",
+        operation_kind=OperationKind.PARTICIPANT_ACTION,
+        request_commitment=f"sha256:{'a' * 64}",
+    )
     return ControlPlaneOperationRecord(
         receipt=OperationReceipt(
             operation_id=operation_id,
             domain=RuntimeDomain.PARTICIPANT,
             submitted_at=submitted_at,
             accepted=True,
+            context=context,
         ),
         status=OperationStatus(
             operation_id=operation_id,
@@ -93,6 +104,7 @@ def _participant_operation_record(operation_id: str, participant_address: str) -
             state=OperationState.RUNNING,
             submitted_at=submitted_at,
             updated_at=submitted_at,
+            context=context,
             changed_addresses=[participant_address],
         ),
     )
@@ -100,6 +112,10 @@ def _participant_operation_record(operation_id: str, participant_address: str) -
 
 class _BarrierLike(Protocol):
     def wait(self, timeout: float | None = None) -> int: ...
+
+
+_CROSS_PROCESS_BARRIER_TIMEOUT_SECONDS = 60
+_CROSS_PROCESS_JOIN_TIMEOUT_SECONDS = 75
 
 
 def _save_operation_in_process(store_path: str, index: int, barrier: _BarrierLike) -> None:
@@ -111,7 +127,7 @@ def _save_operation_in_process(store_path: str, index: int, barrier: _BarrierLik
         idempotency_key=f"process-key-{index}",
         request_fingerprint=f"process-fingerprint-{index}",
     )
-    barrier.wait(timeout=10)
+    barrier.wait(timeout=_CROSS_PROCESS_BARRIER_TIMEOUT_SECONDS)
     LocalControlPlaneStore(Path(store_path)).save_record(record)
 
 
@@ -255,9 +271,55 @@ nodes:
         )
 
     assert response.status_code == 200
-    status = control_plane.get_operation(response.json()["operation_id"])
+    receipt = response.json()
+    assert receipt["context"]["actor_id"] == "backend-service"
+    assert receipt["context"]["target_scope"] == f"target:{target.name}"
+    assert receipt["context"]["operation_kind"] == "evaluation"
+    assert receipt["context"]["request_commitment"].startswith("sha256:")
+    status = control_plane.get_operation(receipt["operation_id"])
     assert status is not None
     assert status.state is OperationState.SUCCEEDED
+    assert status.context.model_dump(mode="json") == receipt["context"]
+
+
+def test_control_plane_api_audits_denied_operation_receipt_as_denied() -> None:
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    submitted_plan = OrchestrationPlan(
+        operations=[
+            OrchestrationOp(
+                action=ChangeAction.CREATE,
+                address="orchestration.workflow.test",
+                resource_type="workflow",
+                payload={},
+                ordering_dependencies=("orchestration.workflow.missing",),
+            )
+        ],
+        startup_order=["orchestration.workflow.test"],
+    )
+    authorization_plan = plan(compile_runtime_model(_scenario("name: admission-authorization")), target.manifest)
+    # Planner validity is intentionally out of scope; this test targets the
+    # operation-admission rejection and its audit record after authorization.
+    control_plane.register_planner_produced_plan(replace(authorization_plan, orchestration=submitted_plan))
+    app = create_control_plane_app(control_plane, security=_test_security(target.name))
+    headers = {
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/orchestration",
+            json=orchestration_plan_model(submitted_plan).model_dump(mode="json", exclude_none=True),
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["accepted"] is False
+    audits = [event for event in control_plane.audit_log() if event.operation_id == response.json()["operation_id"]]
+    assert len(audits) == 1
+    assert audits[0].action == "orchestration_admission"
+    assert all(event.identity == "backend-service" and event.allowed is False for event in audits)
 
 
 @pytest.mark.parametrize("domain", ["orchestration", "evaluation"])
@@ -637,6 +699,7 @@ def test_slow_backend_submission_does_not_block_unrelated_http_reads(
         base_snapshot: RuntimeSnapshot | None = None,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
     ) -> OperationReceipt:
         entered.set()
         if not release.wait(timeout=5):
@@ -646,6 +709,7 @@ def test_slow_backend_submission_does_not_block_unrelated_http_reads(
             base_snapshot=base_snapshot,
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
+            identity=identity,
         )
 
     monkeypatch.setattr(control_plane, "submit_provisioning", blocking_submit)
@@ -699,6 +763,7 @@ def test_control_plane_rejects_mutation_queue_overload(
         base_snapshot: RuntimeSnapshot | None = None,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
     ) -> OperationReceipt:
         entered.set()
         if not release.wait(timeout=5):
@@ -708,6 +773,7 @@ def test_control_plane_rejects_mutation_queue_overload(
             base_snapshot=base_snapshot,
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
+            identity=identity,
         )
 
     monkeypatch.setattr(control_plane, "submit_provisioning", blocking_submit)
@@ -1236,7 +1302,7 @@ def test_local_control_plane_store_preserves_cross_process_operation_writes(tmp_
     for process in processes:
         process.start()
     for process in processes:
-        process.join(timeout=15)
+        process.join(timeout=_CROSS_PROCESS_JOIN_TIMEOUT_SECONDS)
     for process in processes:
         if process.is_alive():
             process.terminate()

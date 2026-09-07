@@ -364,15 +364,16 @@ def _submit_native_scenario(path: Path, tmp_path: Path):
     control_plane.register_planner_produced_plan(execution_plan)
     receipt = control_plane.submit_provisioning(execution_plan.provisioning)
     status = control_plane.get_operation(receipt.operation_id)
-    assert status is not None
-    return driver, connection, status, control_plane.snapshot
+    return driver, connection, receipt, status, control_plane.snapshot
 
 
 def test_operational_techvault_rejects_unrealized_concerns_before_libvirt_io(tmp_path):
-    driver, connection, status, snapshot = _submit_native_scenario(
+    driver, connection, receipt, status, snapshot = _submit_native_scenario(
         EXAMPLES_DIR / "techvault-operational.sdl.yaml", tmp_path
     )
 
+    assert receipt.accepted is True
+    assert status is not None
     assert status.state.value == "failed"
     codes = {diagnostic.code for diagnostic in status.diagnostics}
     assert "libvirt-backend.techvault.resource-out-of-envelope" in codes
@@ -384,21 +385,27 @@ def test_operational_techvault_rejects_unrealized_concerns_before_libvirt_io(tmp
 
 
 @pytest.mark.parametrize(
-    ("filename", "domain_count", "network_count"),
+    ("filename", "domain_count", "network_count", "accepted"),
     (
-        ("techvault-observability-core.sdl.yaml", 3, 1),
-        ("techvault-defensive-min.sdl.yaml", 6, 1),
-        ("techvault-enterprise-web.sdl.yaml", 9, 3),
-        ("techvault-attacker-target.sdl.yaml", 8, 3),
+        ("techvault-observability-core.sdl.yaml", 3, 1, True),
+        ("techvault-defensive-min.sdl.yaml", 6, 1, False),
+        ("techvault-enterprise-web.sdl.yaml", 9, 3, True),
+        ("techvault-attacker-target.sdl.yaml", 8, 3, True),
     ),
 )
 def test_curated_variants_do_not_turn_planned_surfaces_into_native_claims(
-    filename, domain_count, network_count, tmp_path
+    filename, domain_count, network_count, accepted, tmp_path
 ):
     del domain_count, network_count
-    driver, connection, status, snapshot = _submit_native_scenario(EXAMPLES_DIR / filename, tmp_path)
+    driver, connection, receipt, status, snapshot = _submit_native_scenario(EXAMPLES_DIR / filename, tmp_path)
 
-    assert status.state.value == "failed"
+    assert receipt.accepted is accepted
+    if accepted:
+        assert status is not None
+        assert status.state.value == "failed"
+    else:
+        assert status is None
+        assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["realization.unsupported-exact-requirement"]
     assert connection.domain_xml == []
     assert connection.network_xml == []
     assert driver.last_snapshot == {}
