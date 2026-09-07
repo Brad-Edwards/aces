@@ -6,6 +6,7 @@ evidence records and they are not proof that capture occurred.
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
@@ -125,14 +126,24 @@ class EvidenceRequirement(SDLModel):
     loss_disclosure: EvidenceLossDisclosureExpectation | str
     capture_spec_ref: str = ""
     capture_requirement_ref: str = ""
+    output_contract: str = ""
+    field_selectors: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
-    @field_validator("source_refs", "scope_refs", "channel_refs", "media_types", "notes", mode="before")
+    @field_validator(
+        "source_refs",
+        "scope_refs",
+        "channel_refs",
+        "media_types",
+        "field_selectors",
+        "notes",
+        mode="before",
+    )
     @classmethod
     def _coerce_lists(cls, value: object) -> object:
         return _coerce_string_list(value)
 
-    @field_validator("source_refs", "scope_refs", "channel_refs", "media_types", "notes")
+    @field_validator("source_refs", "scope_refs", "channel_refs", "media_types", "field_selectors", "notes")
     @classmethod
     def _validate_lists(cls, values: list[str], info: ValidationInfo) -> list[str]:
         return _validate_string_list(values, field_name=info.field_name)
@@ -186,6 +197,12 @@ class EvidenceRequirement(SDLModel):
             raise ValueError("evidence requirement must declare window, trigger_ref, boundary_ref, or boundary_kind")
         if self.channel is None and not self.channel_refs and not self.boundary_kind:
             raise ValueError("evidence requirement must declare channel, channel_refs, or boundary_kind")
+        if bool(self.output_contract) != bool(self.field_selectors):
+            raise ValueError("output_contract and field_selectors must be declared together")
+        if bool(self.capture_spec_ref) != bool(self.capture_requirement_ref):
+            raise ValueError("capture_spec_ref and capture_requirement_ref must be declared together")
+        if any(re.fullmatch(r"(?:/(?:[^~/]|~[01])*)*", selector) is None for selector in self.field_selectors):
+            raise ValueError("field_selectors must be canonical RFC 6901 JSON Pointers")
         return self
 
 

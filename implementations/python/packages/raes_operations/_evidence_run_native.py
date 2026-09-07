@@ -200,7 +200,18 @@ def _realize_native_substrate(
     """
     if native_driver is None:
         return None, EvidenceCheck("native_substrate_realization", False, ("no native driver",)), (), None
+    planning_failures = _dedupe(
+        f"{diagnostic.code}: {diagnostic.message}" for diagnostic in execution_plan.diagnostics if diagnostic.is_error
+    )
+    if planning_failures:
+        return (
+            None,
+            EvidenceCheck("native_substrate_realization", False, ("composite planning rejected native realization",)),
+            planning_failures,
+            None,
+        )
     try:
+        control_plane.register_planner_produced_plan(execution_plan)
         receipt = control_plane.submit_provisioning(execution_plan.provisioning)
         operation_id = str(receipt.operation_id)
         status = control_plane.get_operation(receipt.operation_id)
