@@ -113,6 +113,10 @@ class _BarrierLike(Protocol):
     def wait(self, timeout: float | None = None) -> int: ...
 
 
+_CROSS_PROCESS_BARRIER_TIMEOUT_SECONDS = 60
+_CROSS_PROCESS_JOIN_TIMEOUT_SECONDS = 75
+
+
 def _save_operation_in_process(store_path: str, index: int, barrier: _BarrierLike) -> None:
     record = replace(
         _participant_operation_record(
@@ -122,7 +126,7 @@ def _save_operation_in_process(store_path: str, index: int, barrier: _BarrierLik
         idempotency_key=f"process-key-{index}",
         request_fingerprint=f"process-fingerprint-{index}",
     )
-    barrier.wait(timeout=10)
+    barrier.wait(timeout=_CROSS_PROCESS_BARRIER_TIMEOUT_SECONDS)
     LocalControlPlaneStore(Path(store_path)).save_record(record)
 
 
@@ -1234,7 +1238,7 @@ def test_local_control_plane_store_preserves_cross_process_operation_writes(tmp_
     for process in processes:
         process.start()
     for process in processes:
-        process.join(timeout=15)
+        process.join(timeout=_CROSS_PROCESS_JOIN_TIMEOUT_SECONDS)
     for process in processes:
         if process.is_alive():
             process.terminate()

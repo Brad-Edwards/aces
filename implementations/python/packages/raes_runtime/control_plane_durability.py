@@ -26,7 +26,7 @@ class RuntimeDurabilityMixin:
         try:
             self._store_commits.commit_terminal_operation(snapshot, record)
         except BaseException as exc:
-            self._resynchronize_after_store_error(exc)
+            self._resynchronize_after_store_error(exc, operation_id=record.receipt.operation_id)
             raise
         self._publish_committed_state(snapshot, record)
 
@@ -49,7 +49,7 @@ class RuntimeDurabilityMixin:
                 audit_event=audit_event,
             )
         except BaseException as exc:
-            self._resynchronize_after_store_error(exc)
+            self._resynchronize_after_store_error(exc, operation_id=record.receipt.operation_id)
             raise
         self._publish_committed_state(snapshot, record)
 
@@ -70,7 +70,7 @@ class RuntimeDurabilityMixin:
                 audit_event=audit_event,
             )
         except BaseException as exc:
-            self._resynchronize_after_store_error(exc)
+            self._resynchronize_after_store_error(exc, operation_id=record.receipt.operation_id)
             raise
         self._publish_committed_state(snapshot, record)
 
@@ -82,13 +82,17 @@ class RuntimeDurabilityMixin:
         self._snapshot = snapshot
         self._operations[record.receipt.operation_id] = record
 
-    def _resynchronize_after_store_error(self, error: BaseException) -> None:
-        """Refresh both caches after a store call with an uncertain outcome."""
+    def _resynchronize_after_store_error(self, error: BaseException, *, operation_id: str) -> None:
+        """Refresh caches and seal only the operation whose commit outcome is uncertain."""
 
         try:
             snapshot = self._store.load_snapshot()
             operations = self._store.load_records()
-            operations = reconcile_interrupted_operations(self._store_commits, operations)
+            operations = reconcile_interrupted_operations(
+                self._store_commits,
+                operations,
+                operation_ids=(operation_id,),
+            )
         except Exception as reconciliation_error:
             self._poison_runtime_durability()
             error.add_note(
